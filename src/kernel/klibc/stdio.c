@@ -1,6 +1,6 @@
 #pragma once
 
-void kputc(char c)
+void kputchar(char c)
 {
 	current_stream = kstdout;
 	outc(c);

@@ -2,16 +2,38 @@
 
 struct task task_init(uint32_t eip)
 {
-    struct task task;
-    task.registers.eip = eip;
-    task.registers.cs = KERNEL_CODE_SEGMENT;
-    task.registers.ss = KERNEL_DATA_SEGMENT;
-    task.registers.cr0 = ((uint32_t)1 << 31) | 1;  // Enable paging, protected mode
-    task.registers.eflags = ((uint32_t)1 << 9);  // Enable interrupts
-    return task;
+    struct task _task;
+    _task.registers.eip = eip;
+    _task.registers.cs = KERNEL_CODE_SEGMENT;
+    _task.registers.ss = KERNEL_DATA_SEGMENT;
+    // _task.registers.cr0 = ((uint32_t)1 << 31) | 1;  // Enable paging, protected mode
+    // _task.registers.cr3 = virtual_address_to_physical((uint32_t)&page_directory);
+    _task.registers.eflags = ((uint32_t)1 << 9);  // Enable interrupts
+    _task.registers.ebp = (uint32_t)_task.stack + 4092 - sizeof(struct interrupt_registers);
+    _task.registers.esp = _task.registers.ebp;
+    _task.registers.current_esp = _task.registers.ebp + sizeof(struct interrupt_registers);
+    return _task;
 }
 
-struct task switch_task(struct interrupt_registers registers)
+void switch_task(struct interrupt_registers* registers)
 {
-    ;
+    if (!first_task_switch)
+    {
+        current_task->registers = *registers;
+        first_task_switch = false;
+    }
+    current_task->registers.cr3 = registers->cr3;
+    current_task = current_task->next_task;
+    *registers = current_task->registers;
+    LOG(DEBUG, "Switched to task 0x%x", current_task);
+}
+
+void task_a_main()
+{
+    while (true) kputchar('A');
+}
+
+void task_b_main()
+{
+    while (true) kputchar('B');
 }

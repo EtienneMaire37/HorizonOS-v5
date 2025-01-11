@@ -57,6 +57,19 @@ void interrupt_handler(struct interrupt_registers params)
         {
         case 0:
             handle_irq_0();
+            {
+                if (multitasking_enabled)
+                {
+                    multitasking_counter--;
+                    if (multitasking_counter == 0)
+                    {
+                        switch_task(&params);
+                        multitasking_counter = 40;
+                    }
+                    if (multitasking_counter == 0xff)
+                        multitasking_counter = 40;
+                }
+            }
             break;
 
         default:

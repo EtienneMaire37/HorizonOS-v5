@@ -30,6 +30,9 @@ void halt();
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+physical_address_t virtual_address_to_physical(virtual_address_t address);
+virtual_address_t physical_address_to_virtual(physical_address_t address);
+
 #include "io/io.h"
 #include "ps2/ps2.h"
 #include "debug/out.h"
@@ -45,6 +48,7 @@ void halt();
 #include "idt/idt.h"
 #include "idt/int.h"
 #include "idt/pic.h"
+#include "multitasking/task.h"
 
 #include "io/textio.c"
 #include "klibc/stdio.c"
@@ -56,6 +60,7 @@ void halt();
 #include "idt/idt.c"
 #include "idt/int.c"
 #include "idt/pic.c"
+#include "multitasking/task.c"
 
 // ---------------------------------------------------------------
 
@@ -198,6 +203,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     reload_page_directory(); 
 
     LOG(DEBUG, "Done setting up paging"); 
+
+    struct task task_a = task_init((uint32_t)&task_a_main);
+    struct task task_b = task_init((uint32_t)&task_b_main);
+    task_a.next_task = task_a.previous_task = &task_b;
+    task_b.next_task = task_b.previous_task = &task_a;
+    current_task = &task_b;
+
+    multitasking_enabled = true;
+
+    while(true);
 
     halt();
 }

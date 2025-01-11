@@ -29,7 +29,7 @@ kFILE* klog = &_klog;
 
 kFILE* current_stream, *current_interrupt_stream;
 
-void kputc(char c);
+void kputchar(char c);
 void kputs(char* str);
 
 void kprintf_d(int32_t val);

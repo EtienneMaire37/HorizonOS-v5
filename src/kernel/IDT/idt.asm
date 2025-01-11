@@ -97,7 +97,7 @@ _interrupt_handler:
     call interrupt_handler
 
     pop eax
-    mov cr3, eax
+    ; mov cr3, eax
  
     add esp, 4
 
