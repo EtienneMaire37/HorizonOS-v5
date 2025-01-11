@@ -1,0 +1,5 @@
+0000-00-00 	 00:00:00,000 	 INFO 	Kernel loaded at address 0x101000 - 0x1150ec (82156 bytes long)
+0000-00-00 	 00:00:00,000 	 INFO 	Memory map:
+0000-00-00 	 00:00:00,000 	 INFO 	   Memory block : address : 0x0 ; length : 654336
+0000-00-00 	 00:00:00,000 	 INFO 	   Memory block : address : 0x100000 ; length : 267255808
+0000-00-00 	 00:00:00,000 	 INFO 	Detected 267910144 bytes of usable memory
