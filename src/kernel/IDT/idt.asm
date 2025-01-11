@@ -82,6 +82,7 @@ interrupt_table:
     %endrep
 
 TMP: dw 0
+global _DS
 _DS: dw 0
 
 _interrupt_handler:

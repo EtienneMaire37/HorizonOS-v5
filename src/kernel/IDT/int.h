@@ -7,11 +7,11 @@ struct interrupt_registers
     uint32_t edi, esi, ebp;
     uint32_t esp;   // ESP before pushing the other GP registers
     uint32_t ebx, edx, ecx, eax;
-    uint32_t interruptNumber, errorCode;
+    uint32_t interrupt_number, error_code;
     uint32_t eip;
     uint32_t cs;
     uint32_t eflags;
-    uint32_t currEsp;
+    uint32_t current_esp;   // ESP before the interrupt happpens
     uint32_t ss;
 } __attribute__((packed));
 
@@ -53,3 +53,5 @@ char* errorString[32] =
 
 void kernel_panic(struct interrupt_registers params);
 void interrupt_handler(struct interrupt_registers params);
+
+extern uint16_t _DS;
