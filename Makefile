@@ -6,6 +6,7 @@ DATE := `date +"%Y-%m-%d"`
 all: horizonos.iso
 
 run: all
+	mkdir debug -p
 	qemu-system-i386                               		\
 	-accel tcg,thread=single                       		\
 	-cpu core2duo                                  		\
@@ -18,6 +19,8 @@ run: all
 	-vga std 
 
 horizonos.iso: Makefile src/kernel/kernelentry.asm rmbin
+	mkdir bin -p
+
 	$(ASM) -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
 	$(ASM) -f elf32 -o "bin/gdt.o" "src/kernel/GDT/gdt.asm"
 	$(ASM) -f elf32 -o "bin/idt.o" "src/kernel/IDT/idt.asm"
