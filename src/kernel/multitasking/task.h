@@ -19,5 +19,5 @@ struct task* current_task;
 bool multitasking_enabled = false;
 bool first_task_switch = true;
 
-struct task task_init(uint32_t eip);
+void task_init(struct task* _task, uint32_t eip);
 void switch_task(struct interrupt_registers* registers);

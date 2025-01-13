@@ -204,8 +204,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Done setting up paging"); 
 
-    struct task task_a = task_init((uint32_t)&task_a_main);
-    struct task task_b = task_init((uint32_t)&task_b_main);
+    struct task task_a, task_b;
+    task_init(&task_a, (uint32_t)&task_a_main);
+    task_init(&task_b, (uint32_t)&task_b_main);
     task_a.next_task = task_a.previous_task = &task_b;
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;

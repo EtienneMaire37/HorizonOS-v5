@@ -1,18 +1,16 @@
 #pragma once
 
-struct task task_init(uint32_t eip)
+void task_init(struct task* _task, uint32_t eip)
 {
-    struct task _task;
-    _task.registers.eip = eip;
-    _task.registers.cs = KERNEL_CODE_SEGMENT;
-    _task.registers.ss = KERNEL_DATA_SEGMENT;
-    // _task.registers.cr0 = ((uint32_t)1 << 31) | 1;  // Enable paging, protected mode
-    // _task.registers.cr3 = virtual_address_to_physical((uint32_t)&page_directory);
-    _task.registers.eflags = ((uint32_t)1 << 9);  // Enable interrupts
-    _task.registers.ebp = (uint32_t)_task.stack + 4096 - sizeof(struct interrupt_registers);
-    _task.registers.esp = _task.registers.ebp;
-    _task.registers.current_esp = _task.registers.ebp;// + sizeof(struct interrupt_registers);
-    return _task;
+    _task->registers.eip = eip;
+    _task->registers.cs = KERNEL_CODE_SEGMENT;
+    _task->registers.ss = KERNEL_DATA_SEGMENT;
+    // _task->registers.cr0 = ((uint32_t)1 << 31) | 1;  // Enable paging, protected mode
+    // _task->registers.cr3 = virtual_address_to_physical((uint32_t)&page_directory);
+    _task->registers.eflags = ((uint32_t)1 << 9);  // Enable interrupts
+    _task->registers.ebp = (uint32_t)_task->stack + 4096 - sizeof(struct interrupt_registers);
+    _task->registers.esp = _task->registers.ebp;
+    _task->registers.current_esp = _task->registers.ebp;// + sizeof(struct interrupt_registers);
 }
 
 void switch_task(struct interrupt_registers* registers)
