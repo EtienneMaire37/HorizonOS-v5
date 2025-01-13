@@ -11,6 +11,8 @@ struct task
     uint8_t stack[4096];
 };
 
+#define TASK_SWITCH_DELAY 20 // ms
+
 uint8_t multitasking_counter = 0;
 
 struct task* current_task;

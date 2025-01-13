@@ -87,22 +87,24 @@ void outc(char c)
 			tty_cursor++;
 		}
 
-		while((tty_cursor / 80) >= 24)	// Last line
-		{
-			kmemcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
-			
-			for(uint8_t i = 0; i < 80; i++)
-			{
-				tty_vram[24 * 80 + i]._char = ' ';
-				tty_vram[24 * 80 + i].color = FG_WHITE | BG_BLACK;
-			}
-
-			tty_cursor -= 80;
-		}
-
 		break;
 	}
 	default:
 		;
 	}
+
+	while((tty_cursor / 80) >= 24)	// Last line
+	{
+		kmemcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
+		
+		for(uint8_t i = 0; i < 80; i++)
+		{
+			tty_vram[24 * 80 + i]._char = ' ';
+			tty_vram[24 * 80 + i].color = FG_WHITE | BG_BLACK;
+		}
+
+		tty_cursor -= 80;
+	}
+
+	tty_cursor %= 80 * 25;
 }

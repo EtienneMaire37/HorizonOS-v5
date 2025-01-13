@@ -64,10 +64,10 @@ void interrupt_handler(struct interrupt_registers params)
                     if (multitasking_counter == 0)
                     {
                         switch_task(&params);
-                        multitasking_counter = 40;
+                        multitasking_counter = TASK_SWITCH_DELAY;
                     }
                     if (multitasking_counter == 0xff)
-                        multitasking_counter = 40;
+                        multitasking_counter = TASK_SWITCH_DELAY;
                 }
             }
             break;
