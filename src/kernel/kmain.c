@@ -30,6 +30,8 @@ void halt();
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
+#define bcd_to_binary(bcd) (((bcd) & 0x0f) + ((bcd) >> 4) * 10)
+
 physical_address_t virtual_address_to_physical(virtual_address_t address);
 virtual_address_t physical_address_to_virtual(physical_address_t address);
 
@@ -47,8 +49,10 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 #include "PIT/pit.h"
 #include "IDT/idt.h"
 #include "IDT/int.h"
-#include "IDT/PIC.h"
+#include "IDT/pic.h"
 #include "multitasking/task.h"
+#include "CMOS/cmos.h"
+#include "CMOS/rtc.h"
 
 #include "klibc/string.c"
 #include "IO/textio.c"
@@ -59,7 +63,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 #include "PIT/pit.c"
 #include "IDT/idt.c"
 #include "IDT/int.c"
-#include "IDT/PIC.c"
+#include "IDT/pic.c"
 #include "multitasking/task.c"
 
 // ---------------------------------------------------------------
@@ -205,6 +209,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     reload_page_directory(); 
 
     LOG(DEBUG, "Done setting up paging"); 
+
+    LOG(DEBUG, "Retrieving CMOS data");
+
+    rtc_detect_mode();
+    rtc_get_time();
+
+    LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
+    LOG(DEBUG, "Time : %u:%u:%u %u/%u/%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+
+    LOG(DEBUG, "Setting up multitasking");
 
     struct task task_a, task_b;
     task_init(&task_a, (uint32_t)&task_a_main, "Task A");
