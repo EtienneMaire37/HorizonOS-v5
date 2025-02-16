@@ -4,8 +4,8 @@ struct interrupt_registers;
 
 struct task
 {
+    char name[32];
     struct interrupt_registers* registers;
-    // char name[32];
     struct task* next_task;
     struct task* previous_task;
     uint8_t stack[4096];
@@ -19,5 +19,5 @@ struct task* current_task;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 
-void task_init(struct task* _task, uint32_t eip);
+void task_init(struct task* _task, uint32_t eip, char* name);
 void switch_task(struct interrupt_registers** registers);

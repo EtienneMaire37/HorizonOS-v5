@@ -19,13 +19,15 @@ void install_idt()
     for(uint8_t i = 0; i < 32; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
-    for(uint16_t i = 32; i < 256; i++)
+    for(uint8_t i = 32; i < 32 + 16; i++)
+        setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
+
+    for(uint16_t i = 32 + 16; i < 256; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_TRAP_GATE_32);
 
     _idtr.size = sizeof(IDT) - 1;
     _idtr.address = (uint32_t)&IDT;
 
     pic_disable();
-
     load_idt();
 }

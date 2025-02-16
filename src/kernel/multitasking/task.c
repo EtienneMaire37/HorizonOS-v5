@@ -1,6 +1,6 @@
 #pragma once
 
-void task_init(struct task* _task, uint32_t eip)
+void task_init(struct task* _task, uint32_t eip, char* name)
 {
     uint8_t* task_stack_top = _task->stack + 4096;
 
@@ -20,6 +20,17 @@ void task_init(struct task* _task, uint32_t eip)
     registers->cr3 = virtual_address_to_physical((uint32_t)page_directory);
 
     _task->registers = registers;
+    size_t name_length = kstrlen(name);
+    if (name_length >= 31)
+    {
+        kmemcpy(_task->name, name, 31);
+        _task->name[31] = '\0';
+    }
+    else
+    {
+        kmemcpy(_task->name, name, name_length);
+        _task->name[name_length] = '\0';
+    }
 }
 
 void switch_task(struct interrupt_registers** registers)
@@ -36,15 +47,15 @@ void switch_task(struct interrupt_registers** registers)
     
     *registers = current_task->registers;
 
-    LOG(DEBUG, "Switched to task 0x%x | registers : esp : 0x%x, 0x%x | eip : 0x%x", 
-        current_task, current_task->registers->esp, current_task->registers->handled_esp, current_task->registers->eip);
+    LOG(DEBUG, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x | eip : 0x%x", 
+        current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, current_task->registers->eip);
 }
 void task_a_main()
 {
-    while (true) asm("int 0xff" :: "a" ('A')); // kputchar('A');
+    while (true) asm("int 0xff" :: "a" ('A'));
 }
 
 void task_b_main()
 {
-    while (true) asm("int 0xff" :: "a" ('B')); // kputchar('B');
+    while (true) asm("int 0xff" :: "a" ('B'));
 }
