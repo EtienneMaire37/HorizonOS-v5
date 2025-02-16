@@ -61,6 +61,8 @@ void __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params
         {
         case 0:
             handle_irq_0();
+            if (time_initialized)
+                system_increment_time();
             {
                 if (multitasking_enabled)
                 {

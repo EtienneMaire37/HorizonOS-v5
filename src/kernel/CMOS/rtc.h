@@ -5,6 +5,9 @@ bool rtc_24_hour_mode;  // 0 = 12-hour, 1 = 24-hour
 
 uint8_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
 uint16_t system_year = 0;
+uint16_t system_thousands = 0;
+
+bool time_initialized = false;
 
 void rtc_detect_mode()
 {
@@ -50,5 +53,32 @@ void rtc_get_time()
             system_hours = (system_hours + 12) % 24;
         else
             system_hours = system_hours;
+    }
+
+    system_thousands = 0;
+}
+
+void system_increment_time()
+{
+    system_thousands++;
+    if (system_thousands >= 1000)
+    {
+        system_seconds++;
+        system_thousands = 0;
+        if (system_seconds >= 60)
+        {
+            system_minutes++;
+            system_seconds = 0;
+            if (system_minutes >= 60)
+            {
+                system_hours++;
+                system_minutes = 0;
+                if (system_hours >= 24)
+                {
+                    system_day++;
+                    system_hours = 0;
+                }
+            }
+        }
     }
 }
