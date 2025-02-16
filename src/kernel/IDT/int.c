@@ -36,19 +36,19 @@ void __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params
     //     LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 
     //         params->esp, params->handled_esp, params->eip);
 
-    if(params->interrupt_number < 32)            // Fault
+    if (params->interrupt_number < 32)            // Fault
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2);
 
         kernel_panic(params);
     }
-    else if(params->interrupt_number < 32 + 16)  // IRQ
+    else if (params->interrupt_number < 32 + 16)  // IRQ
     {
         uint8_t irqNumber = params->interrupt_number - 32;
 
-        if(irqNumber == 7 && !(pic_get_isr() >> 7))
+        if (irqNumber == 7 && !(pic_get_isr() >> 7))
             return_from_isr();
-        if(irqNumber == 15 && !(pic_get_isr() >> 15))
+        if (irqNumber == 15 && !(pic_get_isr() >> 15))
         {
             outb(PIC1_CMD, PIC_EOI);
 	        io_wait();
@@ -82,6 +82,10 @@ void __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params
 
         pic_send_eoi(irqNumber);
         return_from_isr();
+    }
+    else if (params->interrupt_number == 0xff)
+    {
+        kputchar(params->eax & 0x7f);
     }
 
     return_from_isr();

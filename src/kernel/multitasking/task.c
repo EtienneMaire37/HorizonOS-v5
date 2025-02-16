@@ -41,10 +41,10 @@ void switch_task(struct interrupt_registers** registers)
 }
 void task_a_main()
 {
-    while (true) kputchar('A');
+    while (true) asm("int 0xff" :: "a" ('A')); // kputchar('A');
 }
 
 void task_b_main()
 {
-    while (true) kputchar('B');
+    while (true) asm("int 0xff" :: "a" ('B')); // kputchar('B');
 }
