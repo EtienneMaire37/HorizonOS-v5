@@ -33,33 +33,33 @@ void halt();
 physical_address_t virtual_address_to_physical(virtual_address_t address);
 virtual_address_t physical_address_to_virtual(physical_address_t address);
 
-#include "io/io.h"
-#include "ps2/ps2.h"
+#include "IO/io.h"
+#include "PS2/ps2.h"
 #include "debug/out.h"
 
-#include "io/textio.h"
+#include "IO/textio.h"
 #include "klibc/stdio.h"
 // #include "klibc/reset.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
-#include "gdt/gdt.h"
+#include "GDT/gdt.h"
 #include "paging/paging.h"
-#include "pit/pit.h"
-#include "idt/idt.h"
-#include "idt/int.h"
-#include "idt/pic.h"
+#include "PIT/pit.h"
+#include "IDT/idt.h"
+#include "IDT/int.h"
+#include "IDT/PIC.h"
 #include "multitasking/task.h"
 
-#include "io/textio.c"
+#include "IO/textio.c"
 #include "klibc/stdio.c"
 #include "klibc/string.c"
 #include "klibc/stdlib.c"
-#include "gdt/gdt.c"
+#include "GDT/gdt.c"
 #include "paging/paging.c"
-#include "pit/pit.c"
-#include "idt/idt.c"
-#include "idt/int.c"
-#include "idt/pic.c"
+#include "PIT/pit.c"
+#include "IDT/idt.c"
+#include "IDT/int.c"
+#include "IDT/PIC.c"
 #include "multitasking/task.c"
 
 // ---------------------------------------------------------------
@@ -100,6 +100,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     tty_reset_cursor();
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &_kernel_end, kernel_size); 
+
+    // halt();
 
     uint32_t max_kernel_size = (uint32_t)(-(uint32_t)&_kernel_start);
     if (kernel_size >= max_kernel_size)
@@ -142,16 +144,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kmemset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
-    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
-    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
+    // setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
+    // setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
     
-    kmemset(&TSS, 0, sizeof(struct tss_entry));
-    TSS.iopb = sizeof(struct tss_entry);
-    TSS.ss0 = KERNEL_DATA_SEGMENT;
-    TSS.esp0 = (uint32_t)&stack_top;
-    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b0100);  // TSS
+    // kmemset(&TSS, 0, sizeof(struct tss_entry));
+    // TSS.iopb = sizeof(struct tss_entry);
+    // TSS.ss0 = KERNEL_DATA_SEGMENT;
+    // TSS.esp0 = (uint32_t)&stack_top;
+    // setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b0100);  // TSS
     install_gdt();
-    load_tss();
+    // load_tss();
     kprintf(" | Done\n");
 
     LOG(DEBUG, "Loaded the GDT"); 
@@ -194,7 +196,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
             set_page(&page_table_768_1023[i * 1024], j, address, PAGING_SUPERVISOR_LEVEL, true);
         }
     }
-
+    
     for (uint16_t i = 769; i < 1023; i++)
         add_page_table(page_directory, i, virtual_address_to_physical((virtual_address_t)&page_table_768_1023[(i - 768) * 1024]), PAGING_SUPERVISOR_LEVEL, true);  
 

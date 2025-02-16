@@ -1,6 +1,6 @@
 CC := i386-elf-gcc
 ASM := nasm
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields # -O3 -lgcc
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone
 DATE := `date +"%Y-%m-%d"`
 
 all: horizonos.iso
@@ -30,18 +30,17 @@ horizonos.iso: Makefile src/kernel/kernelentry.asm rmbin
 	 
 	ld -T src/link.ld -m elf_i386 
 	
-	mkdir -p root/boot/grub
+	mkdir -p ./root/boot/grub
 	
-	cp bin/kernel.elf root/boot/kernel.elf
-	cp src/grub.cfg root/boot/grub/grub.cfg
+	cp ./bin/kernel.elf ./root/boot/kernel.elf
+	cp ./src/grub.cfg ./root/boot/grub/grub.cfg
 	 
-	grub-mkrescue -o horizonos.iso root
+	grub-mkrescue -o ./horizonos.iso ./root
 
 rmbin:
-	rm -rf bin/*
-	# rm -rf root
-	rm -rf src/libc/lib/*
-	rm -rf initrd.tar
+	rm -rf ./bin/*
+	rm -rf ./src/libc/lib/*
+	rm -rf ./initrd.tar
 
 clean: rmbin
-	rm -f horizonos.iso
+	rm -f ./horizonos.iso

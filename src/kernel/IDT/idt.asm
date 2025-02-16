@@ -81,37 +81,44 @@ interrupt_table:
     %assign i i+1 
     %endrep
 
-TMP: dw 0
-global _DS
-_DS: dw 0
-
 _interrupt_handler:
-    pushad
+    pusha
+
+    mov eax, 0
+    mov ax, ds
+    push eax
+
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
     mov eax, cr2
     push eax
 
     mov eax, cr3
     push eax
-
+    
+    push esp
     call interrupt_handler
+    ; add esp, 4
+    pop esp
+
+    ; pop eax
+    ; mov cr3, eax
+
+    ; pop eax
+    ; mov cr2, eax
+
+    add esp, 8  ; skip cr2 and cr3 for now
 
     pop eax
-    mov cr3, eax
- 
-    add esp, 4
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
-    popad
-
-    mov [TMP], ax
-    
-    mov   ax, [_DS]
-    mov   ds, ax
-    mov   es, ax
-    mov   fs, ax
-    mov   gs, ax
-
-    mov ax, [TMP]
-
+    popa
     add esp, 8
-    iret 
+    iret

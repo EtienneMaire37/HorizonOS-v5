@@ -101,7 +101,7 @@ _halt:
   	hlt
 	jmp .loop
 
-global stack_top
 section .data
 times 16384 dd 0
+global stack_top
 stack_top:
