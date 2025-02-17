@@ -14,6 +14,8 @@ uint8_t usable_memory_blocks;
 uint8_t first_alloc_block;
 virtual_address_t first_alloc_page;
 
+uint32_t memory_allocated, allocatable_memory;
+
 void pfa_detect_usable_memory()
 {
     usable_memory = usable_memory_blocks = 0;
@@ -77,6 +79,8 @@ void pfa_detect_usable_memory()
 void pfa_bitmap_init()
 {
     uint32_t bitmap_size = usable_memory / 0x1000 / 8;
+    memory_allocated = 0;
+    allocatable_memory = usable_memory - bitmap_size;
     // if (usable_memory % 0x1000)
     //     bitmap_size++;
     LOG(INFO, "Allocating %u bytes of bitmap", bitmap_size);
@@ -138,6 +142,9 @@ virtual_address_t pfa_allocate_page()
                         physical_address_t phys_addr = block->address + (remaining * 0x1000);
                         virtual_address_t virt_addr = physical_address_to_virtual(phys_addr);
                         LOG(DEBUG, "Allocated page at 0x%x", virt_addr);
+                        memory_allocated += 0x1000;
+                        float percentage = (float)memory_allocated / (float)allocatable_memory * 100;
+                        LOG(DEBUG, "Used memory : %u / %u bytes (%u.%u%u%u%%)", memory_allocated, allocatable_memory, (int)percentage, (int)(percentage * 10) % 10, (int)(percentage * 100) % 10, (int)(percentage * 1000) % 10);
                         return virt_addr;
                     }
                     remaining -= pages_in_block;
@@ -179,5 +186,7 @@ void pfa_free_page(virtual_address_t address)
     
     bitmap[byte_idx] &= ~(1 << bit_idx);
 
-    LOG(DEBUG, "Freed page at 0x%x", address);
+    memory_allocated -= 0x1000;
+
+    // LOG(DEBUG, "Freed page at 0x%x", address);
 }

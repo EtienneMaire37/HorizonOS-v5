@@ -10,6 +10,7 @@ struct task
     struct task* previous_task;
     // uint8_t stack[4096];
     uint8_t* stack;
+    struct page_directory_entry_4kb* page_directory;
 };
 
 #define TASK_SWITCH_DELAY 30 // ms
@@ -22,3 +23,5 @@ volatile bool first_task_switch = true;
 
 void task_init(struct task* _task, uint32_t eip, char* name);
 void switch_task(struct interrupt_registers** registers);
+
+void task_create_virtual_address_space(struct task* _task);

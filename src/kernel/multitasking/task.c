@@ -32,11 +32,103 @@ void task_init(struct task* _task, uint32_t eip, char* name)
         kmemcpy(_task->name, name, name_length);
         _task->name[name_length] = '\0';
     }
+
+    task_create_virtual_address_space(_task);
 }
 
 void task_destroy(struct task* _task)
 {
     pfa_free_page((virtual_address_t)_task->stack);
+}
+
+void task_virtual_address_space_destroy(struct task* _task)
+{
+    for (uint16_t i = 0; i < 1024; i++)
+    {
+        if (_task->page_directory[i].present)
+        {
+            struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual(_task->page_directory[i].address << 12);
+
+            for (uint16_t j = 0; j < 1024; j++)
+            {
+                if (pt[j].present)
+                {
+                    pfa_free_page(physical_address_to_virtual(pt[j].address << 12));
+                }
+            }
+
+            pfa_free_page((virtual_address_t)pt);
+        }
+    }
+    pfa_free_page((virtual_address_t)_task->page_directory);
+}
+
+void task_virtual_address_space_create_page_table(struct task* _task, uint16_t index)
+{
+    struct page_table_entry* pt = (struct page_table_entry*)pfa_allocate_page();
+
+    init_page_table(pt);
+
+    add_page_table(_task->page_directory, index, virtual_address_to_physical((uint32_t)pt), PAGING_SUPERVISOR_LEVEL, true);
+}
+
+void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index)
+{
+    struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual(_task->page_directory[index].address << 12);
+
+    for (uint16_t i = 0; i < 1024; i++)
+    {
+        if (pt[i].present)
+            pfa_free_page(physical_address_to_virtual(pt[i].address << 12));
+    }
+
+    pfa_free_page((virtual_address_t)pt);
+
+    remove_page_table(_task->page_directory, index);
+}
+
+void task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
+{
+    if (!_task->page_directory[pd_index].present)
+        task_virtual_address_space_create_page_table(_task, pd_index);
+
+    struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual(_task->page_directory[pd_index].address << 12);
+
+    set_page(pt, pt_index, virtual_address_to_physical(pfa_allocate_page()), user_supervisor, read_write);
+}
+
+void task_create_virtual_address_space(struct task* _task)
+{
+    _task->page_directory = (struct page_directory_entry_4kb*)pfa_allocate_page();
+
+    init_page_directory(_task->page_directory);
+
+    _task->registers->cr3 = virtual_address_to_physical((uint32_t)_task->page_directory);
+
+    task_virtual_address_space_create_page_table(_task, 0);
+    struct page_table_entry* first_mb_pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[0].address << 12);
+
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        set_page(first_mb_pt, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
+    }
+
+    for (uint16_t i = 0; i < 256; i++)
+    {
+        task_virtual_address_space_create_page_table(_task, i + 768);
+        // LOG(DEBUG, "Created page table %u at 0x%x", i + 768, (uint32_t)_task->page_directory[i + 768].address << 12);
+        for (uint16_t j = 0; j < 1024; j++)
+        {
+            struct virtual_address_layout layout;
+            layout.page_directory_entry = i + 768;
+            layout.page_table_entry = j;
+            layout.page_offset = 0;
+            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
+            struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[i + 768].address << 12);
+            set_page(pt, j, address, PAGING_SUPERVISOR_LEVEL, true);
+            // LOG(DEBUG, "Created page at 0x%x", address);
+        }
+    }
 }
 
 // void task_init_from_memory(struct task* _task, void (*function)(), uint32_t size, char* name)

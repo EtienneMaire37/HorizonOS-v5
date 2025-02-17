@@ -212,7 +212,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
             layout.page_directory_entry = i + 768;
             layout.page_table_entry = j;
             layout.page_offset = 0;
-            uint32_t address = *(uint32_t*)&layout + 0xc0000000;
+            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
             set_page(&page_table_768_1023[i * 1024], j, address, PAGING_SUPERVISOR_LEVEL, true);
         }
     }
@@ -225,6 +225,15 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     reload_page_directory(); 
 
     LOG(DEBUG, "Done setting up paging"); 
+
+    // for (uint16_t i = 0; i < 1024; i++)
+    // {
+    //     LOG(DEBUG, "Page table 0x%x : 0x%x", i, page_table_0[i].address << 12);
+    //     for (uint16_t j = 0; j < 1024; j++)
+    //     {
+    //         LOG(DEBUG, "Page 0x%x : 0x%x", j, page_table_768_1023[i * 1024 + j].address << 12);
+    //     }
+    // }
 
     LOG(INFO, "Setting up memory allocation");
 
