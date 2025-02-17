@@ -65,6 +65,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 #include "IDT/int.c"
 #include "IDT/pic.c"
 #include "multitasking/task.c"
+#include "memalloc/page_frame_allocator.c"
 
 // ---------------------------------------------------------------
 
@@ -128,10 +129,11 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     }
 
     LOG(INFO, "Memory map:");
+
     for (uint32_t i = 0; i < multiboot_info->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
-        physical_address_t addr = ((physical_address_t)mmmt->addr_high << 8) | mmmt->addr_low;
+        physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
         uint32_t len = mmmt->len_low;
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
@@ -140,7 +142,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
         }   
     }
 
-    LOG(INFO, "Detected %u bytes of usable memory", available_memory); 
+    LOG(INFO, "Detected %u bytes of available memory", available_memory); 
 
     kprintf(" | Done (%u bytes found)\n", available_memory);
 
@@ -210,6 +212,10 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Done setting up paging"); 
 
+    LOG(INFO, "Setting up memory allocation");
+
+    pfa_detect_usable_memory();
+
     LOG(DEBUG, "Retrieving CMOS data");
 
     rtc_detect_mode();
@@ -218,9 +224,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     time_initialized = true;
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
-    LOG(DEBUG, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+    LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
 
-    LOG(DEBUG, "Setting up multitasking");
+    LOG(INFO, "Setting up multitasking");
 
     struct task task_a, task_b;
     task_init(&task_a, (uint32_t)&task_a_main, "Task A");
