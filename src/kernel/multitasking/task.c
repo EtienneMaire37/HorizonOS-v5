@@ -109,9 +109,7 @@ void task_create_virtual_address_space(struct task* _task)
     struct page_table_entry* first_mb_pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[0].address << 12);
 
     for (uint16_t i = 0; i < 256; i++)
-    {
         set_page(first_mb_pt, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
-    }
 
     for (uint16_t i = 0; i < 256; i++)
     {

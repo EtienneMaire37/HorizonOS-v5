@@ -117,6 +117,12 @@ virtual_address_t pfa_allocate_page()
     uint8_t* bitmap_start = (uint8_t*)physical_address_to_virtual(usable_memory_map[0].address);
     uint32_t bitmap_size = usable_memory / 0x1000 / 8;
 
+    if (memory_allocated >= allocatable_memory || memory_allocated + 0x1000 > allocatable_memory)
+    {
+        LOG(CRITICAL, "Out of memory!");
+        kabort();
+    }
+
     for (uint32_t byte_idx = 0; byte_idx < bitmap_size; byte_idx++) 
     {
         uint8_t byte = bitmap_start[byte_idx];
