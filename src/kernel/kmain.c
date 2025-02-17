@@ -244,22 +244,22 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     // multitasking_enabled = true;
 
-    void* page = (void*)pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
-    pfa_allocate_page();
+    // void* page = (void*)pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
+    // pfa_allocate_page();
 
-    void* page2 = (void*)pfa_allocate_page();
-    pfa_allocate_page();
+    // void* page2 = (void*)pfa_allocate_page();
+    // pfa_allocate_page();
 
-    pfa_free_page((virtual_address_t)page);
-    pfa_free_page((virtual_address_t)page2);
+    // pfa_free_page((virtual_address_t)page);
+    // pfa_free_page((virtual_address_t)page2);
 
-    kprintf("0x%x 0x%x\n", *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address), *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address + 1));
+    // kprintf("0x%x 0x%x\n", *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address), *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address + 1));
 
     while(true);
 
