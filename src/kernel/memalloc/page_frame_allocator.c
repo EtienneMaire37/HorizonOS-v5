@@ -25,6 +25,15 @@ void pfa_detect_usable_memory()
         len *= 0x1000;
         if (len == 0)
             continue;
+        if (addr + len <= virtual_address_to_physical((virtual_address_t)&_kernel_end))
+            continue;
+        while (addr < virtual_address_to_physical((virtual_address_t)&_kernel_end))
+        {
+            if (len < 0x1000)
+                continue;
+            len -= 0x1000;
+            addr += 0x1000;
+        }
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
             LOG(INFO, "   Memory block : address : 0x%lx ; length : %u", addr, len);
@@ -34,3 +43,4 @@ void pfa_detect_usable_memory()
 
     LOG(INFO, "Detected %u bytes of usable memory", usable_memory); 
 }
+
