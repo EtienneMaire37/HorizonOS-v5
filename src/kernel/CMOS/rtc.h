@@ -77,6 +77,37 @@ void system_increment_time()
                 {
                     system_day++;
                     system_hours = 0;
+                    if ((system_year % 4 == 0) && (system_year % 400 != 0)) // Leap year
+                    {
+                        if (system_month == 2 && system_day > 29)
+                        {
+                            system_month++;
+                            system_day = 1;
+                        }
+                        else if (system_day > 30 + ((system_month <= 7) ? system_month % 2 : (system_month + 1) % 2))
+                        {
+                            system_month++;
+                            system_day = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (system_month == 2 && system_day > 28)
+                        {
+                            system_month++;
+                            system_day = 1;
+                        }
+                        else if (system_day > 30 + ((system_month <= 7) ? system_month % 2 : (system_month + 1) % 2))
+                        {
+                            system_month++;
+                            system_day = 1;
+                        }
+                    }
+                    if (system_month > 12)
+                    {
+                        system_year++;
+                        system_month = 1;
+                    }
                 }
             }
         }

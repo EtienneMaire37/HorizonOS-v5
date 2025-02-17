@@ -218,7 +218,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     time_initialized = true;
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
-    LOG(DEBUG, "Time : %u:%u:%u %u/%u/%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+    LOG(DEBUG, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
 
     LOG(DEBUG, "Setting up multitasking");
 
