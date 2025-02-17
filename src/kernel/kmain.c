@@ -220,6 +220,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(INFO, "Setting up memory allocation");
 
     pfa_detect_usable_memory();
+    pfa_bitmap_init();
 
     LOG(DEBUG, "Retrieving CMOS data");
     kprintf("Retrieving CMOS data...");

@@ -4,12 +4,15 @@ uint64_t usable_memory;
 
 struct mem_block
 {
-    virtual_address_t address;
+    physical_address_t address;
     uint32_t length;
 };
 
 struct mem_block usable_memory_map[64];
 uint8_t usable_memory_blocks;
+
+uint8_t first_alloc_block;
+virtual_address_t first_alloc_page;
 
 void pfa_detect_usable_memory()
 {
@@ -47,6 +50,12 @@ void pfa_detect_usable_memory()
         }
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
+            if (usable_memory_blocks >= 64)
+            {
+                LOG(WARNING, "Too many memory blocks detected");
+                break;
+            }
+
             LOG(INFO, "   Memory block : address : 0x%lx ; length : %u", addr, len);
             usable_memory += len;
 
@@ -56,5 +65,45 @@ void pfa_detect_usable_memory()
         }   
     }
 
+    if (usable_memory == 0)
+    {
+        LOG(CRITICAL, "No usable memory detected");
+        kabort();
+    }
+
     LOG(INFO, "Detected %u bytes of usable memory", usable_memory); 
+}
+
+void pfa_bitmap_init()
+{
+    uint32_t bitmap_size = usable_memory / 0x1000 / 8;
+    // if (usable_memory % 0x1000)
+    //     bitmap_size++;
+    LOG(INFO, "Allocating %u bytes of bitmap", bitmap_size);
+    virtual_address_t address = physical_address_to_virtual(usable_memory_map[0].address);
+    uint8_t* bitmap_start = (uint8_t*)address;
+    uint8_t current_block = 0;
+    for (uint32_t i = 0; i < bitmap_size; i++)
+    {
+        *(uint8_t*)address = 0;
+        address++;
+        if (address >= physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
+        {
+            current_block++;
+            if (current_block >= usable_memory_blocks)
+            {
+                LOG(CRITICAL, "Not enough memory blocks to allocate bitmap");
+                kabort();
+            }
+            address = usable_memory_map[current_block].address;
+        }
+        // LOG(DEBUG, "Bitmap address : 0x%x", address);
+    }
+
+    first_alloc_block = current_block;
+    first_alloc_page = ((address + 0xfff) / 0x1000) * 0x1000;
+
+    LOG(INFO, "Initialized page frame allocator bitmap at address 0x%x", bitmap_start);
+    LOG(INFO, "First allocatable block : %u", first_alloc_block);
+    LOG(INFO, "First allocatable page address : 0x%x", first_alloc_page);
 }
