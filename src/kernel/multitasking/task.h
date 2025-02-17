@@ -8,7 +8,8 @@ struct task
     struct interrupt_registers* registers;
     struct task* next_task;
     struct task* previous_task;
-    uint8_t stack[4096];
+    // uint8_t stack[4096];
+    uint8_t* stack;
 };
 
 #define TASK_SWITCH_DELAY 30 // ms

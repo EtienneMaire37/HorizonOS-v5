@@ -54,6 +54,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 #include "CMOS/cmos.h"
 #include "CMOS/rtc.h"
 
+#include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
 #include "IO/textio.c"
 #include "klibc/stdio.c"
@@ -65,7 +66,6 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 #include "IDT/int.c"
 #include "IDT/pic.c"
 #include "multitasking/task.c"
-#include "memalloc/page_frame_allocator.c"
 
 // ---------------------------------------------------------------
 
@@ -76,12 +76,21 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 
 physical_address_t virtual_address_to_physical(virtual_address_t address)
 {
-    return address - 0xc0000000;
+    if (address < 0x100000) return (physical_address_t)address;
+    if (address == 0xffffffff) return (physical_address_t)(uint32_t)&page_directory - 0xc0000000;   // Recursive paging
+    if (address >= 0xc0000000) return address - 0xc0000000;
+    LOG(CRITICAL, "Invalid virtual address 0x%x", address);
+    kabort();
+    return 0;
 }
 
 virtual_address_t physical_address_to_virtual(physical_address_t address)
 {
-    return address + 0xc0000000;
+    if (address < 0x100000) return (virtual_address_t)address;
+    if (address < 0xc0000000) return address + 0xc0000000;
+    LOG(CRITICAL, "Unmapped physical address 0x%x", address);
+    kabort();
+    return 0;
 }
 
 void halt()
@@ -242,7 +251,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
 
-    // multitasking_enabled = true;
+    multitasking_enabled = true;
 
     // void* page = (void*)pfa_allocate_page();
     // pfa_allocate_page();

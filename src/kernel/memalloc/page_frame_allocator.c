@@ -136,8 +136,9 @@ virtual_address_t pfa_allocate_page()
                     if (remaining < pages_in_block) 
                     {
                         physical_address_t phys_addr = block->address + (remaining * 0x1000);
-                        // LOG(DEBUG, "Allocated page at 0x%x", phys_addr);
-                        return physical_address_to_virtual(phys_addr);
+                        virtual_address_t virt_addr = physical_address_to_virtual(phys_addr);
+                        LOG(DEBUG, "Allocated page at 0x%x", virt_addr);
+                        return virt_addr;
                     }
                     remaining -= pages_in_block;
                 }
@@ -177,4 +178,6 @@ void pfa_free_page(virtual_address_t address)
     uint8_t* bitmap = (uint8_t*)physical_address_to_virtual(usable_memory_map[0].address);
     
     bitmap[byte_idx] &= ~(1 << bit_idx);
+
+    LOG(DEBUG, "Freed page at 0x%x", address);
 }
