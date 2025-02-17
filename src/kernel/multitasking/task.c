@@ -33,6 +33,11 @@ void task_init(struct task* _task, uint32_t eip, char* name)
     }
 }
 
+// void task_init_from_memory(struct task* _task, void (*function)(), uint32_t size, char* name)
+// {
+//     task_init(_task, (uint32_t)function, name);
+// }
+
 void switch_task(struct interrupt_registers** registers)
 {
     if (!first_task_switch) 
@@ -50,6 +55,7 @@ void switch_task(struct interrupt_registers** registers)
     LOG(DEBUG, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x | eip : 0x%x", 
         current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, current_task->registers->eip);
 }
+
 void task_a_main()
 {
     while (true) asm("int 0xff" :: "a" ('A'));

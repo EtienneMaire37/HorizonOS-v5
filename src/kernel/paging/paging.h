@@ -53,7 +53,7 @@ struct virtual_address_layout
 //     uint8_t reserved_2 : 16;
 // };
 
-struct page_directory_entry_4kb  page_directory[1024] __attribute__((aligned(4096)));
+struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
 void init_page_directory(struct page_directory_entry_4kb* pd);
 void init_page_table(struct page_table_entry* pt);
