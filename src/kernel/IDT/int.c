@@ -27,10 +27,12 @@ void kernel_panic(struct interrupt_registers* params)
     halt();
 }
 
-// #define return_from_isr() { return task_data_segment(*currentTask); }
-#define return_from_isr() { return; }
+uint32_t _cr3;
 
-void __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
+// #define return_from_isr() { return task_data_segment(*currentTask); }
+#define return_from_isr() { return params->cr3; }
+
+uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
 {
     // if (multitasking_enabled)
     //     LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 

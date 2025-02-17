@@ -16,7 +16,6 @@ void task_init(struct task* _task, uint32_t eip, char* name)
     registers->esp = (uint32_t)task_stack_top;
     registers->handled_esp = registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
     
-    // Initialize other registers to 0
     registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
     registers->esi = registers->edi = registers->ebp = 0;
     registers->cr3 = virtual_address_to_physical((uint32_t)page_directory);

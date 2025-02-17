@@ -47,4 +47,4 @@ char* errorString[32] =
 };
 
 void kernel_panic(struct interrupt_registers* params);
-void interrupt_handler(struct interrupt_registers* params);
+uint32_t interrupt_handler(struct interrupt_registers* params);

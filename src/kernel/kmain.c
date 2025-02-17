@@ -77,7 +77,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 physical_address_t virtual_address_to_physical(virtual_address_t address)
 {
     if (address < 0x100000) return (physical_address_t)address;
-    if (address == 0xffffffff) return (physical_address_t)(uint32_t)&page_directory - 0xc0000000;   // Recursive paging
+    if (address == 0xffffffff) return virtual_address_to_physical((virtual_address_t)(uint32_t)&page_directory);   // Recursive paging
     if (address >= 0xc0000000) return address - 0xc0000000;
     LOG(CRITICAL, "Invalid virtual address 0x%x", address);
     kabort();

@@ -102,16 +102,11 @@ _interrupt_handler:
     
     push esp
     call interrupt_handler
-    ; add esp, 4
+    mov cr3, eax
+
     pop esp
 
-    ; pop eax
-    ; mov cr3, eax
-
-    ; pop eax
-    ; mov cr2, eax
-
-    add esp, 8  ; skip cr2 and cr3 for now
+    add esp, 8  ; skip cr2 and cr3
 
     pop eax
     mov ds, ax
