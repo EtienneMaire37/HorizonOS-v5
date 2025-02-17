@@ -223,7 +223,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     pfa_bitmap_init();
 
     LOG(DEBUG, "Retrieving CMOS data");
-    kprintf("Retrieving CMOS data...");
+    kprintf("Retrieving CMOS data...\n");
 
     rtc_detect_mode();
     rtc_get_time();
@@ -242,7 +242,24 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
 
-    multitasking_enabled = true;
+    // multitasking_enabled = true;
+
+    void* page = (void*)pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+    pfa_allocate_page();
+
+    void* page2 = (void*)pfa_allocate_page();
+    pfa_allocate_page();
+
+    pfa_free_page((virtual_address_t)page);
+    pfa_free_page((virtual_address_t)page2);
+
+    kprintf("0x%x 0x%x\n", *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address), *(uint8_t*)physical_address_to_virtual(usable_memory_map[0].address + 1));
 
     while(true);
 

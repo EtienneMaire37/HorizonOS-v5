@@ -107,3 +107,71 @@ void pfa_bitmap_init()
     LOG(INFO, "First allocatable block : %u", first_alloc_block);
     LOG(INFO, "First allocatable page address : 0x%x", first_alloc_page);
 }
+
+virtual_address_t pfa_allocate_page()
+{
+    uint8_t current_block = first_alloc_block;
+    virtual_address_t address = first_alloc_page;
+    while (true)
+    {
+        uint8_t* bitmap_start = (uint8_t*)physical_address_to_virtual(usable_memory_map[current_block].address);
+        uint32_t bitmap_offset = (address - physical_address_to_virtual(usable_memory_map[current_block].address)) / 0x1000 / 8;
+        uint8_t* bitmap_byte = bitmap_start + bitmap_offset;
+        uint8_t bitmap_bit = 1;
+        for (uint8_t i = 0; i < 8; i++)
+        {
+            if (!(*bitmap_byte & bitmap_bit))
+            {
+                *bitmap_byte |= bitmap_bit;
+                LOG(INFO, "Allocated page at address 0x%x", address);
+                return address;
+            }
+            bitmap_bit <<= 1;
+        }
+        address += 0x1000;
+        if (address >= physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
+        {
+            current_block++;
+            if (current_block >= usable_memory_blocks)
+            {
+                LOG(CRITICAL, "Not enough memory blocks to allocate page");
+                kabort();
+            }
+            address = physical_address_to_virtual(usable_memory_map[current_block].address);
+        }
+    }
+}
+
+void pfa_free_page(virtual_address_t address)
+{
+    uint8_t current_block = first_alloc_block;
+    while (true)
+    {
+        if (address >= physical_address_to_virtual(usable_memory_map[current_block].address) && 
+            address < physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
+        {
+            uint8_t* bitmap_start = (uint8_t*)physical_address_to_virtual(usable_memory_map[current_block].address);
+            uint32_t bitmap_offset = (address - physical_address_to_virtual(usable_memory_map[current_block].address)) / 0x1000 / 8;
+            uint8_t* bitmap_byte = bitmap_start + bitmap_offset;
+            uint8_t bitmap_bit = 1;
+            for (uint8_t i = 0; i < 8; i++)
+            {
+                if (*bitmap_byte & bitmap_bit)
+                {
+                    *bitmap_byte &= ~bitmap_bit;
+                    LOG(INFO, "Freed page at address 0x%x", address);
+                    return;
+                }
+                bitmap_bit <<= 1;
+            }
+            LOG(WARNING, "Page at address 0x%x is already free", address);
+            return;
+        }
+        current_block++;
+        if (current_block >= usable_memory_blocks)
+        {
+            LOG(CRITICAL, "Invalid page address 0x%x", address);
+            kabort();
+        }
+    }
+}
