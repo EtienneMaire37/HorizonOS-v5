@@ -137,6 +137,11 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
         uint32_t len = mmmt->len_low;
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
+            if (addr > 0xffffffff)
+            {
+                LOG(CRITICAL, "Memory block above 4GB detected");
+                kabort();
+            }
             LOG(INFO, "   Memory block : address : 0x%lx ; length : %u", addr, len);
             available_memory += len;
         }   
@@ -217,6 +222,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     pfa_detect_usable_memory();
 
     LOG(DEBUG, "Retrieving CMOS data");
+    kprintf("Retrieving CMOS data...");
 
     rtc_detect_mode();
     rtc_get_time();
