@@ -85,7 +85,52 @@ void task_load_from_initrd(struct task* _task, char* name)
         kabort();
     }
 
+    LOG(DEBUG, "ELF header : ");
+    LOG(DEBUG, "   Type : %u", header->type);
+    LOG(DEBUG, "   Machine : %u", header->machine);
+    LOG(DEBUG, "   Entry : 0x%x", header->entry);
+    LOG(DEBUG, "   Program header offset : 0x%x", header->phoff);
+    LOG(DEBUG, "   Section header offset : 0x%x", header->shoff);
+    LOG(DEBUG, "   Flags : 0x%x", header->flags);
+
     task_create_virtual_address_space(_task);
+
+    LOG(DEBUG, "ELF sections : ");
+
+    struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
+    struct elf32_section_header* section_headers = (struct elf32_section_header*)((uint32_t)header + header->shoff);
+    struct elf32_section_header* string_table_header = &section_headers[header->shstrndx];
+    char* string_table = (char*)((uint32_t)header + string_table_header->sh_offset);
+    
+    for (uint16_t i = 0; i < header->phnum; i++)
+    {
+        if (program_headers[i].type == 0) continue;
+        LOG(DEBUG, "   Program section %u : ", i);
+        LOG(DEBUG, "       Type : %u", program_headers[i].type);
+        LOG(DEBUG, "       Offset : 0x%x", program_headers[i].p_offset);
+        LOG(DEBUG, "       Virtual address : 0x%x", program_headers[i].p_vaddr);
+        LOG(DEBUG, "       Physical address : 0x%x", program_headers[i].p_paddr);
+        LOG(DEBUG, "       File size : %u", program_headers[i].p_filesz);
+        LOG(DEBUG, "       Memory size : %u", program_headers[i].p_memsz);
+        LOG(DEBUG, "       Flags : 0x%x", program_headers[i].flags);
+        LOG(DEBUG, "       Alignment : %u", program_headers[i].align);
+    }
+
+    for (uint16_t i = 0; i < header->shnum; i++)
+    {
+        if (section_headers[i].sh_type == 0) continue;
+        LOG(DEBUG, "   Elf section %u : ", i);
+        LOG(DEBUG, "       Name : %s", &string_table[section_headers[i].sh_name]);
+        LOG(DEBUG, "       Type : %u", section_headers[i].sh_type);
+        LOG(DEBUG, "       Flags : 0x%x", section_headers[i].sh_flags);
+        LOG(DEBUG, "       Address : 0x%x", section_headers[i].sh_addr);
+        LOG(DEBUG, "       Offset : 0x%x", section_headers[i].sh_offset);
+        LOG(DEBUG, "       Size : %u", section_headers[i].sh_size);
+        LOG(DEBUG, "       Link : %u", section_headers[i].sh_link);
+        LOG(DEBUG, "       Info : %u", section_headers[i].sh_info);
+        LOG(DEBUG, "       Address alignment : %u", section_headers[i].sh_addralign);
+        LOG(DEBUG, "       Entry size : %u", section_headers[i].sh_entsize);
+    }
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
 }

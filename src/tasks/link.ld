@@ -4,7 +4,7 @@ OUTPUT_FORMAT(elf32-i386)
  
 SECTIONS
 {
-	. = 0xC0000000;
+	. = 0x100000;
 
 	.text ALIGN(0x1000) : 
 	{

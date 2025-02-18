@@ -46,3 +46,39 @@ struct elf32_header
     elf32_half_t    shnum;
     elf32_half_t    shstrndx;
 };
+
+struct elf32_program_header
+{
+    elf32_word_t    type;
+    elf32_off_t     p_offset;
+    elf32_addr_t    p_vaddr;
+    elf32_addr_t    p_paddr;
+    elf32_word_t    p_filesz;
+    elf32_word_t    p_memsz;
+    elf32_word_t    flags;
+    elf32_word_t    align;
+};
+
+struct elf32_section_header
+{
+    elf32_word_t    sh_name;
+    elf32_word_t    sh_type;
+    elf32_word_t    sh_flags;
+    elf32_addr_t    sh_addr;
+    elf32_off_t     sh_offset;
+    elf32_word_t    sh_size;
+    elf32_word_t    sh_link;
+    elf32_word_t    sh_info;
+    elf32_word_t    sh_addralign;
+    elf32_word_t    sh_entsize;
+};
+
+#define ELF_SEGMENT_TYPE_NULL       0
+#define ELF_SEGMENT_TYPE_LOAD       1
+#define ELF_SEGMENT_TYPE_DYNAMIC    2
+#define ELF_SEGMENT_TYPE_INTERP     3
+#define ELF_SEGMENT_TYPE_NOTE       4
+
+#define ELF_FLAG_EXECUTABLE         1
+#define ELF_FLAG_WRITABLE           2
+#define ELF_FLAG_READABLE           4

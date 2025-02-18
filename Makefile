@@ -42,7 +42,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/taskA.elf:
+src/tasks/bin/taskA.elf: src/tasks/src/taskA.asm src/tasks/link.ld
 	$(ASM) -f elf32 -o "src/tasks/bin/taskA.o" "src/tasks/src/taskA.asm"
 	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskA.elf" "src/tasks/bin/taskA.o"
 
