@@ -18,6 +18,9 @@ extern uint8_t stack_top;
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
+virtual_address_t kernel_start;
+virtual_address_t kernel_end;
+
 uint64_t kernel_size = 0;
 uint64_t available_memory = 0;
 
@@ -34,6 +37,8 @@ void halt();
 
 physical_address_t virtual_address_to_physical(virtual_address_t address);
 virtual_address_t physical_address_to_virtual(physical_address_t address);
+
+multiboot_module_t* initrd_module;
 
 #include "IO/io.h"
 #include "PS2/ps2.h"
@@ -113,7 +118,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     tty_clear_screen(' ');
     tty_reset_cursor();
 
-    LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &_kernel_end, kernel_size); 
+    LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
 
     // halt();
 
@@ -234,6 +239,28 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     //         LOG(DEBUG, "Page 0x%x : 0x%x", j, page_table_768_1023[i * 1024 + j].address << 12);
     //     }
     // }
+
+    if (multiboot_info->mods_count != 1)
+    {
+        LOG(CRITICAL, "Invalid number of modules (%u)", multiboot_info->mods_count);
+        kabort();
+    }
+
+    physical_address_t initrd_module_address = multiboot_info->mods_addr;
+
+    initrd_module = (multiboot_module_t*)physical_address_to_virtual(initrd_module_address);    // Conversion is'nt needed because the 1st MB is identity mapped
+
+    LOG(INFO, "Initrd module address : 0x%x", initrd_module);
+    LOG(INFO, "Initrd module start : 0x%x", initrd_module->mod_start);
+    LOG(INFO, "Initrd module end : 0x%x", initrd_module->mod_end);
+
+    initrd_module->mod_start = physical_address_to_virtual(initrd_module->mod_start);
+    initrd_module->mod_end = physical_address_to_virtual(initrd_module->mod_end);
+
+    kernel_end = (virtual_address_t)&_kernel_end;
+    kernel_start = (virtual_address_t)&_kernel_start;
+
+    kernel_end = max(kernel_end, initrd_module->mod_end);
 
     LOG(INFO, "Setting up memory allocation");
 

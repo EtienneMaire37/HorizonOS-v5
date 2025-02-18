@@ -18,7 +18,7 @@ run: all
 	-usb                                           		\
 	-vga std 
 
-horizonos.iso: Makefile src/kernel/kernelentry.asm rmbin
+horizonos.iso: rmbin src/tasks/bin/taskA.elf
 	mkdir bin -p
 
 	$(ASM) -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
@@ -31,11 +31,20 @@ horizonos.iso: Makefile src/kernel/kernelentry.asm rmbin
 	ld -T src/link.ld -m elf_i386 
 	
 	mkdir -p ./root/boot/grub
+	mkdir -p ./bin/initrd
+
+	cp src/tasks/bin/taskA.elf ./bin/initrd/taskA.elf
+
+	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
 	
 	cp ./bin/kernel.elf ./root/boot/kernel.elf
 	cp ./src/grub.cfg ./root/boot/grub/grub.cfg
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
+
+src/tasks/bin/taskA.elf:
+	$(ASM) -f elf32 -o "src/tasks/bin/taskA.o" "src/tasks/src/taskA.asm"
+	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskA.elf" "src/tasks/bin/taskA.o"
 
 rmbin:
 	rm -rf ./bin/*

@@ -13,6 +13,7 @@ uint8_t usable_memory_blocks;
 
 uint8_t first_alloc_block;
 virtual_address_t first_alloc_page;
+uint32_t bitmap_size;
 
 uint32_t memory_allocated, allocatable_memory;
 
@@ -43,9 +44,9 @@ void pfa_detect_usable_memory()
         len *= 0x1000;
         if (len == 0)
             continue;
-        if (addr + len <= virtual_address_to_physical((virtual_address_t)&_kernel_end))
+        if (addr + len <= virtual_address_to_physical(kernel_end))
             continue;
-        while (addr < virtual_address_to_physical((virtual_address_t)&_kernel_end))
+        while (addr < virtual_address_to_physical(kernel_end))
         {
             if (len < 0x1000)
                 continue;
@@ -80,7 +81,13 @@ void pfa_detect_usable_memory()
 
 void pfa_bitmap_init()
 {
-    uint32_t bitmap_size = usable_memory / 0x1000 / 8;
+    // Optimal bitmap size calculation
+    // Let X be the usable memory
+    // Let (un) = X
+    // Let f(x) = (X - x) / 0x1000 / 8 so that un+1=f(un)
+    // Using the fixed point theorem, we can find that x = 32768/32769 * X
+    
+    bitmap_size = (uint32_t)(usable_memory / 0x1000 / 8 * 32768 + 32768) / 32769;   // Round up the byte
     memory_allocated = 0;
     allocatable_memory = usable_memory - bitmap_size;
     // if (usable_memory % 0x1000)
@@ -117,7 +124,6 @@ void pfa_bitmap_init()
 virtual_address_t pfa_allocate_page()
 {
     uint8_t* bitmap_start = (uint8_t*)physical_address_to_virtual(usable_memory_map[0].address);
-    uint32_t bitmap_size = usable_memory / 0x1000 / 8;
 
     if (memory_allocated >= allocatable_memory || memory_allocated + 0x1000 > allocatable_memory)
     {
