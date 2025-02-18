@@ -59,6 +59,8 @@ multiboot_module_t* initrd_module;
 #include "CMOS/cmos.h"
 #include "CMOS/rtc.h"
 #include "memalloc/page_frame_allocator.h"
+#include "initrd/ustar.h"
+#include "initrd/initrd.h"
 
 #include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
@@ -241,6 +243,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     //     }
     // }
 
+    LOG(DEBUG, "Setting up the initrd");
+
     if (multiboot_info->mods_count != 1)
     {
         LOG(CRITICAL, "Invalid number of modules (%u)", multiboot_info->mods_count);
@@ -262,6 +266,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kernel_start = (virtual_address_t)&_kernel_start;
 
     kernel_end = max(kernel_end, initrd_module->mod_end);
+
+    initrd_parse();
 
     LOG(INFO, "Setting up memory allocation");
 
