@@ -58,6 +58,7 @@ multiboot_module_t* initrd_module;
 #include "multitasking/task.h"
 #include "CMOS/cmos.h"
 #include "CMOS/rtc.h"
+#include "memalloc/page_frame_allocator.h"
 
 #include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
