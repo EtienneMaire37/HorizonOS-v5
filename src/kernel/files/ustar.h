@@ -1,24 +1,24 @@
 #pragma once
 
-struct USTARHeader
+struct ustar_header
 {
-    char name[100];
-    char mode[8];
-    char owner_id[8];
-    char group_id[8];
-    char size[12];
-    char last_modification[12];
-    char checksum[8];
-    char type;
-    char linked_file[100];
-    char ustar[6];
-    char version[2];
-    char owner_name[32];
-    char group_name[32];
-    char device_major[8];
-    char device_minor[8];
-    char filename_prefix[155];
-    char padding[12];
+    char    name[100];
+    uint8_t mode[8];
+    uint8_t owner_id[8];
+    uint8_t group_id[8];
+    char    size[12];
+    uint8_t last_modification[12];
+    uint8_t checksum[8];
+    uint8_t type;
+    uint8_t linked_file[100];
+    uint8_t ustar[6];
+    uint8_t version[2];
+    uint8_t owner_name[32];
+    uint8_t group_name[32];
+    uint8_t device_major[8];
+    uint8_t device_minor[8];
+    uint8_t filename_prefix[155];
+    uint8_t padding[12];
 };
 
 #define USTAR_BLOCK_SIZE 512

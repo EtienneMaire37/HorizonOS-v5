@@ -1,10 +1,13 @@
 #pragma once
 
+typedef uint8_t tar_file_type;
+
 struct initrd_file
 {
     char* name;
     uint32_t size;
     uint8_t* data;
+    tar_file_type type;
 
     // 12 bytes
 };
@@ -29,7 +32,7 @@ void initrd_parse()
 
     while (initrd_offset < initrd_size)
     {
-        struct USTARHeader* header = (struct USTARHeader*)(initrd_start + initrd_offset);
+        struct ustar_header* header = (struct ustar_header*)(initrd_start + initrd_offset);
 
         if (header->name[0] == '\0')
         {
@@ -50,6 +53,8 @@ void initrd_parse()
         initrd_files[initrd_files_count].name = &header->name[0];
         initrd_files[initrd_files_count].size = file_size;
         initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
+        if (header->type == 0) header->type = '0';
+        initrd_files[initrd_files_count].type = header->type;
         initrd_files_count++;
 
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;

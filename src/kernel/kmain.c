@@ -59,7 +59,8 @@ multiboot_module_t* initrd_module;
 #include "CMOS/cmos.h"
 #include "CMOS/rtc.h"
 #include "memalloc/page_frame_allocator.h"
-#include "initrd/ustar.h"
+#include "files/ustar.h"
+#include "files/elf.h"
 #include "initrd/initrd.h"
 
 #include "memalloc/page_frame_allocator.c"
@@ -294,7 +295,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
 
-    multitasking_enabled = true;
+    // multitasking_enabled = true;
     
     while(true);
 
