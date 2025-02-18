@@ -256,9 +256,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     initrd_module = (multiboot_module_t*)physical_address_to_virtual(initrd_module_address);    // Conversion is'nt needed because the 1st MB is identity mapped
 
-    LOG(INFO, "Initrd module address : 0x%x", initrd_module);
-    LOG(INFO, "Initrd module start : 0x%x", initrd_module->mod_start);
-    LOG(INFO, "Initrd module end : 0x%x", initrd_module->mod_end);
+    LOG(DEBUG, "Initrd module address : 0x%x", initrd_module);
+    LOG(DEBUG, "Initrd module start : 0x%x", initrd_module->mod_start);
+    LOG(DEBUG, "Initrd module end : 0x%x", initrd_module->mod_end);
 
     initrd_module->mod_start = physical_address_to_virtual(initrd_module->mod_start);
     initrd_module->mod_end = physical_address_to_virtual(initrd_module->mod_end);
@@ -270,7 +270,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     initrd_parse();
 
-    LOG(INFO, "Setting up memory allocation");
+    LOG(DEBUG, "Setting up memory allocation");
 
     pfa_detect_usable_memory();
     pfa_bitmap_init();
@@ -286,11 +286,12 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
 
-    LOG(INFO, "Setting up multitasking");
+    LOG(DEBUG, "Setting up multitasking");
 
-    struct task task_a, task_b;
+    struct task task_a, task_b, task_c;
     task_init(&task_a, (uint32_t)&task_a_main, "Task A");
     task_init(&task_b, (uint32_t)&task_b_main, "Task B");
+    task_load_from_initrd(&task_c, "./bin/initrd/taskA.elf");
     task_a.next_task = task_a.previous_task = &task_b;
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;

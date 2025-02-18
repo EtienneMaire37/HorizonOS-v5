@@ -27,14 +27,14 @@ struct elf32_header
     uint8_t         magic[4];
     uint8_t         architecture;
     uint8_t         byte_order;
-    uint8_t         version;
+    uint8_t         header_version;
     uint8_t         osabi;
     uint8_t         abiversion;
     uint8_t         pad[7];
     
     elf32_half_t    type;
     elf32_half_t    machine;
-    elf32_word_t    version;
+    elf32_word_t    elf_version;
     elf32_addr_t    entry;
     elf32_off_t     phoff;
     elf32_off_t     shoff;

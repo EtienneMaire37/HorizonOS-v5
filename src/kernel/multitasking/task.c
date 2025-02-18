@@ -36,6 +36,60 @@ void task_init(struct task* _task, uint32_t eip, char* name)
     task_create_virtual_address_space(_task);
 }
 
+void task_load_from_initrd(struct task* _task, char* name)
+{
+    LOG(INFO, "Loading task \"%s\" from initrd", name);
+
+    struct initrd_file* file = initrd_find_file(name);
+    if (!file) 
+    {
+        LOG(CRITICAL, "File \"%s\" not found in initrd", name);
+        kabort();
+    }
+
+    struct elf32_header* header = (struct elf32_header*)file->data;
+
+    if (kmemcmp(header->magic, "\x7f""ELF", 4) != 0)
+    {
+        LOG(CRITICAL, "Invalid ELF header");
+        kabort();
+    }
+
+    if (header->architecture != ELF_CLASS_32)
+    {
+        LOG(CRITICAL, "Invalid ELF architecture");
+        kabort();
+    }
+
+    if (header->byte_order != ELF_DATA_LITTLE_ENDIAN)
+    {
+        LOG(CRITICAL, "Invalid ELF byte order");
+        kabort();
+    }
+
+    if (header->osabi != ELF_OSABI_SYSV)
+    {
+        LOG(CRITICAL, "Invalid ELF OSABI");
+        kabort();
+    }
+
+    if (header->machine != ELF_INSTRUCTION_SET_x86)
+    {
+        LOG(CRITICAL, "Invalid ELF machine");
+        kabort();
+    }
+
+    if (header->type != ELF_TYPE_EXECUTABLE)
+    {
+        LOG(CRITICAL, "Invalid ELF type");
+        kabort();
+    }
+
+    task_create_virtual_address_space(_task);
+
+    LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
+}
+
 void task_destroy(struct task* _task)
 {
     pfa_free_page((virtual_address_t)_task->stack);
@@ -146,7 +200,7 @@ void switch_task(struct interrupt_registers** registers)
 
     current_task = current_task->next_task;
 
-    LOG(DEBUG, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
+    LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
         current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip);
     
     *registers = current_task->registers;

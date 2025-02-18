@@ -5,12 +5,14 @@ void debug_outc(char c)
     outb(0xe9, c);
 }
 
-#define LOG_LEVEL_DEBUG     0
-#define LOG_LEVEL_INFO      1
-#define LOG_LEVEL_WARNING   2
-#define LOG_LEVEL_ERROR     3
-#define LOG_LEVEL_CRITICAL  4
+#define LOG_LEVEL_TRACE     0
+#define LOG_LEVEL_DEBUG     1
+#define LOG_LEVEL_INFO      2
+#define LOG_LEVEL_WARNING   3
+#define LOG_LEVEL_ERROR     4
+#define LOG_LEVEL_CRITICAL  5
 
+#define TRACE               LOG_LEVEL_TRACE
 #define DEBUG               LOG_LEVEL_DEBUG
 #define INFO                LOG_LEVEL_INFO
 #define WARNING             LOG_LEVEL_WARNING
@@ -19,8 +21,9 @@ void debug_outc(char c)
 
 #define LOG_LEVEL           DEBUG
 
-char* LOG_LEVEL_STR[5] = 
+char* LOG_LEVEL_STR[6] = 
 {
+    "TRACE",
     "DEBUG",
     "INFO",
     "WARN",

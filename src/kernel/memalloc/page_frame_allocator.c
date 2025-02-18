@@ -73,7 +73,7 @@ void pfa_bitmap_init()
     allocatable_memory = usable_memory - bitmap_size;
     // if (usable_memory % 0x1000)
     //     bitmap_size++;
-    LOG(INFO, "Allocating %u bytes of bitmap", bitmap_size);
+    LOG(DEBUG, "Allocating %u bytes of bitmap", bitmap_size);
     virtual_address_t address = physical_address_to_virtual(usable_memory_map[0].address);
     uint8_t* bitmap_start = (uint8_t*)address;
     uint8_t current_block = 0;
@@ -97,9 +97,9 @@ void pfa_bitmap_init()
     first_alloc_block = current_block;
     first_alloc_page = ((address + 0xfff) / 0x1000) * 0x1000;
 
-    LOG(INFO, "Initialized page frame allocator bitmap at address 0x%x", bitmap_start);
-    LOG(INFO, "First allocatable block : %u", first_alloc_block);
-    LOG(INFO, "First allocatable page address : 0x%x", first_alloc_page);
+    LOG(DEBUG, "Initialized page frame allocator bitmap at address 0x%x", bitmap_start);
+    LOG(DEBUG, "First allocatable block : %u", first_alloc_block);
+    LOG(DEBUG, "First allocatable page address : 0x%x", first_alloc_page);
 }
 
 virtual_address_t pfa_allocate_page()
