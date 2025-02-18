@@ -50,7 +50,7 @@ void rtc_get_time()
     if (!rtc_24_hour_mode)
     {
         if (pm)
-            system_hours = (system_hours + 12) % 24;
+            system_hours = (system_hours + 12) % 24;    // 12pm = 0am, 12am = 12am
         else
             system_hours = system_hours;
     }
