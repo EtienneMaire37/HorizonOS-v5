@@ -73,11 +73,22 @@ struct elf32_section_header
     elf32_word_t    sh_entsize;
 };
 
-#define ELF_SEGMENT_TYPE_NULL       0
-#define ELF_SEGMENT_TYPE_LOAD       1
-#define ELF_SEGMENT_TYPE_DYNAMIC    2
-#define ELF_SEGMENT_TYPE_INTERP     3
-#define ELF_SEGMENT_TYPE_NOTE       4
+#define ELF_PROGRAM_TYPE_NULL       0
+#define ELF_PROGRAM_TYPE_LOAD       1
+#define ELF_PROGRAM_TYPE_DYNAMIC    2
+#define ELF_PROGRAM_TYPE_INTERP     3
+#define ELF_PROGRAM_TYPE_NOTE       4
+
+#define ELF_SECTION_TYPE_NULL       0
+#define ELF_SECTION_TYPE_PROGBITS   1
+#define ELF_SECTION_TYPE_SYMTAB     2
+#define ELF_SECTION_TYPE_STRTAB     3
+#define ELF_SECTION_TYPE_RELA       4
+#define ELF_SECTION_TYPE_NOBITS     8
+#define ELF_SECTION_TYPE_REL        9
+
+#define ELF_SECTION_FLAG_WRITE      1
+#define ELF_SECTION_FLAG_ALLOC      2
 
 #define ELF_FLAG_EXECUTABLE         1
 #define ELF_FLAG_WRITABLE           2

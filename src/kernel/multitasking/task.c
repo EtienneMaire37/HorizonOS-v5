@@ -104,7 +104,7 @@ void task_load_from_initrd(struct task* _task, char* name)
     
     for (uint16_t i = 0; i < header->phnum; i++)
     {
-        if (program_headers[i].type == 0) continue;
+        if (program_headers[i].type == ELF_PROGRAM_TYPE_NULL) continue;
         LOG(DEBUG, "   Program section %u : ", i);
         LOG(DEBUG, "       Type : %u", program_headers[i].type);
         LOG(DEBUG, "       Offset : 0x%x", program_headers[i].p_offset);
@@ -130,6 +130,33 @@ void task_load_from_initrd(struct task* _task, char* name)
         LOG(DEBUG, "       Info : %u", section_headers[i].sh_info);
         LOG(DEBUG, "       Address alignment : %u", section_headers[i].sh_addralign);
         LOG(DEBUG, "       Entry size : %u", section_headers[i].sh_entsize);
+
+        if (section_headers[i].sh_flags & ELF_SECTION_FLAG_ALLOC)   // Allocate section
+        {
+            virtual_address_t vaddr = section_headers[i].sh_addr;
+            if (vaddr & 0xfff)
+            {
+                LOG(CRITICAL, "Section is not page aligned");
+                kabort();
+            }
+            for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
+            {
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)(&vaddr + j);
+                LOG(DEBUG, "Allocating page at 0x%x", vaddr + j);
+                task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, PAGING_SUPERVISOR_LEVEL, 1);
+                kmemcpy((void*)vaddr + j, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                layout.page_offset += 0x1000;
+                if (layout.page_offset == 0)
+                {
+                    layout.page_table_entry++;
+                    if (layout.page_table_entry == 1024)
+                    {
+                        layout.page_table_entry = 0;
+                        layout.page_directory_entry++;
+                    }
+                }
+            }
+        }
     }
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
@@ -166,8 +193,11 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
 {
     struct page_table_entry* pt = (struct page_table_entry*)pfa_allocate_page();
 
+    // LOG(DEBUG, "Creating page table at 0x%x : 0x%x", index, (uint32_t)pt);
+
     init_page_table(pt);
 
+    // ! CAUSES A "FATAL 	Tried to set a non page aligned page table"
     add_page_table(_task->page_directory, index, virtual_address_to_physical((uint32_t)pt), PAGING_SUPERVISOR_LEVEL, true);
 }
 
@@ -188,6 +218,8 @@ void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t i
 
 void task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
 {
+    // LOG(DEBUG, "Creating page at 0x%x : 0x%x", pd_index, pt_index);
+    // LOG(DEBUG, "Page table address : 0x%x", (uint32_t)_task->page_directory[pd_index].address << 12);
     if (!_task->page_directory[pd_index].present)
         task_virtual_address_space_create_page_table(_task, pd_index);
 
@@ -206,7 +238,6 @@ void task_create_virtual_address_space(struct task* _task)
 
     task_virtual_address_space_create_page_table(_task, 0);
     struct page_table_entry* first_mb_pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[0].address << 12);
-
     for (uint16_t i = 0; i < 256; i++)
         set_page(first_mb_pt, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
 

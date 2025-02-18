@@ -288,10 +288,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Setting up multitasking");
 
-    struct task task_a, task_b, task_c;
-    task_init(&task_a, (uint32_t)&task_a_main, "Task A");
+    struct task task_a, task_b;
+    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf");
     task_init(&task_b, (uint32_t)&task_b_main, "Task B");
-    task_load_from_initrd(&task_c, "./bin/initrd/taskA.elf");
     task_a.next_task = task_a.previous_task = &task_b;
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;

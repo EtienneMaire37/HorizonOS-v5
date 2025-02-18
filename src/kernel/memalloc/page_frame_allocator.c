@@ -104,85 +104,53 @@ void pfa_bitmap_init()
 
 virtual_address_t pfa_allocate_page()
 {
-    uint8_t* bitmap_start = (uint8_t*)physical_address_to_virtual(usable_memory_map[0].address);
-
-    if (memory_allocated >= allocatable_memory || memory_allocated + 0x1000 > allocatable_memory)
+    if (memory_allocated + 0x1000 > allocatable_memory)
     {
-        LOG(CRITICAL, "Out of memory!");
+        LOG(CRITICAL, "Out of memory !");
         kabort();
     }
 
-    for (uint32_t byte_idx = 0; byte_idx < bitmap_size; byte_idx++) 
+    uint32_t bitmap_byte_address = physical_address_to_virtual(usable_memory_map[0].address);
+    uint8_t current_block = 0;
+    for (uint32_t i = 0; i < bitmap_size; i++)
     {
-        uint8_t byte = bitmap_start[byte_idx];
-        if (byte == 0xff) 
-            continue;
-        
-        for (uint8_t bit_idx = 0; bit_idx < 8; bit_idx++) 
+        if (*(uint8_t*)bitmap_byte_address != 0xff)
         {
-            if (!(byte & (1 << bit_idx))) 
+            for (uint8_t j = 0; j < 8; j++)
             {
-                bitmap_start[byte_idx] |= (1 << bit_idx);
-                
-                uint32_t page_number = byte_idx * 8 + bit_idx;
-                uint32_t remaining = page_number;
-                
-                for (uint8_t block_idx = 0; block_idx < usable_memory_blocks; block_idx++) 
+                uint8_t bit = 1 << j;
+                if (!((*(uint8_t*)bitmap_byte_address) & bit))
                 {
-                    struct mem_block* block = &usable_memory_map[block_idx];
-                    uint32_t pages_in_block = block->length / 0x1000;
-                    
-                    if (remaining < pages_in_block) 
-                    {
-                        physical_address_t phys_addr = block->address + (remaining * 0x1000);
-                        virtual_address_t virt_addr = physical_address_to_virtual(phys_addr);
-                        // LOG(DEBUG, "Allocated page at 0x%x", virt_addr);
-                        memory_allocated += 0x1000;
-                        LOG_MEM_ALLOCATED();
-                        return virt_addr;
-                    }
-                    remaining -= pages_in_block;
+                    *(uint8_t*)bitmap_byte_address |= bit;
+                    uint32_t page = i * 8 + j;
+                    virtual_address_t address = page * 512 + first_alloc_page;
+                    // LOG(DEBUG, "Allocated page at 0x%x", address);
+                    memory_allocated += 0x1000;
+                    LOG_MEM_ALLOCATED();
+                    return address;
                 }
-
-                LOG(CRITICAL, "Allocated page not in memory map!");
-                kabort();
             }
         }
+
+        bitmap_byte_address++;
+        if (bitmap_byte_address >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
+        {
+            current_block++;
+            if (current_block >= usable_memory_blocks)
+            {
+                LOG(CRITICAL, "Out of memory !");
+                kabort();
+            }
+            bitmap_byte_address = usable_memory_map[current_block].address;
+        }
     }
-    
-    LOG(CRITICAL, "Out of memory!");
+
+    LOG(CRITICAL, "Out of memory !");
     kabort();
     return 0;
 }
 
 void pfa_free_page(virtual_address_t address)
 {
-    physical_address_t phys_addr = virtual_address_to_physical(address);
-    uint32_t page_number = 0;
     
-    for (uint8_t block_idx = 0; block_idx < usable_memory_blocks; block_idx++) 
-    {
-        struct mem_block* block = &usable_memory_map[block_idx];
-        
-        if (phys_addr >= block->address && 
-            phys_addr < (block->address + block->length)) 
-        {
-            page_number += (phys_addr - block->address) / 0x1000;
-            break;
-        }
-
-        page_number += block->length / 0x1000;
-    }
-
-    uint32_t byte_idx = page_number / 8;
-    uint8_t bit_idx = page_number % 8;
-    uint8_t* bitmap = (uint8_t*)physical_address_to_virtual(usable_memory_map[0].address);
-    
-    bitmap[byte_idx] &= ~(1 << bit_idx);
-
-    memory_allocated -= 0x1000;
-
-    LOG_MEM_ALLOCATED();
-
-    // LOG(DEBUG, "Freed page at 0x%x", address);
 }

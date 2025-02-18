@@ -22,6 +22,11 @@ bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 
 void task_init(struct task* _task, uint32_t eip, char* name);
-void switch_task(struct interrupt_registers** registers);
-
+void task_load_from_initrd(struct task* _task, char* name);
+void task_destroy(struct task* _task);
+void task_virtual_address_space_destroy(struct task* _task);
+void task_virtual_address_space_create_page_table(struct task* _task, uint16_t index);
+void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index);
+void task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
 void task_create_virtual_address_space(struct task* _task);
+void switch_task(struct interrupt_registers** registers);
