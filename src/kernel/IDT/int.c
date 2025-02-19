@@ -34,9 +34,12 @@ uint32_t _cr3;
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
 {
-    // if (multitasking_enabled)
-    //     LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 
-    //         params->esp, params->handled_esp, params->eip);
+    if (multitasking_enabled)
+        LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 
+            params->esp, params->handled_esp, params->eip);
+
+    if (current_task->name[0] == '.')   // TASK A
+        LOG(DEBUG, "0x100000 : 0x%x", *(uint32_t*)0x100000);
 
     if (params->interrupt_number < 32)            // Fault
     {

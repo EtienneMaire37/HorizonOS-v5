@@ -141,10 +141,14 @@ void task_load_from_initrd(struct task* _task, char* name)
             }
             for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
             {
+                // !!!!!!!!!!!!!!!!!!! WRONG CODE (copying only continuous pages) !!!!!!!!!!!!!!!!!!!
+                // !!!!!!!!!!!!!!!!!! FOR SOME REASON DOESN'T COPY ANYTHING !!!!!!!!!!!!!!!!!!!!!!!!
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)(&vaddr + j);
-                LOG(DEBUG, "Allocating page at 0x%x", vaddr + j);
+                LOG(DEBUG, "Allocating page at vaddr : 0x%x", vaddr + j);
+                virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))->address << 12);
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, PAGING_SUPERVISOR_LEVEL, 1);
-                kmemcpy((void*)vaddr + j, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                kmemcpy((void*)paddr + j, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                LOG(DEBUG, "Data at 0x%x : 0x%x 0x%x", vaddr + j, *(uint8_t*)(paddr + j), *(uint8_t*)(paddr + j + 1));
                 layout.page_offset += 0x1000;
                 if (layout.page_offset == 0)
                 {
@@ -157,6 +161,39 @@ void task_load_from_initrd(struct task* _task, char* name)
                 }
             }
         }
+    }
+
+    _task->stack = (uint8_t*)pfa_allocate_page();
+
+    uint8_t* task_stack_top = _task->stack + 4096;
+
+    struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
+    
+    registers->cs = KERNEL_CODE_SEGMENT;
+    registers->ds = KERNEL_DATA_SEGMENT;
+    registers->eflags = 0x200; // Interrupts enabled (bit 9)
+    registers->ss = KERNEL_DATA_SEGMENT;
+    registers->esp = (uint32_t)task_stack_top;
+    registers->handled_esp = registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
+    
+    registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
+    registers->esi = registers->edi = registers->ebp = 0;
+    registers->cr3 = (uint32_t)virtual_address_to_physical((virtual_address_t)&_task->page_directory[0]);
+
+    registers->eip = header->entry;
+
+    _task->registers = registers;
+
+    size_t name_length = kstrlen(name);
+    if (name_length >= 31)
+    {
+        kmemcpy(_task->name, name, 31);
+        _task->name[31] = '\0';
+    }
+    else
+    {
+        kmemcpy(_task->name, name, name_length);
+        _task->name[name_length] = '\0';
     }
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
@@ -197,7 +234,6 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
 
     init_page_table(pt);
 
-    // ! CAUSES A "FATAL 	Tried to set a non page aligned page table"
     add_page_table(_task->page_directory, index, virtual_address_to_physical((uint32_t)pt), PAGING_SUPERVISOR_LEVEL, true);
 }
 
@@ -220,6 +256,7 @@ void task_virtual_address_space_create_page(struct task* _task, uint16_t pd_inde
 {
     // LOG(DEBUG, "Creating page at 0x%x : 0x%x", pd_index, pt_index);
     // LOG(DEBUG, "Page table address : 0x%x", (uint32_t)_task->page_directory[pd_index].address << 12);
+
     if (!_task->page_directory[pd_index].present)
         task_virtual_address_space_create_page_table(_task, pd_index);
 

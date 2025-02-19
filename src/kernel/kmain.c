@@ -295,7 +295,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
 
-    // multitasking_enabled = true;
+    multitasking_enabled = true;
     
     while(true);
 
