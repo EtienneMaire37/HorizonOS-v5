@@ -18,7 +18,7 @@ run: all
 	-usb                                           		\
 	-vga std 
 
-horizonos.iso: rmbin src/tasks/bin/taskA.elf
+horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf
 	mkdir bin -p
 
 	$(ASM) -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
@@ -34,6 +34,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf
 	mkdir -p ./bin/initrd
 
 	cp src/tasks/bin/taskA.elf ./bin/initrd/taskA.elf
+	cp src/tasks/bin/taskB.elf ./bin/initrd/taskB.elf
 
 	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
 	
@@ -45,6 +46,9 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf
 src/tasks/bin/taskA.elf: src/tasks/src/taskA.asm src/tasks/link.ld
 	$(ASM) -f elf32 -o "src/tasks/bin/taskA.o" "src/tasks/src/taskA.asm"
 	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskA.elf" "src/tasks/bin/taskA.o"
+src/tasks/bin/taskB.elf: src/tasks/src/taskB.asm src/tasks/link.ld
+	$(ASM) -f elf32 -o "src/tasks/bin/taskB.o" "src/tasks/src/taskB.asm"
+	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskB.elf" "src/tasks/bin/taskB.o"
 
 rmbin:
 	rm -rf ./bin/*

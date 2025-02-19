@@ -316,13 +316,3 @@ void switch_task(struct interrupt_registers** registers)
     
     *registers = current_task->registers;
 }
-
-void task_a_main()
-{
-    while (true) asm("int 0xff" :: "a" ('A'));
-}
-
-void task_b_main()
-{
-    while (true) asm("int 0xff" :: "a" ('B'));
-}
