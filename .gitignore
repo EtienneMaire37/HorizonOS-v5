@@ -1,4 +1,5 @@
 horizonos.iso
 debug/*
 bin/*
+src/tasks/bin/*
 root/
