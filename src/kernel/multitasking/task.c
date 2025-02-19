@@ -141,14 +141,12 @@ void task_load_from_initrd(struct task* _task, char* name)
             }
             for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
             {
-                // !!!!!!!!!!!!!!!!!!! WRONG CODE (copying only continuous pages) !!!!!!!!!!!!!!!!!!!
-                // !!!!!!!!!!!!!!!!!! FOR SOME REASON DOESN'T COPY ANYTHING !!!!!!!!!!!!!!!!!!!!!!!!
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)(&vaddr + j);
                 LOG(DEBUG, "Allocating page at vaddr : 0x%x", vaddr + j);
-                virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))->address << 12);
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, PAGING_SUPERVISOR_LEVEL, 1);
-                kmemcpy((void*)paddr + j, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
-                LOG(DEBUG, "Data at 0x%x : 0x%x 0x%x", vaddr + j, *(uint8_t*)(paddr + j), *(uint8_t*)(paddr + j + 1));
+                virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))[layout.page_table_entry].address << 12);
+                kmemcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                // LOG(DEBUG, "Data at 0x%x (0x%x) : 0x%x 0x%x", vaddr + j, paddr, *(uint8_t*)paddr, *(uint8_t*)(paddr + 1));
                 layout.page_offset += 0x1000;
                 if (layout.page_offset == 0)
                 {

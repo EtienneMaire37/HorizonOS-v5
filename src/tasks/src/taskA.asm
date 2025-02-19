@@ -1,4 +1,8 @@
 section .text
 
 _start:
-    jmp $
+;    jmp $
+    mov eax, 'A'
+.loop:
+    int 0xff
+    jmp .loop
