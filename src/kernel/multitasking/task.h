@@ -6,10 +6,12 @@ struct task
 {
     char name[32];
     struct interrupt_registers* registers;
+    uint8_t kernel_stack[sizeof(struct interrupt_registers)];
     struct task* next_task;
     struct task* previous_task;
     // uint8_t stack[4096];
     uint8_t* stack;
+    uint8_t ring;
     struct page_directory_entry_4kb* page_directory;
 };
 
@@ -22,7 +24,7 @@ bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 
 void task_init(struct task* _task, uint32_t eip, char* name);
-void task_load_from_initrd(struct task* _task, char* name);
+void task_load_from_initrd(struct task* _task, char* name, uint8_t ring);
 void task_destroy(struct task* _task);
 void task_virtual_address_space_destroy(struct task* _task);
 void task_virtual_address_space_create_page_table(struct task* _task, uint16_t index);

@@ -35,6 +35,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf
 
 	cp src/tasks/bin/taskA.elf ./bin/initrd/taskA.elf
 	cp src/tasks/bin/taskB.elf ./bin/initrd/taskB.elf
+	cp resources/pci.ids ./bin/initrd/pci.ids
 
 	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
 	

@@ -173,16 +173,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kmemset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
-    // setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
-    // setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
+    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
+    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
     
-    // kmemset(&TSS, 0, sizeof(struct tss_entry));
-    // TSS.iopb = sizeof(struct tss_entry);
-    // TSS.ss0 = KERNEL_DATA_SEGMENT;
-    // TSS.esp0 = (uint32_t)&stack_top;
-    // setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b0100);  // TSS
+    kmemset(&TSS, 0, sizeof(struct tss_entry));
+    TSS.iopb = sizeof(struct tss_entry);
+    TSS.ss0 = KERNEL_DATA_SEGMENT;
+    TSS.esp0 = (uint32_t)&stack_top;
+    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b0100);  // TSS
     install_gdt();
-    // load_tss();
+    load_tss();
     kprintf(" | Done\n");
 
     LOG(DEBUG, "Loaded the GDT"); 
@@ -235,15 +235,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Done setting up paging"); 
 
-    // for (uint16_t i = 0; i < 1024; i++)
-    // {
-    //     LOG(DEBUG, "Page table 0x%x : 0x%x", i, page_table_0[i].address << 12);
-    //     for (uint16_t j = 0; j < 1024; j++)
-    //     {
-    //         LOG(DEBUG, "Page 0x%x : 0x%x", j, page_table_768_1023[i * 1024 + j].address << 12);
-    //     }
-    // }
-
     LOG(DEBUG, "Setting up the initrd");
 
     if (multiboot_info->mods_count != 1)
@@ -289,11 +280,14 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(DEBUG, "Setting up multitasking");
 
     struct task task_a, task_b;
-    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf");
-    task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf");
+    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf", 0);
+    task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf", 0);
     task_a.next_task = task_a.previous_task = &task_b;
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
+
+    TSS.esp0 = (uint32_t)task_b.kernel_stack + sizeof(struct interrupt_registers);
+    TSS.ss0 = KERNEL_DATA_SEGMENT;
 
     multitasking_enabled = true;
     

@@ -33,11 +33,19 @@ void task_init(struct task* _task, uint32_t eip, char* name)
         _task->name[name_length] = '\0';
     }
 
+    _task->ring = 0;
+
     task_create_virtual_address_space(_task);
 }
 
-void task_load_from_initrd(struct task* _task, char* name)
+void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 {
+    if (ring != 3 && ring != 0)
+    {
+        LOG(CRITICAL, "Invalid ring level");
+        kabort();
+    }
+
     LOG(INFO, "Loading task \"%s\" from initrd", name);
 
     struct initrd_file* file = initrd_find_file(name);
@@ -143,7 +151,7 @@ void task_load_from_initrd(struct task* _task, char* name)
             {
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)(&vaddr + j);
                 LOG(DEBUG, "Allocating page at vaddr : 0x%x", vaddr + j);
-                task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, PAGING_SUPERVISOR_LEVEL, 1);
+                task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
                 virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))[layout.page_table_entry].address << 12);
                 kmemcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
                 // LOG(DEBUG, "Data at 0x%x (0x%x) : 0x%x 0x%x", vaddr + j, paddr, *(uint8_t*)paddr, *(uint8_t*)(paddr + 1));
@@ -165,14 +173,14 @@ void task_load_from_initrd(struct task* _task, char* name)
 
     uint8_t* task_stack_top = _task->stack + 4096;
 
-    struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
+    struct interrupt_registers* registers = ring == 3 ? (struct interrupt_registers*)_task->kernel_stack : (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
     
-    registers->cs = KERNEL_CODE_SEGMENT;
-    registers->ds = KERNEL_DATA_SEGMENT;
+    registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
+    registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
     registers->eflags = 0x200; // Interrupts enabled (bit 9)
-    registers->ss = KERNEL_DATA_SEGMENT;
+    registers->ss = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
     registers->esp = (uint32_t)task_stack_top;
-    registers->handled_esp = registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
+    registers->handled_esp = ring == 3 ? (uint32_t)_task->kernel_stack - 7 * 4 : registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
     
     registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
     registers->esi = registers->edi = registers->ebp = 0;
@@ -193,6 +201,8 @@ void task_load_from_initrd(struct task* _task, char* name)
         kmemcpy(_task->name, name, name_length);
         _task->name[name_length] = '\0';
     }
+
+    _task->ring = ring;
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
 }
@@ -232,7 +242,7 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
 
     init_page_table(pt);
 
-    add_page_table(_task->page_directory, index, virtual_address_to_physical((uint32_t)pt), PAGING_SUPERVISOR_LEVEL, true);
+    add_page_table(_task->page_directory, index, virtual_address_to_physical((uint32_t)pt), PAGING_USER_LEVEL, true);
 }
 
 void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index)
@@ -310,6 +320,8 @@ void switch_task(struct interrupt_registers** registers)
     //     registers->esp, registers->handled_esp, registers->eip);
 
     current_task = current_task->next_task;
+
+    TSS.esp0 = (uint32_t)current_task->kernel_stack + sizeof(struct interrupt_registers);
 
     LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
         current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip);
