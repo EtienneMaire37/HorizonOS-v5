@@ -160,12 +160,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
         uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
-            // if (addr + len > 0xffffffff)
-            // {
-            //     LOG(CRITICAL, "Memory block above 4GB detected");
-            //     kprintf("Memory block above 4GB detected\n");
-            //     kabort();
-            // }
             LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes", addr, len);
             available_memory += len;
         }   
@@ -179,14 +173,17 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kmemset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
-    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
-    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
+    // setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
+    // setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
+    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xfa, 0xc);  // User mode code segment
+    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xf2, 0xc);  // User mode data segment
     
     kmemset(&TSS, 0, sizeof(struct tss_entry));
     // TSS.iopb = sizeof(struct tss_entry);
     TSS.ss0 = KERNEL_DATA_SEGMENT;
     TSS.esp0 = (uint32_t)&stack_top;
-    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b1100);  // TSS
+    // setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b1100);  // TSS
+    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
     install_gdt();
     load_tss();
     kprintf(" | Done\n");

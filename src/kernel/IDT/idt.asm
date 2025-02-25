@@ -84,7 +84,7 @@ interrupt_table:
 _interrupt_handler:
     pusha
 
-    mov eax, 0
+    xor eax, eax
     mov ax, ds
     push eax
 
@@ -114,7 +114,7 @@ _interrupt_handler:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    mov ss, ax
+    ; mov ss, ax ; ss is supposedly handled by iret
 
     popa
     add esp, 8

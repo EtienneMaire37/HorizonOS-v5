@@ -11,7 +11,6 @@ struct task
     uint8_t kernel_stack[KERNEL_STACK_SIZE];
     struct task* next_task;
     struct task* previous_task;
-    // uint8_t stack[4096];
     uint8_t* stack;
     uint8_t ring;
     struct page_directory_entry_4kb* page_directory;

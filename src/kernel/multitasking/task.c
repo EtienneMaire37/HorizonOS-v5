@@ -178,8 +178,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
     registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    registers->eflags = 0x200; // Interrupts enabled (bit 9)
     registers->ss = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+    registers->eflags = 0x200; // Interrupts enabled (bit 9)
     registers->esp = (uint32_t)task_stack_top;
     registers->handled_esp = (uint32_t)task_stack_top - 7 * 4; // (ring == 3 ? (uint32_t)_task->kernel_stack + KERNEL_STACK_SIZE : (uint32_t)task_stack_top) - 7 * 4;
     
@@ -324,10 +324,5 @@ void switch_task(struct interrupt_registers** registers)
     LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
         current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip);
 
-    if (current_task->ring == 3)
-        LOG(TRACE, "Kernel stack : address : 0x%x | values : 0 : 0x%x, 1 : 0x%x, 2 : 0x%x, 3 : 0x%x, 4 : 0x%x, 5 : 0x%x, 6 : 0x%x, 7 : 0x%x, 8 : 0x%x, 9 : 0x%x, 10 : 0x%x, 11 : 0x%x, 12 : 0x%x, 13 : 0x%x, 14 : 0x%x, 15 : 0x%x, 16 : 0x%x, 17 : 0x%x, 18 : 0x%x",
-            current_task->kernel_stack, 
-            *(uint32_t*)&current_task->kernel_stack[0], *(uint32_t*)&current_task->kernel_stack[4], *(uint32_t*)&current_task->kernel_stack[4 * 2], *(uint32_t*)&current_task->kernel_stack[14 * 3], *(uint32_t*)&current_task->kernel_stack[4 * 4], *(uint32_t*)&current_task->kernel_stack[4 * 5], *(uint32_t*)&current_task->kernel_stack[4 * 6], *(uint32_t*)&current_task->kernel_stack[4 * 7], *(uint32_t*)&current_task->kernel_stack[4 * 8], *(uint32_t*)&current_task->kernel_stack[4 * 9], *(uint32_t*)&current_task->kernel_stack[4 * 10], *(uint32_t*)&current_task->kernel_stack[4 * 11], *(uint32_t*)&current_task->kernel_stack[4 * 12], *(uint32_t*)&current_task->kernel_stack[4 * 13], *(uint32_t*)&current_task->kernel_stack[4 * 14], *(uint32_t*)&current_task->kernel_stack[4 * 15], *(uint32_t*)&current_task->kernel_stack[4 * 16], *(uint32_t*)&current_task->kernel_stack[4 * 17], *(uint32_t*)&current_task->kernel_stack[4 * 18]);
-    
     *registers = current_task->registers;
 }

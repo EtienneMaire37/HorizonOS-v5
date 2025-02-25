@@ -22,8 +22,10 @@ void install_idt()
     for(uint8_t i = 32; i < 32 + 16; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
-    for(uint16_t i = 32 + 16; i < 256; i++)
+    for(uint16_t i = 32 + 16; i < 255; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
+
+    setup_idt_entry(&IDT[255], KERNEL_CODE_SEGMENT, interrupt_table[255], 0b11, ISR_INTERRUPT_GATE_32); // System call
 
     _idtr.size = sizeof(IDT) - 1;
     _idtr.address = (uint32_t)&IDT;
