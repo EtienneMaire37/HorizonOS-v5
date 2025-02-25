@@ -60,11 +60,11 @@ void rtc_get_time()
 
 void system_increment_time()
 {
-    system_thousands++;
-    if (system_thousands >= 1000)
+    system_thousands += PIT_INCREMENT;
+    while (system_thousands >= 1000)
     {
+        system_thousands -= 1000;
         system_seconds++;
-        system_thousands = 0;
         if (system_seconds >= 60)
         {
             system_minutes++;

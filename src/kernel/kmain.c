@@ -206,7 +206,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(DEBUG, "Initialized the PIC"); 
 
     kprintf("Initializing the PIT...");
-    pit_channel_0_set_frequency(1000);
+    pit_channel_0_set_frequency(PIT_FREQUENCY);
     kprintf(" | Done\n");
 
     LOG(DEBUG, "Initialized the PIT"); 

@@ -75,10 +75,10 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                     if (multitasking_counter == 0)
                     {
                         switch_task(&params);
-                        multitasking_counter = TASK_SWITCH_DELAY;
+                        multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
                     }
                     if (multitasking_counter == 0xff)
-                        multitasking_counter = TASK_SWITCH_DELAY;
+                        multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
                 }
             }
             break;
