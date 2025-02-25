@@ -173,14 +173,15 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     uint8_t* task_stack_top = _task->stack + 4096;
 
-    struct interrupt_registers* registers = ring == 3 ? (struct interrupt_registers*)_task->kernel_stack : (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
-    
+    // struct interrupt_registers* registers = ring == 3 ? (struct interrupt_registers*)((uint32_t)_task->kernel_stack + 4) : (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
+    struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
+
     registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
     registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
     registers->eflags = 0x200; // Interrupts enabled (bit 9)
     registers->ss = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
     registers->esp = (uint32_t)task_stack_top;
-    registers->handled_esp = ring == 3 ? (uint32_t)_task->kernel_stack - 7 * 4 : registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
+    registers->handled_esp = (uint32_t)task_stack_top - 7 * 4; // (ring == 3 ? (uint32_t)_task->kernel_stack + KERNEL_STACK_SIZE : (uint32_t)task_stack_top) - 7 * 4;
     
     registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
     registers->esi = registers->edi = registers->ebp = 0;
@@ -189,6 +190,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     registers->eip = header->entry;
 
     _task->registers = registers;
+
+    // *(uint32_t*)&_task->kernel_stack[0] = (uint32_t)registers;
 
     size_t name_length = kstrlen(name);
     if (name_length >= 31)
@@ -304,27 +307,27 @@ void task_create_virtual_address_space(struct task* _task)
     }
 }
 
-// void task_init_from_memory(struct task* _task, void (*function)(), uint32_t size, char* name)
-// {
-//     task_init(_task, (uint32_t)function, name);
-// }
-
 void switch_task(struct interrupt_registers** registers)
 {
     if (!first_task_switch) 
         current_task->registers = *registers;
 
     first_task_switch = false;
-    
-    // LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 
-    //     registers->esp, registers->handled_esp, registers->eip);
 
     current_task = current_task->next_task;
 
-    TSS.esp0 = (uint32_t)current_task->kernel_stack + sizeof(struct interrupt_registers);
+    TSS.esp0 = (uint32_t)current_task->kernel_stack + KERNEL_STACK_SIZE;
+    TSS.ss0 = KERNEL_DATA_SEGMENT;
+
+    // load_tss();
 
     LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
         current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip);
+
+    if (current_task->ring == 3)
+        LOG(TRACE, "Kernel stack : address : 0x%x | values : 0 : 0x%x, 1 : 0x%x, 2 : 0x%x, 3 : 0x%x, 4 : 0x%x, 5 : 0x%x, 6 : 0x%x, 7 : 0x%x, 8 : 0x%x, 9 : 0x%x, 10 : 0x%x, 11 : 0x%x, 12 : 0x%x, 13 : 0x%x, 14 : 0x%x, 15 : 0x%x, 16 : 0x%x, 17 : 0x%x, 18 : 0x%x",
+            current_task->kernel_stack, 
+            *(uint32_t*)&current_task->kernel_stack[0], *(uint32_t*)&current_task->kernel_stack[4], *(uint32_t*)&current_task->kernel_stack[4 * 2], *(uint32_t*)&current_task->kernel_stack[14 * 3], *(uint32_t*)&current_task->kernel_stack[4 * 4], *(uint32_t*)&current_task->kernel_stack[4 * 5], *(uint32_t*)&current_task->kernel_stack[4 * 6], *(uint32_t*)&current_task->kernel_stack[4 * 7], *(uint32_t*)&current_task->kernel_stack[4 * 8], *(uint32_t*)&current_task->kernel_stack[4 * 9], *(uint32_t*)&current_task->kernel_stack[4 * 10], *(uint32_t*)&current_task->kernel_stack[4 * 11], *(uint32_t*)&current_task->kernel_stack[4 * 12], *(uint32_t*)&current_task->kernel_stack[4 * 13], *(uint32_t*)&current_task->kernel_stack[4 * 14], *(uint32_t*)&current_task->kernel_stack[4 * 15], *(uint32_t*)&current_task->kernel_stack[4 * 16], *(uint32_t*)&current_task->kernel_stack[4 * 17], *(uint32_t*)&current_task->kernel_stack[4 * 18]);
     
     *registers = current_task->registers;
 }

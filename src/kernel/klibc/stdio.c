@@ -20,7 +20,7 @@ void kputs(char* str)
 	tty_update_cursor();
 }
 
-void kprintf_d(int32_t val)
+void kprintf_d(int64_t val)
 {
 	if(val < 0)
 	{
@@ -34,8 +34,8 @@ void kprintf_d(int32_t val)
 	else
 	{
 		bool first0 = true;
-		uint32_t div = 1000000000;
-		for(uint8_t i = 0; i < 10; i++)
+		uint64_t div = (uint64_t)10000000000000000000;
+		for(uint8_t i = 0; i < 20; i++)
 		{
 			uint8_t digit = (val / div) % 10;
 			if(digit)
@@ -47,7 +47,7 @@ void kprintf_d(int32_t val)
 	}
 }
 
-void kprintf_u(uint32_t val)
+void kprintf_u(uint64_t val)
 {
 	if(val < 10)
 	{
@@ -56,8 +56,8 @@ void kprintf_u(uint32_t val)
 	else
 	{
 		bool first0 = true;
-		uint32_t div = 1000000000;
-		for(uint8_t i = 0; i < 10; i++)
+		uint64_t div = (uint64_t)10000000000000000000;
+		for(uint8_t i = 0; i < 20; i++)
 		{
 			uint8_t digit = (val / div) % 10;
 			if(digit)
@@ -158,13 +158,26 @@ void kfprintf(kFILE* file, char* fmt, ...)
 					break;
 
 				case 'd':
-					kprintf_d(*(int32_t*)arg);
+					if (next_as_long)
+					{
+						next_as_long = false;
+						kprintf_d(*(int64_t*)arg);
+						arg++;
+					}
+					else
+						kprintf_d(*(int32_t*)arg);
 
 					break;
 
 				case 'u':
-					kprintf_u(*(uint32_t*)arg);
-
+					if (next_as_long)
+					{
+						next_as_long = false;
+						kprintf_u(*(uint64_t*)arg);
+						arg++;
+					}
+					else
+						kprintf_u(*(uint32_t*)arg);
 					break;
 
 				case 'x':
@@ -210,5 +223,3 @@ void kfprintf(kFILE* file, char* fmt, ...)
 
 	tty_update_cursor();
 }
-
-#define kprintf(...) kfprintf(kstdout, __VA_ARGS__)

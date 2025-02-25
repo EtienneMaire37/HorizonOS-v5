@@ -28,7 +28,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf
 	 
 	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)
 	 
-	ld -T src/link.ld -m elf_i386 
+	ld -T src/kernel/link.ld -m elf_i386 
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
@@ -40,7 +40,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf
 	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
 	
 	cp ./bin/kernel.elf ./root/boot/kernel.elf
-	cp ./src/grub.cfg ./root/boot/grub/grub.cfg
+	cp ./src/kernel/grub.cfg ./root/boot/grub/grub.cfg
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 

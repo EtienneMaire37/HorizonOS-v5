@@ -1,5 +1,6 @@
 section .text
 
+global _start
 _start:
     mov eax, 'A'
 .loop:

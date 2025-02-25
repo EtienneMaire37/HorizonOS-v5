@@ -40,6 +40,8 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
+#include "klibc/arithmetic.c"
+
 #include "IO/io.h"
 #include "PS2/ps2.h"
 #include "debug/out.h"
@@ -130,6 +132,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if (kernel_size >= max_kernel_size)
     {
         LOG(CRITICAL, "Kernel is too big (max %uB)", max_kernel_size); 
+        kprintf("Kernel is too big (max %uB)\n", max_kernel_size);
         kabort();
     }
 
@@ -138,11 +141,13 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if(magic_number != MULTIBOOT_BOOTLOADER_MAGIC) 
     {
         LOG(CRITICAL, "Invalid multiboot magic number (%x)", magic_number);
+        kprintf("Invalid multiboot magic number (%x)\n", magic_number);
         kabort();
     }
     if(!((multiboot_info->flags >> 6) & 1)) 
     {
         LOG(CRITICAL, "Invalid memory map");
+        kprintf("Invalid memory map\n");
         kabort();
     }
 
@@ -152,15 +157,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     {
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
-        uint32_t len = mmmt->len_low;
+        uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
-            if (addr > 0xffffffff)
-            {
-                LOG(CRITICAL, "Memory block above 4GB detected");
-                kabort();
-            }
-            LOG(INFO, "   Memory block : address : 0x%lx ; length : %u", addr, len);
+            // if (addr + len > 0xffffffff)
+            // {
+            //     LOG(CRITICAL, "Memory block above 4GB detected");
+            //     kprintf("Memory block above 4GB detected\n");
+            //     kabort();
+            // }
+            LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes", addr, len);
             available_memory += len;
         }   
     }
@@ -177,10 +183,10 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
     
     kmemset(&TSS, 0, sizeof(struct tss_entry));
-    TSS.iopb = sizeof(struct tss_entry);
+    // TSS.iopb = sizeof(struct tss_entry);
     TSS.ss0 = KERNEL_DATA_SEGMENT;
     TSS.esp0 = (uint32_t)&stack_top;
-    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b0100);  // TSS
+    setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry), 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b1100);  // TSS
     install_gdt();
     load_tss();
     kprintf(" | Done\n");
@@ -240,6 +246,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if (multiboot_info->mods_count != 1)
     {
         LOG(CRITICAL, "Invalid number of modules (%u)", multiboot_info->mods_count);
+        kprintf("Invalid number of modules (%u)\n", multiboot_info->mods_count);
         kabort();
     }
 
@@ -285,9 +292,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     task_a.next_task = task_a.previous_task = &task_b;
     task_b.next_task = task_b.previous_task = &task_a;
     current_task = &task_b;
-
-    TSS.esp0 = (uint32_t)task_b.kernel_stack + sizeof(struct interrupt_registers);
-    TSS.ss0 = KERNEL_DATA_SEGMENT;
 
     multitasking_enabled = true;
     

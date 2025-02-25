@@ -93,6 +93,7 @@ _interrupt_handler:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov ss, ax
 
     mov eax, cr2
     push eax
@@ -113,6 +114,7 @@ _interrupt_handler:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    mov ss, ax
 
     popa
     add esp, 8

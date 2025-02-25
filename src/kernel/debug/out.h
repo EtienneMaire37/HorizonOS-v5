@@ -19,7 +19,7 @@ void debug_outc(char c)
 #define ERROR               LOG_LEVEL_ERROR
 #define CRITICAL            LOG_LEVEL_CRITICAL
 
-#define LOG_LEVEL           DEBUG
+#define LOG_LEVEL           TRACE
 
 char* LOG_LEVEL_STR[6] = 
 {

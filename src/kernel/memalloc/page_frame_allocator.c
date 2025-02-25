@@ -6,13 +6,19 @@ void pfa_detect_usable_memory()
 
     LOG(INFO, "Usable memory map:");
 
+    kputchar('\n');
+
     for (uint32_t i = 0; i < multiboot_info->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
-        uint32_t len = mmmt->len_low;
-        if (mmmt->len_high)
-            continue; // Ignore memory blocks above 4GB
+        uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
+        // if (addr + len > 0xffffffff)
+        //     continue; // Ignore memory blocks above 4GB
+        if (addr >= 0xffffffff)
+            continue;
+        else if (addr + len > 0xffffffff)
+            len = 0xffffffff - addr; // -(uint32_t)addr
         if (addr & 0xfff) // Align to page boundaries
         {
             uint32_t offset = 0x1000 - (addr & 0xfff);
@@ -36,18 +42,23 @@ void pfa_detect_usable_memory()
         }
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
         {
-            if (usable_memory_blocks >= 64)
+            if (usable_memory_blocks >= MAX_USABLE_MEMORY_BLOCKS)
             {
                 LOG(WARNING, "Too many memory blocks detected");
                 break;
             }
 
-            LOG(INFO, "   Memory block : address : 0x%lx ; length : %u", addr, len);
+            LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu", addr, len);
             usable_memory += len;
 
+            uint32_t len32 = len;
+
             usable_memory_map[usable_memory_blocks].address = addr;
-            usable_memory_map[usable_memory_blocks].length = len;
+            usable_memory_map[usable_memory_blocks].length = len32;
+            // kprintf("Memory block %u : address : 0x%lx ; length : %u\n", usable_memory_blocks, usable_memory_map[usable_memory_blocks].address, usable_memory_map[usable_memory_blocks].length);
             usable_memory_blocks++;
+
+            // kprintf("len : %u\n", len32);
         }   
     }
 
@@ -79,17 +90,19 @@ void pfa_bitmap_init()
     uint8_t current_block = 0;
     for (uint32_t i = 0; i < bitmap_size; i++)
     {
+        // LOG(DEBUG, "Bitmap address : 0x%x", address);
         *(uint8_t*)address = 0;
         address++;
-        if (address >= physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
+        if (address >= (uint64_t)physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
         {
+            // LOG(DEBUG, "Switching memory block from address: 0x%lx, length: %u", usable_memory_map[current_block].address, usable_memory_map[current_block].length);
             current_block++;
             if (current_block >= usable_memory_blocks)
             {
                 LOG(CRITICAL, "Not enough memory blocks to allocate bitmap");
                 kabort();
             }
-            address = usable_memory_map[current_block].address;
+            address = usable_memory_map[current_block].address; // max(address, usable_memory_map[current_block].address);
         }
         // LOG(DEBUG, "Bitmap address : 0x%x", address);
     }

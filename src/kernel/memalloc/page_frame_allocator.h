@@ -1,14 +1,15 @@
 #pragma once
 
-uint64_t usable_memory;
+uint32_t usable_memory;
 
 struct mem_block
 {
     physical_address_t address;
     uint32_t length;
-};
+} __attribute__((packed));
 
-struct mem_block usable_memory_map[64];
+#define MAX_USABLE_MEMORY_BLOCKS 64
+struct mem_block usable_memory_map[MAX_USABLE_MEMORY_BLOCKS];
 uint8_t usable_memory_blocks;
 
 uint8_t first_alloc_block;
