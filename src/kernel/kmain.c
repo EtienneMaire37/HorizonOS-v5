@@ -173,8 +173,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kmemset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
-    // setup_gdt_entry(&GDT[3], 0, 0xfffff, 0b11111011, 0b1100);  // User mode code segment
-    // setup_gdt_entry(&GDT[4], 0, 0xfffff, 0b11110011, 0b1100);  // User mode data segment
     setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xfa, 0xc);  // User mode code segment
     setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xf2, 0xc);  // User mode data segment
     
@@ -182,7 +180,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     // TSS.iopb = sizeof(struct tss_entry);
     TSS.ss0 = KERNEL_DATA_SEGMENT;
     TSS.esp0 = (uint32_t)&stack_top;
-    // setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0b10000000 | TSS_TYPE_32BIT_TSS_AVL, 0b1100);  // TSS
     setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
     install_gdt();
     load_tss();
@@ -283,12 +280,14 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Setting up multitasking");
 
-    struct task task_a, task_b;
+    struct task task_a, task_b, task_c;
     task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf", 0);
     task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf", 0);
-    task_a.next_task = task_a.previous_task = &task_b;
-    task_b.next_task = task_b.previous_task = &task_a;
-    current_task = &task_b;
+    task_load_from_initrd(&task_c, "./bin/initrd/taskC.elf", 0);
+    task_a.next_task = &task_b; task_c.previous_task = &task_c;
+    task_b.next_task = &task_c; task_c.previous_task = &task_a;
+    task_c.next_task = &task_a; task_c.previous_task = &task_b;
+    current_task = &task_c;
 
     multitasking_enabled = true;
     

@@ -149,8 +149,9 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
             }
             for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
             {
-                struct virtual_address_layout layout = *(struct virtual_address_layout*)(&vaddr + j);
-                LOG(DEBUG, "Allocating page at vaddr : 0x%x", vaddr + j);
+                uint32_t address = vaddr + j;
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
+                LOG(DEBUG, "Allocating page at vaddr : 0x%x", address);
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
                 virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))[layout.page_table_entry].address << 12);
                 kmemcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
@@ -319,10 +320,10 @@ void switch_task(struct interrupt_registers** registers)
     TSS.esp0 = (uint32_t)current_task->kernel_stack + KERNEL_STACK_SIZE;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
 
-    // load_tss();
-
-    LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x", 
-        current_task->name, current_task, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip);
+    LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+        current_task->name, current_task, current_task->ring, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip,
+        current_task->registers->cs, current_task->registers->eflags, current_task->registers->ss, current_task->registers->cr3, current_task->registers->ds,
+        current_task->registers->eax, current_task->registers->ebx, current_task->registers->ecx, current_task->registers->edx, current_task->registers->esi, current_task->registers->edi);
 
     *registers = current_task->registers;
 }
