@@ -3,3 +3,4 @@ debug/*
 bin/*
 src/tasks/bin/*
 root/
+src/libc/lib/*

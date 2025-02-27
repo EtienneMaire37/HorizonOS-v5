@@ -271,12 +271,14 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     pfa_bitmap_init();
 
     LOG(DEBUG, "Retrieving CMOS data");
-    kprintf("Retrieving CMOS data...\n");
+    kprintf("Retrieving CMOS data...");
 
     rtc_detect_mode();
     rtc_get_time();
 
     time_initialized = true;
+    
+    kprintf(" | Done\n");
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
@@ -284,6 +286,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(DEBUG, "Setting up multitasking");
 
     LOG(TRACE, "sizeof(struct task) : %u", sizeof(struct task));
+
+    kputchar('\n');
 
     multitasking_init();
 

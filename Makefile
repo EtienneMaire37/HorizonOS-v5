@@ -48,10 +48,6 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/
 	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o"
 
 src/libc/lib/libc.o: src/libc/src/* # src/libc/include/*
-	# $(CC) -c "src/libc/src/crt0.c" -o "src/libc/lib/crt0.o"
-	# $(CC) -c "src/libc/src/stdio.c" -o "src/libc/lib/stdio.o" -masm=intel
-	# $(CC) -c "src/libc/src/stdlib.c" -o "src/libc/lib/stdlib.o" -masm=intel
-
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -masm=intel
 
 rmbin:

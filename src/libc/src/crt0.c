@@ -1,6 +1,3 @@
-// extern int main();
-// extern void exit();
-
 int main();
 void exit();
 
