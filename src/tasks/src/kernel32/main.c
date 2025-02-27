@@ -1,8 +1,6 @@
-// #include <stdio.h>
-#include "../../../libc/src/stdio.h"
-#include "../../../libc/src/stdlib.h"
-#include "../../../libc/src/crt0.c"
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 int main()
 {

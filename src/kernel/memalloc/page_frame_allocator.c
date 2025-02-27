@@ -114,7 +114,7 @@ void pfa_bitmap_init()
     LOG(DEBUG, "First allocatable block : %u", first_alloc_block);
     LOG(DEBUG, "First allocatable page address : 0x%x", first_alloc_page);
 
-    pma_page_address = pfa_allocate_page();
+    pma_page_address = (uint8_t*)pfa_allocate_page();
 }
 
 physical_address_t pfa_allocate_physical_page()
