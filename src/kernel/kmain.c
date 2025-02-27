@@ -40,7 +40,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           TRACE
+#define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
 #include "klibc/arithmetic.c"
@@ -287,9 +287,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     multitasking_init();
 
-    multasking_add_task_from_initrd("./bin/initrd/taskA.elf", 3);
-    multasking_add_task_from_initrd("./bin/initrd/taskB.elf", 3);
-    multasking_add_task_from_initrd("./bin/initrd/taskC.elf", 3);
+    multasking_add_task_from_initrd("./bin/initrd/taskA.elf", 3, false);
+    multasking_add_task_from_initrd("./bin/initrd/taskB.elf", 3, false);
+    multasking_add_task_from_initrd("./bin/initrd/taskC.elf", 3, false);
 
     multitasking_start();
 

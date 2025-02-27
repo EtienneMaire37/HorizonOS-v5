@@ -179,7 +179,16 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
 void task_destroy(struct task* _task)
 {
+    LOG(ERROR, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
+    LOG(TRACE, "Freeing stack at 0x%x", _task->stack);
     pfa_free_page((virtual_address_t)_task->stack);
+    LOG(TRACE, "Freeing virtual address space");
+    task_virtual_address_space_destroy(_task);
+    if (_task->ring == 3)
+    {
+        LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack);
+        pfa_free_page((virtual_address_t)_task->kernel_stack);
+    }
 }
 
 void task_virtual_address_space_destroy(struct task* _task)
@@ -192,15 +201,17 @@ void task_virtual_address_space_destroy(struct task* _task)
 
             for (uint16_t j = 0; j < 1024; j++)
             {
-                if (pt[j].present)
+                if (pt[j].present && !(i == 0 && j < 256) && i < 768)
                 {
+                    // LOG(TRACE, "Freeing page at 0x%x (mapped at 0x%x)", physical_address_to_virtual(pt[j].address << 12), 4096 * ((uint32_t)i * 1024 + (uint32_t)j));
                     pfa_free_page(physical_address_to_virtual(pt[j].address << 12));
                 }
             }
-
+            // LOG(TRACE, "Freeing page table at 0x%x", pt);
             pfa_free_page((virtual_address_t)pt);
         }
     }
+    // LOG(TRACE, "Freeing page directory at 0x%x", _task->page_directory);
     pfa_free_page((virtual_address_t)_task->page_directory);
 }
 
@@ -287,10 +298,11 @@ void multitasking_start()
     while(true);
 }
 
-void multasking_add_task_from_initrd(char* path, uint8_t ring)
+void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
 {
     task_load_from_initrd(&tasks[task_count], path, ring);
     tasks[task_count].pid = current_pid++;
+    tasks[task_count].system_task = system;
     task_count++;
 }
 
@@ -315,8 +327,26 @@ void switch_task(struct interrupt_registers** registers)
 
     *registers = tasks[current_task_index].registers;
 
-    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+    LOG(DEBUG, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
         tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, tasks[current_task_index].registers->eip,
         tasks[current_task_index].registers->cs, tasks[current_task_index].registers->eflags, tasks[current_task_index].registers->ss, tasks[current_task_index].registers->cr3, tasks[current_task_index].registers->ds,
         tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
+}
+
+void task_kill(uint16_t index)
+{
+    if (index >= task_count)
+    {
+        LOG(CRITICAL, "Invalid task index %u", index);
+        kabort();
+    }
+
+    task_destroy(&tasks[index]);
+    for (uint16_t i = index; i < task_count - 1; i++)
+        tasks[i] = tasks[i + 1];
+    if (current_task_index == task_count)
+        current_task_index = 0;
+    else if (current_task_index > index)
+        current_task_index--;
+    task_count--;
 }

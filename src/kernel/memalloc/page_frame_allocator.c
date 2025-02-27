@@ -218,7 +218,7 @@ void pfa_free_page(virtual_address_t address)
 
         if (address < current_address)
         {
-            LOG(CRITICAL, "Tried to free an unallocated page");
+            LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
             kabort();
         }
 
@@ -228,7 +228,7 @@ void pfa_free_page(virtual_address_t address)
             current_block++;
             if (current_block >= usable_memory_blocks)
             {
-                LOG(CRITICAL, "Tried to free an unallocated page");
+                LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
                 kabort();
             }
             byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);

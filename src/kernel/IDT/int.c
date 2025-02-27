@@ -45,7 +45,15 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2);
 
-        kernel_panic(params);
+        if (tasks[current_task_index].system_task || task_count == 1)
+            kernel_panic(params);
+        else
+        {
+            task_kill(current_task_index);
+            switch_task(&params);
+        }
+
+        return_from_isr();
     }
     else if (params->interrupt_number < 32 + 16)  // IRQ
     {

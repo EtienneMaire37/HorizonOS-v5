@@ -16,6 +16,7 @@ struct task
     uint8_t* stack;
     uint8_t ring;
     uint64_t pid;
+    bool system_task;
     struct page_directory_entry_4kb* page_directory;
 };
 
@@ -43,4 +44,5 @@ void task_create_virtual_address_space(struct task* _task);
 void switch_task(struct interrupt_registers** registers);
 void multasking_init();
 void multitasking_start();
-void multasking_add_task_from_initrd(char* path, uint8_t ring);  // TODO: Implement a vfs
+void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs
+void task_kill(uint16_t index);
