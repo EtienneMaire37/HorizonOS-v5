@@ -101,14 +101,24 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     }
     else if (params->interrupt_number == 0xff)
     {
-        if (params->eax & 0x80)
+        uint16_t old_index;
+        switch (params->eax)
         {
-            uint16_t old_index = current_task_index;
+        case 0:
+            LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
+            old_index = current_task_index;
             switch_task(&params);
             task_kill(old_index);
-        }
-        else
-            kputchar(params->eax);
+            break;
+        case 1:
+            kputchar(params->ebx);
+            break;
+        default:
+            LOG(ERROR, "Undefined system call");
+            old_index = current_task_index;
+            switch_task(&params);
+            task_kill(old_index);
+        }            
     }
 
     return_from_isr();
