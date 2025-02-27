@@ -101,7 +101,7 @@ physical_address_t virtual_address_to_physical(virtual_address_t address)
 virtual_address_t physical_address_to_virtual(physical_address_t address)
 {
     if (address < 0x100000) return (virtual_address_t)address;
-    if (address < 0xc0000000) return address + 0xc0000000;
+    if (address < 0x40000000) return address + 0xc0000000;
     LOG(CRITICAL, "Unmapped physical address 0x%x", address);
     kabort();
     return 0;
@@ -287,9 +287,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     multitasking_init();
 
-    multasking_add_task_from_initrd("./bin/initrd/taskA.elf", 3, false);
-    multasking_add_task_from_initrd("./bin/initrd/taskB.elf", 3, false);
-    multasking_add_task_from_initrd("./bin/initrd/taskC.elf", 3, false);
+    multasking_add_task_from_initrd("./bin/initrd/kernel32.elf", 0, true);
 
     multitasking_start();
 

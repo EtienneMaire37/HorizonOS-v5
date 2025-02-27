@@ -18,7 +18,7 @@ run: all
 	-usb                                           		\
 	-vga std 
 
-horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf src/tasks/bin/taskC.elf
+horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
 
 	$(ASM) -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
@@ -33,9 +33,7 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf src/tasks/b
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
 
-	cp src/tasks/bin/taskA.elf ./bin/initrd/taskA.elf
-	cp src/tasks/bin/taskB.elf ./bin/initrd/taskB.elf
-	cp src/tasks/bin/taskC.elf ./bin/initrd/taskC.elf
+	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
 	cp resources/pci.ids ./bin/initrd/pci.ids
 
 	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
@@ -45,15 +43,9 @@ horizonos.iso: rmbin src/tasks/bin/taskA.elf src/tasks/bin/taskB.elf src/tasks/b
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/taskA.elf: src/tasks/src/taskA.asm src/tasks/link.ld
-	$(ASM) -f elf32 -o "src/tasks/bin/taskA.o" "src/tasks/src/taskA.asm"
-	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskA.elf" "src/tasks/bin/taskA.o"
-src/tasks/bin/taskB.elf: src/tasks/src/taskB.asm src/tasks/link.ld
-	$(ASM) -f elf32 -o "src/tasks/bin/taskB.o" "src/tasks/src/taskB.asm"
-	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskB.elf" "src/tasks/bin/taskB.o"
-src/tasks/bin/taskC.elf: src/tasks/src/taskC.asm src/tasks/link.ld
-	$(ASM) -f elf32 -o "src/tasks/bin/taskC.o" "src/tasks/src/taskC.asm"
-	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/taskC.elf" "src/tasks/bin/taskC.o"
+src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/main.c src/tasks/link.ld
+	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS)
+	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o"
 
 rmbin:
 	rm -rf ./bin/*

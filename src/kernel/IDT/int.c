@@ -101,7 +101,14 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     }
     else if (params->interrupt_number == 0xff)
     {
-        kputchar(params->eax & 0x7f);
+        if (params->eax & 0x80)
+        {
+            uint16_t old_index = current_task_index;
+            switch_task(&params);
+            task_kill(old_index);
+        }
+        else
+            kputchar(params->eax);
     }
 
     return_from_isr();

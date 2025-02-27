@@ -20,7 +20,9 @@ struct task
     struct page_directory_entry_4kb* page_directory;
 };
 
-struct task tasks[4096];    // TODO : Implement a dynamic array
+#define MAX_TASKS 128
+
+struct task tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;
 
 #define TASK_SWITCH_DELAY 30 // ms

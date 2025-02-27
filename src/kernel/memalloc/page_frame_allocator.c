@@ -113,6 +113,8 @@ void pfa_bitmap_init()
     LOG(DEBUG, "Initialized page frame allocator bitmap at address 0x%x", bitmap_start);
     LOG(DEBUG, "First allocatable block : %u", first_alloc_block);
     LOG(DEBUG, "First allocatable page address : 0x%x", first_alloc_page);
+
+    pma_page_address = pfa_allocate_page();
 }
 
 physical_address_t pfa_allocate_physical_page()
@@ -191,7 +193,7 @@ virtual_address_t pfa_allocate_page()
     return physical_address_to_virtual(pfa_allocate_physical_page());
 }
 
-void pfa_free_page(virtual_address_t address)
+void pfa_free_physical_page(physical_address_t address)
 {
     if (address & 0xfff)
     {
@@ -199,7 +201,7 @@ void pfa_free_page(virtual_address_t address)
         kabort();
     }
 
-    virtual_address_t current_address = first_alloc_page;
+    physical_address_t current_address = virtual_address_to_physical(first_alloc_page);
     uint8_t current_block = 0;
     virtual_address_t byte_address = physical_address_to_virtual(usable_memory_map[0].address);
     for (uint32_t i = 0; i < bitmap_size; i++)
@@ -234,4 +236,9 @@ void pfa_free_page(virtual_address_t address)
             byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }
     }
+}
+
+void pfa_free_page(virtual_address_t address)
+{
+    pfa_free_physical_page(virtual_address_to_physical(address));
 }

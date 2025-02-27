@@ -197,7 +197,8 @@ void task_virtual_address_space_destroy(struct task* _task)
     {
         if (_task->page_directory[i].present)
         {
-            struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual(_task->page_directory[i].address << 12);
+            physical_address_t pt_paddr = _task->page_directory[i].address << 12;
+            struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual(pt_paddr);
 
             for (uint16_t j = 0; j < 1024; j++)
             {
@@ -300,6 +301,12 @@ void multitasking_start()
 
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
 {
+    if (task_count >= MAX_TASKS)
+    {
+        LOG(CRITICAL, "Too many tasks");
+        kabort();
+    }
+
     task_load_from_initrd(&tasks[task_count], path, ring);
     tasks[task_count].pid = current_pid++;
     tasks[task_count].system_task = system;
@@ -338,6 +345,11 @@ void task_kill(uint16_t index)
     if (index >= task_count)
     {
         LOG(CRITICAL, "Invalid task index %u", index);
+        kabort();
+    }
+    if (task_count == 1)
+    {
+        LOG(CRITICAL, "Zero tasks remaining");
         kabort();
     }
 
