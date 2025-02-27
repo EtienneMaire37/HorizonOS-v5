@@ -40,7 +40,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           DEBUG
+#define LOG_LEVEL           TRACE
 // #define NO_LOGS
 
 #include "klibc/arithmetic.c"

@@ -15,6 +15,7 @@ struct task
     // struct task* previous_task;
     uint8_t* stack;
     uint8_t ring;
+    uint64_t pid;
     struct page_directory_entry_4kb* page_directory;
 };
 
@@ -29,6 +30,7 @@ uint8_t multitasking_counter = 0;
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
+uint64_t current_pid;
 
 // void task_init(struct task* _task, uint32_t eip, char* name);
 void task_load_from_initrd(struct task* _task, char* path, uint8_t ring);

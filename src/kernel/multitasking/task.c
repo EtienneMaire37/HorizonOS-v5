@@ -1,43 +1,5 @@
 #pragma once
 
-// void task_init(struct task* _task, uint32_t eip, char* name)
-// {
-//     _task->stack = (uint8_t*)pfa_allocate_page();
-
-//     uint8_t* task_stack_top = _task->stack + 4096;
-
-//     struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
-    
-//     registers->eip = eip;
-//     registers->cs = KERNEL_CODE_SEGMENT;
-//     registers->ds = KERNEL_DATA_SEGMENT;
-//     registers->eflags = 0x200; // Interrupts enabled (bit 9)
-//     registers->ss = KERNEL_DATA_SEGMENT;
-//     registers->esp = (uint32_t)task_stack_top;
-//     registers->handled_esp = registers->esp - 7 * 4; // sizeof(struct interrupt_registers);
-    
-//     registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
-//     registers->esi = registers->edi = registers->ebp = 0;
-//     registers->cr3 = virtual_address_to_physical((uint32_t)page_directory);
-
-//     _task->registers = registers;
-//     size_t name_length = kstrlen(name);
-//     if (name_length >= 31)
-//     {
-//         kmemcpy(_task->name, name, 31);
-//         _task->name[31] = '\0';
-//     }
-//     else
-//     {
-//         kmemcpy(_task->name, name, name_length);
-//         _task->name[name_length] = '\0';
-//     }
-
-//     _task->ring = 0;
-
-//     task_create_virtual_address_space(_task);
-// }
-
 void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 {
     if (ring != 3 && ring != 0)
@@ -312,39 +274,11 @@ void task_create_virtual_address_space(struct task* _task)
     }
 }
 
-// void switch_task(struct interrupt_registers** registers)
-// {
-//     if (!first_task_switch) 
-//     {
-//         current_task->registers = *registers;
-//         LOG(TRACE, "Switched from task \"%s\" (pid = 0x%x) (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
-//         current_task->name, current_task, current_task->ring, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip,
-//         current_task->registers->cs, current_task->registers->eflags, current_task->registers->ss, current_task->registers->cr3, current_task->registers->ds,
-//         current_task->registers->eax, current_task->registers->ebx, current_task->registers->ecx, current_task->registers->edx, current_task->registers->esi, current_task->registers->edi);
-//     }
-
-//     first_task_switch = false;
-
-//     current_task = current_task->next_task;
-
-//     TSS.esp0 = (uint32_t)current_task->kernel_stack + 4096; // (uint32_t)current_task->kernel_stack + KERNEL_STACK_SIZE;// - 4;
-//     TSS.ss0 = KERNEL_DATA_SEGMENT;
-
-//     *registers = current_task->registers;
-
-//     LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
-//         current_task->name, current_task, current_task->ring, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip,
-//         current_task->registers->cs, current_task->registers->eflags, current_task->registers->ss, current_task->registers->cr3, current_task->registers->ds,
-//         current_task->registers->eax, current_task->registers->ebx, current_task->registers->ecx, current_task->registers->edx, current_task->registers->esi, current_task->registers->edi);
-
-//     // if (current_task->ring == 3)
-//     //     LOG(TRACE, "Kernel stack : 0x%x - 0x%x", current_task->kernel_stack, current_task->kernel_stack + KERNEL_STACK_SIZE);
-// }
-
 void multitasking_init()
 {
     task_count = 0;
     current_task_index = 0;
+    current_pid = 0;
 }
 
 void multitasking_start()
@@ -356,6 +290,7 @@ void multitasking_start()
 void multasking_add_task_from_initrd(char* path, uint8_t ring)
 {
     task_load_from_initrd(&tasks[task_count], path, ring);
+    tasks[task_count].pid = current_pid++;
     task_count++;
 }
 
@@ -369,6 +304,8 @@ void switch_task(struct interrupt_registers** registers)
 
     if (!first_task_switch) 
         tasks[current_task_index].registers = *registers;
+    else
+        current_task_index = task_count - 1;
     first_task_switch = false;
 
     current_task_index = (current_task_index + 1) % task_count;
@@ -378,8 +315,8 @@ void switch_task(struct interrupt_registers** registers)
 
     *registers = tasks[current_task_index].registers;
 
-    LOG(TRACE, "Switched to task \"%s\" (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
-        tasks[current_task_index].name, tasks[current_task_index].ring, tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, tasks[current_task_index].registers->eip,
+    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, tasks[current_task_index].registers->eip,
         tasks[current_task_index].registers->cs, tasks[current_task_index].registers->eflags, tasks[current_task_index].registers->ss, tasks[current_task_index].registers->cr3, tasks[current_task_index].registers->ds,
         tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
 }
