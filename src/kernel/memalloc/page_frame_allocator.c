@@ -115,7 +115,7 @@ void pfa_bitmap_init()
     LOG(DEBUG, "First allocatable page address : 0x%x", first_alloc_page);
 }
 
-virtual_address_t pfa_allocate_page()
+physical_address_t pfa_allocate_physical_page()
 {
     if (memory_allocated + 0x1000 > allocatable_memory)
     {
@@ -137,12 +137,13 @@ virtual_address_t pfa_allocate_page()
                     *(uint8_t*)bitmap_byte_address |= bit;
                     uint32_t page = i * 8 + j;
                     // virtual_address_t address = page * 4096 + first_alloc_page;
-                    virtual_address_t address = first_alloc_page;
+                    // virtual_address_t address = first_alloc_page;
+                    physical_address_t address = virtual_address_to_physical(first_alloc_page);
                     current_block = 0;
                     for (uint32_t k = 0; k < page; k++)
                     {
                         address += 0x1000;
-                        if (virtual_address_to_physical(address) >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
+                        if (address >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
                         {
                             current_block++;
                             if (current_block >= usable_memory_blocks)
@@ -150,7 +151,7 @@ virtual_address_t pfa_allocate_page()
                                 LOG(CRITICAL, "Out of memory !");
                                 kabort();
                             }
-                            address = physical_address_to_virtual(usable_memory_map[current_block].address);
+                            address = usable_memory_map[current_block].address;
                         }
                     }
                     // LOG(DEBUG, "Allocated page at 0x%x", address);
@@ -172,11 +173,22 @@ virtual_address_t pfa_allocate_page()
             }
             bitmap_byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }
+
+        if(bitmap_byte_address >= 0xffffffff)
+        {
+            LOG(CRITICAL, "Out of memory !");
+            kabort();
+        }
     }
 
     LOG(CRITICAL, "Out of memory !");
     kabort();
     return 0;
+}
+
+virtual_address_t pfa_allocate_page()
+{
+    return physical_address_to_virtual(pfa_allocate_physical_page());
 }
 
 void pfa_free_page(virtual_address_t address)

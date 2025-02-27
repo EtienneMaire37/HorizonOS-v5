@@ -280,10 +280,12 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Setting up multitasking");
 
+    LOG(DEBUG, "sizeof(struct task) : %u", sizeof(struct task));
+
     struct task task_a, task_b, task_c;
-    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf", 0);
-    task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf", 0);
-    task_load_from_initrd(&task_c, "./bin/initrd/taskC.elf", 0);
+    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf", 3);
+    task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf", 3);
+    task_load_from_initrd(&task_c, "./bin/initrd/taskC.elf", 3);
     task_a.next_task = &task_b; task_c.previous_task = &task_c;
     task_b.next_task = &task_c; task_c.previous_task = &task_a;
     task_c.next_task = &task_a; task_c.previous_task = &task_b;

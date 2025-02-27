@@ -171,6 +171,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     }
 
     _task->stack = (uint8_t*)pfa_allocate_page();
+    if (ring == 3)
+        _task->kernel_stack = (uint8_t*)pfa_allocate_page();
 
     uint8_t* task_stack_top = _task->stack + 4096;
 
@@ -311,19 +313,28 @@ void task_create_virtual_address_space(struct task* _task)
 void switch_task(struct interrupt_registers** registers)
 {
     if (!first_task_switch) 
+    {
         current_task->registers = *registers;
+        LOG(TRACE, "Switched from task \"%s\" (pid = 0x%x) (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+        current_task->name, current_task, current_task->ring, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip,
+        current_task->registers->cs, current_task->registers->eflags, current_task->registers->ss, current_task->registers->cr3, current_task->registers->ds,
+        current_task->registers->eax, current_task->registers->ebx, current_task->registers->ecx, current_task->registers->edx, current_task->registers->esi, current_task->registers->edi);
+    }
 
     first_task_switch = false;
 
     current_task = current_task->next_task;
 
-    TSS.esp0 = (uint32_t)current_task->kernel_stack + KERNEL_STACK_SIZE;
+    TSS.esp0 = (uint32_t)current_task->kernel_stack + 4096; // (uint32_t)current_task->kernel_stack + KERNEL_STACK_SIZE;// - 4;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
+
+    *registers = current_task->registers;
 
     LOG(TRACE, "Switched to task \"%s\" (pid = 0x%x) (ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
         current_task->name, current_task, current_task->ring, current_task->registers->esp, current_task->registers->handled_esp, *registers, current_task->registers->eip,
         current_task->registers->cs, current_task->registers->eflags, current_task->registers->ss, current_task->registers->cr3, current_task->registers->ds,
         current_task->registers->eax, current_task->registers->ebx, current_task->registers->ecx, current_task->registers->edx, current_task->registers->esi, current_task->registers->edi);
 
-    *registers = current_task->registers;
+    // if (current_task->ring == 3)
+    //     LOG(TRACE, "Kernel stack : 0x%x - 0x%x", current_task->kernel_stack, current_task->kernel_stack + KERNEL_STACK_SIZE);
 }

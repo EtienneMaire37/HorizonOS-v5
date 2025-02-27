@@ -2,13 +2,14 @@
 
 struct interrupt_registers;
 
-#define KERNEL_STACK_SIZE (sizeof(struct interrupt_registers) + 4)  // 4 bytes for the pointer to the stack
+// #define KERNEL_STACK_SIZE 4096 // (2 * sizeof(struct interrupt_registers) + 24)  // 4 bytes for the pointer to the stack
 
 struct task
 {
     char name[32];
     struct interrupt_registers* registers;
-    uint8_t kernel_stack[KERNEL_STACK_SIZE];
+    // uint8_t kernel_stack[KERNEL_STACK_SIZE];
+    uint8_t* kernel_stack;
     struct task* next_task;
     struct task* previous_task;
     uint8_t* stack;
