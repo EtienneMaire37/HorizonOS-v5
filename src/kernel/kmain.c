@@ -40,6 +40,9 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
+#define LOG_LEVEL           DEBUG
+// #define NO_LOGS
+
 #include "klibc/arithmetic.c"
 
 #include "IO/io.h"
@@ -280,20 +283,15 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "Setting up multitasking");
 
-    LOG(DEBUG, "sizeof(struct task) : %u", sizeof(struct task));
+    LOG(TRACE, "sizeof(struct task) : %u", sizeof(struct task));
 
-    struct task task_a, task_b, task_c;
-    task_load_from_initrd(&task_a, "./bin/initrd/taskA.elf", 3);
-    task_load_from_initrd(&task_b, "./bin/initrd/taskB.elf", 3);
-    task_load_from_initrd(&task_c, "./bin/initrd/taskC.elf", 3);
-    task_a.next_task = &task_b; task_c.previous_task = &task_c;
-    task_b.next_task = &task_c; task_c.previous_task = &task_a;
-    task_c.next_task = &task_a; task_c.previous_task = &task_b;
-    current_task = &task_c;
+    multitasking_init();
 
-    multitasking_enabled = true;
-    
-    while(true);
+    multasking_add_task_from_initrd("./bin/initrd/taskA.elf", 3);
+    multasking_add_task_from_initrd("./bin/initrd/taskB.elf", 3);
+    multasking_add_task_from_initrd("./bin/initrd/taskC.elf", 3);
+
+    multitasking_start();
 
     halt();
 }
