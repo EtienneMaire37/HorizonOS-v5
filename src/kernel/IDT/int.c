@@ -49,8 +49,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             kernel_panic(params);
         else
         {
-            task_kill(current_task_index);
+            uint16_t old_index = current_task_index;
             switch_task(&params);
+            task_kill(old_index);
         }
 
         return_from_isr();

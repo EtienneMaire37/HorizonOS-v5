@@ -344,9 +344,7 @@ void task_kill(uint16_t index)
     task_destroy(&tasks[index]);
     for (uint16_t i = index; i < task_count - 1; i++)
         tasks[i] = tasks[i + 1];
-    if (current_task_index == task_count)
-        current_task_index = 0;
-    else if (current_task_index > index)
+    if (current_task_index >= index)
         current_task_index--;
     task_count--;
 }

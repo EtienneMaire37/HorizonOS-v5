@@ -3,7 +3,7 @@ section .text
 global _start
 _start:
     ; jmp $
-    ; cli
+    cli
     mov eax, 'C'
 .loop:
     int 0xff
