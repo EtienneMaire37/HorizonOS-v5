@@ -41,7 +41,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           DEBUG
+#define LOG_LEVEL           INFO
 // #define NO_LOGS
 
 #include "klibc/arithmetic.c"
@@ -83,6 +83,7 @@ multiboot_module_t* initrd_module;
 #include "IDT/int.c"
 #include "IDT/pic.c"
 #include "multitasking/task.c"
+#include "PS2/ps2.c"
 
 // ---------------------------------------------------------------
 
@@ -290,6 +291,19 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     kputchar('\n');
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
+
+    LOG(INFO, "Detecting PS/2 devices");
+
+    ps2_detect_devices();
+
+    if (ps2_device_1_connected)
+        LOG(INFO, "PS/2 device 1 connected");
+    if (ps2_device_2_connected)
+        LOG(INFO, "PS/2 device 2 connected");
+    if (!(ps2_device_1_connected || ps2_device_2_connected))
+        LOG(INFO, "No PS/2 devices detected");
+
+    // while(true);
 
     multitasking_init();
 
