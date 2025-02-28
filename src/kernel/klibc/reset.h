@@ -9,4 +9,6 @@ void reset()
     load_idt();
 
     enable_interrupts();
+
+    while (true);
 }

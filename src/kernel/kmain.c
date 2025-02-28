@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include "multiboot.h"
 multiboot_info_t* multiboot_info;
@@ -51,7 +52,6 @@ multiboot_module_t* initrd_module;
 
 #include "IO/textio.h"
 #include "klibc/stdio.h"
-// #include "klibc/reset.h"
 #include "klibc/string.h"
 #include "klibc/stdlib.h"
 #include "GDT/gdt.h"
@@ -67,6 +67,9 @@ multiboot_module_t* initrd_module;
 #include "files/ustar.h"
 #include "files/elf.h"
 #include "initrd/initrd.h"
+#include "time/gdn.h"
+#include "klibc/reset.h"
+#include "klibc/time.h"
 
 #include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
@@ -288,6 +291,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     LOG(TRACE, "sizeof(struct task) : %u", sizeof(struct task));
 
     kputchar('\n');
+
+    LOG(INFO, "Unix time : %u", time(NULL));
 
     multitasking_init();
 
