@@ -18,14 +18,7 @@ void srand(unsigned int seed)
     rand_next = seed;
 }
 
-static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-    'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-    'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-    'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-    'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-    'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-    'w', 'x', 'y', 'z', '0', '1', '2', '3',
-    '4', '5', '6', '7', '8', '9', '+', '/'};
+static char* encoding_table = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 static char decoding_table[256];
 
 void create_b64_decoding_table()
@@ -53,24 +46,21 @@ long a64l(const char* s)
     return result;
 }
 
-char b64l_buffer[7];
+char l64a_buffer[7];
 
-char* b64l(long value)
+char* l64a(long value)
 {
+    if (value < 0)
+        return NULL;
     uint8_t length = 0;
-    long offset = 60;   // biggest multiple of 6 less than 64
-    bool first0 = true;
     for (uint8_t i = 0; i < 6; i++)
     {
-        char c = encoding_table[(value >> offset) % 64];
-        first0 &= c == 0;
-        if (!first0)
-        {
-            b64l_buffer[length] = c;
-            length++;
-        }
-        offset -= 6;
+        if (value == 0)
+            break;
+        l64a_buffer[i] = encoding_table[value & 0x3f];
+        value >>= 6;
+        length++;
     }
-    b64l_buffer[length] = 0;
-    return b64l_buffer;
+    l64a_buffer[length] = 0;
+    return l64a_buffer;
 }

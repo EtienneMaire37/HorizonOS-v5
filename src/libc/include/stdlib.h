@@ -17,3 +17,4 @@ int rand();
 void srand(unsigned int seed);
 
 long a64l(const char *s);
+char* l64a(long value);
