@@ -111,7 +111,10 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             task_kill(old_index);
             break;
         case 1:
-            kputchar(params->ebx);
+            if (params->ecx == (uint32_t)kstdout || params->ecx == (uint32_t)kstderr)
+                kputchar(params->ebx);
+            else
+                LOG(WARNING, "Unsupported file stream");
             break;
         case 2:
             params->eax = ktime(NULL);

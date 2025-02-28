@@ -30,5 +30,11 @@ struct FILE
 FILE* fopen(const char* path, const char* mode);
 int fclose(FILE* stream);
 
+int fputc(int c, FILE* stream);
+// int putc(int c, FILE* stream);
+#define putc fputc
 int putchar(int c);
+int fputs(const char* s, FILE* stream);
 int puts(const char* s);
+int fprintf(FILE* stream, const char* format, ...);
+#define printf(...) fprintf(stdout, __VA_ARGS__);

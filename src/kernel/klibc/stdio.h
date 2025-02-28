@@ -3,29 +3,13 @@
 char hex[16] = "0123456789abcdef";
 char HEX[16] = "0123456789ABCDEF";
 
-typedef enum kstream
-{
-    STDIN_STREAM,
-    STDOUT_STREAM,
-    STDERR_STREAM,
-    LOG_STREAM,
-    FILE_STREAM
-} kstream_t;
+#include "../../libc/include/stdio.h"
 
-typedef struct kFILE
-{
-    kstream_t stream;
-} kFILE;
-
-kFILE _kstdin;
-kFILE _kstdout;
-kFILE _kstderr;
-kFILE _klog;
-
-kFILE* kstdin = &_kstdin;
-kFILE* kstdout = &_kstdout;
-kFILE* kstderr = &_kstderr;
-kFILE* klog = &_klog;
+#define kFILE       FILE
+#define kstdin      stdin
+#define kstdout     stdout
+#define kstderr     stderr
+#define klog        ((FILE*)3)
 
 kFILE* current_stream, *current_interrupt_stream;
 

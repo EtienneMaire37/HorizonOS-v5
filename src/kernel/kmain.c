@@ -120,10 +120,10 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
-    _kstdin.stream = STDIN_STREAM;
-    _kstdout.stream = STDOUT_STREAM;
-    _kstderr.stream = STDERR_STREAM;
-    _klog.stream = LOG_STREAM;
+    // _kstdin.stream = STDIN_STREAM;
+    // _kstdout.stream = STDOUT_STREAM;
+    // _kstderr.stream = STDERR_STREAM;
+    // _klog.stream = LOG_STREAM;
 
     kernel_size = &_kernel_end - &_kernel_start;
 

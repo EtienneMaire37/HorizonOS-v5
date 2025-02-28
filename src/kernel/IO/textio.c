@@ -45,13 +45,13 @@ void tty_clear_screen(char c)
 
 void outc(char c)
 {
-	switch(current_stream->stream)
+	switch((uint32_t)current_stream)
 	{
-	case LOG_STREAM:
+	case (uint32_t)klog:
 		debug_outc(c);
 		break;
 		
-	case STDOUT_STREAM:
+	case (uint32_t)kstdout:
 	{
 		switch(c)
 		{
