@@ -35,7 +35,6 @@ uint32_t time_to_gdn(uint16_t year, uint8_t month, uint8_t day)
 
 time_t time_to_unix(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second)
 {
-    hour = (hour - 1) % 24;
     uint32_t gdn = time_to_gdn(year, month, day);
     return (gdn - GDN_EPOCH) * 86400LL + hour * 3600 + minute * 60 + second;
 }

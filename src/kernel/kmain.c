@@ -292,7 +292,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     kputchar('\n');
 
-    LOG(INFO, "Unix time : %u", time(NULL));
+    LOG(INFO, "Unix time : %u", ktime(NULL));
 
     multitasking_init();
 

@@ -113,6 +113,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         case 1:
             kputchar(params->ebx);
             break;
+        case 2:
+            params->eax = ktime(NULL);
+            break;
         default:
             LOG(ERROR, "Undefined system call");
             old_index = current_task_index;
