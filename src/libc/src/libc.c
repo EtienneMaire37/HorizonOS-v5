@@ -7,9 +7,9 @@
 #include "../include/stdarg.h"
 #include "../include/string.h"
 
-#include "crt0.c"
 #include "stdio.c"
 #include "stdlib.c"
 #include "time.c"
 #include "string.c"
 #include "arithmetic.c"
+#include "crt0.c"

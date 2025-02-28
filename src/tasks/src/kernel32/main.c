@@ -5,6 +5,16 @@
 #include <stdint.h>
 #include <time.h>
 
+void func1()
+{
+    printf("Function 1 called\n");
+}
+
+void func2()
+{
+    printf("Function 2 called\n");
+}
+
 int main()
 {
     // printf("%u\n", time(NULL));
@@ -20,6 +30,9 @@ int main()
     // srand(time(NULL));
     // for (uint8_t i = 0; i < 5; i++)
     //     printf("%u\n", rand());
+
+    atexit(func1);
+    atexit(func2);
     printf("%ld\n", a64l("BDz5/"));
     printf("%s\n", l64a(1382));
     return 0;

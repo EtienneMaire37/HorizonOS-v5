@@ -1,10 +1,3 @@
-void exit(int r)
-{
-    asm("int 0xff" : 
-        : "a" (0), "b" (r));
-    while(1);
-}
-
 uint32_t rand_next = 1;
 
 int rand()
@@ -63,4 +56,31 @@ char* l64a(long value)
     }
     l64a_buffer[length] = 0;
     return l64a_buffer;
+}
+
+int abs(int n)
+{
+    return n < 0 ? -n : n;
+}
+
+void (*atexit_stack[32])();
+uint8_t atexit_stack_length;
+
+int atexit(void (*function)(void))
+{
+    if (atexit_stack_length >= 32)
+        return 1;
+    atexit_stack[atexit_stack_length++] = function;
+    return 0;
+}
+
+void exit(int r)
+{
+    for (uint8_t i = 0; i < atexit_stack_length; i++)
+        if (atexit_stack[atexit_stack_length - i - 1] != NULL)
+            atexit_stack[atexit_stack_length - i - 1]();
+
+    asm("int 0xff" : 
+        : "a" (0), "b" (r));
+    while(1);
 }

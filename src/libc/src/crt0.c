@@ -4,5 +4,8 @@ void exit();
 void _start()
 {
     create_b64_decoding_table();
-    exit(main());
+    memset(atexit_stack, NULL, 32);
+    atexit_stack_length = 0;
+    int return_value = main();
+    exit(return_value);
 }
