@@ -32,11 +32,11 @@ int fclose(FILE* stream)
     return 0;
 }
 
-char hex[16] = "0123456789abcdef";
-char HEX[16] = "0123456789ABCDEF";
-
 int fprintf(FILE* stream, const char* format, ...)
 {
+    char hex[16] = "0123456789abcdef";
+    char HEX[16] = "0123456789ABCDEF";
+
     void printf_d(int64_t val)
     {
         if(val < 0)
