@@ -24,7 +24,7 @@ int puts(const char* s)
 
 FILE* fopen(const char* path, const char* mode)
 {
-    errno = EACCESS;
+    errno = EACCES;
     return NULL;
 }
 
