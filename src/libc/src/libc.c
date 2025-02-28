@@ -6,6 +6,7 @@
 #include "../include/time.h"
 #include "../include/stdarg.h"
 #include "../include/string.h"
+#include "../include/errno.h"
 
 #include "stdio.c"
 #include "stdlib.c"

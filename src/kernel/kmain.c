@@ -120,10 +120,6 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
-    // _kstdin.stream = STDIN_STREAM;
-    // _kstdout.stream = STDOUT_STREAM;
-    // _kstderr.stream = STDERR_STREAM;
-    // _klog.stream = LOG_STREAM;
 
     kernel_size = &_kernel_end - &_kernel_start;
 
@@ -285,6 +281,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+    kprintf("Time : %u:%u:%u %u-%u-%u\n", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
 
     LOG(DEBUG, "Setting up multitasking");
 

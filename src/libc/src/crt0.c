@@ -3,6 +3,7 @@ void exit();
 
 void _start()
 {
+    errno = 0;
     create_b64_decoding_table();
     memset(atexit_stack, NULL, 32);
     atexit_stack_length = 0;

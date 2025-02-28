@@ -24,12 +24,14 @@ int puts(const char* s)
 
 FILE* fopen(const char* path, const char* mode)
 {
+    errno = EACCESS;
     return NULL;
 }
 
 int fclose(FILE* stream)
 {
-    return 0;
+    errno = EBADF;
+    return EOF;
 }
 
 int fprintf(FILE* stream, const char* format, ...)
