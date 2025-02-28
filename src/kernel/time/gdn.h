@@ -3,7 +3,7 @@
 #define GDN_EPOCH 719162
 typedef uint32_t time_t;
 
-uint32_t year_to_gdn(uint16_t year, int* leap) 
+uint32_t year_to_gdn(uint16_t year, bool* leap) 
 {
     if (year >= (uint32_t)(-1) / 146097)
     {

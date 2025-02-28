@@ -34,5 +34,11 @@ int main()
         i1 = i2;
         putchar('\n');
     }
+    srand(time(NULL));
+    for (uint8_t i = 0; i < 5; i++)
+    {
+        printnumber(rand());
+        putchar('\n');
+    }
     return 0;
 }

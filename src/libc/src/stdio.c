@@ -11,3 +11,13 @@ int puts(const char* s)
         putchar(*s++);
     return 0;
 }
+
+FILE* fopen(const char* path, const char* mode)
+{
+    return NULL;
+}
+
+int fclose(FILE* stream)
+{
+    return 0;
+}
