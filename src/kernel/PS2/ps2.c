@@ -40,7 +40,7 @@ void ps2_controller_init()
 {
     // TODO: Init USB controllers
 
-    ps2_controller_connected = false; //(fadt->boot_architecture_flags & 0b10) || (rsdp->revision == 0);   // For ACPI 1.0 the baf field is reserved so we act as if there is a controller
+    ps2_controller_connected = false; //(fadt->boot_architecture_flags & 0b10) || acpi_10;   // For ACPI 1.0 the baf field is reserved so we act as if there is a controller
 
     if (ps2_controller_connected)
     {

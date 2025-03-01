@@ -45,7 +45,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2);
 
-        if (tasks[current_task_index].system_task || task_count == 1)
+        if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled)
             kernel_panic(params);
         else
         {
@@ -105,10 +105,14 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         switch (params->eax)
         {
         case 0:
-            LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
-            old_index = current_task_index;
-            switch_task(&params);
-            task_kill(old_index);
+            if (multitasking_enabled)
+            {
+                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
+                LOG(ERROR, "Undefined system call");
+                old_index = current_task_index;
+                switch_task(&params);
+                task_kill(old_index);
+            }
             break;
         case 1:
             if (params->ecx == (uint32_t)kstdout || params->ecx == (uint32_t)kstderr)
@@ -120,10 +124,13 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->eax = ktime(NULL);
             break;
         default:
-            LOG(ERROR, "Undefined system call");
-            old_index = current_task_index;
-            switch_task(&params);
-            task_kill(old_index);
+            if (multitasking_enabled)
+            {
+                LOG(ERROR, "Undefined system call");
+                old_index = current_task_index;
+                switch_task(&params);
+                task_kill(old_index);
+            }
         }            
     }
 

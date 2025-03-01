@@ -44,6 +44,15 @@ multiboot_module_t* initrd_module;
 #define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
+const char* multiboot_block_type_text[5] = 
+{
+    "MULTIBOOT_MEMORY_AVAILABLE",
+    "MULTIBOOT_MEMORY_RESERVED",
+    "MULTIBOOT_MEMORY_ACPI_RECLAIMABLE",
+    "MULTIBOOT_MEMORY_NVS",
+    "MULTIBOOT_MEMORY_BADRAM"
+};
+
 #include "klibc/arithmetic.c"
 
 #include "IO/io.h"
@@ -163,9 +172,9 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
         uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
-        if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) 
+        // if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE)
         {
-            LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes", addr, len);
+            LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes (type: %s)", addr, len, multiboot_block_type_text[mmmt->type - 1]);
             available_memory += len;
         }   
     }

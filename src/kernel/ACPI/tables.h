@@ -35,6 +35,8 @@ struct rsdt_table
 struct rsdp_table* rsdp;
 struct rsdt_table* rsdt;
 
+bool acpi_10;
+
 uint8_t* ebda;
 
 void bios_get_ebda_pointer();
