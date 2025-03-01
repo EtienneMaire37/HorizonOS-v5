@@ -25,7 +25,9 @@ void ps2_read_data()
         return;
     while (ps2_wait_for_input() == 0)
     {
-        ps2_data_buffer[ps2_data_bytes_received++] = inb(PS2_DATA);
+        // uint8_t val = inb(PS2_DATA);
+        // LOG(INFO, "PS/2 DATABUFFER at %u = 0x%x", ps2_data_bytes_received, val);
+        ps2_data_buffer[ps2_data_bytes_received++] = inb(PS2_DATA); // val;
         if (ps2_data_bytes_received == PS2_READ_BUFFER_SIZE)
             return;
         if (ps2_data_bytes_received > PS2_READ_BUFFER_SIZE)
@@ -121,12 +123,11 @@ void ps2_detect_devices()
 {
     // if (!ps2_controller_connected)
     //     return;
-    // ps2_send_command_no_data_no_answer(PS2_DISABLE_SCANNING);
+    // uint8_t return_val = ps2_send_command_no_data(PS2_DISABLE_SCANNING);
     // ps2_read_data();
-    // if (ps2_data_bytes_received != 1 || ps2_data_buffer[0] != PS2_ACK)
+    // if (return_val != PS2_ACK)
     // {
     //     ps2_device_1_connected = false;
-    //     LOG(DEBUG, "PS/2 device 1 returned %u bytes : 0x%x 0x%x", ps2_data_bytes_received, ps2_data_buffer[0], ps2_data_buffer[1]);
     //     return;
     // }
     // ps2_send_command_no_data_no_answer(PS2_IDENTIFY);
@@ -137,9 +138,12 @@ void ps2_detect_devices()
     //     LOG(DEBUG, "PS/2 device 1 returned %u bytes : 0x%x 0x%x", ps2_data_bytes_received, ps2_data_buffer[0], ps2_data_buffer[1]);
     //     return;
     // }
-    // ps2_read_data();
-    // ps2_send_command_no_data_no_answer(PS2_ENABLE_SCANNING);
-    // ps2_read_data();
+    // return_val = ps2_send_command_no_data(PS2_ENABLE_SCANNING);
+    // if (return_val != PS2_ACK)
+    // {
+    //     ps2_device_1_connected = false;
+    //     return;
+    // }
 }
 
 void ps2_send_command_no_data_no_answer(uint8_t command)

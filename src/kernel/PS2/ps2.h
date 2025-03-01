@@ -6,7 +6,7 @@
 
 #define PS2_WAIT_TIME           5000  // In milliseconds
 #define PS2_MAX_RESEND          5
-#define PS2_READ_BUFFER_SIZE    2
+#define PS2_READ_BUFFER_SIZE    8     // 4 should work though
 
 #define ps2_output_ready()      ((inb(PS2_STATUS_REGISTER) & 0b10) == 0)    // Output buffer full   (controller -> device)
 #define ps2_input_ready()       ((inb(PS2_STATUS_REGISTER) & 0b01) == 1)    // Input buffer full    (device -> controller)
@@ -23,11 +23,11 @@ bool ps2_wait_for_intput();
 #define PS2_TEST_DEVICE_1       0xab
 #define PS2_DISABLE_DEVICE_1    0xad
 #define PS2_ENABLE_DEVICE_1     0xae
-#define PS2_ACK                 0xfa
-#define PS2_RESEND              0xfe
+#define PS2_IDENTIFY            0xf2
 #define PS2_ENABLE_SCANNING     0xf4
 #define PS2_DISABLE_SCANNING    0xf5
-#define PS2_IDENTIFY            0xf2
+#define PS2_ACK                 0xfa
+#define PS2_RESEND              0xfe
 #define PS2_RESET               0xff
 
 bool ps2_controller_connected;
