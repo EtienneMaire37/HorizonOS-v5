@@ -29,17 +29,26 @@ struct sdt_header
 
 struct rsdt_table
 {
+    struct sdt_header header;
+    // uint32_t ptrs_to_sdt[(header.length - sizeof(header)) / 4];
+} __attribute__((packed));
 
+struct xsdt_table
+{
+    struct sdt_header header;
+    // uint64_t ptrs_to_sdt[(header.length - sizeof(header)) / 8];
 } __attribute__((packed));
   
 struct rsdp_table* rsdp;
 struct rsdt_table* rsdt;
+struct xsdt_table* xsdt;
 
 bool acpi_10;
-
+uint32_t sdt_count;
 uint8_t* ebda;
 
 void bios_get_ebda_pointer();
 
 void acpi_find_tables();
 bool acpi_table_valid();
+uint32_t read_sdt_ptr(uint32_t index);

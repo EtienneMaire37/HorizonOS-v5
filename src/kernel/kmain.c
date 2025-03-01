@@ -313,7 +313,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     ps2_controller_init();
     ps2_detect_devices();
-
+    
     if (ps2_device_1_connected)
     {
         LOG(INFO, "PS/2 device 1 connected");

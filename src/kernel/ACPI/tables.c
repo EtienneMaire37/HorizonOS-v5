@@ -27,7 +27,8 @@ void acpi_find_tables()
 {
     rsdp = rsdt = NULL;
     LOG(INFO, "Searching for the RSDP");
-    
+    kprintf("Searching for the RSDP\n");
+
     LOG(DEBUG, "\tChecking the 1rst KB of EBDA");
 
     // Check EBDA
@@ -54,6 +55,7 @@ void acpi_find_tables()
     }
 
     LOG(CRITICAL, "Couldn't find the RSDP table");
+    kprintf("Couldn't find the RSDP table\n");
     kabort();
 
 found_rsdp:
@@ -62,12 +64,68 @@ found_rsdp:
     acpi_10 = rsdp->revision == 0;
     
     LOG(INFO, "ACPI version : %s", acpi_10 ? "1.0" : "2.0+");
+    kprintf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
 
     bool table_valid = acpi_rsdp_valid((void*)rsdp);
 
     if (!table_valid)
     {
         LOG(CRITICAL, "Invalid RSDP table");
+        kprintf("Invalid RSDP table\n");
         kabort();
+    }
+
+    // if (acpi_10)
+    // {
+    //     rsdt = (struct rsdt_table*)rsdp->rsdt_address;
+    //     xsdt = NULL;
+
+    //     LOG(INFO, "RSDT address : 0x%x", rsdt);
+
+    //     sdt_count = (rsdt->header.length - sizeof(struct sdt_header)) / 4;
+    // }
+    // else
+    // {
+    //     uint64_t address = rsdp->xsdt_address;
+    //     if (address >> 32)
+    //     {
+    //         LOG(CRITICAL, "64 bit XSDT address");
+    //         kabort();
+    //     }
+
+    //     xsdt = (struct xsdt_table*)((uint32_t)address);
+    //     rsdt = NULL;
+
+    //     LOG(INFO, "XSDT address : 0x%x", xsdt);
+
+    //     sdt_count = (xsdt->header.length - sizeof(struct sdt_header)) / 8;
+    // }
+
+    // LOG(INFO, "%u SDT tables detected", sdt_count);
+}
+
+uint32_t read_sdt_ptr(uint32_t index)
+{
+    if (index >= sdt_count)
+    {
+        LOG(CRITICAL, "Kernel tried to read an invalid SDT (%u / %u)", index, sdt_count);
+        kabort();
+    }
+
+    if (acpi_10)    // ACPI 1.0
+    {
+        uint32_t* sdt_ptrs = &(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
+        return sdt_ptrs[index];
+    }
+    else            // ACPI 2.0+
+    {
+        uint64_t* sdt_ptrs = &(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
+        uint64_t address = sdt_ptrs[index];
+        if (address >> 32)
+        {
+            LOG(CRITICAL, "64 bit SDT address at index %u", index);
+            kabort();
+        }
+        return (uint32_t)address;
     }
 }
