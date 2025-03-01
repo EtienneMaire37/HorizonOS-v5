@@ -41,7 +41,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           INFO
+#define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
 #include "klibc/arithmetic.c"
@@ -50,6 +50,7 @@ multiboot_module_t* initrd_module;
 #include "PS2/ps2.h"
 #include "debug/out.h"
 
+#include "ACPI/tables.h"
 #include "IO/textio.h"
 #include "klibc/stdio.h"
 #include "klibc/string.h"
@@ -71,6 +72,7 @@ multiboot_module_t* initrd_module;
 #include "klibc/reset.h"
 #include "klibc/time.h"
 
+#include "ACPI/tables.c"
 #include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
 #include "IO/textio.c"
@@ -292,18 +294,34 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
 
-    LOG(INFO, "Detecting PS/2 devices");
+    LOG(INFO, "Detecting ACPI tables and EBDA");
 
+    bios_get_ebda_pointer();
+    acpi_find_tables();
+
+    LOG(INFO, "Detecting PS/2 devices");
+    kprintf("Detecting PS/2 devices\n");
+
+    ps2_controller_init();
     ps2_detect_devices();
 
     if (ps2_device_1_connected)
+    {
         LOG(INFO, "PS/2 device 1 connected");
+        kprintf("PS/2 device 1 connected\n");
+    }
     if (ps2_device_2_connected)
+    {
         LOG(INFO, "PS/2 device 2 connected");
+        kprintf("PS/2 device 2 connected\n");
+    }
     if (!(ps2_device_1_connected || ps2_device_2_connected))
+    {
         LOG(INFO, "No PS/2 devices detected");
+        kprintf("No PS/2 devices detected\n");
+    }
 
-    // while(true);
+    while(true);
 
     multitasking_init();
 

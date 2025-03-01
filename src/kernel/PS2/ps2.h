@@ -19,11 +19,14 @@ bool ps2_wait_for_intput();
 #define PS2_ENABLE_SCANNING     0xf4
 #define PS2_DISABLE_SCANNING    0xf5
 #define PS2_IDENTIFY            0xf2
+#define PS2_RESET               0xff
 
+bool ps2_controller_connected;
 bool ps2_device_1_connected, ps2_device_2_connected;
 
 uint8_t ps2_data_buffer[PS2_READ_BUFFER_SIZE];
 uint8_t ps2_data_bytes_received;
 
+void ps2_controller_init();
 void ps2_detect_devices();
 uint8_t ps2_send_command_no_data(uint8_t command);

@@ -14,9 +14,9 @@ run: all
 	-m 256                                        		\
 	-drive format=raw,media=cdrom,file=horizonos.iso    \
 	-serial stdio                                  		\
-	-smp 1                                         		\
-	-usb                                           		\
 	-vga std 
+	# -smp 1                                         		\
+	# -usb                                           		\
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
