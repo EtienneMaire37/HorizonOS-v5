@@ -326,14 +326,16 @@ void ps2_detect_keyboards()
 
 void handle_irq_1() 
 {
+    uint8_t data = inb(PS2_DATA);
+
+    if (!ps2_device_1_interrupt)
+        return;
     if (!ps2_device_1_connected) 
         return;
     
     // uint8_t status = inb(PS2_STATUS_REGISTER);
     // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
     //     return;
-
-    uint8_t data = inb(PS2_DATA);
     
     if (ps2_device_1_type == PS2_DEVICE_KEYBOARD) 
         ps2_handle_keyboard_scancode(1, data);
@@ -341,14 +343,16 @@ void handle_irq_1()
 
 void handle_irq_12() 
 {
+    uint8_t data = inb(PS2_DATA);
+
+    if (!ps2_device_1_interrupt)
+        return;
     if (!ps2_device_2_connected) 
         return;
     
     // uint8_t status = inb(PS2_STATUS_REGISTER);
     // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
-    //     return;
-
-    uint8_t data = inb(PS2_DATA);
+    //     return;;
     
     if (ps2_device_2_type == PS2_DEVICE_KEYBOARD) 
         ps2_handle_keyboard_scancode(2, data);
