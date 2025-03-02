@@ -101,7 +101,8 @@ uint8_t ps2_send_device_command(uint8_t device, uint8_t command)
         } 
         else 
         {
-            if (ps2_wait_for_output()) {
+            if (ps2_wait_for_output()) 
+            {
                 LOG(DEBUG, "Timeout waiting to send to device %d", device);
                 continue;
             }
@@ -111,9 +112,11 @@ uint8_t ps2_send_device_command(uint8_t device, uint8_t command)
             uint32_t delay_start = global_timer;
             while (global_timer - delay_start < 2); // ~2ms
             
-            if (ps2_wait_for_input()) {
+            if (ps2_wait_for_input()) 
+            {
                 LOG(DEBUG, "Timeout waiting for response from device %d", device);
-                continue;
+                return 0xff;
+                // continue;
             }
             response = inb(PS2_DATA);
         }
@@ -164,12 +167,12 @@ void ps2_controller_init()
     LOG(DEBUG, "Disabling device 2");
     ps2_send_command(PS2_DISABLE_DEVICE_2);
     
-    // ps2_flush_buffer();
+    ps2_flush_buffer();
 
     LOG(DEBUG, "Setting up the Controller Configuration Byte");
 
     uint8_t config = ps2_send_command(PS2_GET_CONFIGURATION);
-    config &= 0b01000011; // (disable IRQs and translation)
+    config &= ~0b01010011; // (disable IRQs and translation) + enable clock
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
 
     LOG(DEBUG, "Testing the controller");
@@ -236,55 +239,56 @@ void ps2_controller_init()
 
     LOG(DEBUG, "Setting up the right ccb");
 
-    config = ps2_send_command(PS2_GET_CONFIGURATION);
+    // config = ps2_send_command(PS2_GET_CONFIGURATION);
+    // config &= ~0b01000000;   // Disable translation
+    config = 0b00000100;
     if (ps2_device_1_connected) config |= 0b00000001; // Enable interrupts
     if (ps2_device_2_connected) config |= 0b00000010;
-    config &= 0b01000000;   // Disable translation
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
 
     LOG(INFO, "PS/2 Controller initialized. Devices: %u/%u", 
         ps2_device_1_connected, ps2_device_2_connected);
 }
 
-void ps2_detect_devices() 
-{
-    if (!ps2_controller_connected)
-        return;
+// void ps2_detect_devices() 
+// {
+//     if (!ps2_controller_connected)
+//         return;
 
-    ps2_device_1_type = ps2_device_2_type = PS2_DEVICE_UNKNOWN;
+//     ps2_device_1_type = ps2_device_2_type = PS2_DEVICE_UNKNOWN;
     
-    if (ps2_device_1_connected) 
-    {
-        if (ps2_send_device_command(1, PS2_DISABLE_SCANNING) == PS2_ACK) 
-        {
-            if (ps2_send_device_command(1, PS2_IDENTIFY) == PS2_ACK) 
-            {
-                ps2_read_data();
-                LOG(INFO, "Device1 ID: 0x%x 0x%x", 
-                    ps2_data_buffer[0], ps2_data_buffer[1]);
-            }
-            ps2_send_device_command(1, PS2_ENABLE_SCANNING);
-        }
-        else 
-            ps2_device_1_connected = false;
-    }
+//     if (ps2_device_1_connected) 
+//     {
+//         if (ps2_send_device_command(1, PS2_DISABLE_SCANNING) == PS2_ACK) 
+//         {
+//             if (ps2_send_device_command(1, PS2_IDENTIFY) == PS2_ACK) 
+//             {
+//                 ps2_read_data();
+//                 LOG(INFO, "Device1 ID: 0x%x 0x%x", 
+//                     ps2_data_buffer[0], ps2_data_buffer[1]);
+//             }
+//             ps2_send_device_command(1, PS2_ENABLE_SCANNING);
+//         }
+//         else 
+//             ps2_device_1_connected = false;
+//     }
     
-    if (ps2_device_2_connected) 
-    {
-        if (ps2_send_device_command(2, PS2_DISABLE_SCANNING) == PS2_ACK) 
-        {
-            if (ps2_send_device_command(2, PS2_IDENTIFY) == PS2_ACK) 
-            {
-                ps2_read_data();
-                LOG(INFO, "Device2 ID: 0x%x 0x%x",
-                    ps2_data_buffer[0], ps2_data_buffer[1]);
-            }
-            ps2_send_device_command(2, PS2_ENABLE_SCANNING);
-        }
-        else 
-            ps2_device_2_connected = false;
-    }
-}
+//     if (ps2_device_2_connected) 
+//     {
+//         if (ps2_send_device_command(2, PS2_DISABLE_SCANNING) == PS2_ACK) 
+//         {
+//             if (ps2_send_device_command(2, PS2_IDENTIFY) == PS2_ACK) 
+//             {
+//                 ps2_read_data();
+//                 LOG(INFO, "Device2 ID: 0x%x 0x%x",
+//                     ps2_data_buffer[0], ps2_data_buffer[1]);
+//             }
+//             ps2_send_device_command(2, PS2_ENABLE_SCANNING);
+//         }
+//         else 
+//             ps2_device_2_connected = false;
+//     }
+// }
 
 void ps2_detect_keyboards() 
 {
