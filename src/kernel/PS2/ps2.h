@@ -4,7 +4,7 @@
 #define PS2_STATUS_REGISTER     0x64
 #define PS2_COMMAND_REGISTER    0x64
 
-#define PS2_WAIT_TIME           100  // In milliseconds
+#define PS2_WAIT_TIME           3000  // In milliseconds
 #define PS2_MAX_RESEND          5
 #define PS2_READ_BUFFER_SIZE    8     // 4 should work though
 

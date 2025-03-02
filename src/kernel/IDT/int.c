@@ -69,8 +69,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             return_from_isr();
         }
 
-        if (irqNumber != 0)
-            LOG(INFO, "IRQ %u", irqNumber);
+        // if (irqNumber != 0)
+        //     LOG(INFO, "IRQ %u", irqNumber);
 
         switch (irqNumber)
         {

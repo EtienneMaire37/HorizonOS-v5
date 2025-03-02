@@ -7,6 +7,10 @@ bool ps2_wait_for_output()
     uint32_t start = global_timer;
     while ((inb(PS2_STATUS_REGISTER) & PS2_STATUS_INPUT_FULL) && 
           (global_timer - start < PS2_WAIT_TIME));
+    if (global_timer - start >= PS2_WAIT_TIME)
+    {
+        LOG(ERROR, "PS/2 wait to output timeout");
+    }
     return (global_timer - start >= PS2_WAIT_TIME);
 }
 
@@ -17,6 +21,10 @@ bool ps2_wait_for_input()
     uint32_t start = global_timer;
     while (!(inb(PS2_STATUS_REGISTER) & PS2_STATUS_OUTPUT_FULL) && 
           (global_timer - start < PS2_WAIT_TIME));
+    if (global_timer - start >= PS2_WAIT_TIME)
+    {
+        LOG(ERROR, "PS/2 wait to output timeout");
+    }
     return (global_timer - start >= PS2_WAIT_TIME);
 }
 
@@ -149,7 +157,7 @@ void ps2_controller_init()
     ps2_device_1_connected = false;
     ps2_device_2_connected = false;
 
-    if (!ps2_controller_connected) 
+    if (!ps2_controller_connected)
         return;
 
     LOG(DEBUG, "Disabling devices");
@@ -168,9 +176,11 @@ void ps2_controller_init()
 
     LOG(DEBUG, "Testing the controller");
 
-    if (ps2_send_command(PS2_TEST_CONTROLLER) != 0x55) 
+    uint8_t self_test_code = ps2_send_command(PS2_TEST_CONTROLLER);
+
+    if (self_test_code != 0x55) 
     {
-        LOG(ERROR, "Controller self-test failed");
+        LOG(ERROR, "Controller self-test failed (code 0x%x)", self_test_code);
         ps2_controller_connected = false;
         return;
     }
@@ -201,8 +211,9 @@ void ps2_controller_init()
         {
             ps2_read_data();
             if (ps2_data_bytes_received >= 1 && 
-                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) {
-                LOG(INFO, "Device 1 BAT passed");
+                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) 
+            {
+                LOG(INFO, "Device 1 basic assurance test passed");
             }
         }
         else
@@ -216,8 +227,9 @@ void ps2_controller_init()
         {
             ps2_read_data();
             if (ps2_data_bytes_received >= 1 && 
-                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) {
-                LOG(INFO, "Device 2 BAT passed");
+                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) 
+            {
+                LOG(INFO, "Device 2 basic assurance test passed");
             }
         }
         else
@@ -326,6 +338,12 @@ void ps2_detect_keyboards()
 
 void handle_irq_1() 
 {
+    if (!ps2_controller_connected)
+        return;
+    
+    if (!(inb(PS2_STATUS_REGISTER) & PS2_STATUS_OUTPUT_FULL))
+        return;
+
     uint8_t data = inb(PS2_DATA);
 
     if (!ps2_device_1_interrupt)
@@ -333,26 +351,24 @@ void handle_irq_1()
     if (!ps2_device_1_connected) 
         return;
     
-    // uint8_t status = inb(PS2_STATUS_REGISTER);
-    // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
-    //     return;
-    
     if (ps2_device_1_type == PS2_DEVICE_KEYBOARD) 
         ps2_handle_keyboard_scancode(1, data);
 }
 
 void handle_irq_12() 
 {
+    if (!ps2_controller_connected)
+        return;
+
+    if (!(inb(PS2_STATUS_REGISTER) & PS2_STATUS_OUTPUT_FULL))
+        return;
+
     uint8_t data = inb(PS2_DATA);
 
-    if (!ps2_device_1_interrupt)
+    if (!ps2_device_2_interrupt)
         return;
     if (!ps2_device_2_connected) 
         return;
-    
-    // uint8_t status = inb(PS2_STATUS_REGISTER);
-    // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
-    //     return;;
     
     if (ps2_device_2_type == PS2_DEVICE_KEYBOARD) 
         ps2_handle_keyboard_scancode(2, data);
