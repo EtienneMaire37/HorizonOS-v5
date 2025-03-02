@@ -47,6 +47,8 @@
 uint8_t ps2_device_1_type;
 uint8_t ps2_device_2_type;
 
+bool ps2_device_1_interrupt, ps2_device_2_interrupt;
+
 bool ps2_controller_connected;
 bool ps2_device_1_connected, ps2_device_2_connected;
 uint8_t ps2_data_buffer[PS2_READ_BUFFER_SIZE];

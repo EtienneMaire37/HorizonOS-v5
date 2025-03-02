@@ -41,7 +41,7 @@ uint8_t ps2_send_command(uint8_t command)
     {
         if (tries > 0)
             LOG(WARNING, "PS/2 controller sent resend signal");
-        if (ps2_wait_for_output()) 
+        if (ps2_wait_for_output())
             return 0xff;
         outb(PS2_COMMAND_REGISTER, command);
         if (ps2_wait_for_input()) 
@@ -85,6 +85,7 @@ uint8_t ps2_send_device_command(uint8_t device, uint8_t command)
         return 0xff;
 
     ps2_flush_buffer();
+
     uint8_t response;
     for (int tries = 0; tries < PS2_MAX_RESEND; tries++) 
     {
@@ -120,6 +121,8 @@ uint8_t ps2_send_device_command(uint8_t device, uint8_t command)
                 // Add 5ms delay before retry
                 uint32_t delay_start = global_timer;
                 while (global_timer - delay_start < 5);
+                // for (uint16_t j = 0; j < 100; j++)
+                //     io_wait();
                 break;
             default:
                 LOG(DEBUG, "Unexpected response 0x%x from device %d", response, device);
@@ -140,6 +143,8 @@ void ps2_read_data()
 
 void ps2_controller_init() 
 {
+    LOG(DEBUG, "PS/2 controller initialization sequence");
+
     ps2_controller_connected = true;   // TODO: FADT parsing
     ps2_device_1_connected = false;
     ps2_device_2_connected = false;
@@ -147,13 +152,21 @@ void ps2_controller_init()
     if (!ps2_controller_connected) 
         return;
 
+    LOG(DEBUG, "Disabling devices");
+    LOG(DEBUG, "Disabling device 1");
     ps2_send_command(PS2_DISABLE_DEVICE_1);
+    LOG(DEBUG, "Disabling device 2");
     ps2_send_command(PS2_DISABLE_DEVICE_2);
+    
     ps2_flush_buffer();
 
+    LOG(DEBUG, "Setting up the Controller Configuration Byte");
+
     uint8_t config = ps2_send_command(PS2_GET_CONFIGURATION);
-    config &= 0b01000011; // (disable IRQs + translation)
+    config &= 0b01000011; // (disable IRQs and translation)
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
+
+    LOG(DEBUG, "Testing the controller");
 
     if (ps2_send_command(PS2_TEST_CONTROLLER) != 0x55) 
     {
@@ -161,6 +174,8 @@ void ps2_controller_init()
         ps2_controller_connected = false;
         return;
     }
+
+    LOG(DEBUG, "Testing the ports");
 
     bool dual_channel = false;
     if (ps2_send_command(PS2_ENABLE_DEVICE_2) == 0x00) 
@@ -174,8 +189,10 @@ void ps2_controller_init()
     ps2_device_2_connected = dual_channel && 
                            (ps2_send_command(PS2_TEST_DEVICE_2) == 0x00);
 
-    // ps2_send_device_command(1, PS2_DISABLE_SCANNING);
-    // ps2_send_device_command(2, PS2_DISABLE_SCANNING);
+    ps2_send_device_command(1, PS2_DISABLE_SCANNING);
+    ps2_send_device_command(2, PS2_DISABLE_SCANNING);
+
+    LOG(DEBUG, "Resetting the devices");
 
     if (ps2_device_1_connected) 
     {
@@ -207,9 +224,11 @@ void ps2_controller_init()
             ps2_device_2_connected = false;
     }
 
+    LOG(DEBUG, "Setting up the right ccb");
+
     config = ps2_send_command(PS2_GET_CONFIGURATION);
-    if (ps2_device_1_connected) config |= 0x01; // Enable interrupt
-    if (ps2_device_2_connected) config |= 0x02;
+    if (ps2_device_1_connected) config |= 0b00000001; // Enable interrupts
+    if (ps2_device_2_connected) config |= 0b00000010;
     config &= 0b01000000;   // Disable translation
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
 
@@ -310,9 +329,9 @@ void handle_irq_1()
     if (!ps2_device_1_connected) 
         return;
     
-    uint8_t status = inb(PS2_STATUS_REGISTER);
-    if (!(status & PS2_STATUS_OUTPUT_FULL)) 
-        return;
+    // uint8_t status = inb(PS2_STATUS_REGISTER);
+    // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
+    //     return;
 
     uint8_t data = inb(PS2_DATA);
     
@@ -325,9 +344,9 @@ void handle_irq_12()
     if (!ps2_device_2_connected) 
         return;
     
-    uint8_t status = inb(PS2_STATUS_REGISTER);
-    if (!(status & PS2_STATUS_OUTPUT_FULL)) 
-        return;
+    // uint8_t status = inb(PS2_STATUS_REGISTER);
+    // if (!(status & PS2_STATUS_OUTPUT_FULL)) 
+    //     return;
 
     uint8_t data = inb(PS2_DATA);
     

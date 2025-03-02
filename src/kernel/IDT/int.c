@@ -69,8 +69,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             return_from_isr();
         }
 
-        if (irqNumber != 0)
-            LOG(INFO, "IRQ %u", irqNumber);
+        // if (irqNumber != 0)
+        //     LOG(INFO, "IRQ %u", irqNumber);
 
         switch (irqNumber)
         {
@@ -94,10 +94,12 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             break;
 
         case 1:
-            // handle_irq_1();
+            if (ps2_device_1_interrupt)
+                handle_irq_1();
             break;
         case 12:
-            // handle_irq_12();
+            if (ps2_device_2_interrupt)
+                handle_irq_12();
             break;
 
         default:
