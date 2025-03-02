@@ -318,6 +318,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
+    ps2_flush_buffer();
+
     ksleep(100);
 
     ps2_controller_init();
