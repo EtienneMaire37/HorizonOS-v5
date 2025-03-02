@@ -163,6 +163,8 @@ void ps2_controller_init()
     ps2_send_command(PS2_DISABLE_DEVICE_1);
     LOG(DEBUG, "Disabling device 2");
     ps2_send_command(PS2_DISABLE_DEVICE_2);
+    
+    // ps2_flush_buffer();
 
     LOG(DEBUG, "Setting up the Controller Configuration Byte");
 
