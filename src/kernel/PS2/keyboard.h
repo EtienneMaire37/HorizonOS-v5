@@ -9,7 +9,4 @@
 #define PS2_KB_KEY_DETECTION_ERROR_1     0xff
 #define PS2_KB_INTERNAL_BUFFER_OVERRUN_1 0xff
 
-void handle_keyboard_input(uint8_t port, uint8_t scancode) 
-{
-    ;
-}
+void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode);

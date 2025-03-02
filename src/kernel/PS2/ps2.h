@@ -24,6 +24,13 @@
 #define PS2_ENABLE_DEVICE_1     0xAE
 #define PS2_WRITE_DEVICE_2      0xD4
 
+#define PS2_DEVICE_TEST_PASS    0x00
+#define PS2_DEVICE_RESET        0xFF
+#define PS2_SELF_TEST_OK        0x55
+#define PS2_DEVICE_BAT_OK       0xAA
+#define PS2_DEVICE_ID_KEYBOARD  0xAB
+#define PS2_DEVICE_ID_MOUSE     0x00
+
 // Device Commands
 #define PS2_IDENTIFY            0xF2
 #define PS2_ENABLE_SCANNING     0xF4
@@ -45,13 +52,16 @@ bool ps2_device_1_connected, ps2_device_2_connected;
 uint8_t ps2_data_buffer[PS2_READ_BUFFER_SIZE];
 uint8_t ps2_data_bytes_received;
 
-// Function Prototypes
 bool ps2_wait_for_output();
 bool ps2_wait_for_input();
 void ps2_read_data();
 void ps2_controller_init();
 void ps2_detect_devices();
+void ps2_detect_keyboards();
 uint8_t ps2_send_command(uint8_t command);
 uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data);
 uint8_t ps2_send_device_command(uint8_t device, uint8_t command);
 void ps2_flush_buffer();
+
+void handle_irq_1();
+void handle_irq_12();

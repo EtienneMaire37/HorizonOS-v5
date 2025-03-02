@@ -68,8 +68,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 	        io_wait();
             return_from_isr();
         }
-        
-        // LOG(INFO, "Interrupt %u handled", params->interrupt_number);
+
+        if (irqNumber != 0)
+            LOG(INFO, "IRQ %u", irqNumber);
 
         switch (irqNumber)
         {
@@ -90,6 +91,13 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                         multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
                 }
             }
+            break;
+
+        case 1:
+            // handle_irq_1();
+            break;
+        case 12:
+            // handle_irq_12();
             break;
 
         default:

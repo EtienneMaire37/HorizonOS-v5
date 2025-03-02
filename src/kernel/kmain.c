@@ -83,6 +83,7 @@ const char* multiboot_block_type_text[5] =
 #include "klibc/reset.h"
 #include "klibc/time.h"
 
+#include "PS2/keyboard.c"
 #include "ACPI/tables.c"
 #include "memalloc/page_frame_allocator.c"
 #include "klibc/string.c"
@@ -219,6 +220,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     pit_channel_0_set_frequency(PIT_FREQUENCY);
     kprintf(" | Done\n");
 
+    ps2_controller_connected = ps2_device_1_connected = ps2_device_2_connected = false;
+
     LOG(DEBUG, "Initialized the PIT"); 
 
     enable_interrupts(); 
@@ -315,6 +318,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     ps2_controller_init();
     ps2_detect_devices();
+    ps2_detect_keyboards();
     
     if (ps2_device_1_connected)
     {
@@ -334,7 +338,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     kputchar('\n');
 
-    // while(true);
+    while(true);
 
     multitasking_init();
 
