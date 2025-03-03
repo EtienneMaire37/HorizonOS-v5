@@ -325,13 +325,16 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     ps2_controller_init();
     // ps2_detect_devices();
     ps2_detect_keyboards();
-    ps2_enable_interrupts();
+
+    ps2_init_keyboards();
 
     // ps2_controller_connected = true;
     // ps2_device_1_connected = true;
     // ps2_device_1_type = PS2_DEVICE_KEYBOARD;
 
-    // ksleep(100);
+    ksleep(100);
+    
+    ps2_enable_interrupts();
 
     // ps2_flush_buffer();
     
