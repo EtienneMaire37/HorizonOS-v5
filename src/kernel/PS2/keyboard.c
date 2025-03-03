@@ -29,8 +29,8 @@ void ps2_kb_get_scancode_set()
 
 void ps2_init_keyboards()
 {
-    ps2_flush_buffer();
-
+    // ps2_flush_buffer();
+    
     ps2_kb_get_scancode_set();
 
     if (PS2_DEVICE_1_KB)
