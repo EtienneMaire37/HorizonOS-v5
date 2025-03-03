@@ -64,6 +64,16 @@ uint8_t ps2_send_command(uint8_t command)
     return return_val;
 }
 
+void ps2_send_command_no_response(uint8_t command)
+{
+    if (!ps2_controller_connected)
+        return;
+    LOG(TRACE, "Sending command 0x%x to PS/2 controller", command);
+    if (ps2_wait_for_output())
+        return;
+    outb(PS2_COMMAND_REGISTER, command);
+}
+
 uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data) 
 {
     if (!ps2_controller_connected)
@@ -89,6 +99,21 @@ uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data)
     }
     while (return_val == PS2_RESEND && tries < PS2_MAX_RESEND);
     return return_val;
+}
+
+void ps2_send_command_with_data_no_response(uint8_t command, uint8_t data) 
+{
+    if (!ps2_controller_connected)
+        return;
+
+    LOG(TRACE, "Sending command 0x%x, 0x%x to PS/2 controller", command, data);
+
+    if (ps2_wait_for_output()) 
+        return;
+    outb(PS2_COMMAND_REGISTER, command);
+    if (ps2_wait_for_output()) 
+        return;
+    outb(PS2_DATA, data);
 }
 
 bool ps2_send_device_command(uint8_t device, uint8_t command) 
@@ -142,9 +167,9 @@ void ps2_controller_init()
         return;
 
     LOG(DEBUG, "Disabling device 1");
-    ps2_send_command(PS2_DISABLE_DEVICE_1);
+    ps2_send_command_no_response(PS2_DISABLE_DEVICE_1);
     LOG(DEBUG, "Disabling device 2");
-    ps2_send_command(PS2_DISABLE_DEVICE_2);
+    ps2_send_command_no_response(PS2_DISABLE_DEVICE_2);
     
     ps2_flush_buffer();
 
@@ -153,7 +178,7 @@ void ps2_controller_init()
 
     uint8_t config = ps2_send_command(PS2_GET_CONFIGURATION);
     config &= ~0b11001011; // (disable IRQs and translation)
-    ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
+    ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
     LOG(DEBUG, "Testing the controller");
     // kprintf("Testing the controller\n");
@@ -174,7 +199,7 @@ void ps2_controller_init()
     {
         uint8_t new_config = ps2_send_command(PS2_GET_CONFIGURATION);
         dual_channel = !(new_config & 0x20);
-        ps2_send_command(PS2_DISABLE_DEVICE_2);
+        ps2_send_command_no_response(PS2_DISABLE_DEVICE_2);
     }
 
     // ps2_flush_buffer();
@@ -190,7 +215,7 @@ void ps2_controller_init()
 
     if (ps2_device_1_connected) 
     {
-        ps2_send_command(PS2_ENABLE_DEVICE_1);
+        ps2_send_command_no_response(PS2_ENABLE_DEVICE_1);
         if (ps2_send_device_command(1, PS2_RESET)) 
         {
             ps2_read_data();
@@ -206,7 +231,7 @@ void ps2_controller_init()
 
     if (ps2_device_2_connected) 
     {
-        ps2_send_command(PS2_ENABLE_DEVICE_2);
+        ps2_send_command_no_response(PS2_ENABLE_DEVICE_2);
         if (ps2_send_device_command(2, PS2_RESET)) 
         {
             ps2_read_data();
@@ -226,7 +251,7 @@ void ps2_controller_init()
     config &= ~0b01000000;   // Disable translation
     // if (ps2_device_1_connected) config &= ~0b00000001; // Disable interrupts
     // if (ps2_device_2_connected) config &= ~0b00000010;
-    ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
+    ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
     LOG(INFO, "PS/2 Controller initialized. Devices: %u/%u", 
         ps2_device_1_connected, ps2_device_2_connected);
@@ -377,6 +402,7 @@ void handle_irq_1()
     //     LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
     //     kabort();
     // }
+
     if (!ps2_device_1_connected) 
         return;
     
@@ -399,6 +425,7 @@ void handle_irq_12()
     //     LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
     //     kabort();
     // }
+
     if (!ps2_device_2_connected) 
         return;
     
