@@ -149,12 +149,14 @@ void ps2_controller_init()
     ps2_flush_buffer();
 
     LOG(DEBUG, "Setting up the Controller Configuration Byte");
+    // kprintf("Setting up the Controller Configuration Byte\n");
 
     uint8_t config = ps2_send_command(PS2_GET_CONFIGURATION);
-    config &= ~0b01010011; // (disable IRQs and translation) + enable clock
+    config &= ~0b11001011; // (disable IRQs and translation)
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
 
     LOG(DEBUG, "Testing the controller");
+    // kprintf("Testing the controller\n");
 
     uint8_t self_test_code = ps2_send_command(PS2_TEST_CONTROLLER);
 
@@ -370,11 +372,11 @@ void handle_irq_1()
 
     uint8_t data = inb(PS2_DATA);
 
-    if (!ps2_device_1_interrupt)
-    {
-        LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
-        kabort();
-    }
+    // if (!ps2_device_1_interrupt)
+    // {
+    //     LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
+    //     kabort();
+    // }
     if (!ps2_device_1_connected) 
         return;
     
@@ -392,11 +394,11 @@ void handle_irq_12()
 
     uint8_t data = inb(PS2_DATA);
 
-    if (!ps2_device_2_interrupt)
-    {
-        LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
-        kabort();
-    }
+    // if (!ps2_device_2_interrupt)
+    // {
+    //     LOG(CRITICAL, "Kernel failed to poll PS/2 return value");
+    //     kabort();
+    // }
     if (!ps2_device_2_connected) 
         return;
     
