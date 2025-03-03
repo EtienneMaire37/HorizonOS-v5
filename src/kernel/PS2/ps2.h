@@ -6,7 +6,7 @@
 
 #define PS2_WAIT_TIME           3000  // In milliseconds
 #define PS2_MAX_RESEND          5
-#define PS2_READ_BUFFER_SIZE    8     // 4 should work though
+#define PS2_READ_BUFFER_SIZE    8     // 5 should work though
 
 // Status Register Flags
 #define PS2_STATUS_OUTPUT_FULL  0x01  // Bit 0: Output buffer full (data available)
@@ -15,29 +15,26 @@
 // Controller Commands
 #define PS2_GET_CONFIGURATION   0x20
 #define PS2_SET_CONFIGURATION   0x60
-#define PS2_DISABLE_DEVICE_2    0xA7
-#define PS2_ENABLE_DEVICE_2     0xA8
-#define PS2_TEST_DEVICE_2       0xA9
-#define PS2_TEST_CONTROLLER     0xAA
-#define PS2_TEST_DEVICE_1       0xAB
-#define PS2_DISABLE_DEVICE_1    0xAD
-#define PS2_ENABLE_DEVICE_1     0xAE
-#define PS2_WRITE_DEVICE_2      0xD4
+#define PS2_DISABLE_DEVICE_2    0xa7
+#define PS2_ENABLE_DEVICE_2     0xa8
+#define PS2_TEST_DEVICE_2       0xa9
+#define PS2_TEST_CONTROLLER     0xaa
+#define PS2_TEST_DEVICE_1       0xab
+#define PS2_DISABLE_DEVICE_1    0xad
+#define PS2_ENABLE_DEVICE_1     0xae
+#define PS2_WRITE_DEVICE_2      0xd4
 
 #define PS2_DEVICE_TEST_PASS    0x00
-#define PS2_DEVICE_RESET        0xFF
 #define PS2_SELF_TEST_OK        0x55
-#define PS2_DEVICE_BAT_OK       0xAA
-#define PS2_DEVICE_ID_KEYBOARD  0xAB
-#define PS2_DEVICE_ID_MOUSE     0x00
+#define PS2_DEVICE_BAT_OK       0xaa
 
 // Device Commands
-#define PS2_IDENTIFY            0xF2
-#define PS2_ENABLE_SCANNING     0xF4
-#define PS2_DISABLE_SCANNING    0xF5
-#define PS2_ACK                 0xFA
-#define PS2_RESEND              0xFE
-#define PS2_RESET               0xFF
+#define PS2_IDENTIFY            0xf2
+#define PS2_ENABLE_SCANNING     0xf4
+#define PS2_DISABLE_SCANNING    0xf5
+#define PS2_ACK                 0xfa
+#define PS2_RESEND              0xfe
+#define PS2_RESET               0xff
 
 // Device Types
 #define PS2_DEVICE_UNKNOWN      0

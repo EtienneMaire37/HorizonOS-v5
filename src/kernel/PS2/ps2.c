@@ -28,7 +28,7 @@ bool ps2_wait_for_input()
         if ((reg & PS2_STATUS_OUTPUT_FULL) == PS2_STATUS_OUTPUT_FULL)
             return false;
     }
-    LOG(WARNING, "PS/2 wait to input timeout");
+    LOG(DEBUG, "PS/2 wait to input timeout");
     return true;
 }
 
@@ -135,6 +135,8 @@ void ps2_controller_init()
     ps2_controller_connected = true;   // TODO: FADT parsing
     ps2_device_1_connected = false;
     ps2_device_2_connected = false;
+    enable_ps2_kb_input = false;
+    ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
     if (!ps2_controller_connected)
         return;
@@ -156,7 +158,7 @@ void ps2_controller_init()
 
     uint8_t self_test_code = ps2_send_command(PS2_TEST_CONTROLLER);
 
-    if (self_test_code != 0x55) 
+    if (self_test_code != PS2_SELF_TEST_OK) 
     {
         LOG(ERROR, "Controller self-test failed (code 0x%x)", self_test_code);
         ps2_controller_connected = false;
@@ -166,7 +168,7 @@ void ps2_controller_init()
     LOG(DEBUG, "Testing the ports");
 
     bool dual_channel = false;
-    if (ps2_send_command(PS2_ENABLE_DEVICE_2) == 0x00) 
+    if (ps2_send_command(PS2_ENABLE_DEVICE_2) == PS2_DEVICE_TEST_PASS) 
     {
         uint8_t new_config = ps2_send_command(PS2_GET_CONFIGURATION);
         dual_channel = !(new_config & 0x20);
@@ -175,9 +177,9 @@ void ps2_controller_init()
 
     // ps2_flush_buffer();
 
-    ps2_device_1_connected = (ps2_send_command(PS2_TEST_DEVICE_1) == 0x00);
+    ps2_device_1_connected = (ps2_send_command(PS2_TEST_DEVICE_1) == PS2_DEVICE_TEST_PASS);
     ps2_device_2_connected = dual_channel && 
-                           (ps2_send_command(PS2_TEST_DEVICE_2) == 0x00);
+                           (ps2_send_command(PS2_TEST_DEVICE_2) == PS2_DEVICE_TEST_PASS);
 
     ps2_send_device_command(1, PS2_DISABLE_SCANNING);
     ps2_send_device_command(2, PS2_DISABLE_SCANNING);
@@ -280,17 +282,19 @@ void ps2_detect_keyboards()
         if (ps2_send_device_command(1, PS2_DISABLE_SCANNING)) 
         {
             ps2_read_data();
+            if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
+                goto invalid_port_1;
             if (ps2_send_device_command(1, PS2_IDENTIFY)) 
             {
                 ps2_read_data();
+                if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
+                    goto invalid_port_1;
 
-                LOG(INFO, "PS/2 port 1 id : 0x%x 0x%x 0x%x (%u)", ps2_data_buffer[0], 
-                    ps2_data_buffer[1], ps2_data_buffer[2], ps2_data_bytes_received);
+                LOG(INFO, "PS/2 port 1 id : 0x%x 0x%x (%u bytes)", ps2_data_buffer[1], 
+                    ps2_data_buffer[2], ps2_data_bytes_received);
                 
-                // Standard PS/2 keyboard responds with 0xAB 0x83
-                // AT keyboard responds with single 0xAB
-                // if ((ps2_data_bytes_received == 1 && ps2_data_buffer[ps2_data_bytes_received] == 0xAB) ||
-                //     (ps2_data_bytes_received >= 2 && ps2_data_buffer[ps2_data_bytes_received - 1] == 0x83)) 
+                // if ((ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab && ps2_data_buffer[2] == 0x83))  // Standard PS/2 keyboard
+                if (ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab) // Any PS/2 keyboard
                 {
                     ps2_device_1_type = PS2_DEVICE_KEYBOARD;
                     LOG(INFO, "Keyboard detected on port 1");
@@ -300,28 +304,41 @@ void ps2_detect_keyboards()
         }
     }
 
+detect_port_2:
     if (ps2_device_2_connected) 
     {
         if (ps2_send_device_command(2, PS2_DISABLE_SCANNING)) 
         {
             ps2_read_data();
+            if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
+                goto invalid_port_2;
             if (ps2_send_device_command(2, PS2_IDENTIFY)) 
             {
                 ps2_read_data();
+                if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
+                    goto invalid_port_2;
 
-                LOG(INFO, "PS/2 port 2 id : 0x%x 0x%x 0x%x (%u)", ps2_data_buffer[0], 
-                    ps2_data_buffer[1], ps2_data_buffer[2], ps2_data_bytes_received);
+                LOG(INFO, "PS/2 port 1 id : 0x%x 0x%x (%u bytes)", ps2_data_buffer[1], 
+                    ps2_data_buffer[2], ps2_data_bytes_received);
                 
-                // if ((ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == 0xAB) ||
-                //     (ps2_data_bytes_received >= 2 && ps2_data_buffer[1] == 0x83)) 
+                // if ((ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab && ps2_data_buffer[2] == 0x83))  // Standard PS/2 keyboard
+                if (ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab) // Any PS/2 keyboard
                 {
-                    ps2_device_2_type = PS2_DEVICE_KEYBOARD;
-                    LOG(INFO, "Keyboard detected on port 2");
+                    ps2_device_1_type = PS2_DEVICE_KEYBOARD;
+                    LOG(INFO, "Keyboard detected on port 1");
                 }
             }
             ps2_send_device_command(2, PS2_ENABLE_SCANNING);
         }
     }
+
+    return;
+
+invalid_port_1:
+    ps2_device_1_connected = false;
+    goto detect_port_2;
+invalid_port_2:
+    ps2_device_2_connected = false;
 }
 
 void ps2_enable_interrupts()
@@ -337,6 +354,10 @@ void ps2_enable_interrupts()
     if (ps2_device_1_connected) config |= 0b00000001; // Enable interrupts
     if (ps2_device_2_connected) config |= 0b00000010;
     ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
+
+    ksleep(10);
+
+    enable_ps2_kb_input = true;
 }
 
 void handle_irq_1() 
@@ -357,7 +378,7 @@ void handle_irq_1()
     if (!ps2_device_1_connected) 
         return;
     
-    if (ps2_device_1_type == PS2_DEVICE_KEYBOARD) 
+    if (ps2_device_1_type == PS2_DEVICE_KEYBOARD && enable_ps2_kb_input) 
         ps2_handle_keyboard_scancode(1, data);
 }
 
@@ -379,6 +400,6 @@ void handle_irq_12()
     if (!ps2_device_2_connected) 
         return;
     
-    if (ps2_device_2_type == PS2_DEVICE_KEYBOARD) 
+    if (ps2_device_2_type == PS2_DEVICE_KEYBOARD && enable_ps2_kb_input) 
         ps2_handle_keyboard_scancode(2, data);
 }
