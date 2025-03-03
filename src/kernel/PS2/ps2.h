@@ -56,6 +56,7 @@ uint8_t ps2_data_bytes_received;
 bool ps2_wait_for_output();
 bool ps2_wait_for_input();
 void ps2_read_data();
+void ps2_read_additional_data();
 void ps2_controller_init();
 // void ps2_detect_devices();
 void ps2_detect_keyboards();
@@ -65,6 +66,8 @@ uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data);
 void ps2_send_command_no_response(uint8_t command);
 void ps2_send_command_with_data_no_response(uint8_t command, uint8_t data);
 bool ps2_send_device_command(uint8_t device, uint8_t command);
+bool ps2_send_device_full_command(uint8_t device, uint8_t command);
+bool ps2_send_device_full_command_with_data(uint8_t device, uint8_t command, uint8_t data);
 void ps2_flush_buffer();
 
 void handle_irq_1();

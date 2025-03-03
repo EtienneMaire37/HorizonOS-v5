@@ -144,6 +144,53 @@ bool ps2_send_device_command(uint8_t device, uint8_t command)
     return false;
 }
 
+bool ps2_send_device_full_command(uint8_t device, uint8_t command)
+{
+    uint8_t tries = 0;
+    do
+    {
+        tries++;
+        if(!ps2_send_device_command(device, command))
+            return false;
+        ps2_read_data();
+    } while ((ps2_data_bytes_received == 0 || ps2_data_buffer[0] == PS2_RESEND) && tries < PS2_MAX_RESEND);
+    if (tries >= PS2_MAX_RESEND)
+        return false;
+    return true;
+}
+
+bool ps2_send_device_full_command_with_data(uint8_t device, uint8_t command, uint8_t data)
+{
+    bool sending_command = true;
+    uint8_t tries = 0;
+    do
+    {
+        tries++;
+        if (sending_command)
+        {
+            if(!ps2_send_device_command(device, command))
+                return false;
+            ps2_read_data();
+        }
+        else
+        {
+            if(!ps2_send_device_command(device, data))
+                return false;
+            ps2_read_data();
+            return true;
+        }
+        if (!((ps2_data_bytes_received == 0 || ps2_data_buffer[0] == PS2_RESEND || !sending_command)))
+        {
+            sending_command = false;
+            tries--;
+        }
+    } while (tries < PS2_MAX_RESEND); //((ps2_data_bytes_received == 0 || ps2_data_buffer[0] == PS2_RESEND || !sending_command) && tries < PS2_MAX_RESEND);
+    // if (tries >= PS2_MAX_RESEND)
+    //     return false;
+    // return true;
+    return false;
+}
+
 void ps2_read_data() 
 {
     ps2_data_bytes_received = 0;
@@ -151,6 +198,15 @@ void ps2_read_data()
         return;
     while (!ps2_wait_for_input() && ps2_data_bytes_received < PS2_READ_BUFFER_SIZE) 
     // while(inb(PS2_STATUS_REGISTER) & PS2_STATUS_OUTPUT_FULL)
+        ps2_data_buffer[ps2_data_bytes_received++] = inb(PS2_DATA);
+}
+
+void ps2_read_additional_data() 
+{
+    // ps2_data_bytes_received = 0;
+    if (!ps2_controller_connected)
+        return;
+    while (!ps2_wait_for_input() && ps2_data_bytes_received < PS2_READ_BUFFER_SIZE)
         ps2_data_buffer[ps2_data_bytes_received++] = inb(PS2_DATA);
 }
 
@@ -209,24 +265,28 @@ void ps2_controller_init()
     ps2_device_2_connected = dual_channel && 
                            (ps2_send_command(PS2_TEST_DEVICE_2) == PS2_DEVICE_TEST_PASS);
 
-    ps2_send_device_command(1, PS2_DISABLE_SCANNING);
-    ps2_flush_buffer();
-    ps2_send_device_command(2, PS2_DISABLE_SCANNING);
-    ps2_flush_buffer();
+    // ps2_send_device_command(1, PS2_DISABLE_SCANNING);
+    // ps2_flush_buffer();
+    // ps2_send_device_command(2, PS2_DISABLE_SCANNING);
+    // ps2_flush_buffer();
+    ps2_send_device_full_command(1, PS2_DISABLE_SCANNING);
+    ps2_send_device_full_command(2, PS2_DISABLE_SCANNING);
 
     LOG(DEBUG, "Resetting the devices");
 
     if (ps2_device_1_connected) 
     {
         ps2_send_command_no_response(PS2_ENABLE_DEVICE_1);
-        if (ps2_send_device_command(1, PS2_RESET)) 
+        // if (ps2_send_device_command(1, PS2_RESET)) 
+        if (ps2_send_device_full_command(1, PS2_RESET))
         {
-            ps2_read_data();
-            if (ps2_data_bytes_received >= 1 && 
-                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) 
+            if (ps2_data_bytes_received >= 2 && 
+                ps2_data_buffer[1] == PS2_DEVICE_BAT_OK) 
             {
                 LOG(INFO, "Device 1 basic assurance test passed");
             }
+            else
+                ps2_device_1_connected = false;
         }
         else
             ps2_device_1_connected = false;
@@ -235,14 +295,16 @@ void ps2_controller_init()
     if (ps2_device_2_connected) 
     {
         ps2_send_command_no_response(PS2_ENABLE_DEVICE_2);
-        if (ps2_send_device_command(2, PS2_RESET)) 
+        // if (ps2_send_device_command(1, PS2_RESET)) 
+        if (ps2_send_device_full_command(2, PS2_RESET))
         {
-            ps2_read_data();
-            if (ps2_data_bytes_received >= 1 && 
-                ps2_data_buffer[0] == PS2_DEVICE_BAT_OK) 
+            if (ps2_data_bytes_received >= 2 && 
+                ps2_data_buffer[1] == PS2_DEVICE_BAT_OK) 
             {
                 LOG(INFO, "Device 2 basic assurance test passed");
             }
+            else
+                ps2_device_2_connected = false;
         }
         else
             ps2_device_2_connected = false;
@@ -269,14 +331,16 @@ void ps2_detect_keyboards()
     
     if (ps2_device_1_connected) 
     {
-        if (ps2_send_device_command(1, PS2_DISABLE_SCANNING)) 
+        // if (ps2_send_device_command(1, PS2_DISABLE_SCANNING)) 
+        if (ps2_send_device_full_command(1, PS2_DISABLE_SCANNING))
         {
-            ps2_read_data();
+            // ps2_read_data();
             if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
                 goto invalid_port_1;
-            if (ps2_send_device_command(1, PS2_IDENTIFY)) 
+            // if (ps2_send_device_command(1, PS2_IDENTIFY)) 
+            if (ps2_send_device_full_command(1, PS2_IDENTIFY))
             {
-                ps2_read_data();
+                // ps2_read_data();
                 if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
                     goto invalid_port_1;
 
@@ -290,37 +354,41 @@ void ps2_detect_keyboards()
                     LOG(INFO, "Keyboard detected on port 1");
                 }
             }
-            ps2_send_device_command(1, PS2_ENABLE_SCANNING);
-            ps2_flush_buffer();
+            // ps2_send_device_command(1, PS2_ENABLE_SCANNING);
+            // ps2_flush_buffer();
+            ps2_send_device_full_command(1, PS2_ENABLE_SCANNING);
         }
     }
 
 detect_port_2:
     if (ps2_device_2_connected) 
     {
-        if (ps2_send_device_command(2, PS2_DISABLE_SCANNING)) 
+        // if (ps2_send_device_command(2, PS2_DISABLE_SCANNING)) 
+        if (ps2_send_device_full_command(2, PS2_DISABLE_SCANNING))
         {
-            ps2_read_data();
+            // ps2_read_data();
             if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
                 goto invalid_port_2;
-            if (ps2_send_device_command(2, PS2_IDENTIFY)) 
+            // if (ps2_send_device_command(2, PS2_IDENTIFY)) 
+            if (ps2_send_device_full_command(2, PS2_IDENTIFY))
             {
-                ps2_read_data();
+                // ps2_read_data();
                 if (!(ps2_data_bytes_received >= 1 && ps2_data_buffer[0] == PS2_ACK))
                     goto invalid_port_2;
 
-                LOG(INFO, "PS/2 port 1 id : 0x%x 0x%x (%u bytes)", ps2_data_buffer[1], 
+                LOG(INFO, "PS/2 port 2 id : 0x%x 0x%x (%u bytes)", ps2_data_buffer[1], 
                     ps2_data_buffer[2], ps2_data_bytes_received);
                 
                 // if ((ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab && ps2_data_buffer[2] == 0x83))  // Standard PS/2 keyboard
                 if (ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab) // Any PS/2 keyboard
                 {
                     ps2_device_1_type = PS2_DEVICE_KEYBOARD;
-                    LOG(INFO, "Keyboard detected on port 1");
+                    LOG(INFO, "Keyboard detected on port 2");
                 }
             }
-            ps2_send_device_command(2, PS2_ENABLE_SCANNING);
-            ps2_flush_buffer();
+            // ps2_send_device_command(2, PS2_ENABLE_SCANNING);
+            // ps2_flush_buffer();
+            ps2_send_device_full_command(2, PS2_ENABLE_SCANNING);
         }
     }
 

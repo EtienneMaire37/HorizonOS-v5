@@ -4,11 +4,14 @@ void ps2_kb_get_scancode_set()
 {
     if (PS2_DEVICE_1_KB)
     {
-        ps2_send_device_command(1, PS2_KB_GET_SET_SCANCODE_SET);
-        ps2_flush_buffer();
-        ps2_send_device_command(1, 0);  // GET
-        ps2_read_data();
-        ps2_kb_1_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
+        // ps2_send_device_command(1, PS2_KB_GET_SET_SCANCODE_SET);
+        // ps2_flush_buffer();
+        // ps2_send_device_command(1, 0);  // GET
+        // ps2_read_data();
+        if(ps2_send_device_full_command_with_data(1, PS2_KB_GET_SET_SCANCODE_SET, 0))
+            ps2_kb_1_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
+        else
+            ps2_kb_1_scancode_set = 0xff;
 
         ps2_print_read_buffer();
     }
@@ -17,11 +20,14 @@ void ps2_kb_get_scancode_set()
 
     if (PS2_DEVICE_2_KB)
     {
-        ps2_send_device_command(2, PS2_KB_GET_SET_SCANCODE_SET);
-        ps2_flush_buffer();
-        ps2_send_device_command(2, 0);  // GET
-        ps2_read_data();
-        ps2_kb_2_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
+        // ps2_send_device_command(2, PS2_KB_GET_SET_SCANCODE_SET);
+        // ps2_flush_buffer();
+        // ps2_send_device_command(2, 0);  // GET
+        // ps2_read_data();
+        if(ps2_send_device_full_command_with_data(2, PS2_KB_GET_SET_SCANCODE_SET, 0))
+            ps2_kb_2_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
+        else
+            ps2_kb_2_scancode_set = 0xff;
     }
     else
         ps2_kb_2_scancode_set = 0xff;
@@ -30,7 +36,7 @@ void ps2_kb_get_scancode_set()
 void ps2_init_keyboards()
 {
     // ps2_flush_buffer();
-    
+
     ps2_kb_get_scancode_set();
 
     if (PS2_DEVICE_1_KB)
