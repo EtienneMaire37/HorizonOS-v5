@@ -1,9 +1,9 @@
-int fputc(int c, FILE* stream)
-{
-    asm("int 0xff" : 
-        : "a" (1), "b" ((char)c), "c" (stream));
-    return c;
-}
+// int fputc(int c, FILE* stream)
+// {
+//     asm("int 0xff" : 
+//         : "a" (1), "b" ((char)c), "c" (stream));
+//     return c;
+// }
 
 int putchar(int c)
 {

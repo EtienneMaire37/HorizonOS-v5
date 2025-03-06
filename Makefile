@@ -1,6 +1,6 @@
-CC := i386-elf-gcc
-ASM := nasm
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone
+# CC := i386-elf-gcc
+# ASM := nasm
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -O0
 DATE := `date +"%Y-%m-%d"`
 
 all: horizonos.iso
@@ -21,12 +21,12 @@ run: all
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
 
-	$(ASM) -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
-	$(ASM) -f elf32 -o "bin/gdt.o" "src/kernel/GDT/gdt.asm"
-	$(ASM) -f elf32 -o "bin/idt.o" "src/kernel/IDT/idt.asm"
-	$(ASM) -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
+	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
+	nasm -f elf32 -o "bin/gdt.o" "src/kernel/GDT/gdt.asm"
+	nasm -f elf32 -o "bin/idt.o" "src/kernel/IDT/idt.asm"
+	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
-	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)
+	i386-elf-gcc -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)
 	 
 	ld -T src/kernel/link.ld -m elf_i386 
 	
@@ -44,11 +44,11 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	grub-mkrescue -o ./horizonos.iso ./root
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.o
-	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include"
+	i386-elf-gcc -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include"
 	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o"
 
 src/libc/lib/libc.o: src/libc/src/* # src/libc/include/*
-	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -masm=intel
+	i386-elf-gcc -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -masm=intel
 
 rmbin:
 	rm -rf ./bin/*

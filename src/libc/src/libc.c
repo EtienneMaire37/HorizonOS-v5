@@ -8,9 +8,13 @@
 #include "../include/string.h"
 #include "../include/errno.h"
 
+#include "kernel_glue.h"
+
 #include "stdio.c"
 #include "stdlib.c"
 #include "time.c"
 #include "string.c"
 #include "arithmetic.c"
 #include "crt0.c"
+
+#include "kernel_glue.c"
