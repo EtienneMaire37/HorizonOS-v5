@@ -116,6 +116,22 @@ int fprintf(FILE* stream, const char* format, ...)
                 fputc(HEX[digit], stream);
         }
     }
+    void printf_f(long double val)
+    {
+        int64_t k = (int64_t)val;
+        long double p = val - (long double)k;
+        printf_d(k);
+        fputc('.', stream);
+        int64_t mul = 10; // 1000000000000000000;
+        // bool first0 = true;
+        while(mul < 10000)  // 1000000000
+        {
+            uint8_t digit = ((uint64_t)(p * mul)) % 10;
+            // if(!first0)
+                fputc('0' + digit, stream);
+            mul *= 10;
+        }
+    }
 
     va_list args;
     va_start(args, format);
@@ -156,6 +172,12 @@ int fprintf(FILE* stream, const char* format, ...)
                     printf_X(va_arg(args, uint64_t), na64_set ? va_arg(args, uint32_t) : 1);
                 else
                     printf_X(va_arg(args, uint32_t), na64_set ? va_arg(args, uint32_t) : 1);
+                break;
+            case 'f':
+                if (next_arg_64)
+                    printf_f(va_arg(args, long double));
+                else
+                    printf_f(va_arg(args, double));
                 break;
             case 'l':
                 na64_set = true;
