@@ -5,7 +5,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     if (ring != 3 && ring != 0)
     {
         LOG(CRITICAL, "Invalid ring level");
-        kabort();
+        abort();
     }
 
     LOG(INFO, "Loading task \"%s\" from initrd", name);
@@ -14,45 +14,45 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     if (!file) 
     {
         LOG(CRITICAL, "File \"%s\" not found in initrd", name);
-        kabort();
+        abort();
     }
 
     struct elf32_header* header = (struct elf32_header*)file->data;
 
-    if (kmemcmp(header->magic, "\x7f""ELF", 4) != 0)
+    if (memcmp(header->magic, "\x7f""ELF", 4) != 0)
     {
         LOG(CRITICAL, "Invalid ELF header");
-        kabort();
+        abort();
     }
 
     if (header->architecture != ELF_CLASS_32)
     {
         LOG(CRITICAL, "Invalid ELF architecture");
-        kabort();
+        abort();
     }
 
     if (header->byte_order != ELF_DATA_LITTLE_ENDIAN)
     {
         LOG(CRITICAL, "Invalid ELF byte order");
-        kabort();
+        abort();
     }
 
     if (header->osabi != ELF_OSABI_SYSV)
     {
         LOG(CRITICAL, "Invalid ELF OSABI");
-        kabort();
+        abort();
     }
 
     if (header->machine != ELF_INSTRUCTION_SET_x86)
     {
         LOG(CRITICAL, "Invalid ELF machine");
-        kabort();
+        abort();
     }
 
     if (header->type != ELF_TYPE_EXECUTABLE)
     {
         LOG(CRITICAL, "Invalid ELF type");
-        kabort();
+        abort();
     }
 
     LOG(DEBUG, "ELF header : ");
@@ -107,7 +107,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
             if (vaddr & 0xfff)
             {
                 LOG(CRITICAL, "Section is not page aligned");
-                kabort();
+                abort();
             }
             for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
             {
@@ -116,7 +116,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
                 LOG(DEBUG, "Allocating page at vaddr : 0x%x", address);
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
                 virtual_address_t paddr = physical_address_to_virtual(((struct page_table_entry*)physical_address_to_virtual(_task->page_directory[layout.page_directory_entry].address << 12))[layout.page_table_entry].address << 12);
-                kmemcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                memcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
                 // LOG(DEBUG, "Data at 0x%x (0x%x) : 0x%x 0x%x", vaddr + j, paddr, *(uint8_t*)paddr, *(uint8_t*)(paddr + 1));
                 layout.page_offset += 0x1000;
                 if (layout.page_offset == 0)
@@ -161,12 +161,12 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     // size_t name_length = kstrlen(name);
     // if (name_length >= 31)
     // {
-    //     kmemcpy(_task->name, name, 31);
+    //     memcpy(_task->name, name, 31);
     //     _task->name[31] = '\0';
     // }
     // else
     // {
-    //     kmemcpy(_task->name, name, name_length);
+    //     memcpy(_task->name, name, name_length);
     //     _task->name[name_length] = '\0';
     // }
 
@@ -304,7 +304,7 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     if (task_count >= MAX_TASKS)
     {
         LOG(CRITICAL, "Too many tasks");
-        kabort();
+        abort();
     }
 
     task_load_from_initrd(&tasks[task_count], path, ring);
@@ -318,7 +318,7 @@ void switch_task(struct interrupt_registers** registers)
     if (task_count == 0)
     {
         LOG(CRITICAL, "No task to switch to");
-        kabort();
+        abort();
     }
 
     if (!first_task_switch) 
@@ -345,12 +345,12 @@ void task_kill(uint16_t index)
     if (index >= task_count)
     {
         LOG(CRITICAL, "Invalid task index %u", index);
-        kabort();
+        abort();
     }
     if (task_count == 1)
     {
         LOG(CRITICAL, "Zero tasks remaining");
-        kabort();
+        abort();
     }
 
     task_destroy(&tasks[index]);

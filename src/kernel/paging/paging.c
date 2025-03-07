@@ -17,7 +17,7 @@ void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physica
     if (pt_address & 0xfff)
     {
         LOG(CRITICAL, "Tried to set a non page aligned page table");
-        kabort();
+        abort();
     }
 
     pd[index].page_size = 0;
@@ -45,7 +45,7 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
     if (address & 0xfff)
     {
         LOG(CRITICAL, "Tried to set a non page aligned page");
-        kabort();
+        abort();
     }
 
     pt[index].global = 0;
@@ -62,7 +62,7 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
 void set_page_by_address(struct page_directory_entry_4kb* pd, virtual_address_t vaddress, physical_address_t paddress, uint8_t user_supervisor, uint8_t read_write)
 {
     LOG(CRITICAL, "Tried to use the set_page_by_address function");
-    kabort();
+    abort();
 }
 
 void remove_page_by_address(struct page_directory_entry_4kb* pd, virtual_address_t vaddress)

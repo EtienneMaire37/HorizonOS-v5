@@ -67,7 +67,7 @@ struct initrd_file* initrd_find_file(char* name)
 {
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
-        if (kstrcmp(initrd_files[i].name, name) == 0)
+        if (strcmp(initrd_files[i].name, name) == 0)
             return &initrd_files[i];
     }
 

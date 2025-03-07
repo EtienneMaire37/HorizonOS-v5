@@ -8,7 +8,7 @@ uint32_t year_to_gdn(uint16_t year, bool* leap)
     if (year >= (uint32_t)(-1) / 146097)
     {
         LOG(CRITICAL, "Year is too large (); Can't convert to Gregorian Day Number");
-        kabort();
+        abort();
     }
 
     year--;

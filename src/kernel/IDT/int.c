@@ -12,15 +12,15 @@ void kernel_panic(struct interrupt_registers* params)
     tty_hide_cursor();
 
     tty_color = (FG_LIGHTRED | BG_BLUE);
-    kfprintf(kstdout, "Kernel panic\n\n\t");
+    fprintf(stdout, "Kernel panic\n\n\t");
 
     tty_color = (FG_WHITE | BG_BLUE);
 
-    kfprintf(kstdout, "Exception number: %u\n\n\t", params->interrupt_number);
-    kfprintf(kstdout, "Error:       %s\n\t", errorString[params->interrupt_number]);
-    kfprintf(kstdout, "Error code:  0x%x\n\n\t", params->error_code);
+    fprintf(stdout, "Exception number: %u\n\n\t", params->interrupt_number);
+    fprintf(stdout, "Error:       %s\n\t", errorString[params->interrupt_number]);
+    fprintf(stdout, "Error code:  0x%x\n\n\t", params->error_code);
 
-    kfprintf(kstdout, "cr2:  0x%x\n", params->cr2);
+    fprintf(stdout, "cr2:  0x%x\n", params->cr2);
 
     // LOG(ERROR, "Kernel panic : Exception number : %u ; Error : %s ; Error code = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code);
 
@@ -123,8 +123,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             }
             break;
         case 1:
-            if (params->ecx == (uint32_t)kstdout || params->ecx == (uint32_t)kstderr)
-                kputchar(params->ebx);
+            if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)
+                putchar(params->ebx);
             else
                 LOG(WARNING, "Unsupported file stream");
             break;

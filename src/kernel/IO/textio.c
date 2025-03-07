@@ -43,59 +43,45 @@ void tty_clear_screen(char c)
 	}
 }
 
-void outc(char c)
+void tty_outc(char c)
 {
-	switch((uint32_t)current_stream)
+	switch(c)
 	{
-	case (uint32_t)klog:
-		debug_outc(c);
+	case '\n':
+		tty_cursor += 80;
+
+	case '\r':
+		tty_cursor = (int)(tty_cursor / 80) * 80;
+
 		break;
-		
-	case (uint32_t)kstdout:
+
+	case '\b':
+		tty_cursor--;
+		tty_outc(' ');
+		tty_cursor--;
+
+		break;
+
+	case '\t':
 	{
-		switch(c)
-		{
-		case '\n':
-			tty_cursor += 80;
-
-		case '\r':
-			tty_cursor = (int)(tty_cursor / 80) * 80;
-
-			break;
-
-		case '\b':
-			tty_cursor--;
-			outc(' ');
-			tty_cursor--;
-
-			break;
-
-		case '\t':
-		{
-			// for(uint8_t i = 0; i < TAB_LENGTH; i++)
-			uint8_t first_tab_x = (tty_cursor % 80) / TAB_LENGTH;
-			while(first_tab_x == (tty_cursor % 80) / TAB_LENGTH)
-				outc(' ');
-
-			break;
-		}
-
-		default:
-			tty_vram[tty_cursor]._char = c;
-			tty_vram[tty_cursor].color = tty_color;
-
-			tty_cursor++;
-		}
+		// for(uint8_t i = 0; i < TAB_LENGTH; i++)
+		uint8_t first_tab_x = (tty_cursor % 80) / TAB_LENGTH;
+		while(first_tab_x == (tty_cursor % 80) / TAB_LENGTH)
+			tty_outc(' ');
 
 		break;
 	}
+
 	default:
-		;
+		tty_vram[tty_cursor]._char = c;
+		tty_vram[tty_cursor].color = tty_color;
+
+		tty_cursor++;
 	}
 
 	while((tty_cursor / 80) >= 24)	// Last line
 	{
-		kmemcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
+		memcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
 		
 		for(uint8_t i = 0; i < 80; i++)
 		{

@@ -6,7 +6,7 @@ void pfa_detect_usable_memory()
 
     LOG(INFO, "Usable memory map:");
 
-    kputchar('\n');
+    putchar('\n');
 
     for (uint32_t i = 0; i < multiboot_info->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {
@@ -55,17 +55,17 @@ void pfa_detect_usable_memory()
 
             usable_memory_map[usable_memory_blocks].address = addr;
             usable_memory_map[usable_memory_blocks].length = len32;
-            // kprintf("Memory block %u : address : 0x%lx ; length : %u\n", usable_memory_blocks, usable_memory_map[usable_memory_blocks].address, usable_memory_map[usable_memory_blocks].length);
+            // printf("Memory block %u : address : 0x%lx ; length : %u\n", usable_memory_blocks, usable_memory_map[usable_memory_blocks].address, usable_memory_map[usable_memory_blocks].length);
             usable_memory_blocks++;
 
-            // kprintf("len : %u\n", len32);
+            // printf("len : %u\n", len32);
         }   
     }
 
     if (usable_memory == 0)
     {
         LOG(CRITICAL, "No usable memory detected");
-        kabort();
+        abort();
     }
 
     LOG(INFO, "Detected %u bytes of usable memory", usable_memory); 
@@ -100,7 +100,7 @@ void pfa_bitmap_init()
             if (current_block >= usable_memory_blocks)
             {
                 LOG(CRITICAL, "Not enough memory blocks to allocate bitmap");
-                kabort();
+                abort();
             }
             address = usable_memory_map[current_block].address; // max(address, usable_memory_map[current_block].address);
         }
@@ -122,7 +122,7 @@ physical_address_t pfa_allocate_physical_page()
     if (memory_allocated + 0x1000 > allocatable_memory)
     {
         LOG(CRITICAL, "Out of memory !");
-        kabort();
+        abort();
     }
 
     uint32_t bitmap_byte_address = physical_address_to_virtual(usable_memory_map[0].address);
@@ -151,7 +151,7 @@ physical_address_t pfa_allocate_physical_page()
                             if (current_block >= usable_memory_blocks)
                             {
                                 LOG(CRITICAL, "Out of memory !");
-                                kabort();
+                                abort();
                             }
                             address = usable_memory_map[current_block].address;
                         }
@@ -171,7 +171,7 @@ physical_address_t pfa_allocate_physical_page()
             if (current_block >= usable_memory_blocks)
             {
                 LOG(CRITICAL, "Out of memory !");
-                kabort();
+                abort();
             }
             bitmap_byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }
@@ -179,12 +179,12 @@ physical_address_t pfa_allocate_physical_page()
         if(bitmap_byte_address >= 0xffffffff)
         {
             LOG(CRITICAL, "Out of memory !");
-            kabort();
+            abort();
         }
     }
 
     LOG(CRITICAL, "Out of memory !");
-    kabort();
+    abort();
     return 0;
 }
 
@@ -198,7 +198,7 @@ void pfa_free_physical_page(physical_address_t address)
     if (address & 0xfff)
     {
         LOG(CRITICAL, "Tried to free a non page aligned address");
-        kabort();
+        abort();
     }
 
     physical_address_t current_address = virtual_address_to_physical(first_alloc_page);
@@ -221,7 +221,7 @@ void pfa_free_physical_page(physical_address_t address)
         if (address < current_address)
         {
             LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
-            kabort();
+            abort();
         }
 
         byte_address++;
@@ -231,7 +231,7 @@ void pfa_free_physical_page(physical_address_t address)
             if (current_block >= usable_memory_blocks)
             {
                 LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
-                kabort();
+                abort();
             }
             byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }

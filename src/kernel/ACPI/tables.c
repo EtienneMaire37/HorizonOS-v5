@@ -27,7 +27,7 @@ void acpi_find_tables()
 {
     rsdp = rsdt = NULL;
     LOG(INFO, "Searching for the RSDP");
-    kprintf("Searching for the RSDP\n");
+    printf("Searching for the RSDP\n");
 
     LOG(DEBUG, "\tChecking the 1rst KB of EBDA");
 
@@ -35,7 +35,7 @@ void acpi_find_tables()
     for (uint8_t i = 0; i < 64; i++)
     {
         virtual_address_t address = (uint32_t)ebda + 16 * (uint32_t)i;
-        if (kmemcmp((void*)address, "RSD PTR ", 8) == 0)
+        if (memcmp((void*)address, "RSD PTR ", 8) == 0)
         {
             rsdp = (struct rsdp_table*)address;
             goto found_rsdp;
@@ -47,7 +47,7 @@ void acpi_find_tables()
     for (uint16_t i = 0; i < 0x2000; i++)
     {
         virtual_address_t address = (uint32_t)0xe0000 + 16 * (uint32_t)i;
-        if (kmemcmp((void*)address, "RSD PTR ", 8) == 0)
+        if (memcmp((void*)address, "RSD PTR ", 8) == 0)
         {
             rsdp = (struct rsdp_table*)address;
             goto found_rsdp;
@@ -55,8 +55,8 @@ void acpi_find_tables()
     }
 
     LOG(CRITICAL, "Couldn't find the RSDP table");
-    kprintf("Couldn't find the RSDP table\n");
-    kabort();
+    printf("Couldn't find the RSDP table\n");
+    abort();
 
 found_rsdp:
     LOG(INFO, "Found rsdp at address 0x%x", rsdp);
@@ -64,15 +64,15 @@ found_rsdp:
     acpi_10 = rsdp->revision == 0;
     
     LOG(INFO, "ACPI version : %s", acpi_10 ? "1.0" : "2.0+");
-    kprintf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
+    printf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
 
     bool table_valid = acpi_rsdp_valid((void*)rsdp);
 
     if (!table_valid)
     {
         LOG(CRITICAL, "Invalid RSDP table");
-        kprintf("Invalid RSDP table\n");
-        kabort();
+        printf("Invalid RSDP table\n");
+        abort();
     }
 
     // if (acpi_10)
@@ -90,7 +90,7 @@ found_rsdp:
     //     if (address >> 32)
     //     {
     //         LOG(CRITICAL, "64 bit XSDT address");
-    //         kabort();
+    //         abort();
     //     }
 
     //     xsdt = (struct xsdt_table*)((uint32_t)address);
@@ -109,7 +109,7 @@ uint32_t read_sdt_ptr(uint32_t index)
     if (index >= sdt_count)
     {
         LOG(CRITICAL, "Kernel tried to read an invalid SDT (%u / %u)", index, sdt_count);
-        kabort();
+        abort();
     }
 
     if (acpi_10)    // ACPI 1.0
@@ -124,7 +124,7 @@ uint32_t read_sdt_ptr(uint32_t index)
         if (address >> 32)
         {
             LOG(CRITICAL, "64 bit SDT address at index %u", index);
-            kabort();
+            abort();
         }
         return (uint32_t)address;
     }

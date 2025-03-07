@@ -1,5 +1,5 @@
-#include <stddef.h>
-#include <stdint.h>
+// #include <stddef.h>
+// #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
 
@@ -10,6 +10,12 @@ multiboot_info_t* multiboot_info;
 #define MB (1024 * KB)
 #define GB (1024 * MB)
 #define TB (1024 * GB)
+
+#include "../libc/include/inttypes.h"
+#include "../libc/include/errno.h"
+#include "../libc/include/stddef.h"
+#include "../libc/include/stdarg.h"
+#include "../libc/include/unistd.h"
 
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
@@ -27,6 +33,10 @@ uint64_t available_memory = 0;
 
 extern void _halt();
 void halt();
+
+typedef struct FILE FILE;
+
+#define klog ((FILE*)3)
 
 #define enable_interrupts()  asm("sti");
 #define disable_interrupts() asm("cli");
@@ -53,7 +63,8 @@ const char* multiboot_block_type_text[5] =
     "MULTIBOOT_MEMORY_BADRAM"
 };
 
-#include "klibc/arithmetic.c"
+// #include "klibc/arithmetic.c"
+#include "../libc/src/arithmetic.c"
 
 #include "IO/io.h"
 #include "PS2/ps2.h"
@@ -63,9 +74,15 @@ const char* multiboot_block_type_text[5] =
 #include "PS2/keyboard.h"
 #include "ACPI/tables.h"
 #include "IO/textio.h"
-#include "klibc/stdio.h"
-#include "klibc/string.h"
-#include "klibc/stdlib.h"
+// #include "klibc/stdio.h"
+// #include "klibc/string.h"
+// #include "klibc/stdlib.h"
+#include "../libc/include/stdio.h"
+#include "../libc/include/string.h"
+#include "../libc/include/stdlib.h"
+#include "../libc/src/stdio.c"
+#include "../libc/src/string.c"
+#include "../libc/src/stdlib.c"
 #include "GDT/gdt.h"
 #include "paging/paging.h"
 #include "PIT/pit.h"
@@ -80,16 +97,18 @@ const char* multiboot_block_type_text[5] =
 #include "files/elf.h"
 #include "initrd/initrd.h"
 #include "time/gdn.h"
-#include "klibc/reset.h"
-#include "klibc/time.h"
+#include "time/ktime.h"
+// #include "klibc/time.h"
+#include "../libc/include/time.h"
+#include "../libc/src/time.c"
 
 #include "PS2/keyboard.c"
 #include "ACPI/tables.c"
 #include "memalloc/page_frame_allocator.c"
-#include "klibc/string.c"
+// #include "klibc/string.c"
 #include "IO/textio.c"
-#include "klibc/stdio.c"
-#include "klibc/stdlib.c"
+// #include "klibc/stdio.c"
+// #include "klibc/stdlib.c"
 #include "GDT/gdt.c"
 #include "paging/paging.c"
 #include "PIT/pit.c"
@@ -98,6 +117,9 @@ const char* multiboot_block_type_text[5] =
 #include "IDT/pic.c"
 #include "multitasking/task.c"
 #include "PS2/ps2.c"
+
+#include "../libc/src/kernel_glue.h"
+#include "../libc/src/kernel.c"
 
 // ---------------------------------------------------------------
 
@@ -112,7 +134,7 @@ physical_address_t virtual_address_to_physical(virtual_address_t address)
     if (address == 0xffffffff) return virtual_address_to_physical((virtual_address_t)(uint32_t)&page_directory);   // Recursive paging
     if (address >= 0xc0000000) return address - 0xc0000000;
     LOG(CRITICAL, "Invalid virtual address 0x%x", address);
-    kabort();
+    abort();
     return 0;
 }
 
@@ -121,7 +143,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
     if (address < 0x100000) return (virtual_address_t)address;
     if (address < 0x40000000) return address + 0xc0000000;
     LOG(CRITICAL, "Unmapped physical address 0x%x", address);
-    kabort();
+    abort();
     return 0;
 }
 
@@ -149,23 +171,23 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if (kernel_size >= max_kernel_size)
     {
         LOG(CRITICAL, "Kernel is too big (max %uB)", max_kernel_size); 
-        kprintf("Kernel is too big (max %uB)\n", max_kernel_size);
-        kabort();
+        printf("Kernel is too big (max %uB)\n", max_kernel_size);
+        abort();
     }
 
-    kprintf("Detecting available memory...");
+    printf("Detecting available memory...");
 
     if(magic_number != MULTIBOOT_BOOTLOADER_MAGIC) 
     {
         LOG(CRITICAL, "Invalid multiboot magic number (%x)", magic_number);
-        kprintf("Invalid multiboot magic number (%x)\n", magic_number);
-        kabort();
+        printf("Invalid multiboot magic number (%x)\n", magic_number);
+        abort();
     }
     if(!((multiboot_info->flags >> 6) & 1)) 
     {
         LOG(CRITICAL, "Invalid memory map");
-        kprintf("Invalid memory map\n");
-        kabort();
+        printf("Invalid memory map\n");
+        abort();
     }
 
     LOG(INFO, "Memory map:");
@@ -184,41 +206,41 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     LOG(INFO, "Detected %u bytes of available memory", available_memory); 
 
-    kprintf(" | Done (%u bytes found)\n", available_memory);
+    printf(" | Done (%u bytes found)\n", available_memory);
 
-    kprintf("Loading a GDT...");
-    kmemset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
+    printf("Loading a GDT...");
+    memset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
     setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xfa, 0xc);  // User mode code segment
     setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xf2, 0xc);  // User mode data segment
     
-    kmemset(&TSS, 0, sizeof(struct tss_entry));
+    memset(&TSS, 0, sizeof(struct tss_entry));
     // TSS.iopb = sizeof(struct tss_entry);
     TSS.ss0 = KERNEL_DATA_SEGMENT;
     TSS.esp0 = (uint32_t)&stack_top;
     setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
     install_gdt();
     load_tss();
-    kprintf(" | Done\n");
+    printf(" | Done\n");
 
     LOG(DEBUG, "Loaded the GDT"); 
 
-    kprintf("Loading an IDT...");
+    printf("Loading an IDT...");
     install_idt();
-    kprintf(" | Done\n");
+    printf(" | Done\n");
 
     LOG(DEBUG, "Loaded the IDT"); 
 
-    kprintf("Initializing the PIC...");
+    printf("Initializing the PIC...");
     pic_remap(32, 32 + 8);
-    kprintf(" | Done\n");
+    printf(" | Done\n");
 
     LOG(DEBUG, "Initialized the PIC"); 
 
-    kprintf("Initializing the PIT...");
+    printf("Initializing the PIT...");
     pit_channel_0_set_frequency(PIT_FREQUENCY);
-    kprintf(" | Done\n");
+    printf(" | Done\n");
 
     ps2_controller_connected = ps2_device_1_connected = ps2_device_2_connected = false;
 
@@ -259,8 +281,8 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if (multiboot_info->mods_count != 1)
     {
         LOG(CRITICAL, "Invalid number of modules (%u)", multiboot_info->mods_count);
-        kprintf("Invalid number of modules (%u)\n", multiboot_info->mods_count);
-        kabort();
+        printf("Invalid number of modules (%u)\n", multiboot_info->mods_count);
+        abort();
     }
 
     physical_address_t initrd_module_address = multiboot_info->mods_addr;
@@ -287,24 +309,24 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     pfa_bitmap_init();
 
     LOG(DEBUG, "Retrieving CMOS data");
-    kprintf("Retrieving CMOS data...");
+    printf("Retrieving CMOS data...");
 
     rtc_detect_mode();
     rtc_get_time();
 
     time_initialized = true;
     
-    kprintf(" | Done\n");
+    printf(" | Done\n");
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
-    kprintf("Time : %u:%u:%u %u-%u-%u\n", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+    printf("Time : %u:%u:%u %u-%u-%u\n", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
 
     LOG(DEBUG, "Setting up multitasking");
 
     LOG(TRACE, "sizeof(struct task) : %u", sizeof(struct task));
 
-    kputchar('\n');
+    putchar('\n');
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
 
@@ -314,7 +336,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     acpi_find_tables();
 
     LOG(INFO, "Detecting PS/2 devices");
-    kprintf("Detecting PS/2 devices\n");
+    printf("Detecting PS/2 devices\n");
 
     ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
@@ -341,20 +363,20 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
     if (ps2_device_1_connected)
     {
         LOG(INFO, "PS/2 device 1 connected");
-        kprintf("PS/2 device 1 connected\n");
+        printf("PS/2 device 1 connected\n");
     }
     if (ps2_device_2_connected)
     {
         LOG(INFO, "PS/2 device 2 connected");
-        kprintf("PS/2 device 2 connected\n");
+        printf("PS/2 device 2 connected\n");
     }
     if (!(ps2_device_1_connected || ps2_device_2_connected))
     {
         LOG(INFO, "No PS/2 devices detected");
-        kprintf("No PS/2 devices detected\n");
+        printf("No PS/2 devices detected\n");
     }
 
-    kputchar('\n');
+    putchar('\n');
 
     while(true);
 

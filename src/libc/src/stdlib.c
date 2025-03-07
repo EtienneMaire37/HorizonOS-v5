@@ -84,3 +84,8 @@ int atexit(void (*function)(void))
 //         : "a" (0), "b" (r));
 //     while(1);
 // }
+
+void abort()
+{
+    exit(EXIT_FAILURE);
+}

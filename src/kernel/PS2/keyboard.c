@@ -42,13 +42,13 @@ void ps2_init_keyboards()
     if (PS2_DEVICE_1_KB)
     {
         LOG(DEBUG, "Keyboard 1 scancode set : %u", ps2_kb_1_scancode_set);
-        kprintf("Keyboard 1 scancode set : %u\n", ps2_kb_1_scancode_set);
+        printf("Keyboard 1 scancode set : %u\n", ps2_kb_1_scancode_set);
     }
 
     if (PS2_DEVICE_2_KB)
     {
         LOG(DEBUG, "Keyboard 2 scancode set : %u", ps2_kb_2_scancode_set);
-        kprintf("Keyboard 2 scancode set : %u\n", ps2_kb_2_scancode_set);
+        printf("Keyboard 2 scancode set : %u\n", ps2_kb_2_scancode_set);
     }
 }
 
@@ -61,5 +61,5 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)
         if (ps2_kb_2_scancode_set != 2)
             return;
     // if (!(scancode & 0x80))
-        kprintf("A");
+        printf("A");
 }

@@ -43,12 +43,17 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.o
+src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
 	i386-elf-gcc -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include"
 	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o"
 
-src/libc/lib/libc.o: src/libc/src/* # src/libc/include/*
+src/libc/lib/libc.o: libc
+src/libc/lib/libm.o: libm
+
+libc: src/libc/src/* src/libc/include/*
 	i386-elf-gcc -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -masm=intel
+libm: src/libc/src/* src/libc/include/*
+	i386-elf-gcc -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -masm=intel
 
 rmbin:
 	rm -rf ./bin/*
