@@ -28,7 +28,7 @@ long a64l(const char* s)
     uint8_t i = 0;
     while (*s && i < 6)
     {
-        uint8_t digit = decoding_table[*s];
+        uint8_t digit = decoding_table[(uint8_t)*s];
         if (digit == 0xff)
             break;
         result += digit * magnitude;

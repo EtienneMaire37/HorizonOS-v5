@@ -15,7 +15,10 @@ int fputc(int c, FILE* stream)
 
     default:
         LOG(ERROR, "Invalid output stream");
+        return EOF;
     }
+
+    return c;
 }
 
 void exit(int r)

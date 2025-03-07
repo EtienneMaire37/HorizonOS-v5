@@ -25,7 +25,10 @@ bool acpi_rsdp_valid(struct rsdp_table* table)
 
 void acpi_find_tables()
 {
-    rsdp = rsdt = NULL;
+    // rsdp = rsdt = NULL;
+    rsdp = NULL;
+    rsdt = NULL;
+    
     LOG(INFO, "Searching for the RSDP");
     printf("Searching for the RSDP\n");
 
@@ -114,12 +117,12 @@ uint32_t read_sdt_ptr(uint32_t index)
 
     if (acpi_10)    // ACPI 1.0
     {
-        uint32_t* sdt_ptrs = &(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
+        uint32_t* sdt_ptrs = (uint32_t*)&(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
         return sdt_ptrs[index];
     }
     else            // ACPI 2.0+
     {
-        uint64_t* sdt_ptrs = &(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
+        uint64_t* sdt_ptrs = (uint64_t*)&(((uint8_t*)rsdt)[sizeof(struct sdt_header)]);
         uint64_t address = sdt_ptrs[index];
         if (address >> 32)
         {

@@ -19,7 +19,7 @@ int fputs(const char* s, FILE* stream)
 
 int puts(const char* s)
 {
-    fputs(s, stdout);
+    return fputs(s, stdout);
 }
 
 FILE* fopen(const char* path, const char* mode)
@@ -34,21 +34,27 @@ int fclose(FILE* stream)
     return EOF;
 }
 
+#define FLOAT_PRINT_MAX_DIGITS 10
+
 int fprintf(FILE* stream, const char* format, ...)
 {
     char hex[16] = "0123456789abcdef";
     char HEX[16] = "0123456789ABCDEF";
+
+    uint32_t length = 0;
 
     void printf_d(int64_t val)
     {
         if(val < 0)
         {
             fputc('-', stream);
+            length++;
             val = -val;
         }
         if(val == 0)
         {
             fputc('0', stream);
+            length++;
             return;
         }
         int64_t div = 1000000000000000000;
@@ -59,7 +65,10 @@ int fprintf(FILE* stream, const char* format, ...)
             if(digit || div == 1)
                 first0 = false;
             if(!first0)
+            {
                 fputc('0' + digit, stream);
+                length++;
+            }
             div /= 10;
         }
     }
@@ -68,6 +77,7 @@ int fprintf(FILE* stream, const char* format, ...)
         if(val == 0)
         {
             fputc('0', stream);
+            length++;
             return;
         }
         uint64_t div = 10000000000000000000;
@@ -78,7 +88,10 @@ int fprintf(FILE* stream, const char* format, ...)
             if(digit || div == 1)
                 first0 = false;
             if(!first0)
+            {
                 fputc('0' + digit, stream);
+                length++;
+            }
             div /= 10;
         }
     }
@@ -87,8 +100,12 @@ int fprintf(FILE* stream, const char* format, ...)
         if(val == 0)
         {
             for(uint8_t i = 0; i < padding; i++)
+            {
                 fputc('0', stream);
+                length++;
+            }
             fputc('0', stream);
+            length++;
             return;
         }
         uint64_t mask = 0xf;
@@ -96,7 +113,10 @@ int fprintf(FILE* stream, const char* format, ...)
         {
             uint8_t digit = (val >> ((15 - i) * 4)) & mask;
             if(digit || i >= 16 - padding)
+            {
                 fputc(hex[digit], stream);
+                length++;
+            }
         }
     }
     void printf_X(uint64_t val, uint8_t padding)
@@ -104,8 +124,12 @@ int fprintf(FILE* stream, const char* format, ...)
         if(val == 0)
         {
             for(uint8_t i = 0; i < padding; i++)
+            {
                 fputc('0', stream);
+                length++;
+            }
             fputc('0', stream);
+            length++;
             return;
         }
         uint64_t mask = 0xf;
@@ -113,22 +137,59 @@ int fprintf(FILE* stream, const char* format, ...)
         {
             uint8_t digit = (val >> ((15 - i) * 4)) & mask;
             if(digit || i >= 16 - padding)
+            {
                 fputc(HEX[digit], stream);
+                length++;
+            }
         }
     }
-    void printf_f(long double val)
+    void printf_lf(long double val)
     {
         int64_t k = (int64_t)val;
         long double p = val - (long double)k;
         printf_d(k);
         fputc('.', stream);
-        int64_t mul = 10; // 1000000000000000000;
-        // bool first0 = true;
-        while(mul < 10000)  // 1000000000
+        length++;
+        uint64_t mul = 10;
+        uint64_t max_mul = 10;
+        long double _p = p;
+        uint8_t digits = 0;
+        while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
         {
-            uint8_t digit = ((uint64_t)(p * mul)) % 10;
-            // if(!first0)
-                fputc('0' + digit, stream);
+            _p -= (((uint8_t)(max_mul * _p)) % 10) / (long double)max_mul;
+            max_mul *= 10;
+            digits++;
+        }
+        while(mul < max_mul)
+        {
+            uint8_t digit = ((uint8_t)(p * mul)) % 10;
+            fputc('0' + digit, stream);
+            length++;
+            mul *= 10;
+        }
+    }
+    void printf_f(double val)
+    {
+        int64_t k = (int64_t)val;
+        double p = val - (double)k;
+        printf_d(k);
+        fputc('.', stream);
+        length++;
+        uint64_t mul = 10;
+        uint64_t max_mul = 10;
+        double _p = p;
+        uint8_t digits = 0;
+        while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
+        {
+            _p -= (((uint8_t)(max_mul * _p)) % 10) / (double)max_mul;
+            max_mul *= 10;
+            digits++;
+        }
+        while(mul < max_mul)
+        {
+            uint8_t digit = ((uint8_t)(p * mul)) % 10;
+            fputc('0' + digit, stream);
+            length++;
             mul *= 10;
         }
     }
@@ -175,7 +236,7 @@ int fprintf(FILE* stream, const char* format, ...)
                 break;
             case 'f':
                 if (next_arg_64)
-                    printf_f(va_arg(args, long double));
+                    printf_lf(va_arg(args, long double));
                 else
                     printf_f(va_arg(args, double));
                 break;
@@ -183,8 +244,22 @@ int fprintf(FILE* stream, const char* format, ...)
                 na64_set = true;
                 break;
             case 's':
-                fputs(va_arg(args, char*), stream);
+            // {
+            //     char* s = va_arg(args, char*);
+            //     fputs(s, stream);
+            //     length += strlen(s);
+            //     break;
+            // }
+            {
+                char* s = va_arg(args, char*);
+                while(*s)
+                {
+                    fputc(*s++, stream);
+                    length++;
+                }
                 break;
+            }
+                
             default:
                 break;
             }
@@ -202,8 +277,15 @@ int fprintf(FILE* stream, const char* format, ...)
             format++;
             continue;
         }
-        else 
+        else
+        {
             fputc(*format, stream);
+            length++;
+        }
         format++;
     }
+
+    va_end(args);
+
+    return length;
 }

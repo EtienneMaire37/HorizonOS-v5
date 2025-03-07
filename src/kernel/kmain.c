@@ -70,7 +70,7 @@ const char* multiboot_block_type_text[5] =
 #include "PS2/ps2.h"
 #include "debug/out.h"
 
-#include "IO/keyboard.h"
+// #include "IO/keyboard.h"
 #include "PS2/keyboard.h"
 #include "ACPI/tables.h"
 #include "IO/textio.h"
