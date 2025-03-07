@@ -116,7 +116,6 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             if (multitasking_enabled)
             {
                 LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
-                LOG(ERROR, "Undefined system call");
                 old_index = current_task_index;
                 switch_task(&params);
                 task_kill(old_index);
@@ -134,7 +133,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         default:
             if (multitasking_enabled)
             {
-                LOG(ERROR, "Undefined system call");
+                LOG(ERROR, "Undefined system call (0x%x)", params->eax);
                 old_index = current_task_index;
                 switch_task(&params);
                 task_kill(old_index);

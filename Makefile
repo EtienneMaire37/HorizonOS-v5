@@ -45,7 +45,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
 	i386-elf-gcc -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include"
-	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o"
+	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o" "src/libc/lib/libm.o"
 
 src/libc/lib/libc.o: libc
 src/libc/lib/libm.o: libm

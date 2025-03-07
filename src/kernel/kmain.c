@@ -378,7 +378,7 @@ void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 
     putchar('\n');
 
-    while(true);
+    // while(true);
 
     multitasking_init();
 
