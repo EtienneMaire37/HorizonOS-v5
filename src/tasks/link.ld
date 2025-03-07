@@ -1,28 +1,37 @@
 ENTRY(_start)
 
 OUTPUT_FORMAT(elf32-i386)
- 
-SECTIONS
+
+PHDRS 
 {
-	. = 0x100000;
+    text PT_LOAD FLAGS(5);
+    data PT_LOAD FLAGS(6);
+    bss PT_LOAD FLAGS(6);
+}
 
-	.text ALIGN(0x1000) : 
-	{
-		*(.text)
-	}
- 
-	.rodata ALIGN(0x1000) : 
-	{
-		*(.rodata)
-	}
+SECTIONS 
+{
+    . = 0x08000000;
 
-	.data ALIGN(0x1000) : 
-	{
-		*(.data)
-	}
+    .text ALIGN(0x1000) : 
+    {
+        *(.text .text.*)
+    } :text
 
-	.bss ALIGN(0x1000) : 
-	{
-		*(.bss)
-	}
+    .rodata ALIGN(0x1000) : 
+    {
+        *(.rodata .rodata.*)
+    } :text
+
+    .data ALIGN(0x1000) : 
+    {
+        *(.data .data.*)
+    } :data
+
+    .bss ALIGN(0x1000) : 
+    {
+        *(COMMON)
+        *(.bss .bss.*)
+        . = ALIGN(0x1000);
+    } :bss
 }

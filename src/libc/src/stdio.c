@@ -5,6 +5,8 @@
 //     return c;
 // }
 
+#include "../include/math.h"
+
 int putchar(int c)
 {
     return fputc(c, stdout);
@@ -13,7 +15,10 @@ int putchar(int c)
 int fputs(const char* s, FILE* stream)
 {
     while(*s)
-        fputc(*s++, stream);
+    {
+        fputc(*s, stream);
+        s++;
+    }
     return 0;
 }
 
@@ -145,7 +150,40 @@ int fprintf(FILE* stream, const char* format, ...)
     }
     void printf_lf(long double val)
     {
-        int64_t k = (int64_t)val;
+        if (val < 0)
+        {
+            fputc('-', stream);
+            length++;
+            val *= -1;
+        }
+        
+        switch(fpclassify(val))
+        {
+        case FP_INFINITE:
+        {
+            char* s = "inf";
+            while(*s)
+            {
+                fputc(*s++, stream);
+                length++;
+            }
+            length += 8;
+            return;
+        }
+        case FP_NAN:
+        {
+            char* s = "nan";
+            while(*s)
+            {
+                fputc(*s++, stream);
+                length++;
+            }
+            length += 3;
+            return;
+        }
+        }
+
+        uint64_t k = (uint64_t)val;
         long double p = val - (long double)k;
         printf_d(k);
         fputc('.', stream);
@@ -170,7 +208,40 @@ int fprintf(FILE* stream, const char* format, ...)
     }
     void printf_f(double val)
     {
-        int64_t k = (int64_t)val;
+        if (val < 0)
+        {
+            fputc('-', stream);
+            length++;
+            val *= -1;
+        }
+
+        switch(fpclassify(val))
+        {
+        case FP_INFINITE:
+        {
+            char* s = "inf";
+            while(*s)
+            {
+                fputc(*s++, stream);
+                length++;
+            }
+            length += 8;
+            return;
+        }
+        case FP_NAN:
+        {
+            char* s = "nan";
+            while(*s)
+            {
+                fputc(*s++, stream);
+                length++;
+            }
+            length += 3;
+            return;
+        }
+        }
+
+        uint64_t k = (uint64_t)val;
         double p = val - (double)k;
         printf_d(k);
         fputc('.', stream);

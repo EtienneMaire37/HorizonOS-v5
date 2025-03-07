@@ -51,7 +51,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           TRACE
+#define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
 const char* multiboot_block_type_text[5] = 

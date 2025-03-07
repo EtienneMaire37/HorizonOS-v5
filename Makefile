@@ -44,16 +44,20 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	grub-mkrescue -o ./horizonos.iso ./root
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
-	i386-elf-gcc -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include"
-	ld -T src/tasks/link.ld -m elf_i386 -o "src/tasks/bin/kernel32.elf" "src/tasks/bin/kernel32.o" "src/libc/lib/libc.o" "src/libc/lib/libm.o"
+	i386-elf-gcc -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" # -ffunction-sections -fdata-sections
+	i386-elf-ld -T src/tasks/link.ld -nostdlib --nmagic -m elf_i386 \
+    -o "src/tasks/bin/kernel32.elf" \
+    "src/tasks/bin/kernel32.o" \
+    "src/libc/lib/libc.o" \
+    "src/libc/lib/libm.o"
 
 src/libc/lib/libc.o: libc
 src/libc/lib/libm.o: libm
 
 libc: src/libc/src/* src/libc/include/*
-	i386-elf-gcc -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -masm=intel
+	i386-elf-gcc -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O3 -masm=intel
 libm: src/libc/src/* src/libc/include/*
-	i386-elf-gcc -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -masm=intel
+	i386-elf-gcc -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 -masm=intel
 
 rmbin:
 	rm -rf ./bin/*

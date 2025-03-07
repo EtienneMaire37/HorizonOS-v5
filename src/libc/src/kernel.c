@@ -15,6 +15,7 @@ int fputc(int c, FILE* stream)
 
     default:
         LOG(ERROR, "Invalid output stream");
+        errno = EBADF;
         return EOF;
     }
 

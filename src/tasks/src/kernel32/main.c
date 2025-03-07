@@ -14,6 +14,13 @@ int main()
     printf("PI: %f\n", M_PI);
 
     printf("ln(%f) = %f\n", 10000000., log(10000000.));
+    printf("ln(%f) = %f\n", 10000., log(10000.));
+    printf("ln(%f) = %f\n", 0., log(0.));
+    printf("ln(%f) = %f\n", 1., log(1.));
+    printf("ln(%f) = %f\n", M_E, log(M_E));
+    printf("ln(%f) = %f\n", 3.5, log(3.5));
+    printf("sin(%f) = %f\n", 15., sin(15.));
+    printf("cos(%f) = %f\n", .7, cos(.7));
 
     return 0;
 }
