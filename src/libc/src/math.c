@@ -1,6 +1,8 @@
 #include "../include/math.h"
 #include "../include/inttypes.h"
 
+#define BIN_SEARCH_PRECISION    .00000000001
+
 double fabs(double x)
 {
     return x < 0 ? -x : x;
@@ -73,8 +75,9 @@ long double intpowl(long double a, int64_t b)
 #define exp_k2  0.5
 #define exp_k3  0.166666666667
 #define exp_k4  0.0416666666667
+#define exp_k5  0.00833333333333
 
-#define EXP_TAYLOR_5(x) (1 + (x) * (1 + (x) * exp_k2 + (x) * ((x) * exp_k3 + (x) * (x) * exp_k4))) // (1 + x + x * x * k2 + x * x * x * k3 + x * x * x * x * k4)
+#define EXP_TAYLOR_5(x) (1 + (x) * (1 + (x) * (exp_k2 + (x) * (exp_k3 + (x) * (exp_k4 + (x) * exp_k5))))) // (1 + x + x * x * k2 + x * x * x * k3 + x * x * x * x * k4)
 #define EXP_DIV  100. // 5.
 #define M_SQRTE  1.6487212707001281941643356
 // TODO: Implement interpolation between taylors series as different points
@@ -100,18 +103,32 @@ long double expl(long double x)
 
 double exp2(double x)
 {
+    int64_t k = (int64_t)x;
+    double p = x - (double)k;
+    if (fabs(p) < 1e-50) // if (p < 1e-50)
+        return intpow(2, k);
     return pow(2, x);   // Not the best way to do it
 }
 float exp2f(float x)
 {
-    return powf(2, x);
+    int64_t k = (int64_t)x;
+    float p = x - (float)k;
+    if (fabsf(p) < 1e-50)
+        return intpowf(2, k);
+    return pow(2, x);
 }
 long double exp2l(long double x)
 {
+    int64_t k = (int64_t)x;
+    long double p = x - (long double)k;
+    if (fabsl(p) < 1e-50)
+        return intpowl(2, k);
     return powl(2, x);
 }
 
 #define LOG_HALLEY_ITERATIONS   17
+
+#define LOG_ITERATIONS(x)   ((x) < .01 ? 18 : ((x) < .1 ? 25 : ((x) < 1 ? 7 : ((x) < 10 ? 10 : ((x) < 100 ? 12 : ((x) < 1000 ? 14 : ((x) < 100000 ? 15 : 18)))))))
 
 double log(double x)
 {
@@ -120,7 +137,7 @@ double log(double x)
     if (x < 0)
         return 0;
     double y = 1;
-    uint8_t iterations = x < .01 ? 18 : (x < .1 ? 25 : (x < 1 ? 7 : (x < 10 ? 10 : (x < 100 ? 12 : (x < 1000 ? 14 : (x < 100000 ? 15 : 18))))));
+    uint8_t iterations = LOG_ITERATIONS(x);
     // for (uint8_t i = 0; i < LOG_HALLEY_ITERATIONS; i++)
     for (uint8_t i = 0; i < iterations; i++)
         y += 2 * (x - exp(y)) / (x + exp(y));
@@ -132,11 +149,11 @@ double log(double x)
     //     double e_mid = exp(mid);
     //     if (e_mid < x)
     //     {
-    //         xmin = mid + .001;
+    //         xmin = mid + BIN_SEARCH_PRECISION;
     //     }
     //     else if (e_mid > x)
     //     {
-    //         xmax = mid - .001;
+    //         xmax = mid - BIN_SEARCH_PRECISION;
     //     }
     // }
     // return xmin;
@@ -148,7 +165,7 @@ float logf(float x)
     if (x < 0)
         return 0;
     float y = 1;
-    uint8_t iterations = x < .01 ? 18 : (x < .1 ? 25 : (x < 1 ? 7 : (x < 10 ? 10 : (x < 100 ? 12 : (x < 1000 ? 14 : (x < 100000 ? 15 : 18))))));
+    uint8_t iterations = LOG_ITERATIONS(x);
     for (uint8_t i = 0; i < iterations; i++)
         y += 2 * (x - expf(y)) / (x + expf(y));
     return y;
@@ -160,7 +177,7 @@ long double logl(long double x)
     if (x < 0)
         return 0;
     long double y = 1;
-    uint8_t iterations = x < .01 ? 18 : (x < .1 ? 25 : (x < 1 ? 7 : (x < 10 ? 10 : (x < 100 ? 12 : (x < 1000 ? 14 : (x < 100000 ? 15 : 18))))));
+    uint8_t iterations = LOG_ITERATIONS(x);
     for (uint8_t i = 0; i < iterations; i++)
         y += 2 * (x - expl(y)) / (x + expl(y));
     return y;
@@ -301,3 +318,38 @@ double cos(double x)
         default: return 0.;
     }
 }
+
+double tan(double x)
+{
+    return sin(x) / cos(x);
+}
+// float tanf(float x)
+// {
+//     return sinf(x) / cosf(x);
+// }
+// long double tanl(long double x)
+// {
+//     return sinl(x) / cosl(x);
+// }
+
+double sqrt(double x)
+{
+    double xmin = 0, xmax = x;
+    while (xmin < xmax)
+    {
+        double mid = (xmin + xmax) * .5;
+        double mid2 = mid * mid;
+        if (mid2 < x)
+        {
+            xmin = mid + BIN_SEARCH_PRECISION;
+        }
+        else if (mid2 > x)
+        {
+            xmax = mid - BIN_SEARCH_PRECISION;
+        }
+    }
+    return xmin;
+}
+
+// float sqrtf(float x);
+// long double sqrtl(long double x);

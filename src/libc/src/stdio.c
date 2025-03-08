@@ -6,6 +6,7 @@
 // }
 
 #include "../include/math.h"
+// #include "../src/math.c"
 
 int putchar(int c)
 {
@@ -186,6 +187,8 @@ int fprintf(FILE* stream, const char* format, ...)
         uint64_t k = (uint64_t)val;
         long double p = val - (long double)k;
         printf_d(k);
+        if (p < 1e-50)
+            return;
         fputc('.', stream);
         length++;
         uint64_t mul = 10;
@@ -194,13 +197,14 @@ int fprintf(FILE* stream, const char* format, ...)
         uint8_t digits = 0;
         while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
         {
-            _p -= (((uint8_t)(max_mul * _p)) % 10) / (long double)max_mul;
+            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
+            _p -= digit / (long double)max_mul;
             max_mul *= 10;
             digits++;
         }
         while(mul < max_mul)
         {
-            uint8_t digit = ((uint8_t)(p * mul)) % 10;
+            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
             fputc('0' + digit, stream);
             length++;
             mul *= 10;
@@ -244,6 +248,8 @@ int fprintf(FILE* stream, const char* format, ...)
         uint64_t k = (uint64_t)val;
         double p = val - (double)k;
         printf_d(k);
+        if (p < 1e-50)
+            return;
         fputc('.', stream);
         length++;
         uint64_t mul = 10;
@@ -252,13 +258,14 @@ int fprintf(FILE* stream, const char* format, ...)
         uint8_t digits = 0;
         while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
         {
-            _p -= (((uint8_t)(max_mul * _p)) % 10) / (double)max_mul;
+            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
+            _p -= digit / (long double)max_mul;
             max_mul *= 10;
             digits++;
         }
         while(mul < max_mul)
         {
-            uint8_t digit = ((uint8_t)(p * mul)) % 10;
+            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
             fputc('0' + digit, stream);
             length++;
             mul *= 10;
