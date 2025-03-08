@@ -40,7 +40,8 @@ int fclose(FILE* stream)
     return EOF;
 }
 
-#define FLOAT_PRINT_MAX_DIGITS 10
+#define FLOAT_PRINT_MAX_DIGITS  18// 34
+#define DOUBLE_PRINT_MAX_DIGITS 18// 308
 
 int fprintf(FILE* stream, const char* format, ...)
 {
@@ -184,27 +185,36 @@ int fprintf(FILE* stream, const char* format, ...)
         }
         }
 
+        // long double fmodl(long double a, long double b)
+        // {
+        //     while (a >= b || a < 0)
+        //         a += b * (a < 0 ? 1 : -1);
+        //     return a;
+        // }
+
         uint64_t k = (uint64_t)val;
         long double p = val - (long double)k;
         printf_d(k);
-        if (p < 1e-50)
+        if (p < 1e-10)
             return;
         fputc('.', stream);
         length++;
         uint64_t mul = 10;
         uint64_t max_mul = 10;
+        // long double mul = 10, max_mul = 10;
         long double _p = p;
-        uint8_t digits = 0;
-        while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
+        uint16_t digits = 0;
+        while (_p != 0 && digits < DOUBLE_PRINT_MAX_DIGITS)
         {
-            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
+            uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10);
             _p -= digit / (long double)max_mul;
             max_mul *= 10;
             digits++;
         }
         while(mul < max_mul)
         {
-            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
+            uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10); // ((uint8_t)fmodl(p * mul, 10));
+            // p -= digit / (long double)max_mul;  // To optimize the fmodl call
             fputc('0' + digit, stream);
             length++;
             mul *= 10;
@@ -248,7 +258,7 @@ int fprintf(FILE* stream, const char* format, ...)
         uint64_t k = (uint64_t)val;
         double p = val - (double)k;
         printf_d(k);
-        if (p < 1e-50)
+        if (p < 1e-10)
             return;
         fputc('.', stream);
         length++;

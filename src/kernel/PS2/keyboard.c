@@ -61,5 +61,5 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)
         if (ps2_kb_2_scancode_set != 2)
             return;
     // if (!(scancode & 0x80))
-        printf("A");
+        // printf("A");
 }
