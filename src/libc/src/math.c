@@ -5,8 +5,28 @@ double fabs(double x)
 {
     return x < 0 ? -x : x;
 }
+float fabsf(float x)
+{
+    return x < 0 ? -x : x;
+}
+long double fabsl(long double x)
+{
+    return x < 0 ? -x : x;
+}
 
 double fmod(double a, double b)
+{
+    while (a >= b || a < 0)
+        a += b * (a < 0 ? 1 : -1);
+    return a;
+}
+float fmodf(float a, float b)
+{
+    while (a >= b || a < 0)
+        a += b * (a < 0 ? 1 : -1);
+    return a;
+}
+long double fmodl(long double a, long double b)
 {
     while (a >= b || a < 0)
         a += b * (a < 0 ? 1 : -1);
@@ -21,6 +41,30 @@ double intpow(double a, int64_t b)
         return intpow(a, -b);
 
     double result = 1.;
+    for (int64_t i = 0; i < b; i++)
+        result *= a;
+    return result;
+}
+float intpowf(float a, int64_t b)
+{
+    if (b == 0)
+        return 1;
+    if (b < 0)
+        return intpowf(a, -b);
+
+        float result = 1.;
+    for (int64_t i = 0; i < b; i++)
+        result *= a;
+    return result;
+}
+long double intpowl(long double a, int64_t b)
+{
+    if (b == 0)
+        return 1;
+    if (b < 0)
+        return intpowl(a, -b);
+
+    long double result = 1.;
     for (int64_t i = 0; i < b; i++)
         result *= a;
     return result;
@@ -40,6 +84,31 @@ double exp(double x)
     int64_t k = (int64_t)x;
     double p = x - (double)k;
     return intpow(M_E, k) * intpow(EXP_TAYLOR_5(p / EXP_DIV), EXP_DIV);
+}
+float expf(float x)
+{
+    int64_t k = (int64_t)x;
+    float p = x - (float)k;
+    return intpowf((float)M_E, k) * intpowf(EXP_TAYLOR_5(p / EXP_DIV), EXP_DIV);
+}
+long double expl(long double x)
+{
+    int64_t k = (int64_t)x;
+    long double p = x - (long double)k;
+    return intpowl(M_El, k) * intpowl(EXP_TAYLOR_5(p / EXP_DIV), EXP_DIV);
+}
+
+double exp2(double x)
+{
+    return pow(2, x);   // Not the best way to do it
+}
+float exp2f(float x)
+{
+    return powf(2, x);
+}
+long double exp2l(long double x)
+{
+    return powl(2, x);
 }
 
 #define LOG_HALLEY_ITERATIONS   17
@@ -72,10 +141,42 @@ double log(double x)
     // }
     // return xmin;
 }
+float logf(float x)
+{
+    if (fabsf(x) < 1e-40)
+        return -INFINITY;
+    if (x < 0)
+        return 0;
+    float y = 1;
+    uint8_t iterations = x < .01 ? 18 : (x < .1 ? 25 : (x < 1 ? 7 : (x < 10 ? 10 : (x < 100 ? 12 : (x < 1000 ? 14 : (x < 100000 ? 15 : 18))))));
+    for (uint8_t i = 0; i < iterations; i++)
+        y += 2 * (x - expf(y)) / (x + expf(y));
+    return y;
+}
+long double logl(long double x)
+{
+    if (fabsl(x) < 1e-40)
+        return -INFINITY;
+    if (x < 0)
+        return 0;
+    long double y = 1;
+    uint8_t iterations = x < .01 ? 18 : (x < .1 ? 25 : (x < 1 ? 7 : (x < 10 ? 10 : (x < 100 ? 12 : (x < 1000 ? 14 : (x < 100000 ? 15 : 18))))));
+    for (uint8_t i = 0; i < iterations; i++)
+        y += 2 * (x - expl(y)) / (x + expl(y));
+    return y;
+}
 
 double pow(double a, double b)
 {
     return exp(b * log(a));
+}
+float powf(float a, float b)
+{
+    return expf(b * logf(a));
+}
+long double powl(long double a, long double b)
+{
+    return expl(b * logl(a));
 }
 
 #define SIN_TAYLOR_4(xx) ((xx) - ((xx) * (xx) * (xx)) / 6. + ((xx) * (xx) * (xx) * (xx) * (xx)) / 120.)
