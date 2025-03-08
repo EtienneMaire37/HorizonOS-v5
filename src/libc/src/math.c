@@ -54,7 +54,7 @@ float intpowf(float a, int64_t b)
     if (b < 0)
         return intpowf(a, -b);
 
-        float result = 1.;
+    float result = 1.f;
     for (int64_t i = 0; i < b; i++)
         result *= a;
     return result;

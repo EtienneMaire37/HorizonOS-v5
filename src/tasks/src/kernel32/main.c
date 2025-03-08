@@ -29,7 +29,8 @@ int main()
     printf("sqrt(%f) = %f\n", 14., sqrt(14.));
     printf("sqrt(%f) = %f\n", 2., sqrt(2.));
     printf("sqrt(%f) = %f\n", 1526.3, sqrt(1526.3));
-    printf("%f\n", 133.16789134678891200042345);    
+    printf("%f\n", 133.16789134678891200042345);
+    fputs("fputs test\n", stdout);
 
     return 0;
 }

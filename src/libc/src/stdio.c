@@ -163,23 +163,13 @@ int fprintf(FILE* stream, const char* format, ...)
         {
         case FP_INFINITE:
         {
-            char* s = "inf";
-            while(*s)
-            {
-                fputc(*s++, stream);
-                length++;
-            }
-            length += 8;
+            fputs("inf", stream);
+            length += 3;
             return;
         }
         case FP_NAN:
         {
-            char* s = "nan";
-            while(*s)
-            {
-                fputc(*s++, stream);
-                length++;
-            }
+            fputs("nan", stream);
             length += 3;
             return;
         }
@@ -233,23 +223,13 @@ int fprintf(FILE* stream, const char* format, ...)
         {
         case FP_INFINITE:
         {
-            char* s = "inf";
-            while(*s)
-            {
-                fputc(*s++, stream);
-                length++;
-            }
-            length += 8;
+            fputs("inf", stream);
+            length += 3;
             return;
         }
         case FP_NAN:
         {
-            char* s = "nan";
-            while(*s)
-            {
-                fputc(*s++, stream);
-                length++;
-            }
+            fputs("nan", stream);
             length += 3;
             return;
         }
@@ -332,12 +312,6 @@ int fprintf(FILE* stream, const char* format, ...)
                 na64_set = true;
                 break;
             case 's':
-            // {
-            //     char* s = va_arg(args, char*);
-            //     fputs(s, stream);
-            //     length += strlen(s);
-            //     break;
-            // }
             {
                 char* s = va_arg(args, char*);
                 while(*s)
