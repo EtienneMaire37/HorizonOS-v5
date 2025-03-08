@@ -6,9 +6,9 @@
 
 #define EOF (-1)
 
-#define SEEK_SET 0
-#define SEEK_CUR 1
-#define SEEK_END 2
+#define SEEK_CUR 0
+#define SEEK_END 1
+#define SEEK_SET 2
 
 #define BUFSIZ 4096
 
@@ -25,6 +25,14 @@ struct FILE
 #define stdin   ((FILE*)0)
 #define stdout  ((FILE*)1)
 #define stderr  ((FILE*)2)
+
+#define _IOFBF 0
+#define _IOLBF 1
+#define _IONBF 2
+
+#define FILENAME_MAX    255
+#define FOPEN_MAX       8
+#define TMP_MAX         65536
 
 FILE* fopen(const char* path, const char* mode);
 int fclose(FILE* stream);

@@ -353,3 +353,16 @@ double sqrt(double x)
 
 // float sqrtf(float x);
 // long double sqrtl(long double x);
+
+double sinh(double x)
+{
+    return .5 * (exp(x) - exp(-x));
+}
+double cosh(double x)
+{
+    return .5 * (exp(x) + exp(-x));
+}
+double tanh(double x)
+{
+    return (exp(x) - exp(-x)) / (exp(x) + exp(-x)); // sinh(x) / cosh(x)
+}
