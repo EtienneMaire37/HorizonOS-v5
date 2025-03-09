@@ -133,7 +133,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (true) //(task_count >= MAX_TASKS)
+            if (true) // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -150,18 +150,26 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
                 // tasks[task_count - 1].name = tasks[current_task_index].name;
                 // tasks[task_count - 1].ring = tasks[current_task_index].ring;
-                // if (tasks[current_task_index].kernel_stack)
+                // task_create_virtual_address_space(&tasks[task_count - 1]);
+                // if (tasks[current_task_index].kernel_stack_phys)
                 // {
-                //     tasks[task_count - 1].kernel_stack = pfa_allocate_page();
-                //     memcpy(tasks[task_count - 1].kernel_stack, tasks[current_task_index].kernel_stack, 4096);
+                //     tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
+                //     // memcpy(tasks[task_count - 1].kernel_stack, tasks[current_task_index].kernel_stack, 4096);
+                //     load_pd(tasks[current_task_index].page_directory);
+                //     memcpy(stack_tmp, TASK_KERNEL_STACK_BOTTOM_ADDRESS, 4096);
+                //     load_pd(tasks[task_count - 1].page_directory);
+                //     memcpy(TASK_KERNEL_STACK_BOTTOM_ADDRESS, stack_tmp, 4096);
                 // }
-                // if (tasks[current_task_index].stack)
+                // if (tasks[current_task_index].stack_phys)
                 // {
-                //     tasks[task_count - 1].stack = pfa_allocate_page();
-                //     memcpy(tasks[task_count - 1].stack, tasks[current_task_index].stack, 4096);
+                //     tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
+                //     // memcpy(tasks[task_count - 1].stack, tasks[current_task_index].stack, 4096);
+                //     load_pd(tasks[current_task_index].page_directory);
+                //     memcpy(stack_tmp, TASK_STACK_BOTTOM_ADDRESS, 4096);
+                //     load_pd(tasks[task_count - 1].page_directory);
+                //     memcpy(TASK_STACK_BOTTOM_ADDRESS, stack_tmp, 4096);
                 // }
-                
-                // !! TODO : Make the stack be mapped at a fixed place in memory so you can fork correctly
+                // TODO: Finish this (create pages in tasks[task_count - 1] where they are present in tasks[current_task_index] (where 0x100000 <= addr < 0xc0000000 - 0x2000), copy the data)
             }
             break;
         default:

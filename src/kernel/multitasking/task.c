@@ -1,5 +1,10 @@
 #pragma once
 
+void load_pd(void* ptr)
+{
+    asm("mov cr3, eax" :: "a" ((uint32_t)virtual_address_to_physical((virtual_address_t)ptr)));
+}
+
 void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 {
     if (ring != 3 && ring != 0)
@@ -64,6 +69,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     LOG(DEBUG, "   Flags : 0x%x", header->flags);
 
     task_create_virtual_address_space(_task);
+
+    load_pd(_task->page_directory);
 
     LOG(DEBUG, "ELF sections : ");
 
@@ -132,13 +139,18 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         }
     }
 
-    _task->stack = (uint8_t*)pfa_allocate_page();
+    // _task->stack = (uint8_t*)pfa_allocate_page();
+    _task->stack_phys = pfa_allocate_physical_page();
     if (ring == 3)
-        _task->kernel_stack = (uint8_t*)pfa_allocate_page();
-    else 
-        _task->kernel_stack = NULL;
+        _task->kernel_stack_phys = pfa_allocate_physical_page();
+    else
+        _task->kernel_stack_phys = 0;
+    // if (ring == 3)
+    //     _task->kernel_stack = (uint8_t*)pfa_allocate_page();
+    // else 
+    //     _task->kernel_stack = NULL;
 
-    uint8_t* task_stack_top = _task->stack + 4096;
+    uint8_t* task_stack_top = (uint8_t*)TASK_STACK_TOP_ADDRESS; // _task->stack + 4096;
 
     // struct interrupt_registers* registers = ring == 3 ? (struct interrupt_registers*)((uint32_t)_task->kernel_stack + 4) : (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
     struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
@@ -182,12 +194,15 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 void task_destroy(struct task* _task)
 {
     LOG(INFO, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
-    LOG(TRACE, "Freeing stack at 0x%x", _task->stack);
-    pfa_free_page((virtual_address_t)_task->stack);
+    LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys); //_task->stack);
+    // pfa_free_page((virtual_address_t)_task->stack);
+    pfa_free_physical_page(_task->stack_phys);
     LOG(TRACE, "Freeing virtual address space");
     task_virtual_address_space_destroy(_task);
-    if (_task->kernel_stack)
-        pfa_free_page((virtual_address_t)_task->kernel_stack);
+    // if (_task->kernel_stack)
+    if (_task->kernel_stack_phys)
+        pfa_free_physical_page(_task->kernel_stack_phys);
+        // pfa_free_page((virtual_address_t)_task->kernel_stack);
 }
 
 void task_virtual_address_space_destroy(struct task* _task)
@@ -283,6 +298,11 @@ void task_create_virtual_address_space(struct task* _task)
             // LOG(DEBUG, "Created page at 0x%x", address);
         }
     }
+
+    task_virtual_address_space_create_page_table(_task, 767);   // Stacks
+    struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[767].address << 12);
+    set_page(pt, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
+    set_page(pt, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
 }
 
 void multitasking_init()
@@ -328,7 +348,7 @@ void switch_task(struct interrupt_registers** registers)
 
     current_task_index = (current_task_index + 1) % task_count;
 
-    TSS.esp0 = (uint32_t)tasks[current_task_index].kernel_stack + 4096;
+    TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS; //(uint32_t)tasks[current_task_index].kernel_stack + 4096;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
 
     *registers = tasks[current_task_index].registers;

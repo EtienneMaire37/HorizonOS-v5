@@ -10,16 +10,23 @@ struct task
     char* name;
     struct interrupt_registers* registers;
     // uint8_t kernel_stack[KERNEL_STACK_SIZE];
-    uint8_t* kernel_stack;
+    // uint8_t* kernel_stack;
     // struct task* next_task;
     // struct task* previous_task;
-    uint8_t* stack;
+    // uint8_t* stack;
+    physical_address_t stack_phys;
+    physical_address_t kernel_stack_phys;
     uint8_t ring;
     // uint64_t pid;
     pid_t pid;
     bool system_task;
     struct page_directory_entry_4kb* page_directory;
 };
+
+#define TASK_STACK_BOTTOM_ADDRESS   (0xc0000000 - 4096)
+#define TASK_STACK_TOP_ADDRESS      (TASK_STACK_BOTTOM_ADDRESS + 4096)
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS   (0xc0000000 - 8192)
+#define TASK_KERNEL_STACK_TOP_ADDRESS      (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 4096)
 
 #define MAX_TASKS 128
 
@@ -29,6 +36,8 @@ uint16_t task_count;
 #define TASK_SWITCH_DELAY 30 // ms
 
 uint8_t multitasking_counter = 0;
+
+uint8_t stack_tmp[4096];
 
 // struct task* current_task;
 uint16_t current_task_index = 0;
