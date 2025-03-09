@@ -135,6 +135,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     _task->stack = (uint8_t*)pfa_allocate_page();
     if (ring == 3)
         _task->kernel_stack = (uint8_t*)pfa_allocate_page();
+    else 
+        _task->kernel_stack = NULL;
 
     uint8_t* task_stack_top = _task->stack + 4096;
 
@@ -179,16 +181,13 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
 void task_destroy(struct task* _task)
 {
-    LOG(ERROR, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
+    LOG(INFO, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
     LOG(TRACE, "Freeing stack at 0x%x", _task->stack);
     pfa_free_page((virtual_address_t)_task->stack);
     LOG(TRACE, "Freeing virtual address space");
     task_virtual_address_space_destroy(_task);
-    if (_task->ring == 3)
-    {
-        LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack);
+    if (_task->kernel_stack)
         pfa_free_page((virtual_address_t)_task->kernel_stack);
-    }
 }
 
 void task_virtual_address_space_destroy(struct task* _task)

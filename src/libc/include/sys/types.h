@@ -1,3 +1,3 @@
 #pragma once
 
-typedef unsigned long long pid_t;
+typedef long long pid_t;    // unsigned long long

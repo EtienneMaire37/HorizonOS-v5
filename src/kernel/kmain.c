@@ -154,7 +154,7 @@ void halt()
     _halt();
 }
 
-void kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
+void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
     multiboot_info = _multiboot_info;
     tty_cursor = 0;

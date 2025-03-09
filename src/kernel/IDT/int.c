@@ -27,9 +27,6 @@ void kernel_panic(struct interrupt_registers* params)
     halt();
 }
 
-uint32_t _cr3;
-
-// #define return_from_isr() { return task_data_segment(*currentTask); }
 #define return_from_isr() { return params->cr3; }
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
@@ -113,7 +110,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         uint16_t old_index;
         switch (params->eax)
         {
-        case 0:
+        case 0:     // exit
             if (multitasking_enabled)
             {
                 LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
@@ -122,18 +119,50 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 task_kill(old_index);
             }
             break;
-        case 1:
+        case 1:     // fputc
             if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)
                 putchar(params->ebx);
             else
                 LOG(WARNING, "Unsupported file stream");
             break;
-        case 2:
+        case 2:     // time
             params->eax = ktime(NULL);
             break;
-        case 3:
+        case 3:     // getpid
             params->eax = tasks[current_task_index].pid >> 32;
             params->ebx = (uint32_t)tasks[current_task_index].pid;
+            break;
+        case 4:     // fork
+            if (true) //(task_count >= MAX_TASKS)
+            {
+                params->eax = 0xffffffff;
+                params->ebx = 0xffffffff;   // -1
+            }
+            else
+            {
+                // task_count++;
+                // *(tasks[task_count - 1].registers) = params;
+                // tasks[task_count - 1].registers->eax = tasks[task_count - 1].registers->ebx = 0;  // 0 to child
+                // tasks[task_count - 1].pid = current_pid++;
+
+                // params->eax = tasks[task_count - 1].pid >> 32;
+                // params->ebx = (uint32_t)tasks[task_count - 1].pid;
+
+                // tasks[task_count - 1].name = tasks[current_task_index].name;
+                // tasks[task_count - 1].ring = tasks[current_task_index].ring;
+                // if (tasks[current_task_index].kernel_stack)
+                // {
+                //     tasks[task_count - 1].kernel_stack = pfa_allocate_page();
+                //     memcpy(tasks[task_count - 1].kernel_stack, tasks[current_task_index].kernel_stack, 4096);
+                // }
+                // if (tasks[current_task_index].stack)
+                // {
+                //     tasks[task_count - 1].stack = pfa_allocate_page();
+                //     memcpy(tasks[task_count - 1].stack, tasks[current_task_index].stack, 4096);
+                // }
+                
+                // !! TODO : Make the stack be mapped at a fixed place in memory so you can fork correctly
+            }
             break;
         default:
             if (multitasking_enabled)

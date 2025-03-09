@@ -1,12 +1,12 @@
 #pragma once
 
-void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd)
+void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 {
 	outb(0x3d4, 0x0a);
-	outb(0x3d5, (inb(0x3d5) & 0xc0) | scanlineStart);
+	outb(0x3d5, (inb(0x3d5) & 0xc0) | scanline_start);
  
 	outb(0x3d4, 0x0b);
-	outb(0x3d5, (inb(0x3d5) & 0xe0) | scanlineEnd);
+	outb(0x3d5, (inb(0x3d5) & 0xe0) | scanline_end);
 }
 
 void tty_hide_cursor()

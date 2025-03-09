@@ -5,3 +5,4 @@
 
 void* sbrk(intptr_t increment);
 pid_t getpid();
+pid_t fork();

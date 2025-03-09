@@ -35,3 +35,11 @@ pid_t getpid()
         : "a" (3));
     return ((pid_t)hi << 32) | lo;
 }
+
+pid_t fork()
+{
+    uint32_t hi, lo;
+    asm("int 0xff" : "=a" (hi), "=b" (lo)
+        : "a" (4));
+    return ((pid_t)hi << 32) | lo;
+}

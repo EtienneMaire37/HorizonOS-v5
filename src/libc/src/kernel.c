@@ -36,5 +36,10 @@ time_t time(time_t* t)
 
 pid_t getpid()
 {
-    return (pid_t)0xffffffffffffffff;
+    return (pid_t)-1;
+}
+
+pid_t fork()
+{
+    return (pid_t)-1;
 }
