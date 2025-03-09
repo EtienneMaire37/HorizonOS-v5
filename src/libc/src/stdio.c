@@ -40,10 +40,10 @@ int fclose(FILE* stream)
     return EOF;
 }
 
-#define FLOAT_PRINT_MAX_DIGITS  18// 34
-#define DOUBLE_PRINT_MAX_DIGITS 18// 308
+#define FLOAT_PRINT_MAX_DIGITS  18 // 34
+#define DOUBLE_PRINT_MAX_DIGITS 18 // 308
 
-int fprintf(FILE* stream, const char* format, ...)
+int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_list args)
 {
     char hex[16] = "0123456789abcdef";
     char HEX[16] = "0123456789ABCDEF";
@@ -54,13 +54,13 @@ int fprintf(FILE* stream, const char* format, ...)
     {
         if(val < 0)
         {
-            fputc('-', stream);
+            func('-');
             length++;
             val = -val;
         }
         if(val == 0)
         {
-            fputc('0', stream);
+            func('0');
             length++;
             return;
         }
@@ -73,7 +73,7 @@ int fprintf(FILE* stream, const char* format, ...)
                 first0 = false;
             if(!first0)
             {
-                fputc('0' + digit, stream);
+                func('0' + digit);
                 length++;
             }
             div /= 10;
@@ -83,7 +83,7 @@ int fprintf(FILE* stream, const char* format, ...)
     {
         if(val == 0)
         {
-            fputc('0', stream);
+            func('0');
             length++;
             return;
         }
@@ -96,7 +96,7 @@ int fprintf(FILE* stream, const char* format, ...)
                 first0 = false;
             if(!first0)
             {
-                fputc('0' + digit, stream);
+                func('0' + digit);
                 length++;
             }
             div /= 10;
@@ -108,10 +108,10 @@ int fprintf(FILE* stream, const char* format, ...)
         {
             for(uint8_t i = 0; i < padding; i++)
             {
-                fputc('0', stream);
+                func('0');
                 length++;
             }
-            fputc('0', stream);
+            func('0');
             length++;
             return;
         }
@@ -121,7 +121,7 @@ int fprintf(FILE* stream, const char* format, ...)
             uint8_t digit = (val >> ((15 - i) * 4)) & mask;
             if(digit || i >= 16 - padding)
             {
-                fputc(hex[digit], stream);
+                func(hex[digit]);
                 length++;
             }
         }
@@ -132,10 +132,10 @@ int fprintf(FILE* stream, const char* format, ...)
         {
             for(uint8_t i = 0; i < padding; i++)
             {
-                fputc('0', stream);
+                func('0');
                 length++;
             }
-            fputc('0', stream);
+            func('0');
             length++;
             return;
         }
@@ -145,7 +145,7 @@ int fprintf(FILE* stream, const char* format, ...)
             uint8_t digit = (val >> ((15 - i) * 4)) & mask;
             if(digit || i >= 16 - padding)
             {
-                fputc(HEX[digit], stream);
+                func(HEX[digit]);
                 length++;
             }
         }
@@ -154,7 +154,7 @@ int fprintf(FILE* stream, const char* format, ...)
     {
         if (val < 0)
         {
-            fputc('-', stream);
+            func('-');
             length++;
             val *= -1;
         }
@@ -163,13 +163,13 @@ int fprintf(FILE* stream, const char* format, ...)
         {
         case FP_INFINITE:
         {
-            fputs("inf", stream);
+            func_s("inf");
             length += 3;
             return;
         }
         case FP_NAN:
         {
-            fputs("nan", stream);
+            func_s("nan");
             length += 3;
             return;
         }
@@ -187,7 +187,7 @@ int fprintf(FILE* stream, const char* format, ...)
         printf_d(k);
         if (p < 1e-10)
             return;
-        fputc('.', stream);
+        func('.');
         length++;
         uint64_t mul = 10;
         uint64_t max_mul = 10;
@@ -205,7 +205,7 @@ int fprintf(FILE* stream, const char* format, ...)
         {
             uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10); // ((uint8_t)fmodl(p * mul, 10));
             // p -= digit / (long double)max_mul;  // To optimize the fmodl call
-            fputc('0' + digit, stream);
+            func('0' + digit);
             length++;
             mul *= 10;
         }
@@ -214,7 +214,7 @@ int fprintf(FILE* stream, const char* format, ...)
     {
         if (val < 0)
         {
-            fputc('-', stream);
+            func('-');
             length++;
             val *= -1;
         }
@@ -223,13 +223,13 @@ int fprintf(FILE* stream, const char* format, ...)
         {
         case FP_INFINITE:
         {
-            fputs("inf", stream);
+            func_s("inf");
             length += 3;
             return;
         }
         case FP_NAN:
         {
-            fputs("nan", stream);
+            func_s("nan");
             length += 3;
             return;
         }
@@ -240,7 +240,7 @@ int fprintf(FILE* stream, const char* format, ...)
         printf_d(k);
         if (p < 1e-10)
             return;
-        fputc('.', stream);
+        func('.');
         length++;
         uint64_t mul = 10;
         uint64_t max_mul = 10;
@@ -256,14 +256,12 @@ int fprintf(FILE* stream, const char* format, ...)
         while(mul < max_mul)
         {
             uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
-            fputc('0' + digit, stream);
+            func('0' + digit);
             length++;
             mul *= 10;
         }
     }
 
-    va_list args;
-    va_start(args, format);
     bool next_arg_64 = false, na64_set = false;
     bool next_formatted = false;
     while (*format)
@@ -316,7 +314,7 @@ int fprintf(FILE* stream, const char* format, ...)
                 char* s = va_arg(args, char*);
                 while(*s)
                 {
-                    fputc(*s++, stream);
+                    func(*s++);
                     length++;
                 }
                 break;
@@ -341,13 +339,29 @@ int fprintf(FILE* stream, const char* format, ...)
         }
         else
         {
-            fputc(*format, stream);
+            func(*format);
             length++;
         }
         format++;
     }
 
-    va_end(args);
+    return length;
+}
 
+int fprintf(FILE* stream, const char* format, ...)
+{
+    void _fputc(char c)
+    {
+        fputc(c, stream);
+    }
+    void _fputs(char* s)
+    {
+        fputs(s, stream);
+    }
+
+    va_list args;
+    va_start(args, format);
+    int length = _printf(_fputc, _fputs, format, args);
+    va_end(args);
     return length;
 }
