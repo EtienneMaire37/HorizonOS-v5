@@ -33,3 +33,8 @@ time_t time(time_t* t)
 {
     return ktime(t);
 }
+
+pid_t getpid()
+{
+    return (pid_t)0xffffffffffffffff;
+}

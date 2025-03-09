@@ -1,5 +1,6 @@
 #include "../include/math.h"
-#include "../include/inttypes.h"
+// #include "../include/inttypes.h"
+#include <stdint.h>
 
 #define BIN_SEARCH_PRECISION    .00000000001
 

@@ -24,6 +24,8 @@ struct FILE
     unsigned char drive;
 };
 
+typedef char* va_list;
+
 #define stdin   ((FILE*)0)
 #define stdout  ((FILE*)1)
 #define stderr  ((FILE*)2)

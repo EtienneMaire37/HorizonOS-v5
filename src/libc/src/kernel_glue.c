@@ -27,3 +27,11 @@ time_t time(time_t* t)
     if (t) *t = now;
     return now;
 }
+
+pid_t getpid()
+{
+    uint32_t hi, lo;
+    asm("int 0xff" : "=a" (hi), "=b" (lo)
+        : "a" (3));
+    return ((pid_t)hi << 32) | lo;
+}

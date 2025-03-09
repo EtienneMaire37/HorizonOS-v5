@@ -109,6 +109,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     }
     else if (params->interrupt_number == 0xff)
     {
+        // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, params->eax);
         uint16_t old_index;
         switch (params->eax)
         {
@@ -129,6 +130,10 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             break;
         case 2:
             params->eax = ktime(NULL);
+            break;
+        case 3:
+            params->eax = tasks[current_task_index].pid >> 32;
+            params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         default:
             if (multitasking_enabled)

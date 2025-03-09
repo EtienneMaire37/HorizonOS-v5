@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <time.h>
 #include <math.h>
 
@@ -31,6 +32,7 @@ int main()
     printf("sqrt(%f) = %f\n", 1526.3, sqrt(1526.3));
     printf("%f\n", 133.16789134678891200042345);
     fputs("fputs test\n", stdout);
+    printf("pid : %lu\n", getpid());
 
     return 0;
 }

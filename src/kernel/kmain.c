@@ -1,5 +1,5 @@
 // #include <stddef.h>
-// #include <stdint.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
 
@@ -11,11 +11,12 @@ multiboot_info_t* multiboot_info;
 #define GB (1024 * MB)
 #define TB (1024 * GB)
 
-#include "../libc/include/inttypes.h"
+// #include "../libc/include/inttypes.h"
 #include "../libc/include/errno.h"
 #include "../libc/include/stddef.h"
 #include "../libc/include/stdarg.h"
 #include "../libc/include/unistd.h"
+#include "../libc/include/sys/types.h"
 
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;

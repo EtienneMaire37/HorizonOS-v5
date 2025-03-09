@@ -15,7 +15,8 @@ struct task
     // struct task* previous_task;
     uint8_t* stack;
     uint8_t ring;
-    uint64_t pid;
+    // uint64_t pid;
+    pid_t pid;
     bool system_task;
     struct page_directory_entry_4kb* page_directory;
 };
