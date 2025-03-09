@@ -8,12 +8,12 @@
 
 int main()
 {
-    printf("isfinite : \n");
-    printf("0.: %u\n", isfinite(0.));
-    printf("1. / 0.: %u\n", isfinite(1. / 0.));
-    printf("PI:  %f\n",  M_PI);
+    // printf("isfinite : \n");
+    // printf("0.: %u\n", isfinite(0.));
+    // printf("1. / 0.: %u\n", isfinite(1. / 0.));
+    // printf("PI:  %f\n",  M_PI);
     printf("PIl: %lf\n", M_PIl);
-    printf("exp(%f) = %f\n", 135.183, exp(135.183));
+    printf("exp(%f) = %lf\n", 135.183, expl(135.183));
     printf("exp(%f) = %f\n", 32.57, exp(32.57));
     printf("ln(%f) = %f\n", 10000000., log(10000000.));
     printf("ln(%f) = %f\n", 10000., log(10000.));

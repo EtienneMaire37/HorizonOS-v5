@@ -4,6 +4,8 @@
 #define NULL ((void*)0)
 #endif
 
+typedef unsigned int size_t;
+
 #define EOF (-1)
 
 #define SEEK_CUR 0
@@ -44,4 +46,7 @@ int putchar(int c);
 int fputs(const char* s, FILE* stream);
 int puts(const char* s);
 int fprintf(FILE* stream, const char* format, ...);
-#define printf(...) fprintf(stdout, __VA_ARGS__);
+// #define printf(...) fprintf(stdout, __VA_ARGS__);
+int printf(const char* format, ...);
+int sprintf(char* buffer, const char* format, ...);
+int snprintf(char* buffer, size_t bufsz, const char* format, ...);

@@ -350,18 +350,86 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
 
 int fprintf(FILE* stream, const char* format, ...)
 {
-    void _fputc(char c)
+    void _putc(char c)
     {
         fputc(c, stream);
     }
-    void _fputs(char* s)
+    void _puts(char* s)
     {
         fputs(s, stream);
     }
 
     va_list args;
     va_start(args, format);
-    int length = _printf(_fputc, _fputs, format, args);
+    int length = _printf(_putc, _puts, format, args);
     va_end(args);
+    return length;
+}
+
+int printf(const char* format, ...)
+{
+    void _putc(char c)
+    {
+        putchar(c);
+    }
+    void _puts(char* s)
+    {
+        puts(s);
+    }
+
+    va_list args;
+    va_start(args, format);
+    int length = _printf(_putc, _puts, format, args);
+    va_end(args);
+    return length;
+}
+
+int sprintf(char* buffer, const char* format, ...)
+{
+    uint32_t index = 0;
+    void _putc(char c)
+    {
+        buffer[index++] = c;
+    }
+    void _puts(char* s)
+    {
+        while (*s)
+        {
+            _putc(*s);
+            s++;
+        }
+    }
+
+    va_list args;
+    va_start(args, format);
+    int length = _printf(_putc, _puts, format, args);
+    va_end(args);
+    buffer[index] = 0;
+    return length;
+}
+
+int snprintf(char* buffer, size_t bufsz, const char* format, ...)
+{
+    uint32_t index = 0;
+    void _putc(char c)
+    {
+        if (index < bufsz - 1)
+            buffer[index++] = c;
+    }
+    void _puts(char* s)
+    {
+        while (*s)
+        {
+            _putc(*s);
+            s++;
+        }
+    }
+
+    va_list args;
+    va_start(args, format);
+    int length = _printf(_putc, _puts, format, args);
+    va_end(args);
+    if (bufsz != 0)
+        buffer[index] = 0;
     return length;
 }
