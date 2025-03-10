@@ -9,12 +9,12 @@
 
 A 32-bit monolithic kernel for x86 architecture developed by [EtienneMaire37](https://github.com/EtienneMaire37)
 
-## Overview
+## Overview 🌟
 HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platform for low-level systems programming. Built from scratch and using the GRUB bootloader, it demonstrates core operating system concepts while maintaining simplicity and readability.
 
-## Features
+## Features 🛠️
 
-### Implemented
+### Implemented ✅
 - Monolithic kernel design for single-processor systems
 - Basic memory management (paging, frame allocation) supporting up to 4GB RAM
 - Preemptive multitasking implementation
@@ -23,7 +23,7 @@ HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platfo
 - Custom C library (libc) in development
 - Basic math library (libm)
 
-### Planned
+### Planned 📅
 - Multi-core support
 - PCI device enumeration
 - USB drivers and mouse support
@@ -31,30 +31,30 @@ HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platfo
 - Graphical display support
 - Improved filesystem support
 
-## Building HorizonOS
+## Building HorizonOS 🛠️
 
-### Prerequisites
+### Prerequisites 📦
 - i386-elf cross-compiler
 - NASM assembler
 - GRUB 2.0+
 - QEMU (for emulation)
 
-# Install build dependencies (Debian/Ubuntu)
+# Install build dependencies (Debian/Ubuntu) 🐧
 ```bash
 sudo apt install nasm grub-pc-bin qemu-system-i386
 ```
 
-# Set up cross-compiler (using included script)
+# Set up cross-compiler (using included script) ⚙️
 ```bash
 sudo sh install-cross-compiler.sh
 ```
 
-### Compilation
+### Compilation 🔨
 ```bash
 make all
 ```
 
-## Running in QEMU
+## Running in QEMU 🚀
 ```bash
 make run
 ```
