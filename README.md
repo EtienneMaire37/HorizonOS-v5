@@ -1,5 +1,11 @@
 # HorizonOS v5
-![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
+![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) 
+![x86](https://img.shields.io/badge/arch-x86-informational?logo=intel) 
+![32-bit](https://img.shields.io/badge/bits-32-ff69b4) 
+![Building](https://img.shields.io/badge/building-Yes-brightgreen) 
+![QEMU](https://img.shields.io/badge/tested%20with-QEMU-red?logo=qemu) 
+![NASM](https://img.shields.io/badge/assembler-NASM-orange) 
+![GRUB](https://img.shields.io/badge/bootloader-GRUB-lightgrey)
 
 A 32-bit monolithic kernel for x86 architecture developed by [EtienneMaire37](https://github.com/EtienneMaire37)
 
