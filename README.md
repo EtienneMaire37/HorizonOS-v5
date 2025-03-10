@@ -63,7 +63,7 @@ make all
 make run
 ```
 
-The horizonos.iso file will be generated in the repository's root
+The horizonos.iso file will be generated in the repository's root.
 
 This will:
 1. Build the kernel ISO
@@ -75,7 +75,7 @@ This will:
    - Logging to debug/ directory
 
 ## Contributing
-Contributions are welcome ! Feel free to open issues and send pull requests
+Contributions are welcome ! Feel free to open issues and send pull requests.
 
 ## License
 Distributed under the MIT License. See `LICENSE` for more information.
