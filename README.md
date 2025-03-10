@@ -1,8 +1,8 @@
 # HorizonOS v5
 <div align="center">
    
-   ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) 
-   ![x86](https://img.shields.io/badge/arch-x86-informational?logo=intel) 
+   ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg) 
+   ![x86](https://img.shields.io/badge/arch-x86-informational?color=pink) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
    ![Last Commit](https://img.shields.io/github/last-commit/EtienneMaire37/HorizonOS-v5?color=green)
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
