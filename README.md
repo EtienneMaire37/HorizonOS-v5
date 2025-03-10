@@ -74,10 +74,10 @@ This will:
    - VGA display
    - Logging to debug/ directory
 
-## Contributing
+## Contributing 🧑‍💻
 Contributions are welcome ! Feel free to open issues and send pull requests.
 
-## License
+## License 📜
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
