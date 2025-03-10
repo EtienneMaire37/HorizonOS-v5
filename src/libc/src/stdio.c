@@ -104,22 +104,13 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     }
     void printf_x(uint64_t val, uint8_t padding)
     {
-        if(val == 0)
-        {
-            for(uint8_t i = 0; i < padding; i++)
-            {
-                func('0');
-                length++;
-            }
-            func('0');
-            length++;
-            return;
-        }
-        uint64_t mask = 0xf;
+        bool first0 = true;
         for(uint8_t i = 0; i < 16; i++)
         {
-            uint8_t digit = (val >> ((15 - i) * 4)) & mask;
-            if(digit || i >= 16 - padding)
+            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
+            first0 &= digit == 0;
+            first0 &= i < 16 - padding;
+            if(!first0)
             {
                 func(hex[digit]);
                 length++;
@@ -128,22 +119,13 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     }
     void printf_X(uint64_t val, uint8_t padding)
     {
-        if(val == 0)
-        {
-            for(uint8_t i = 0; i < padding; i++)
-            {
-                func('0');
-                length++;
-            }
-            func('0');
-            length++;
-            return;
-        }
-        uint64_t mask = 0xf;
+        bool first0 = true;
         for(uint8_t i = 0; i < 16; i++)
         {
-            uint8_t digit = (val >> ((15 - i) * 4)) & mask;
-            if(digit || i >= 16 - padding)
+            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
+            first0 &= digit == 0;
+            first0 &= i < 16 - padding;
+            if(!first0)
             {
                 func(HEX[digit]);
                 length++;
@@ -290,15 +272,15 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 break;
             case 'x':
                 if (next_arg_64)
-                    printf_x(va_arg(args, uint64_t), na64_set ? va_arg(args, uint32_t) : 1);
+                    printf_x(va_arg(args, uint64_t), 1);
                 else
-                    printf_x(va_arg(args, uint32_t), na64_set ? va_arg(args, uint32_t) : 1);
+                    printf_x(va_arg(args, uint32_t), 1);
                 break;
             case 'X':
                 if (next_arg_64)
-                    printf_X(va_arg(args, uint64_t), na64_set ? va_arg(args, uint32_t) : 1);
+                    printf_X(va_arg(args, uint64_t), 1);
                 else
-                    printf_X(va_arg(args, uint32_t), na64_set ? va_arg(args, uint32_t) : 1);
+                    printf_X(va_arg(args, uint32_t), 1);
                 break;
             case 'f':
                 if (next_arg_64)

@@ -28,7 +28,7 @@ struct task
 #define TASK_KERNEL_STACK_BOTTOM_ADDRESS   (0xc0000000 - 8192)
 #define TASK_KERNEL_STACK_TOP_ADDRESS      (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 4096)
 
-#define MAX_TASKS 128
+#define MAX_TASKS 8192
 
 struct task tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;
@@ -37,7 +37,7 @@ uint16_t task_count;
 
 uint8_t multitasking_counter = 0;
 
-uint8_t stack_tmp[4096];
+uint8_t page_tmp[4096];
 
 // struct task* current_task;
 uint16_t current_task_index = 0;
@@ -46,6 +46,7 @@ volatile bool first_task_switch = true;
 uint64_t current_pid;
 
 // void task_init(struct task* _task, uint32_t eip, char* name);
+void load_pd(void* ptr);
 void task_load_from_initrd(struct task* _task, char* path, uint8_t ring);
 void task_destroy(struct task* _task);
 void task_virtual_address_space_destroy(struct task* _task);

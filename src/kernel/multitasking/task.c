@@ -68,7 +68,18 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     LOG(DEBUG, "   Section header offset : 0x%x", header->shoff);
     LOG(DEBUG, "   Flags : 0x%x", header->flags);
 
-    task_create_virtual_address_space(_task);
+    // _task->stack = (uint8_t*)pfa_allocate_page();
+    _task->stack_phys = pfa_allocate_physical_page();
+    if (ring == 3)
+        _task->kernel_stack_phys = pfa_allocate_physical_page();
+    else
+        _task->kernel_stack_phys = 0;
+    // if (ring == 3)
+    //     _task->kernel_stack = (uint8_t*)pfa_allocate_page();
+    // else 
+    //     _task->kernel_stack = NULL;
+
+    task_create_virtual_address_space(_task);   // !! TODO: Implement recursive paging
 
     load_pd(_task->page_directory);
 
@@ -138,17 +149,6 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
             }
         }
     }
-
-    // _task->stack = (uint8_t*)pfa_allocate_page();
-    _task->stack_phys = pfa_allocate_physical_page();
-    if (ring == 3)
-        _task->kernel_stack_phys = pfa_allocate_physical_page();
-    else
-        _task->kernel_stack_phys = 0;
-    // if (ring == 3)
-    //     _task->kernel_stack = (uint8_t*)pfa_allocate_page();
-    // else 
-    //     _task->kernel_stack = NULL;
 
     uint8_t* task_stack_top = (uint8_t*)TASK_STACK_TOP_ADDRESS; // _task->stack + 4096;
 
