@@ -11,7 +11,7 @@
    
 </div>
 
-A 32-bit monolithic kernel for x86 architecture developed by [EtienneMaire37](https://github.com/EtienneMaire37)
+A 32-bit monolithic kernel for the x86 architecture
 
 ## Overview 🌟
 HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platform for low-level systems programming. Built from scratch and using the GRUB bootloader, it demonstrates core operating system concepts while maintaining simplicity and readability.
