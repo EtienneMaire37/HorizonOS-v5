@@ -1,5 +1,6 @@
 # HorizonOS v5
 <div align="center">
+   
    ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg) 
    ![x86](https://img.shields.io/badge/arch-x86-informational?logo=intel) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
@@ -7,6 +8,7 @@
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
    ![Open Issues](https://img.shields.io/github/issues-raw/EtienneMaire37/HorizonOS-v5?color=red)
    ![Closed Issues](https://img.shields.io/github/issues-closed-raw/EtienneMaire37/HorizonOS-v5?color=green)
+   
 </div>
 
 A 32-bit monolithic kernel for x86 architecture developed by [EtienneMaire37](https://github.com/EtienneMaire37)
