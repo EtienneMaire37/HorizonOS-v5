@@ -43,12 +43,12 @@ HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platfo
 - GRUB 2.0+
 - QEMU (for emulation)
 
-# Install build dependencies (Debian/Ubuntu) 🐧
+### Install build dependencies (Debian/Ubuntu) 🐧
 ```bash
 sudo apt install nasm grub-pc-bin qemu-system-i386
 ```
 
-# Set up cross-compiler (using included script) ⚙️
+### Set up cross-compiler (using included script) ⚙️
 ```bash
 sudo sh install-cross-compiler.sh
 ```
@@ -58,7 +58,7 @@ sudo sh install-cross-compiler.sh
 make all
 ```
 
-## Running in QEMU 🚀
+### Running in QEMU 🚀
 ```bash
 make run
 ```
