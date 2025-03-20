@@ -10,6 +10,8 @@ struct interrupt_registers
     uint32_t eip, cs, eflags, esp, ss;
 } __attribute__((packed));
 
+uint32_t current_cr3;
+
 char* errorString[32] = 
 {
     "DIVISION_BY_ZERO__ERROR",

@@ -27,7 +27,7 @@ void kernel_panic(struct interrupt_registers* params)
     halt();
 }
 
-#define return_from_isr() { return params->cr3; }
+#define return_from_isr() { current_cr3 = params->cr3; return params->cr3; }
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
 {
@@ -134,7 +134,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             break;
         case 4:     // fork
             LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
-            if (true)   // (task_count >= MAX_TASKS)
+            if (true) // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -203,7 +203,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                     }
                 }
                 tasks[task_count - 1].registers->cr3 = (uint32_t)virtual_address_to_physical((virtual_address_t)&tasks[task_count - 1].page_directory);
-            }
+            } 
             break;
         default:
             if (multitasking_enabled)

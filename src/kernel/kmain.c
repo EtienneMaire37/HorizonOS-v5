@@ -125,6 +125,7 @@ const char* multiboot_block_type_text[5] =
 // ---------------------------------------------------------------
 
 struct page_table_entry page_table_0[1024] __attribute__((aligned(4096)));
+struct page_table_entry page_table_767[1024] __attribute__((aligned(4096)));
 struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4096)));
 
 // ---------------------------------------------------------------
@@ -159,7 +160,10 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
 
+    current_phys_mem_page = 0;
     kernel_size = &_kernel_end - &_kernel_start;
+
+    current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
 
     tty_clear_screen(' ');
     tty_reset_cursor();
@@ -198,11 +202,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
         uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
-        // if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE)
-        {
-            LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes (type: %s)", addr, len, multiboot_block_type_text[mmmt->type - 1]);
+        LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes (type: %s)", addr, len, multiboot_block_type_text[mmmt->type - 1]);
+        if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE)
             available_memory += len;
-        }   
     }
 
     LOG(INFO, "Detected %u bytes of available memory", available_memory); 
@@ -267,13 +269,20 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
             set_page(&page_table_768_1023[i * 1024], j, address, PAGING_SUPERVISOR_LEVEL, true);
         }
     }
+
+    for (uint16_t i = 0; i < 1024; i++)
+        remove_page(page_table_767, i);
+
+    set_page(page_table_767, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
     
     for (uint16_t i = 769; i < 1023; i++)
         add_page_table(page_directory, i, virtual_address_to_physical((virtual_address_t)&page_table_768_1023[(i - 768) * 1024]), PAGING_SUPERVISOR_LEVEL, true);  
 
-    add_page_table(page_directory, 1023, virtual_address_to_physical((virtual_address_t)&page_directory), PAGING_SUPERVISOR_LEVEL, true);    // Setup recursive mapping
+    add_page_table(page_directory, 767, virtual_address_to_physical((virtual_address_t)page_table_767), PAGING_SUPERVISOR_LEVEL, true);  
 
-    reload_page_directory(); 
+    add_page_table(page_directory, 1023, virtual_address_to_physical((virtual_address_t)page_directory), PAGING_SUPERVISOR_LEVEL, true);    // Setup recursive mapping
+
+    reload_page_directory(); // * Caching is disabled 
 
     LOG(DEBUG, "Done setting up paging"); 
 
@@ -351,9 +360,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     ps2_init_keyboards();
 
-    // ps2_controller_connected = true;
-    // ps2_device_1_connected = true;
-    // ps2_device_1_type = PS2_DEVICE_KEYBOARD;
+    ps2_controller_connected = true;
+    ps2_device_1_connected = true;
+    ps2_device_1_type = PS2_DEVICE_KEYBOARD;
 
     ksleep(100);
     
@@ -378,6 +387,11 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     }
 
     putchar('\n');
+
+    // for (uint16_t i = 0; i < 512; i++)
+    // {
+    //     LOG(DEBUG, "Address 0x%lx = 0x%x", virtual_address_to_physical((virtual_address_t)&i), read_physical_address(virtual_address_to_physical((virtual_address_t)&i)) + 0x100 * read_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1)));
+    // }
 
     // while(true);
 

@@ -55,6 +55,10 @@ struct virtual_address_layout
 
 struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
+#define PHYS_MEM_PAGE_BOTTOM   (0xc0000000 - 3 * 0x1000)
+#define PHYS_MEM_PAGE_TOP      (PHYS_MEM_PAGE_BOTTOM + 0x1000)
+uint32_t current_phys_mem_page;
+
 void init_page_directory(struct page_directory_entry_4kb* pd);
 void init_page_table(struct page_table_entry* pt);
 void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physical_address_t pt_address, uint8_t user_supervisor, uint8_t read_write);

@@ -23,10 +23,10 @@ struct task
     struct page_directory_entry_4kb* page_directory;
 };
 
-#define TASK_STACK_BOTTOM_ADDRESS   (0xc0000000 - 4096)
-#define TASK_STACK_TOP_ADDRESS      (TASK_STACK_BOTTOM_ADDRESS + 4096)
-#define TASK_KERNEL_STACK_BOTTOM_ADDRESS   (0xc0000000 - 8192)
-#define TASK_KERNEL_STACK_TOP_ADDRESS      (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 4096)
+#define TASK_STACK_BOTTOM_ADDRESS   (0xc0000000 - 0x1000)
+#define TASK_STACK_TOP_ADDRESS      (TASK_STACK_BOTTOM_ADDRESS + 0x1000)
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS   (0xc0000000 - 2 * 0x1000)
+#define TASK_KERNEL_STACK_TOP_ADDRESS      (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 0x1000)
 
 #define MAX_TASKS 8192
 
@@ -47,6 +47,7 @@ uint64_t current_pid;
 
 // void task_init(struct task* _task, uint32_t eip, char* name);
 void load_pd(void* ptr);
+void load_pd_by_physaddr(physical_address_t addr);
 void task_load_from_initrd(struct task* _task, char* path, uint8_t ring);
 void task_destroy(struct task* _task);
 void task_virtual_address_space_destroy(struct task* _task);

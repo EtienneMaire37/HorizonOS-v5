@@ -5,6 +5,17 @@ void load_pd(void* ptr)
     asm("mov cr3, eax" :: "a" ((uint32_t)virtual_address_to_physical((virtual_address_t)ptr)));
 }
 
+void load_pd_by_physaddr(physical_address_t addr)
+{
+    if (addr >> 32)
+    {
+        LOG(CRITICAL, "Tried to load a page directory above 4GB");
+        abort();
+    }
+
+    asm("mov cr3, eax" :: "a" ((uint32_t)addr));
+}
+
 void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 {
     if (ring != 3 && ring != 0)
@@ -299,10 +310,11 @@ void task_create_virtual_address_space(struct task* _task)
         }
     }
 
-    task_virtual_address_space_create_page_table(_task, 767);   // Stacks
+    task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access
     struct page_table_entry* pt = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)_task->page_directory[767].address << 12);
     set_page(pt, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
     set_page(pt, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
+    set_page(pt, 1021, 0, PAGING_USER_LEVEL, true);
 }
 
 void multitasking_init()

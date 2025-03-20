@@ -1,5 +1,38 @@
 #pragma once
 
+uint8_t read_physical_address(physical_address_t address)
+{
+    if (address >> 32)
+    {
+        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
+        return 0xff;
+    }
+
+    uint32_t addr = (uint32_t)address;
+    uint32_t page = addr >> 12;
+    uint16_t offset = addr & 0xfff;
+    if (page != current_phys_mem_page)
+    {
+        struct page_directory_entry_4kb* pde = (struct page_directory_entry_4kb*)physical_address_to_virtual(current_cr3 + 4 * 767);
+        if (!pde->present)
+        {
+            LOG(ERROR, "Page table 767 not present");
+            abort();
+            return 0xff;
+        }
+        struct page_table_entry* pte = (struct page_table_entry*)physical_address_to_virtual((pde->address << 12) + 4 * 1021);
+        if (!pte->present)
+        {
+            LOG(ERROR, "Page 767:1021 not present");
+            abort();
+            return 0xff;
+        }
+        pte->address = page;
+        current_phys_mem_page = page;
+    }
+    return *(uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
+}
+
 void init_page_directory(struct page_directory_entry_4kb* pd)
 {
     for(uint16_t i = 0; i < 1024; i++)
@@ -21,7 +54,7 @@ void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physica
     }
 
     pd[index].page_size = 0;
-    pd[index].cache_disable = 0;
+    pd[index].cache_disable = 1;
     pd[index].write_through = 0;
     pd[index].address = (((uint32_t)pt_address) >> 12);
     pd[index].user_supervisor = user_supervisor;
@@ -49,7 +82,7 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
     }
 
     pt[index].global = 0;
-    pt[index].cache_disable = 0;
+    pt[index].cache_disable = 1;
     pt[index].write_through = 0;
     pt[index].dirty = 0;
     pt[index].address = (address >> 12);
