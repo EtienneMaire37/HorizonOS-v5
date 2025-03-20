@@ -388,14 +388,14 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    for (uint16_t i = 0; i < 512;)
-    {
-        uint16_t _i = read_physical_address(virtual_address_to_physical((virtual_address_t)&i)) + 0x100 * read_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1));
-        LOG(DEBUG, "Address 0x%lx = 0x%x", virtual_address_to_physical((virtual_address_t)&i), _i);
-        _i++;
-        write_physical_address(virtual_address_to_physical((virtual_address_t)&i), _i);
-        write_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1), _i >> 8);
-    }
+    // for (uint16_t i = 0; i < 512;)
+    // {
+    //     uint16_t _i = read_physical_address(virtual_address_to_physical((virtual_address_t)&i)) + 0x100 * read_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1));
+    //     LOG(DEBUG, "Address 0x%lx = 0x%x", virtual_address_to_physical((virtual_address_t)&i), _i);
+    //     _i++;
+    //     write_physical_address(virtual_address_to_physical((virtual_address_t)&i), _i);
+    //     write_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1), _i >> 8);
+    // }
 
     // while(true);
 

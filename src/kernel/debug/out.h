@@ -33,6 +33,12 @@ char* LOG_LEVEL_STR[6] =
 #define _LOG(level_text, ...)
 #define LOG(level, ...)
 #else
-#define _LOG(level_text, ...)           { if (time_initialized) fprintf(klog, "%u-%u-%u \t %u:%u:%u,%u%u%u \t %s \t", system_year, system_month, system_day, system_hours, system_minutes, system_seconds, system_thousands / 100, (system_thousands / 10) % 10, system_thousands % 10, level_text); else fprintf(klog, "0000-00-00 \t 00:00:00,000 \t %s \t", level_text); fprintf(klog, __VA_ARGS__); fprintf(klog, "\n"); }
+#define _LOG(level_text, ...)           { \
+    if (time_initialized) \
+        fprintf(klog, "%u-%u%u-%u%u \t %u%u:%u%u:%u%u,%u%u%u \t %s \t", \
+        system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10, \
+        system_thousands / 100, (system_thousands / 10) % 10, system_thousands % 10, level_text); \
+        else fprintf(klog, "0000-00-00 \t 00:00:00,000 \t %s \t", level_text); \
+        fprintf(klog, __VA_ARGS__); fprintf(klog, "\n"); }
 #define LOG(level, ...)                 { if (LOG_LEVEL <= level) { _LOG(LOG_LEVEL_STR[level], __VA_ARGS__) } }
 #endif
