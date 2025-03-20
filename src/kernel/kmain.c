@@ -360,9 +360,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     ps2_init_keyboards();
 
-    ps2_controller_connected = true;
-    ps2_device_1_connected = true;
-    ps2_device_1_type = PS2_DEVICE_KEYBOARD;
+    // ps2_controller_connected = true;
+    // ps2_device_1_connected = true;
+    // ps2_device_1_type = PS2_DEVICE_KEYBOARD;
 
     ksleep(100);
     

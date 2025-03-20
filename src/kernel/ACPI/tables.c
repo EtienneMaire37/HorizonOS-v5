@@ -54,6 +54,7 @@ void acpi_find_tables()
     rsdp = NULL;
     // rsdt = NULL;
     rsdt_address = xsdt_address = 0;
+    fadt_address = 0;
     
     LOG(INFO, "Searching for the RSDP");
     printf("Searching for the RSDP\n");
@@ -141,7 +142,17 @@ found_rsdp:
             LOG(INFO, "\tFound table at address 0x%lx", address);
             if (!(address >> 32))
             {
-                LOG(INFO, "\t\tSignature: %c%c%c%c", (char)table_read_member(struct sdt_header, address, signature[0], true), (char)table_read_member(struct sdt_header, address, signature[1], true), (char)table_read_member(struct sdt_header, address, signature[2], true), (char)table_read_member(struct sdt_header, address, signature[3], true));
+                uint32_t signature = table_read_member(struct sdt_header, address, signature, true);
+                LOG(INFO, "\t\tSignature: %c%c%c%c (0x%x)", (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), signature);
+                switch (signature)
+                {
+                case 0x50434146:    // FACP : FADT
+                    LOG(INFO, "\t\tvalid FADT");
+                    fadt_address = address;
+                    break;
+                default:
+                    LOG(INFO, "\t\tUnkwown table");
+                }
             }
         }
     }

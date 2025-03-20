@@ -214,14 +214,18 @@ void ps2_controller_init()
 {
     LOG(DEBUG, "PS/2 controller initialization sequence");
 
-    ps2_controller_connected = true;   // TODO: FADT parsing
+    ps2_controller_connected = fadt_address == 0 ? true : (acpi_10 ? true : (table_read_bytes(fadt_address, 109, 1, true) & 0b10) == 0b10);
+
     ps2_device_1_connected = false;
     ps2_device_2_connected = false;
     enable_ps2_kb_input = false;
     ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
     if (!ps2_controller_connected)
+    {
+        LOG(INFO, "No PS/2 controller connected");
         return;
+    }
 
     LOG(DEBUG, "Disabling device 1");
     ps2_send_command_no_response(PS2_DISABLE_DEVICE_1);
