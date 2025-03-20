@@ -32,7 +32,7 @@ uint8_t read_physical_address(physical_address_t address)
 {
     if (address >> 32)
     {
-        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
+        LOG(WARNING, "Tried to read from an address over the 4GB limit (0x%lx)", address);
         return 0xff;
     }
 
@@ -48,7 +48,7 @@ void write_physical_address(physical_address_t address, uint8_t value)
 {
     if (address >> 32)
     {
-        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
+        LOG(WARNING, "Tried to read from an address over the 4GB limit (0x%lx)", address);
         return;
     }
 

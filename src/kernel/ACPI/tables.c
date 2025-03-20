@@ -1,28 +1,5 @@
 #pragma once
 
-void bios_get_ebda_pointer()
-{
-    uint32_t ebda_address = (*(uint16_t*)0x40e) << 4;
-    LOG(INFO, "EBDA address : 0x%x", ebda_address);
-    ebda = (uint8_t*)ebda_address;
-}
-
-bool acpi_table_valid(struct sdt_header* header)
-{
-    uint8_t sum = 0;
-    for (uint32_t i = 0; i < header->length; i++)
-        sum += ((uint8_t*)&header[0])[i];
-    return sum == 0;
-}
-
-bool acpi_rsdp_valid(struct rsdp_table* table)
-{
-    uint8_t sum = 0;
-    for (uint32_t i = 0; i < (acpi_10 ? 20 : table->length); i++)
-        sum += ((uint8_t*)&table[0])[i];
-    return sum == 0;
-}
-
 uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uint8_t size, bool little_endian)
 {
     if (size > 4)
@@ -46,6 +23,29 @@ uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uin
     }
 
     return result;
+}
+
+void bios_get_ebda_pointer()
+{
+    uint32_t ebda_address = (*(uint16_t*)0x40e) << 4;
+    LOG(INFO, "EBDA address : 0x%x", ebda_address);
+    ebda = (uint8_t*)ebda_address;
+}
+
+bool acpi_table_valid(physical_address_t table_address)
+{
+    uint8_t sum = 0;
+    for (uint32_t i = 0; i < table_read_member(struct sdt_header, table_address, length, true); i++)
+        sum += table_read_bytes(table_address, i, 1, true);
+    return sum == 0;
+}
+
+bool acpi_rsdp_valid(struct rsdp_table* table)
+{
+    uint8_t sum = 0;
+    for (uint32_t i = 0; i < (acpi_10 ? 20 : table->length); i++)
+        sum += ((uint8_t*)&table[0])[i];
+    return sum == 0;
 }
 
 void acpi_find_tables()
@@ -136,10 +136,13 @@ found_rsdp:
     for (uint32_t i = 0; i < sdt_count; i++)
     {
         uint64_t address = read_rsdt_ptr(i);
-        LOG(INFO, "\tFound table at address 0x%lx", address);
-        if (!(address >> 32))
+        if (acpi_table_valid(address))
         {
-            LOG(INFO, "\t\tSignature: %c%c%c%c", (char)table_read_member(struct sdt_header, address, signature[0], true), (char)table_read_member(struct sdt_header, address, signature[1], true), (char)table_read_member(struct sdt_header, address, signature[2], true), (char)table_read_member(struct sdt_header, address, signature[3], true));
+            LOG(INFO, "\tFound table at address 0x%lx", address);
+            if (!(address >> 32))
+            {
+                LOG(INFO, "\t\tSignature: %c%c%c%c", (char)table_read_member(struct sdt_header, address, signature[0], true), (char)table_read_member(struct sdt_header, address, signature[1], true), (char)table_read_member(struct sdt_header, address, signature[2], true), (char)table_read_member(struct sdt_header, address, signature[3], true));
+            }
         }
     }
 }
