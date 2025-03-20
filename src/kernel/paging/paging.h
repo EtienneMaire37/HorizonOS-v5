@@ -68,5 +68,8 @@ void SetPage(struct page_table_entry* pt, uint16_t index, physical_address_t add
 void SetPageByAddress(struct page_directory_entry_4kb* pd, virtual_address_t vaddress, physical_address_t paddress, uint8_t user_supervisor, uint8_t read_write);
 void RemovePageByAddress(struct page_directory_entry_4kb* pd, virtual_address_t vaddress);
 
+uint8_t read_physical_address(physical_address_t address);
+void write_physical_address(physical_address_t address, uint8_t value);
+
 extern void reload_page_directory();
 extern void enable_paging(); 

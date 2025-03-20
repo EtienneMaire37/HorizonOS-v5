@@ -40,15 +40,22 @@ struct xsdt_table
 } __attribute__((packed));
   
 struct rsdp_table* rsdp;
-struct rsdt_table* rsdt;
-struct xsdt_table* xsdt;
+// struct rsdt_table* rsdt;
+// struct xsdt_table* xsdt;
+
+physical_address_t rsdt_address;
+physical_address_t xsdt_address;
 
 bool acpi_10;
 uint32_t sdt_count;
 uint8_t* ebda;
 
+uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uint8_t size, bool little_endian);
+
+#define table_read_member(table_type, table_address, member, little_endian)     table_read_bytes(table_address, offsetof(table_type, member), sizeof(((table_type*)NULL)->member), little_endian)
+
 void bios_get_ebda_pointer();
 
 void acpi_find_tables();
 bool acpi_table_valid();
-uint32_t read_sdt_ptr(uint32_t index);
+uint64_t read_rsdt_ptr(uint32_t index);

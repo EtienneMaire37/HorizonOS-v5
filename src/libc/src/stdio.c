@@ -288,6 +288,10 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 else
                     printf_f(va_arg(args, double));
                 break;
+            case 'c':
+                func((char)va_arg(args, uint32_t));
+                length++;
+                break;
             case 'l':
                 na64_set = true;
                 break;

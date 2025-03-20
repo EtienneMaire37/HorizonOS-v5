@@ -5,7 +5,7 @@ uint8_t* get_physical_address_ptr(physical_address_t address)
     uint32_t addr = (uint32_t)address;
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
-    if (page != current_phys_mem_page)
+    // if (page != current_phys_mem_page)   // ! TODO: Fix this (it doesn't work if you switch cr3 after a call)
     {
         struct page_directory_entry_4kb* pde = (struct page_directory_entry_4kb*)physical_address_to_virtual(current_cr3 + 4 * 767);
         if (!pde->present)
