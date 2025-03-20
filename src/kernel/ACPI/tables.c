@@ -35,8 +35,13 @@ void bios_get_ebda_pointer()
 bool acpi_table_valid(physical_address_t table_address)
 {
     uint8_t sum = 0;
-    for (uint32_t i = 0; i < table_read_member(struct sdt_header, table_address, length, true); i++)
+    uint32_t length = table_read_member(struct sdt_header, table_address, length, true);
+    // printf("len: %u\n", length);
+    for (uint32_t i = 0; i < length; i++)
+    {
+        // printf("%u (%u)\n", i, table_read_member(struct sdt_header, table_address, length, true));
         sum += table_read_bytes(table_address, i, 1, true);
+    }
     return sum == 0;
 }
 
@@ -133,21 +138,25 @@ found_rsdp:
     }
 
     LOG(INFO, "%u SDT tables detected", sdt_count);
+    printf("%u SDT tables detected\n", sdt_count);
 
     for (uint32_t i = 0; i < sdt_count; i++)
     {
         uint64_t address = read_rsdt_ptr(i);
-        if (acpi_table_valid(address))
+        LOG(INFO, "\tFound table at address 0x%lx", address);
+        if (!(address >> 32))
         {
-            LOG(INFO, "\tFound table at address 0x%lx", address);
-            if (!(address >> 32))
+            if (acpi_table_valid(address))
             {
                 uint32_t signature = table_read_member(struct sdt_header, address, signature, true);
-                LOG(INFO, "\t\tSignature: %c%c%c%c (0x%x)", (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), signature);
+                char signature_text[5] = { (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), 0 };
+                LOG(INFO, "\t\tSignature: %s (0x%x)", signature_text, signature);
+                printf("Signature: %s (0x%x)\n", signature_text, signature);
                 switch (signature)
                 {
                 case 0x50434146:    // FACP : FADT
-                    LOG(INFO, "\t\tvalid FADT");
+                    LOG(INFO, "\t\tValid FADT");
+                    // printf("Found FADT\n");
                     fadt_address = address;
                     break;
                 default:
@@ -162,7 +171,7 @@ uint64_t read_rsdt_ptr(uint32_t index)
 {
     if (index >= sdt_count)
     {
-        LOG(CRITICAL, "Kernel tried to read an invalid SDT (%u / %u)", index, sdt_count);
+        LOG(CRITICAL, "Kernel tried to read an invalid SDT (%u / %u)", index + 1, sdt_count);
         abort();
     }
 
