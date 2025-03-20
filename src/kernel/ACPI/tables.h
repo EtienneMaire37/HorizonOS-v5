@@ -46,7 +46,7 @@ struct rsdp_table* rsdp;
 physical_address_t rsdt_address;
 physical_address_t xsdt_address;
 
-physical_address_t fadt_address, madt_address;
+physical_address_t fadt_address, madt_address, ssdt_address, dsdt_address;
 
 bool acpi_10;
 uint32_t sdt_count;

@@ -59,7 +59,7 @@ void acpi_find_tables()
     rsdp = NULL;
     // rsdt = NULL;
     rsdt_address = xsdt_address = 0;
-    fadt_address = 0;
+    fadt_address = madt_address = ssdt_address = dsdt_address = 0;
     
     LOG(INFO, "Searching for the RSDP");
     printf("Searching for the RSDP\n");
@@ -96,7 +96,8 @@ void acpi_find_tables()
 found_rsdp:
     LOG(INFO, "Found rsdp at address 0x%x", rsdp);
 
-    acpi_10 = rsdp->revision == 0;
+    // acpi_10 = rsdp->revision == 0;
+    acpi_10 = true;     // ! Don't support 64 bit addresses
     
     LOG(INFO, "ACPI version : %s", acpi_10 ? "1.0" : "2.0+");
     printf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
@@ -163,6 +164,16 @@ found_rsdp:
                     LOG(INFO, "\t\tValid MADT");
                     // printf("Found MADT\n");
                     madt_address = address;
+                    break;
+                case 0x44534454:    // DSDT : DSDT
+                    LOG(INFO, "\t\tValid DSDT");
+                    // printf("Found DSDT\n");
+                    dsdt_address = address;
+                    break;
+                case 0x53534454:    // SSDT : SSDT
+                    LOG(INFO, "\t\tValid SSDT");
+                    // printf("Found SSDT\n");
+                    ssdt_address = address;
                     break;
                 default:
                     LOG(INFO, "\t\tUnkwown table");
