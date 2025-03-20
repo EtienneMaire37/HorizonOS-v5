@@ -159,10 +159,20 @@ found_rsdp:
                     // printf("Found FADT\n");
                     fadt_address = address;
                     break;
+                case 0x43495041:    // APIC : MADT
+                    LOG(INFO, "\t\tValid MADT");
+                    // printf("Found MADT\n");
+                    madt_address = address;
+                    break;
                 default:
                     LOG(INFO, "\t\tUnkwown table");
                 }
             }
+        }
+        else
+        {
+            LOG(WARNING, "\t\t64bit table address");
+            printf("64bit table address\n");
         }
     }
 }
