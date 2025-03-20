@@ -1,13 +1,7 @@
 #pragma once
 
-uint8_t read_physical_address(physical_address_t address)
+uint8_t* get_physical_address_ptr(physical_address_t address)
 {
-    if (address >> 32)
-    {
-        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
-        return 0xff;
-    }
-
     uint32_t addr = (uint32_t)address;
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
@@ -18,19 +12,52 @@ uint8_t read_physical_address(physical_address_t address)
         {
             LOG(ERROR, "Page table 767 not present");
             abort();
-            return 0xff;
+            return NULL;
         }
         struct page_table_entry* pte = (struct page_table_entry*)physical_address_to_virtual((pde->address << 12) + 4 * 1021);
         if (!pte->present)
         {
             LOG(ERROR, "Page 767:1021 not present");
             abort();
-            return 0xff;
+            return NULL;
         }
         pte->address = page;
         current_phys_mem_page = page;
     }
-    return *(uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
+
+    return (uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
+}
+
+uint8_t read_physical_address(physical_address_t address)
+{
+    if (address >> 32)
+    {
+        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
+        return 0xff;
+    }
+
+    uint8_t* ptr = get_physical_address_ptr(address);
+
+    if (ptr == NULL)
+        return 0xff;
+    
+    return *ptr;
+}
+
+void write_physical_address(physical_address_t address, uint8_t value)
+{
+    if (address >> 32)
+    {
+        LOG(WARNING, "Tried to read from an adress over the 4GB limit (0x%lx)", address);
+        return;
+    }
+
+    uint8_t* ptr = get_physical_address_ptr(address);
+
+    if (ptr == NULL)
+        return;
+    
+    *ptr = value;
 }
 
 void init_page_directory(struct page_directory_entry_4kb* pd)
