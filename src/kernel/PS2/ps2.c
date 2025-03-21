@@ -214,7 +214,7 @@ void ps2_controller_init()
 {
     LOG(DEBUG, "PS/2 controller initialization sequence");
 
-    ps2_controller_connected = fadt_address == 0 ? true : (acpi_10 ? true : (table_read_bytes(fadt_address, 109, 1, true) & 0b10) == 0b10);
+    ps2_controller_connected = fadt_address == 0 ? true : (acpi_10 ? true : (table_read_member(struct fadt_table, fadt_address, boot_architecture_flags, true) & 0b10) == 0b10); // (table_read_bytes(fadt_address, 109, 1, true) & 0b10)
 
     ps2_device_1_connected = false;
     ps2_device_2_connected = false;

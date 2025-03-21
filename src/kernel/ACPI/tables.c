@@ -58,7 +58,7 @@ void acpi_find_tables()
     // rsdp = rsdt = NULL;
     rsdp = NULL;
     // rsdt = NULL;
-    rsdt_address = xsdt_address = 0;
+    rsdt_address = 0; // xsdt_address = 0;
     fadt_address = madt_address = ssdt_address = dsdt_address = 0;
     
     LOG(INFO, "Searching for the RSDP");
@@ -96,8 +96,7 @@ void acpi_find_tables()
 found_rsdp:
     LOG(INFO, "Found rsdp at address 0x%x", rsdp);
 
-    // acpi_10 = rsdp->revision == 0;
-    acpi_10 = true;     // ! Don't support 64 bit addresses
+    acpi_10 = rsdp->revision == 0;
     
     LOG(INFO, "ACPI version : %s", acpi_10 ? "1.0" : "2.0+");
     printf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
@@ -111,31 +110,15 @@ found_rsdp:
         abort();
     }
 
-    if (acpi_10)
+    // if (acpi_10)
     {
         rsdt_address = (physical_address_t)rsdp->rsdt_address;
-        xsdt_address = 0;
+        // xsdt_address = 0;
 
         LOG(INFO, "RSDT address : 0x%lx", rsdt_address);
 
         // sdt_count = (rsdt->header.length - sizeof(struct sdt_header)) / 4;
         sdt_count = (table_read_member(struct rsdt_table, rsdt_address, header.length, true) - sizeof(struct sdt_header)) / 4;
-    }
-    else
-    {
-        uint64_t address = rsdp->xsdt_address;
-        if (address >> 32)
-        {
-            LOG(CRITICAL, "64 bit XSDT address");
-            abort();
-        }
-
-        xsdt_address = (physical_address_t)((uint32_t)address);
-        rsdt_address = 0;
-
-        LOG(INFO, "XSDT address : 0x%lx", xsdt_address);
-
-        sdt_count = (table_read_member(struct xsdt_table, xsdt_address, header.length, true) - sizeof(struct sdt_header)) / 8;
     }
 
     LOG(INFO, "%u SDT tables detected", sdt_count);
@@ -196,20 +179,9 @@ uint64_t read_rsdt_ptr(uint32_t index)
         abort();
     }
 
-    if (acpi_10)    // ACPI 1.0
+    // if (acpi_10)    // ACPI 1.0
     {
         physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
         return table_read_bytes(sdt_ptr_start, 4 * index, 4, true);
-    }
-    else            // ACPI 2.0+
-    {
-        physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
-        return table_read_bytes(sdt_ptr_start, 8 * index, 4, true) | ((uint64_t)table_read_bytes(sdt_ptr_start, 8 * index + 4, 4, true) << 32);
-        // if (address >> 32)
-        // {
-        //     LOG(CRITICAL, "64 bit SDT address at index %u", index);
-        //     abort();
-        // }
-        // return (uint32_t)address;
     }
 }
