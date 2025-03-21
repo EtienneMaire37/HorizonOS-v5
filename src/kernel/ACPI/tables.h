@@ -44,7 +44,7 @@ struct generic_address_structure
     uint8_t address_space;  // 0: System memory; 1: System I/O; 2: PCI configuration space; 5: System CMOS; 6: PCI Device BAR Target
     uint8_t bit_width;
     uint8_t bit_offset;
-    uint8_t access_size;
+    uint8_t access_size;    // 0: Undefined (legacy reasons); 1: Byte access; 2: 16-bit (word) access; 3: 32-bit (dword) access; 4: 64-bit (qword) access 
     uint64_t address;
 } __attribute__((packed));
 
@@ -57,7 +57,7 @@ struct fadt_table
     // field used in ACPI 1.0; no longer in use, for compatibility only
     uint8_t  reserved;
 
-    uint8_t  preferred_power_management_profile;
+    uint8_t  preferred_power_management_profile;    // 0: Unspecified; 1: Desktop; 2: Mobile; 3: Workstation; 4: Enterprise Server; 5: SOHO Server; 6: Aplliance PC; 7: Performance Server
     uint16_t sci_interrupt;
     uint32_t smi_cmd_port;
     uint8_t  acpi_enable;
@@ -126,6 +126,8 @@ physical_address_t rsdt_address;
 
 physical_address_t fadt_address, madt_address, ssdt_address, dsdt_address;
 
+uint8_t preferred_power_management_profile;
+
 bool acpi_10;
 uint32_t sdt_count;
 uint8_t* ebda;
@@ -136,6 +138,19 @@ uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uin
 
 void bios_get_ebda_pointer();
 
+char* preferred_power_management_profile_text[8] = 
+{
+    "Unspecified",
+    "Desktop",
+    "Mobile",
+    "Workstation",
+    "Enterprise Server",
+    "SOHO Server",
+    "Aplliance PC",
+    "Performance Server"
+};
+
 void acpi_find_tables();
 bool acpi_table_valid();
 uint64_t read_rsdt_ptr(uint32_t index);
+void fadt_extract_data();

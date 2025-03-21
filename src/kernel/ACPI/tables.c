@@ -36,7 +36,7 @@ bool acpi_table_valid(physical_address_t table_address)
 {
     uint8_t sum = 0;
     uint32_t length = table_read_member(struct sdt_header, table_address, length, true);
-    // printf("len: %u\n", length);
+    // LOG(DEBUG, "len: %u", length);
     for (uint32_t i = 0; i < length; i++)
     {
         // printf("%u (%u)\n", i, table_read_member(struct sdt_header, table_address, length, true));
@@ -169,6 +169,8 @@ found_rsdp:
             printf("64bit table address\n");
         }
     }
+
+    fadt_extract_data();
 }
 
 uint64_t read_rsdt_ptr(uint32_t index)
@@ -183,5 +185,43 @@ uint64_t read_rsdt_ptr(uint32_t index)
     {
         physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
         return table_read_bytes(sdt_ptr_start, 4 * index, 4, true);
+    }
+}
+
+void fadt_extract_data()
+{
+    preferred_power_management_profile = 0;
+
+    if (fadt_address == 0)
+    {
+        LOG(DEBUG, "No FADT found");
+        ps2_controller_connected = true;
+        return;
+    }
+
+    LOG(DEBUG, "Extracting data from the FADT");
+
+    ps2_controller_connected = acpi_10 ? true : (table_read_member(struct fadt_table, fadt_address, boot_architecture_flags, true) & 0b10) == 0b10;
+
+    uint8_t _preferred_power_management_profile = table_read_member(struct fadt_table, fadt_address, preferred_power_management_profile, true);
+
+    if (_preferred_power_management_profile > 7)
+        preferred_power_management_profile = 0;
+    else 
+        preferred_power_management_profile = _preferred_power_management_profile;
+
+    LOG(INFO, "Preferred power management profile : %s (%u)", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
+    printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
+
+    uint32_t _dsdt_address = table_read_member(struct fadt_table, fadt_address, dsdt_address, true);
+    // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
+    if (_dsdt_address != 0)
+    {
+        // if (acpi_table_valid(_dsdt_address))
+        {
+            LOG(INFO, "Valid DSDT");
+            printf("Found valid DSDT\n");
+            dsdt_address = _dsdt_address;
+        }
     }
 }
