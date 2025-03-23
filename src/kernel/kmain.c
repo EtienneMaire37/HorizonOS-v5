@@ -52,7 +52,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           DEBUG
+#define LOG_LEVEL           TRACE
 // #define NO_LOGS
 
 const char* multiboot_block_type_text[5] = 
@@ -159,6 +159,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 {
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
+    setting_cur_cr3 = false;
 
     current_phys_mem_page = 0;
     kernel_size = &_kernel_end - &_kernel_start;
@@ -282,7 +283,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     add_page_table(page_directory, 1023, virtual_address_to_physical((virtual_address_t)page_directory), PAGING_SUPERVISOR_LEVEL, true);    // Setup recursive mapping
 
-    reload_page_directory(); // * Caching is disabled 
+    // reload_page_directory(); // * Caching is disabled 
 
     LOG(DEBUG, "Done setting up paging"); 
 
@@ -388,20 +389,15 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    // for (uint16_t i = 0; i < 512;)
-    // {
-    //     uint16_t _i = read_physical_address(virtual_address_to_physical((virtual_address_t)&i)) + 0x100 * read_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1));
-    //     LOG(DEBUG, "Address 0x%lx = 0x%x", virtual_address_to_physical((virtual_address_t)&i), _i);
-    //     _i++;
-    //     write_physical_address(virtual_address_to_physical((virtual_address_t)&i), _i);
-    //     write_physical_address(virtual_address_to_physical((virtual_address_t)&i + 1), _i >> 8);
-    // }
+    while(true);
 
-    // while(true);
+    disable_interrupts();
 
     multitasking_init();
 
     multasking_add_task_from_initrd("./bin/initrd/kernel32.elf", 0, true);
+
+    enable_interrupts();
 
     multitasking_start();
 

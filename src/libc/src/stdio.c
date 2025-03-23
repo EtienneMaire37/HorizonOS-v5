@@ -250,7 +250,13 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     {
         if (*format == '%')
         {
-            next_formatted = true;
+            if (next_formatted)
+            {
+                func('%');
+                next_formatted = false;
+            }
+            else
+                next_formatted = true;
             format++;
             continue;
         }

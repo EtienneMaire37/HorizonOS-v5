@@ -11,12 +11,13 @@ run: all
 	-accel tcg,thread=single                       		\
 	-cpu core2duo                                  		\
 	-debugcon file:debug/${DATE}.log					\
-	-m 256                                        		\
+	-m 4096                                        		\
 	-drive format=raw,media=cdrom,file=horizonos.iso    \
 	-serial stdio                                  		\
 	-vga std 
 	# -smp 1                                         		\
 	# -usb                                           		\
+	# -d int												\
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p

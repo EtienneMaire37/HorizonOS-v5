@@ -13,12 +13,12 @@ uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uin
     {
         if (little_endian)
         {
-            result |= ((uint32_t)read_physical_address(table_address + offset + i)) << (8 * i);
+            result |= ((uint32_t)read_physical_address_1b(table_address + offset + i)) << (8 * i);
         }
         else
         {
             result <<= 8;
-            result |= read_physical_address(table_address + offset + i);
+            result |= read_physical_address_1b(table_address + offset + i);
         }
     }
 

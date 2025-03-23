@@ -64,12 +64,21 @@ void init_page_table(struct page_table_entry* pt);
 void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physical_address_t pt_address, uint8_t user_supervisor, uint8_t read_write);
 void remove_page_table(struct page_directory_entry_4kb* pd, uint16_t index);
 void remove_page(struct page_table_entry* pt, uint16_t index);
-void SetPage(struct page_table_entry* pt, uint16_t index, physical_address_t address, uint8_t user_supervisor, uint8_t read_write);
-void SetPageByAddress(struct page_directory_entry_4kb* pd, virtual_address_t vaddress, physical_address_t paddress, uint8_t user_supervisor, uint8_t read_write);
-void RemovePageByAddress(struct page_directory_entry_4kb* pd, virtual_address_t vaddress);
+void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t address, uint8_t user_supervisor, uint8_t read_write);
 
-uint8_t read_physical_address(physical_address_t address);
-void write_physical_address(physical_address_t address, uint8_t value);
+void physical_init_page_directory(physical_address_t pd);
+void physical_init_page_table(physical_address_t pt);
+void physical_add_page_table(physical_address_t pd, uint16_t index, physical_address_t pt_address, uint8_t user_supervisor, uint8_t read_write);
+void physical_remove_page_table(physical_address_t pd, uint16_t index);
+void physical_remove_page(physical_address_t pt, uint16_t index);
+void physical_set_page(physical_address_t pt, uint16_t index, physical_address_t address, uint8_t user_supervisor, uint8_t read_write);
+
+uint8_t read_physical_address_1b(physical_address_t address);
+uint16_t read_physical_address_2b(physical_address_t address);
+uint32_t read_physical_address_4b(physical_address_t address);
+void write_physical_address_1b(physical_address_t address, uint8_t value);
+void write_physical_address_2b(physical_address_t address, uint16_t value);
+void write_physical_address_4b(physical_address_t address, uint32_t value);
 
 extern void reload_page_directory();
 extern void enable_paging(); 
