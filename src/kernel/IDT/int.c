@@ -12,22 +12,23 @@ void kernel_panic(struct interrupt_registers* params)
     tty_hide_cursor();
 
     tty_color = (FG_LIGHTRED | BG_BLUE);
-    fprintf(stdout, "Kernel panic\n\n\t");
+    printf("Kernel panic\n\n\t");
 
     tty_color = (FG_WHITE | BG_BLUE);
 
-    fprintf(stdout, "Exception number: %u\n\n\t", params->interrupt_number);
-    fprintf(stdout, "Error:       %s\n\t", errorString[params->interrupt_number]);
-    fprintf(stdout, "Error code:  0x%x\n\n\t", params->error_code);
+    printf("Exception number: %u\n\n\t", params->interrupt_number);
+    printf("Error:       %s\n\t", errorString[params->interrupt_number]);
+    printf("Error code:  0x%x\n\n\t", params->error_code);
 
-    fprintf(stdout, "cr2:  0x%x\n", params->cr2);
+    if (params->interrupt_number == 14)
+        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n\t", params->cr2, params->cr2 >> 22, (params->cr2 >> 12) & 0x3ff, params->cr2 & 0xfff);
 
     // LOG(ERROR, "Kernel panic : Exception number : %u ; Error : %s ; Error code = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code);
 
     halt();
 }
 
-#define return_from_isr() { current_cr3 = params->cr3; return params->cr3; }
+#define return_from_isr() { return params->cr3; }
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
 {
@@ -37,6 +38,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
     // if (current_task->name[0] == '.')   // TASK A
     //     LOG(DEBUG, "0x100000 : 0x%x", *(uint32_t*)0x100000);
+
+    current_cr3 = params->cr3; 
+    current_phys_mem_page = 0xffffffff;
 
     if (params->interrupt_number < 32)            // Fault
     {

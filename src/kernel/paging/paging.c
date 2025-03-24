@@ -2,26 +2,12 @@
 
 void set_current_phys_mem_page(uint32_t page)
 {
-    // !!!!!!!! Infinite loop
-    // physical_address_t pde_phys = current_cr3 + 4 * 767;
-    // // if (!(read_physical_address_4b(pde_phys) & 1))   
-    // // {
-    // //     LOG(ERROR, "Page table 767 not present");
-    // //     abort();
-    // // }
-    // physical_address_t pte_phys = (read_physical_address_4b(pde_phys) & 0xfffff000) + 4 * 1021;
-    // // if (!(read_physical_address_4b(pte_phys) & 1))   // !!!! Same here
-    // // {
-    // //     LOG(ERROR, "Page 767:1021 not present");
-    // //     abort();
-    // // }
-    // LOG(DEBUG, "Setting physical memory access page");
-    // write_physical_address_4b(pte_phys, (read_physical_address_4b(pte_phys) & 0xfff) | (page << 12));
-    // current_phys_mem_page = page;
-
-    // ** Use recursive paging instead
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
+
+    load_pd_by_physaddr(current_cr3);
+
+    current_phys_mem_page = page;   // !!!!!!!!!!!! May cause problems later on since an interrupt can happen between both lines
 }
 
 uint8_t* get_physical_address_ptr(physical_address_t address)
@@ -29,7 +15,7 @@ uint8_t* get_physical_address_ptr(physical_address_t address)
     uint32_t addr = (uint32_t)address;
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
-    // if (page != current_phys_mem_page)   // ! TODO: Fix this (it doesn't work if you switch cr3 after a call)
+    if (page != current_phys_mem_page)
         set_current_phys_mem_page(page);
 
     return (uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
@@ -112,7 +98,7 @@ void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physica
     }
 
     pd[index].page_size = 0;
-    pd[index].cache_disable = 1;
+    pd[index].cache_disable = 0;
     pd[index].write_through = 0;
     pd[index].address = (((uint32_t)pt_address) >> 12);
     pd[index].user_supervisor = user_supervisor;
@@ -140,7 +126,7 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
     }
 
     pt[index].global = 0;
-    pt[index].cache_disable = 1;
+    pt[index].cache_disable = 0;
     pt[index].write_through = 0;
     pt[index].dirty = 0;
     pt[index].address = (address >> 12);
@@ -153,13 +139,13 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
 void physical_init_page_directory(physical_address_t pd)
 {
     for(uint16_t i = 0; i < 1024; i++)
-        write_physical_address_4b(pd + 4 * i, 0b00000000000000000000000000010000);  // Cache disable, not present
+        write_physical_address_4b(pd + 4 * i, 0);  // Not present
 }
 
 void physical_init_page_table(physical_address_t pt)
 {
     for(uint16_t i = 0; i < 1024; i++)
-        write_physical_address_4b(pt + 4 * i, 0b00000000000000000000000000010000);  // Cache disable, not present
+        write_physical_address_4b(pt + 4 * i, 0);  // Not present
 }
 
 void physical_add_page_table(physical_address_t pd, uint16_t index, physical_address_t pt_address, uint8_t user_supervisor, uint8_t read_write)
@@ -173,18 +159,17 @@ void physical_add_page_table(physical_address_t pd, uint16_t index, physical_add
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pd + 4 * index, 0b10001 | (read_write << 1) | (user_supervisor << 2) | pt_address);
-    // LOG(DEBUG, "Set PT %u: 0x%x", index, 0b10001 | (read_write << 1) | (user_supervisor << 2) | pt_address);
+    write_physical_address_4b(pd + 4 * index, 1 | (read_write << 1) | (user_supervisor << 2) | pt_address);
 }
 
 void physical_remove_page_table(physical_address_t pd, uint16_t index)
 {
-    write_physical_address_4b(pd + 4 * index, 0b00000000000000000000000000010000);
+    write_physical_address_4b(pd + 4 * index, 0);
 }
 
 void physical_remove_page(physical_address_t pt, uint16_t index)
 {
-    write_physical_address_4b(pt + 4 * index, 0b00000000000000000000000000010000);
+    write_physical_address_4b(pt + 4 * index, 0);
 }
 
 void physical_set_page(physical_address_t pt, uint16_t index, physical_address_t address, uint8_t user_supervisor, uint8_t read_write)
@@ -198,5 +183,5 @@ void physical_set_page(physical_address_t pt, uint16_t index, physical_address_t
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pt + 4 * index, 0b10001 | (read_write << 1) | (user_supervisor << 2) | address);
+    write_physical_address_4b(pt + 4 * index, 1 | (read_write << 1) | (user_supervisor << 2) | address);
 }

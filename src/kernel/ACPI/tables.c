@@ -148,12 +148,12 @@ found_rsdp:
                     // printf("Found MADT\n");
                     madt_address = address;
                     break;
-                case 0x44534454:    // DSDT : DSDT
+                case 0x54445344:    // DSDT : DSDT
                     LOG(INFO, "\t\tValid DSDT");
                     // printf("Found DSDT\n");
                     dsdt_address = address;
                     break;
-                case 0x53534454:    // SSDT : SSDT
+                case 0x54445353:    // SSDT : SSDT
                     LOG(INFO, "\t\tValid SSDT");
                     // printf("Found SSDT\n");
                     ssdt_address = address;
@@ -217,7 +217,7 @@ void fadt_extract_data()
     // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
     if (_dsdt_address != 0)
     {
-        // if (acpi_table_valid(_dsdt_address))
+        if (acpi_table_valid(_dsdt_address))
         {
             LOG(INFO, "Valid DSDT");
             printf("Found valid DSDT\n");

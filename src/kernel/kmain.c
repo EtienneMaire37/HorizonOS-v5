@@ -52,7 +52,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           TRACE
+#define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
 const char* multiboot_block_type_text[5] = 
@@ -161,7 +161,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     tty_cursor = 0;
     setting_cur_cr3 = false;
 
-    current_phys_mem_page = 0;
+    current_phys_mem_page = 0xffffffff;
     kernel_size = &_kernel_end - &_kernel_start;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);

@@ -16,6 +16,7 @@ void load_pd_by_physaddr(physical_address_t addr)
     setting_cur_cr3 = true;
     current_cr3 = (uint32_t)addr;
     asm("mov cr3, eax" :: "a" (current_cr3));
+    current_phys_mem_page = 0xffffffff;
     setting_cur_cr3 = false;
 }
 
@@ -88,19 +89,12 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     else
         _task->kernel_stack_phys = 0;
 
+    LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
+    LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
+
     task_create_virtual_address_space(_task);
 
-    // LOG(DEBUG, "Page directory data : ");
-    // for (uint16_t i = 0; i < 1024; i++)
-    // {
-    //     LOG(DEBUG, "%u: 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
-    // }
-
-    LOG(DEBUG, "Loading program cr3 0x%x", _task->page_directory_phys);
     load_pd_by_physaddr(_task->page_directory_phys);
-    LOG(DEBUG, "Loaded program cr3");
-
-    LOG(DEBUG, "ELF sections : ");
 
     struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
     struct elf32_section_header* section_headers = (struct elf32_section_header*)((uint32_t)header + header->shoff);
@@ -150,9 +144,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
                 LOG(DEBUG, "Allocating page at vaddr : 0x%x", address);
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
-                // memcpy((void*)paddr, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
                 memcpy((void*)address, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
-                // LOG(DEBUG, "Data at 0x%x (0x%x) : 0x%x 0x%x", vaddr + j, paddr, *(uint8_t*)paddr, *(uint8_t*)(paddr + 1));
                 layout.page_offset += 0x1000;
                 if (layout.page_offset == 0)
                 {
@@ -167,76 +159,49 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         }
     }
 
-    // uint8_t* task_stack_top = physical_address_to_virtual(_task->stack_phys + 4096) - sizeof(struct interrupt_registers); // (uint8_t*)TASK_STACK_TOP_ADDRESS;
+    uint8_t* task_stack_top = (uint8_t*)TASK_STACK_TOP_ADDRESS; // physical_address_to_virtual((physical_address_t)_task->stack_phys) + 4096; //(uint8_t*)TASK_STACK_TOP_ADDRESS;
 
-    // // struct interrupt_registers* registers = ring == 3 ? (struct interrupt_registers*)((uint32_t)_task->kernel_stack + 4) : (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
-    // struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers));
+    struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
 
-    // registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
-    // registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    // registers->ss = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    // registers->eflags = 0x200; // Interrupts enabled (bit 9)
-    // registers->esp = (uint32_t)task_stack_top;
-    // registers->handled_esp = (uint32_t)task_stack_top - 7 * 4; // (ring == 3 ? (uint32_t)_task->kernel_stack + KERNEL_STACK_SIZE : (uint32_t)task_stack_top) - 7 * 4;
+    registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
+    registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+    registers->ss = registers->ds;
+
+    registers->eflags = 0x200; // Interrupts enabled (bit 9)
+    registers->esp = (uint32_t)task_stack_top;
+    registers->handled_esp = (uint32_t)task_stack_top - 7 * 4;
     
-    // registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
-    // registers->esi = registers->edi = registers->ebp = 0;
+    registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
+    registers->esi = registers->edi = registers->ebp = 0;
 
-    // registers->eip = header->entry;
+    registers->eip = header->entry;
 
-    // _task->registers = registers;
-
-    struct interrupt_registers registers;
-
-    registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
-    registers.ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    registers.ss = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    registers.eflags = 0x200; // Interrupts enabled (bit 9)
-    registers.esp = TASK_STACK_TOP_ADDRESS;
-    registers.handled_esp = (uint32_t)TASK_STACK_TOP_ADDRESS - 7 * 4; // (ring == 3 ? (uint32_t)_task->kernel_stack + KERNEL_STACK_SIZE : (uint32_t)task_stack_top) - 7 * 4;
-    
-    registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
-    registers.esi = registers.edi = registers.ebp = 0;
-
-    registers.eip = header->entry;
-
-    for (uint32_t i = 0; i < sizeof(struct interrupt_registers); i++)
-        write_physical_address_1b((_task->stack_phys + 4096) - sizeof(struct interrupt_registers), *((uint8_t*)&registers + i));
-
-    // *(uint32_t*)&_task->kernel_stack[0] = (uint32_t)registers;
-
-    // size_t name_length = kstrlen(name);
-    // if (name_length >= 31)
-    // {
-    //     memcpy(_task->name, name, 31);
-    //     _task->name[31] = '\0';
-    // }
-    // else
-    // {
-    //     memcpy(_task->name, name, name_length);
-    //     _task->name[name_length] = '\0';
-    // }
+    _task->registers = registers;
 
     _task->name = name;
 
     _task->ring = ring;
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
+
+    load_pd(page_directory);
 }
 
 void task_destroy(struct task* _task)
 {
     LOG(INFO, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
-    LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys); //_task->stack);
-    // pfa_free_page((virtual_address_t)_task->stack);
     if (_task->stack_phys)
+    {
+        LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
         pfa_free_physical_page(_task->stack_phys);
+    }
     LOG(TRACE, "Freeing virtual address space");
     task_virtual_address_space_destroy(_task);
-    // if (_task->kernel_stack)
     if (_task->kernel_stack_phys)
+    {
+        LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack_phys);
         pfa_free_physical_page(_task->kernel_stack_phys);
-        // pfa_free_page((virtual_address_t)_task->kernel_stack);
+    }
 }
 
 void task_virtual_address_space_destroy(struct task* _task)
@@ -326,33 +291,27 @@ void task_create_virtual_address_space(struct task* _task)
             uint32_t address = *(uint32_t*)&layout - 0xc0000000;
             physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
             physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
-            // LOG(DEBUG, "Mapped 0x%x-0x%x to 0x%x-0x%x", *(uint32_t*)&layout, *(uint32_t*)&layout + 4096, address, address + 4096);
         }
     }
 
-    LOG(DEBUG, "Page directory data 1 : ");
-    for (uint16_t i = 0; i < 1024; i++)
-    {
-        LOG(DEBUG, "%u: 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
-    }
-
-    task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access    // !!!!!!!!!!! This line seems to mess up everything
-    
-    LOG(DEBUG, "Page directory data 2 : ");
-    for (uint16_t i = 0; i < 1024; i++)
-    {
-        LOG(DEBUG, "%u: 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
-    }
+    task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access
 
     physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * 767) & 0xfffff000;
-    physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
-    physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
     physical_set_page(pt_address, 1021, 0, PAGING_USER_LEVEL, true);
+    physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
+    physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
 
-    // LOG(DEBUG, "Page directory data 3 : ");
+    // LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
+    // LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
+
     // for (uint16_t i = 0; i < 1024; i++)
     // {
-    //     LOG(DEBUG, "%u: 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
+    //     LOG(DEBUG, "%u : 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
+    // }
+
+    // for (uint16_t i = 0; i < 1024; i++)
+    // {
+    //     LOG(DEBUG, "767: %u : 0x%x (0x%lx)", i, read_physical_address_4b(pt_address + 4 * i), pt_address + 4 * i);
     // }
 }
 
@@ -403,6 +362,7 @@ void switch_task(struct interrupt_registers** registers)
     TSS.ss0 = KERNEL_DATA_SEGMENT;
 
     *registers = tasks[current_task_index].registers;
+    load_pd_by_physaddr(tasks[current_task_index].page_directory_phys);
 
     LOG(DEBUG, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
         tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 

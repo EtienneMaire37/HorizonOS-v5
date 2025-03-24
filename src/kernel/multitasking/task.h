@@ -6,21 +6,13 @@ struct interrupt_registers;
 
 struct task
 {
-    // char name[32];
     char* name;
     struct interrupt_registers* registers;
-    // uint8_t kernel_stack[KERNEL_STACK_SIZE];
-    // uint8_t* kernel_stack;
-    // struct task* next_task;
-    // struct task* previous_task;
-    // uint8_t* stack;
     physical_address_t stack_phys;
     physical_address_t kernel_stack_phys;
     uint8_t ring;
-    // uint64_t pid;
     pid_t pid;
     bool system_task;
-    // struct page_directory_entry_4kb* page_directory;
     physical_address_t page_directory_phys;
 };
 
