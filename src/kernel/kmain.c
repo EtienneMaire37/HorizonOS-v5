@@ -389,15 +389,13 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    while(true);
-
-    disable_interrupts();
+    // disable_interrupts();
 
     multitasking_init();
 
     multasking_add_task_from_initrd("./bin/initrd/kernel32.elf", 0, true);
 
-    enable_interrupts();
+    // enable_interrupts();
 
     multitasking_start();
 

@@ -84,10 +84,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     LOG(DEBUG, "   Flags : 0x%x", header->flags);
 
     _task->stack_phys = pfa_allocate_physical_page();
-    if (ring == 3)
-        _task->kernel_stack_phys = pfa_allocate_physical_page();
-    else
-        _task->kernel_stack_phys = 0;
+    _task->kernel_stack_phys = pfa_allocate_physical_page();
 
     LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
     LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
@@ -182,6 +179,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     _task->ring = ring;
 
+    LOG(DEBUG, "Page directory physical address : 0x%lx", _task->page_directory_phys);
+
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
 
     load_pd(page_directory);
@@ -267,6 +266,8 @@ physical_address_t task_virtual_address_space_create_page(struct task* _task, ui
 void task_create_virtual_address_space(struct task* _task)
 {
     _task->page_directory_phys = pfa_allocate_physical_page();
+
+    LOG(DEBUG, "Page directory physical address : 0x%lx", _task->page_directory_phys);
 
     physical_init_page_directory(_task->page_directory_phys);
 
@@ -358,6 +359,8 @@ void switch_task(struct interrupt_registers** registers)
 
     current_task_index = (current_task_index + 1) % task_count;
 
+    LOG(DEBUG, "Page directory physical address : 0x%lx", tasks[current_task_index].page_directory_phys);
+
     TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS; //(uint32_t)tasks[current_task_index].kernel_stack + 4096;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
 
@@ -369,6 +372,10 @@ void switch_task(struct interrupt_registers** registers)
         tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, 
         tasks[current_task_index].registers->eip, tasks[current_task_index].registers->cs, tasks[current_task_index].registers->eflags, tasks[current_task_index].registers->ss, tasks[current_task_index].registers->cr3, tasks[current_task_index].registers->ds,
         tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
+
+    tasks[current_task_index].registers->cr3 = tasks[current_task_index].page_directory_phys;
+    // load_pd(page_directory);
+    LOG(DEBUG, "Page directory physical address : 0x%lx", tasks[current_task_index].page_directory_phys);
 }
 
 void task_kill(uint16_t index)

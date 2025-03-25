@@ -21,7 +21,19 @@ void kernel_panic(struct interrupt_registers* params)
     printf("Error code:  0x%x\n\n\t", params->error_code);
 
     if (params->interrupt_number == 14)
+    {
         printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n\t", params->cr2, params->cr2 >> 22, (params->cr2 >> 12) & 0x3ff, params->cr2 & 0xfff);
+        printf("cr3:  0x%x\n\t", params->cr3);
+
+        uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (params->cr2 >> 22));
+        
+        LOG(DEBUG, "Page directory entry : 0x%x", pde);
+
+        if (pde & 1)
+        {
+            LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((params->cr2 >> 12) & 0x3ff)));
+        }
+    }
 
     // LOG(ERROR, "Kernel panic : Exception number : %u ; Error : %s ; Error code = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code);
 
@@ -44,7 +56,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
     if (params->interrupt_number < 32)            // Fault
     {
-        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2);
+        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2, params->cr3);
 
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled)
             kernel_panic(params);
