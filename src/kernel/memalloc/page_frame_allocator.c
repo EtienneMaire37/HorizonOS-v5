@@ -75,11 +75,11 @@ void pfa_bitmap_init()
 {
     // Optimal bitmap size calculation
     // Let X be the usable memory
-    // Let (un) = X
-    // Let f(x) = (X - x) / 0x1000 / 8 so that un+1=f(un)
-    // Using the fixed point theorem, we can find that x = 32768/32769 * X
+    // Let B be the bitmap size
+    // then we find that (X - B) / (4096 * 8) = B
+    // <=> B = X / (8 * 4096 + 1) = X / 32769
     
-    bitmap_size = (uint32_t)(usable_memory / 0x1000 / 8 * 32768 + 32768) / 32769;   // Round up the byte
+    bitmap_size = (uint32_t)(usable_memory + 32768) / 32769;   // Round up the byte
     memory_allocated = 0;
     allocatable_memory = usable_memory - bitmap_size;
     // if (usable_memory % 0x1000)

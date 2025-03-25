@@ -43,3 +43,12 @@ pid_t fork()
         : "a" (4));
     return ((pid_t)hi << 32) | lo;
 }
+
+void* sbrk(intptr_t increment)
+{
+    intptr_t incremented;
+    asm("int 0xff" : "=a" (incremented)
+        : "a" (5), "b" (increment));
+    break_point += incremented;
+    return (void*)break_point;
+}

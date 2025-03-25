@@ -300,16 +300,6 @@ void task_create_virtual_address_space(struct task* _task)
 
     // LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
     // LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
-
-    // for (uint16_t i = 0; i < 1024; i++)
-    // {
-    //     LOG(DEBUG, "%u : 0x%x", i, read_physical_address_4b(_task->page_directory_phys + 4 * i));
-    // }
-
-    // for (uint16_t i = 0; i < 1024; i++)
-    // {
-    //     LOG(DEBUG, "767: %u : 0x%x (0x%lx)", i, read_physical_address_4b(pt_address + 4 * i), pt_address + 4 * i);
-    // }
 }
 
 void multitasking_init()

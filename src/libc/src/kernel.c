@@ -43,3 +43,8 @@ pid_t fork()
 {
     return (pid_t)-1;
 }
+
+void* sbrk(intptr_t increment)
+{
+    return NULL;
+}

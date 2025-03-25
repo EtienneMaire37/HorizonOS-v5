@@ -149,94 +149,80 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            // LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
-            if (true) // (task_count >= MAX_TASKS)
+            if (true)   // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
             }
-            // else
-            // {
-            //     task_count++;
+            else
+            {
+                LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
-            //     tasks[task_count - 1].name = tasks[current_task_index].name;
-            //     tasks[task_count - 1].ring = tasks[current_task_index].ring;
+                task_count++;
 
-            //     if (tasks[current_task_index].stack_phys)
-            //         tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
-            //     if (tasks[current_task_index].kernel_stack_phys)
-            //         tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
-                    
-            //     tasks[task_count - 1].registers = physical_address_to_virtual(tasks[task_count - 1].stack_phys + 4096) - sizeof(struct interrupt_registers);
-            //     *(tasks[task_count - 1].registers) = *params;
-            //     tasks[task_count - 1].registers->eax = tasks[task_count - 1].registers->ebx = 0;  // 0 to child
-            //     tasks[task_count - 1].pid = current_pid++;
+                tasks[task_count - 1].name = tasks[current_task_index].name;
+                tasks[task_count - 1].ring = tasks[current_task_index].ring;
+                tasks[task_count - 1].pid = current_pid++;
 
-            //     params->eax = tasks[task_count - 1].pid >> 32;
-            //     params->ebx = (uint32_t)tasks[task_count - 1].pid;
+                if (tasks[current_task_index].stack_phys)
+                    tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
+                if (tasks[current_task_index].kernel_stack_phys)
+                    tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
 
-            //     // LOG(DEBUG, "Creating virtual address space");
-            //     task_create_virtual_address_space(&tasks[task_count - 1]);
-            //     if (tasks[current_task_index].kernel_stack_phys)
-            //     {
-            //         // LOG(DEBUG, "Copying kernel stack");
-            //         // memcpy(tasks[task_count - 1].kernel_stack, tasks[current_task_index].kernel_stack, 4096);
-            //         // load_pd(tasks[current_task_index].page_directory);
-            //         // memcpy(page_tmp, (void*)TASK_KERNEL_STACK_BOTTOM_ADDRESS, 4096);
-            //         // load_pd(tasks[task_count - 1].page_directory);
-            //         // memcpy((void*)TASK_KERNEL_STACK_BOTTOM_ADDRESS, page_tmp, 4096);
-            //         set_current_phys_mem_page(tasks[current_task_index].kernel_stack_phys >> 12);
-            //         memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-            //         set_current_phys_mem_page(tasks[task_count - 1].kernel_stack_phys >> 12);
-            //         memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-            //     }
-            //     if (tasks[current_task_index].stack_phys)
-            //     {
-            //         // LOG(DEBUG, "Copying stack");
-            //         // memcpy(tasks[task_count - 1].stack, tasks[current_task_index].stack, 4096);
-            //         // load_pd(tasks[current_task_index].page_directory);
-            //         // LOG(DEBUG, "Copying stack 1");
-            //         // memcpy(page_tmp, (void*)TASK_STACK_BOTTOM_ADDRESS, 4096);
-            //         // LOG(DEBUG, "Copying stack 2 0x%x", tasks[task_count - 1].page_directory);
-            //         // load_pd(tasks[task_count - 1].page_directory);
-            //         // LOG(DEBUG, "Copying stack 3");
-            //         // memcpy((void*)TASK_STACK_BOTTOM_ADDRESS, page_tmp, 4096);
-            //         set_current_phys_mem_page(tasks[current_task_index].stack_phys >> 12);
-            //         memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-            //         set_current_phys_mem_page(tasks[task_count - 1].stack_phys >> 12);
-            //         memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-            //     }
-            //     // LOG(DEBUG, "Copying address space");
-            //     for (uint16_t i = 0; i < 768; i++)
-            //     {
-            //         for (uint16_t j = ((i != 0) ? 0 : 256); j < ((i != 767) ? 1024 : 1021); j++)
-            //         {
-            //             if (tasks[current_task_index].page_directory[i].present)
-            //             {
-            //                 // struct virtual_address_layout layout;   // TODO: Do this properly with recursive paging
-            //                 // layout.page_directory_entry = i;
-            //                 // layout.page_table_entry = j;
-            //                 // layout.page_offset = 0;
-            //                 // struct page_table_entry* pt_n = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)tasks[task_count - 1].page_directory[i].address << 12);
-            //                 struct page_table_entry* pt_o = (struct page_table_entry*)physical_address_to_virtual((physical_address_t)tasks[current_task_index].page_directory[i].address << 12);
-            //                 if (pt_o[i].present)
-            //                 {
-            //                     // LOG(DEBUG, "Copying 0x%x", *(uint32_t*)&layout);
-            //                     physical_address_t page = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true) >> 12;
-            //                     // load_pd(tasks[current_task_index].page_directory);
-            //                     // memcpy(page_tmp, (void*)(*(uint32_t*)&layout), 4096);
-            //                     // load_pd(tasks[task_count - 1].page_directory);
-            //                     // memcpy((void*)(*(uint32_t*)&layout), page_tmp, 4096);
-            //                     set_current_phys_mem_page(pt_o->address);
-            //                     memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-            //                     set_current_phys_mem_page(page);
-            //                     memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-            //                 }
-            //             }
-            //         }
-            //     }
-            //     tasks[task_count - 1].registers->cr3 = (uint32_t)virtual_address_to_physical((virtual_address_t)&tasks[task_count - 1].page_directory);
-            // } 
+                if (tasks[current_task_index].kernel_stack_phys)
+                {
+                    set_current_phys_mem_page(tasks[current_task_index].kernel_stack_phys >> 12);
+                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                    set_current_phys_mem_page(tasks[task_count - 1].kernel_stack_phys >> 12);
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
+                }
+                if (tasks[current_task_index].stack_phys)
+                {
+                    set_current_phys_mem_page(tasks[current_task_index].stack_phys >> 12);
+                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                    set_current_phys_mem_page(tasks[task_count - 1].stack_phys >> 12);
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
+                }
+
+                task_create_virtual_address_space(&tasks[task_count - 1]);
+
+                for (uint16_t i = 0; i < 768; i++)
+                {
+                    for (uint16_t j = (i == 0 ? 256 : 0); j < ((i != 767) ? 1024 : 1021); j++)
+                    {
+                        if (read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i) & 1)
+                        {
+                            physical_address_t pt_old_phys = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i) & 0xfffff000;
+                            if (read_physical_address_4b(pt_old_phys + 4 * j) & 1)
+                            {
+                                LOG(DEBUG, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
+
+                                physical_address_t page = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true) >> 12;
+
+                                set_current_phys_mem_page(read_physical_address_4b(pt_old_phys + 4 * j) >> 12);
+                                memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                                set_current_phys_mem_page(page);
+                                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
+                            }
+                        }
+                    }
+                }
+
+                LOG(DEBUG, "Loading forked cr3 (0x%x)", tasks[task_count - 1].page_directory_phys);
+
+                load_pd_by_physaddr(tasks[task_count - 1].page_directory_phys);
+
+                LOG(DEBUG, "Copying registers");
+
+                tasks[task_count - 1].registers = (struct interrupt_registers*)(TASK_KERNEL_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
+
+                *(tasks[task_count - 1].registers) = *params;
+                tasks[task_count - 1].registers->eax = tasks[task_count - 1].registers->ebx = 0;  // 0 to child
+                tasks[task_count - 1].registers->cr3 = (uint32_t)tasks[task_count - 1].page_directory_phys;
+
+                params->eax = tasks[task_count - 1].pid >> 32;
+                params->ebx = (uint32_t)tasks[task_count - 1].pid;
+            } 
             break;
         default:
             if (multitasking_enabled)
