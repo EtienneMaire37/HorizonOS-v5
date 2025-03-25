@@ -33,5 +33,6 @@ SECTIONS
         *(COMMON)
         *(.bss .bss.*)
         . = ALIGN(0x1000);
+        _break_point = .;
     } :bss
 }

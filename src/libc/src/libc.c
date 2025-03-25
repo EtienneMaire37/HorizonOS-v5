@@ -12,6 +12,7 @@
 
 #include "kernel_glue.h"
 
+#include "unistd.c"
 #include "stdio.c"
 #include "stdlib.c"
 #include "time.c"
