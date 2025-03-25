@@ -346,6 +346,15 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     bios_get_ebda_pointer();
     acpi_find_tables();
 
+    // for (uint32_t i = 0; i < 1 * GB / (4 * KB); i++)
+    // {
+    //     pfa_allocate_physical_page();
+    //     if (i % KB == 0)
+    //     {
+    //         LOG(DEBUG, "i = %u", i * (4 * KB));
+    //     }
+    // }
+
     LOG(INFO, "Detecting PS/2 devices");
     printf("Detecting PS/2 devices\n");
 
