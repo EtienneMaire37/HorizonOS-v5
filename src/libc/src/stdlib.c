@@ -80,7 +80,7 @@ int atexit(void (*function)(void))
 //         if (atexit_stack[atexit_stack_length - i - 1] != NULL)
 //             atexit_stack[atexit_stack_length - i - 1]();
 
-//     asm("int 0xff" : 
+//     asm volatile("int 0xff" : 
 //         : "a" (0), "b" (r));
 //     while(1);
 // }

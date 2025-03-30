@@ -80,5 +80,6 @@ void write_physical_address_1b(physical_address_t address, uint8_t value);
 void write_physical_address_2b(physical_address_t address, uint16_t value);
 void write_physical_address_4b(physical_address_t address, uint32_t value);
 
-extern void reload_page_directory();
+#define reload_page_directory() load_pd_by_physaddr(current_cr3)
+
 extern void enable_paging(); 

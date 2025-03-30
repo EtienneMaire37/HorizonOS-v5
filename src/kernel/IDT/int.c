@@ -149,7 +149,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (true)   // (task_count >= MAX_TASKS)
+            if (true) // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -157,6 +157,17 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             else
             {
                 LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
+
+                // for (uint16_t i = 0; i < 1024; i++)
+                // {
+                //     LOG(DEBUG, "%u : 0x%x", i, ((uint32_t*)&page_directory)[i]);
+                // }
+
+                set_page(page_table_767, 1022, tasks[current_task_index].kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+                set_page(page_table_767, 1023, tasks[current_task_index].stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+                load_pd(page_directory);
+
+                // LOG(DEBUG, ".");
 
                 task_count++;
 
@@ -210,18 +221,26 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
                 LOG(DEBUG, "Loading forked cr3 (0x%x)", tasks[task_count - 1].page_directory_phys);
 
-                load_pd_by_physaddr(tasks[task_count - 1].page_directory_phys);
+                // load_pd_by_physaddr(tasks[task_count - 1].page_directory_phys);
+                setting_cur_cr3 = true;
+                current_cr3 = (uint32_t)tasks[task_count - 1].page_directory_phys;
+                
+                asm volatile("mov cr3, eax" : : "a" (current_cr3));     // !!!!!!!!!!! VERY IMPORTANT DON'T MESS UP THE STACK
+                
+                current_phys_mem_page = 0xffffffff;
+                setting_cur_cr3 = false;
 
                 LOG(DEBUG, "Copying registers");
 
-                tasks[task_count - 1].registers = (struct interrupt_registers*)(TASK_KERNEL_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
+                tasks[task_count - 1].registers = (struct interrupt_registers*)(TASK_KERNEL_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
 
                 *(tasks[task_count - 1].registers) = *params;
                 tasks[task_count - 1].registers->eax = tasks[task_count - 1].registers->ebx = 0;  // 0 to child
-                tasks[task_count - 1].registers->cr3 = (uint32_t)tasks[task_count - 1].page_directory_phys;
 
                 params->eax = tasks[task_count - 1].pid >> 32;
                 params->ebx = (uint32_t)tasks[task_count - 1].pid;
+
+                LOG(DEBUG, "Done");
             } 
             break;
         default:

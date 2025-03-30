@@ -39,8 +39,8 @@ typedef struct FILE FILE;
 
 #define klog ((FILE*)3)
 
-#define enable_interrupts()  asm("sti");
-#define disable_interrupts() asm("cli");
+#define enable_interrupts()  asm volatile("sti");
+#define disable_interrupts() asm volatile("cli");
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -101,6 +101,17 @@ const char* multiboot_block_type_text[5] =
 #include "time/ktime.h"
 // #include "klibc/time.h"
 #include "../libc/include/time.h"
+
+
+// ---------------------------------------------------------------
+
+struct page_table_entry page_table_0[1024] __attribute__((aligned(4096)));
+struct page_table_entry page_table_767[1024] __attribute__((aligned(4096)));
+struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4096)));
+
+// ---------------------------------------------------------------
+
+
 #include "../libc/src/time.c"
 
 #include "PS2/keyboard.c"
@@ -122,19 +133,10 @@ const char* multiboot_block_type_text[5] =
 #include "../libc/src/kernel_glue.h"
 #include "../libc/src/kernel.c"
 
-// ---------------------------------------------------------------
-
-struct page_table_entry page_table_0[1024] __attribute__((aligned(4096)));
-struct page_table_entry page_table_767[1024] __attribute__((aligned(4096)));
-struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4096)));
-
-// ---------------------------------------------------------------
-
 physical_address_t virtual_address_to_physical(virtual_address_t address)
 {
     if (address < 0x100000) return (physical_address_t)address;
-    if (address == 0xffffffff) return virtual_address_to_physical((virtual_address_t)(uint32_t)&page_directory);   // Recursive paging
-    if (address >= 0xc0000000) return address - 0xc0000000;
+    if (address >= 0xc0000000 && address < (uint32_t)4 * 1024 * 1024 * 1023) return address - 0xc0000000;
     LOG(CRITICAL, "Invalid virtual address 0x%x", address);
     abort();
     return 0;
@@ -143,8 +145,8 @@ physical_address_t virtual_address_to_physical(virtual_address_t address)
 virtual_address_t physical_address_to_virtual(physical_address_t address)
 {
     if (address < 0x100000) return (virtual_address_t)address;
-    if (address < 0x40000000) return address + 0xc0000000;
-    LOG(CRITICAL, "Unmapped physical address 0x%x", address);
+    if (address < (uint32_t)4 * 1024 * 1024 * 1023 - 0xc0000000) return address + 0xc0000000;
+    LOG(CRITICAL, "Unmapped physical address 0x%lx", address);
     abort();
     return 0;
 }
@@ -170,6 +172,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     tty_reset_cursor();
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
+
+    // LOG(DEBUG, "Kernel page directory address : 0x%x", (uint32_t)&page_directory);
 
     // halt();
 
@@ -250,9 +254,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initialized the PIT"); 
 
-    enable_interrupts(); 
-    LOG(DEBUG, "Enabled interrupts"); 
-
     LOG(DEBUG, "Setting up paging"); 
 
     for (uint16_t i = 256; i < 1024; i++)
@@ -274,16 +275,18 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     for (uint16_t i = 0; i < 1024; i++)
         remove_page(page_table_767, i);
 
-    set_page(page_table_767, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
+    set_page(page_table_767, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);   // Phys mem access
+    // set_page(page_table_767, 1022, virtual_address_to_physical((virtual_address_t)&_kernel_kernel_stack), PAGING_SUPERVISOR_LEVEL, true);   // Kernel stack
+    // set_page(page_table_767, 1023, virtual_address_to_physical((virtual_address_t)&_kernel_stack), PAGING_SUPERVISOR_LEVEL, true);   // Stack
     
-    for (uint16_t i = 769; i < 1023; i++)
+    for (uint16_t i = 769; i < 1023; i++)   // PDE 768 is defined in kernelentry.asm
         add_page_table(page_directory, i, virtual_address_to_physical((virtual_address_t)&page_table_768_1023[(i - 768) * 1024]), PAGING_SUPERVISOR_LEVEL, true);  
 
     add_page_table(page_directory, 767, virtual_address_to_physical((virtual_address_t)page_table_767), PAGING_SUPERVISOR_LEVEL, true);  
 
     add_page_table(page_directory, 1023, virtual_address_to_physical((virtual_address_t)page_directory), PAGING_SUPERVISOR_LEVEL, true);    // Setup recursive mapping
 
-    // reload_page_directory(); // * Caching is disabled 
+    reload_page_directory();
 
     LOG(DEBUG, "Done setting up paging"); 
 
@@ -328,6 +331,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     time_initialized = true;
     
     printf(" | Done\n");
+
+    enable_interrupts(); 
+    LOG(DEBUG, "Enabled interrupts"); 
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
@@ -397,6 +403,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     }
 
     putchar('\n');
+
+    load_pd(page_directory);
 
     // disable_interrupts();
 

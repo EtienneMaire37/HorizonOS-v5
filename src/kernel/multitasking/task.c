@@ -13,9 +13,22 @@ void load_pd_by_physaddr(physical_address_t addr)
         abort();
     }
 
+    if (setting_cur_cr3) 
+    {
+        LOG(DEBUG, "Recursive CR3 load detected");
+        abort();
+    }
+
+    // if (current_cr3 != (uint32_t)addr)
+    // {
+    //     LOG(DEBUG, "Setting cr3 to 0x%lx", addr);
+    // }
+
     setting_cur_cr3 = true;
     current_cr3 = (uint32_t)addr;
-    asm("mov cr3, eax" :: "a" (current_cr3));
+    
+    asm volatile("mov cr3, eax" : : "a" (current_cr3));
+    
     current_phys_mem_page = 0xffffffff;
     setting_cur_cr3 = false;
 }
@@ -91,8 +104,6 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     task_create_virtual_address_space(_task);
 
-    load_pd_by_physaddr(_task->page_directory_phys);
-
     struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
     struct elf32_section_header* section_headers = (struct elf32_section_header*)((uint32_t)header + header->shoff);
     struct elf32_section_header* string_table_header = &section_headers[header->shstrndx];
@@ -135,53 +146,50 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
                 LOG(CRITICAL, "Section is not page aligned");
                 abort();
             }
-            for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000)
+            for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000) 
             {
                 uint32_t address = vaddr + j;
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
-                LOG(DEBUG, "Allocating page at vaddr : 0x%x", address);
+            
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
-                memcpy((void*)address, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
-                layout.page_offset += 0x1000;
-                if (layout.page_offset == 0)
-                {
-                    layout.page_table_entry++;
-                    if (layout.page_table_entry == 1024)
-                    {
-                        layout.page_table_entry = 0;
-                        layout.page_directory_entry++;
-                    }
-                }
+            
+                physical_address_t pte_phys = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
+            
+                set_current_phys_mem_page(read_physical_address_4b(pte_phys + 4 * layout.page_table_entry) >> 12);
+                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
             }
         }
     }
 
     uint8_t* task_stack_top = (uint8_t*)TASK_STACK_TOP_ADDRESS; // physical_address_to_virtual((physical_address_t)_task->stack_phys) + 4096; //(uint8_t*)TASK_STACK_TOP_ADDRESS;
 
-    struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
+    // struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
+    struct interrupt_registers registers;
 
-    registers->cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
-    registers->ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    registers->ss = registers->ds;
+    registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
+    registers.ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+    registers.ss = registers.ds;
 
-    registers->eflags = 0x200; // Interrupts enabled (bit 9)
-    registers->esp = (uint32_t)task_stack_top;
-    registers->handled_esp = (uint32_t)task_stack_top - 7 * 4;
+    registers.eflags = 0x200; // Interrupts enabled (bit 9)
+    registers.esp = (uint32_t)task_stack_top;
+    registers.handled_esp = (uint32_t)task_stack_top - 7 * 4;
     
-    registers->eax = registers->ebx = registers->ecx = registers->edx = 0;
-    registers->esi = registers->edi = registers->ebp = 0;
+    registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
+    registers.esi = registers.edi = registers.ebp = 0;
 
-    registers->eip = header->entry;
+    registers.eip = header->entry;
 
-    _task->registers = registers;
+    for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+        write_physical_address_1b(_task->stack_phys + 0xfff - sizeof(struct interrupt_registers) + i, ((uint8_t*)&registers)[i]);
+
+    // _task->registers = registers;
+    _task->registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
 
     _task->name = name;
 
     _task->ring = ring;
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
-
-    load_pd(page_directory);
 }
 
 void task_destroy(struct task* _task)
@@ -267,9 +275,9 @@ void task_create_virtual_address_space(struct task* _task)
 
     physical_init_page_directory(_task->page_directory_phys);
 
-    _task->registers->cr3 = _task->page_directory_phys;
-
     physical_add_page_table(_task->page_directory_phys, 1023, _task->page_directory_phys, PAGING_SUPERVISOR_LEVEL, true);
+
+    _task->registers->cr3 = _task->page_directory_phys;
 
     task_virtual_address_space_create_page_table(_task, 0);
     physical_address_t first_mb_pt_address = read_physical_address_4b(_task->page_directory_phys) & 0xfffff000;
@@ -324,7 +332,7 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     }
 
     task_load_from_initrd(&tasks[task_count], path, ring);
-    tasks[task_count].pid = current_pid++;
+    tasks[task_count].pid  = current_pid++;
     tasks[task_count].system_task = system;
     task_count++;
 }
@@ -360,7 +368,9 @@ void switch_task(struct interrupt_registers** registers)
         tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
 
     tasks[current_task_index].registers->cr3 = tasks[current_task_index].page_directory_phys;
-    // load_pd(page_directory);
+    set_page(page_table_767, 1022, tasks[current_task_index].kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+    set_page(page_table_767, 1023, tasks[current_task_index].stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+    load_pd(page_directory);
 }
 
 void task_kill(uint16_t index)
