@@ -4,3 +4,5 @@ bin/*
 src/tasks/bin/*
 root/
 src/libc/lib/*
+i386elfgcc/
+tmp/

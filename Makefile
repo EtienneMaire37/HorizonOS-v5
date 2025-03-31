@@ -28,8 +28,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
 	i386-elf-gcc -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)
-	 
-	ld -T src/kernel/link.ld -m elf_i386 
+	i386-elf-ld -T src/kernel/link.ld 
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
