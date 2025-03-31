@@ -14,26 +14,33 @@
 A 32-bit monolithic kernel for the x86 architecture
 
 ## Overview 🌟
-HorizonOS is a hobby kernel targeting x86 systems, designed as a learning platform for low-level systems programming. Built from scratch and using the GRUB bootloader, it demonstrates core operating system concepts while maintaining simplicity and readability.
+HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and readability in mind.
 
 ## Features 🛠️
 
 ### Implemented ✅
-- Monolithic kernel design for single-processor systems
-- Basic memory management (paging, frame allocation) supporting up to 4GB RAM
+- Single core execution
+- Basic memory management supporting up to 4GB RAM
 - Preemptive multitasking implementation
-- Minimal ACPI parsing capabilities
-- PS/2 keyboard driver
-- Custom C library (libc) in development
-- Basic math library (libm)
+- Basic ACPI parsing
+- PS/2 drivers (only keyboard for now)
+- Custom C library (libc and libm) in development
 
 ### Planned 📅
-- Multi-core support
+- Multi-core support (SMP)
 - PCI device enumeration
 - USB drivers and mouse support
-- Network stack support and ethernet drivers
+- Network stack support + ethernet and wifi drivers
 - Graphical display support
-- Improved filesystem support
+- Improved filesystem and VFS support
+- PATA/SATA drivers
+- Full ACPI support (probably with uACPI or LAI)
+- Threading API
+- Complete (or near complete) libc and libstdc++ implementations
+- System halt task and CPU utilization handling (including process blocking)
+- General system optimizations
+- Porting of GCC, Make and other third party software
+- GPU drivers (NVIDIA and AMD)
 
 ## Building HorizonOS 🛠️
 
