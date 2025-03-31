@@ -2,7 +2,7 @@
 <div align="center">
    
    ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg) 
-   ![x86](https://img.shields.io/badge/arch-x86-informational?color=pink) 
+   ![x86](https://img.shields.io/badge/arch-x86-informational) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
    ![Last Commit](https://img.shields.io/github/last-commit/EtienneMaire37/HorizonOS-v5?color=green)
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
@@ -24,7 +24,7 @@ HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and rea
 - Preemptive multitasking implementation
 - Basic ACPI parsing
 - PS/2 drivers (only keyboard for now)
-- Custom C library (libc and libm) in development
+- Custom C standard library (libc and libm) under development
 
 ### Planned 📅
 - Multi-core support (SMP)
@@ -37,9 +37,9 @@ HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and rea
 - Full ACPI support (probably with uACPI or LAI)
 - Threading API
 - Complete (or near complete) libc and libstdc++ implementations
-- System halt task and CPU utilization handling (including process blocking)
+- System idle task and CPU usage management (including process blocking)
 - General system optimizations
-- Porting of GCC, Make and other third party software
+- Porting GCC, Make, and other third-party software
 - GPU drivers (NVIDIA and AMD)
 
 ## Building HorizonOS 🛠️
@@ -70,7 +70,7 @@ make all
 make run
 ```
 
-The horizonos.iso file will be generated in the repository's root.
+The `horizonos.iso` file will be generated in the repository root.
 
 This will:
 1. Build the kernel ISO
