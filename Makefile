@@ -44,6 +44,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	grub-mkrescue -o ./horizonos.iso ./root
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
+	mkdir -p ./src/tasks/bin
 	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" # -ffunction-sections -fdata-sections
 	$(LD) -T src/tasks/link.ld -nostdlib --nmagic -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
@@ -58,10 +59,12 @@ libc: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O3 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
 libm: src/libc/src/* src/libc/include/*
+	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
 
 rmbin:
 	rm -rf ./bin/*
+	rm -rf ./src/tasks/bin/*
 	rm -rf ./src/libc/lib/*
 	rm -rf ./initrd.tar
 
