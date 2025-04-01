@@ -8,14 +8,26 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: sudo sh install-cross-compiler.sh
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
+
+    - name: Cache cross-compiler
+      uses: actions/cache@v3
+      id: compiler-cache
+      with:
+        path: ./i386elfgcc
+        key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.39-gcc-12.2.0
+
+    - name: Install cross-compiler
+      if: steps.compiler-cache.outputs.cache-hit != 'true'
+      run: sh install-cross-compiler.sh
 
     - name: Build
       run: make all
