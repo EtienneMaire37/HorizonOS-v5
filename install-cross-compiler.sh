@@ -2,8 +2,6 @@ export PREFIX="$(pwd)/i386elfgcc"
 export TARGET=i386-elf
 export PATH="$PREFIX/bin:$PATH"
 
-sudo apt-get install libmpc-dev
-
 mkdir /tmp/src
 cd /tmp/src
 

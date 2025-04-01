@@ -55,6 +55,7 @@ src/libc/lib/libc.o: libc
 src/libc/lib/libm.o: libm
 
 libc: src/libc/src/* src/libc/include/*
+	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O3 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
 libm: src/libc/src/* src/libc/include/*
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
