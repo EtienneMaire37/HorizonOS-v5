@@ -17,7 +17,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
-        sudo apt install nasm
+        sudo apt install nasm libisoburn
 
     - name: Cache cross-compiler
       uses: actions/cache@v3
