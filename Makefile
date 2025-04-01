@@ -1,5 +1,3 @@
-# CC := $(CC)
-# ASM := nasm
 CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone # -O0
 DATE := `date +"%Y-%m-%d"`
 CC := ./i386elfgcc/bin/i386-elf-gcc
