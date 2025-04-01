@@ -4,11 +4,8 @@
    ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg) 
    ![x86](https://img.shields.io/badge/arch-x86-informational) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
-   ![Last Commit](https://img.shields.io/github/last-commit/EtienneMaire37/HorizonOS-v5?color=green)
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
-   ![Open Issues](https://img.shields.io/github/issues-raw/EtienneMaire37/HorizonOS-v5?color=red)
-   ![Closed Issues](https://img.shields.io/github/issues-closed-raw/EtienneMaire37/HorizonOS-v5?color=green)
-   
+   ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/EtienneMaire37/HorizonOS-v5/.github%2Fworkflows%2Fmakefile.yml)
 </div>
 
 A 32-bit monolithic kernel for the x86 architecture
