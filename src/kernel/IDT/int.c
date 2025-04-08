@@ -57,8 +57,12 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     if (params->interrupt_number < 32)            // Fault
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2, params->cr3);
+        
+        // if (params->interrupt_number == 1)  // Debug
+        //     return_from_isr();
 
-        if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled)
+        if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || params->interrupt_number == 8 || params->interrupt_number == 18)
+        // System task or last task or multitasking not enabled or Double Fault or Machine Check
             kernel_panic(params);
         else
         {
@@ -120,7 +124,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         pic_send_eoi(irqNumber);
         return_from_isr();
     }
-    else if (params->interrupt_number == 0xff)
+    else if (params->interrupt_number == 0xff)  // System call
     {
         // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, params->eax);
         uint16_t old_index;
@@ -158,91 +162,92 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             {
                 LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
-                // for (uint16_t i = 0; i < 1024; i++)
-                // {
-                //     LOG(DEBUG, "%u : 0x%x", i, ((uint32_t*)&page_directory)[i]);
-                // }
-
                 set_page(page_table_767, 1022, tasks[current_task_index].kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
                 set_page(page_table_767, 1023, tasks[current_task_index].stack_phys, PAGING_SUPERVISOR_LEVEL, true);
                 load_pd(page_directory);
 
-                // LOG(DEBUG, ".");
+                // // task_count++;
 
-                task_count++;
+                // // tasks[task_count - 1].name = tasks[current_task_index].name;
+                // // tasks[task_count - 1].ring = tasks[current_task_index].ring;
+                // // tasks[task_count - 1].pid = current_pid++;
 
-                tasks[task_count - 1].name = tasks[current_task_index].name;
-                tasks[task_count - 1].ring = tasks[current_task_index].ring;
-                tasks[task_count - 1].pid = current_pid++;
+                // // if (tasks[current_task_index].stack_phys)
+                // //     tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
+                // // if (tasks[current_task_index].kernel_stack_phys)
+                // //     tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
 
-                if (tasks[current_task_index].stack_phys)
-                    tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
-                if (tasks[current_task_index].kernel_stack_phys)
-                    tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
+                // // tasks[task_count - 1].registers = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
 
-                if (tasks[current_task_index].kernel_stack_phys)
-                {
-                    set_current_phys_mem_page(tasks[current_task_index].kernel_stack_phys >> 12);
-                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                    set_current_phys_mem_page(tasks[task_count - 1].kernel_stack_phys >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-                }
-                if (tasks[current_task_index].stack_phys)
-                {
-                    set_current_phys_mem_page(tasks[current_task_index].stack_phys >> 12);
-                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                    set_current_phys_mem_page(tasks[task_count - 1].stack_phys >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-                }
+                // // task_create_virtual_address_space(&tasks[task_count - 1]);
 
-                task_create_virtual_address_space(&tasks[task_count - 1]);
+                // // LOG(DEBUG, "Copying stacks");
 
-                for (uint16_t i = 0; i < 768; i++)
-                {
-                    for (uint16_t j = (i == 0 ? 256 : 0); j < ((i != 767) ? 1024 : 1021); j++)
-                    {
-                        if (read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i) & 1)
-                        {
-                            physical_address_t pt_old_phys = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i) & 0xfffff000;
-                            if (read_physical_address_4b(pt_old_phys + 4 * j) & 1)
-                            {
-                                LOG(DEBUG, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
+                // // if (tasks[current_task_index].kernel_stack_phys)
+                // // {
+                // //     for (uint16_t i = 0; i < 4096; i++)
+                // //         write_physical_address_1b(tasks[task_count - 1].kernel_stack_phys + i, read_physical_address_1b(tasks[current_task_index].kernel_stack_phys + i));
+                // // }
+                // // if (tasks[current_task_index].stack_phys)
+                // // {
+                // //     for (uint16_t i = 0; i < 4096; i++)
+                // //         write_physical_address_1b(tasks[task_count - 1].stack_phys + i, read_physical_address_1b(tasks[current_task_index].stack_phys + i));
+                // // }
 
-                                physical_address_t page = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true) >> 12;
+                // // LOG(DEBUG, "Done");
 
-                                set_current_phys_mem_page(read_physical_address_4b(pt_old_phys + 4 * j) >> 12);
-                                memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                                set_current_phys_mem_page(page);
-                                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-                            }
-                        }
-                    }
-                }
+                // // LOG(DEBUG, "Setting up registers");
 
-                LOG(DEBUG, "Loading forked cr3 (0x%x)", tasks[task_count - 1].page_directory_phys);
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&tasks[task_count - 1].registers->eax) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS, 0);
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&tasks[task_count - 1].registers->ebx) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS, 0);
 
-                // load_pd_by_physaddr(tasks[task_count - 1].page_directory_phys);
-                setting_cur_cr3 = true;
-                current_cr3 = (uint32_t)tasks[task_count - 1].page_directory_phys;
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&tasks[task_count - 1].registers->cr3) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS, tasks[task_count - 1].page_directory_phys);
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&tasks[task_count - 1].registers->ebx) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS, 0);
+
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&params->eax) + tasks[current_task_index].stack_phys - TASK_STACK_BOTTOM_ADDRESS, tasks[task_count - 1].pid >> 32);
+                // // write_physical_address_4b((physical_address_t)((uint32_t)&params->ebx) + tasks[current_task_index].stack_phys - TASK_STACK_BOTTOM_ADDRESS, tasks[task_count - 1].pid);
+
+                // // LOG(DEBUG, "Done");
+
+                // // for (uint16_t i = 0; i < 768; i++)
+                // // {
+                // //     for (uint16_t j = (i == 0 ? 256 : 0); j < ((i != 767) ? 1024 : 1021); j++)
+                // //     {
+                // //         uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i);
+                // //         if (old_pde & 1)
+                // //         {
+                // //             physical_address_t pt_old_phys = old_pde & 0xfffff000;
+                // //             uint32_t old_pte = read_physical_address_4b(pt_old_phys + 4 * j);
+                // //             physical_address_t mapping_phys = old_pte & 0xfffff000;
+                // //             if (old_pte & 1)
+                // //             {
+                // //                 LOG(DEBUG, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
+
+                // //                 physical_address_t page_address = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true);
+
+                // //                 for (uint16_t i = 0; i < 4096; i++)
+                // //                     write_physical_address_1b(page_address + i, read_physical_address_1b(mapping_phys + i));
+                // //             }
+                // //         }
+                // //     }
+                // // }
+
+                // LOG(DEBUG, "Reloading cr3 (0x%x)", tasks[current_task_index].page_directory_phys);
+
+                // setting_cur_cr3 = true;
+                // current_cr3 = (uint32_t)tasks[current_task_index].page_directory_phys;
                 
-                asm volatile("mov cr3, eax" : : "a" (current_cr3));     // !!!!!!!!!!! VERY IMPORTANT DON'T MESS UP THE STACK
+                // asm volatile("mov cr3, eax" : : "a" (current_cr3));     // !!!!!!!!!!! VERY IMPORTANT DON'T MESS UP THE STACK
                 
-                current_phys_mem_page = 0xffffffff;
-                setting_cur_cr3 = false;
+                // current_phys_mem_page = 0xffffffff;
+                // setting_cur_cr3 = false;
 
-                LOG(DEBUG, "Copying registers");
+                // LOG(DEBUG, "Done");
 
-                tasks[task_count - 1].registers = (struct interrupt_registers*)(TASK_KERNEL_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
-
-                *(tasks[task_count - 1].registers) = *params;
-                tasks[task_count - 1].registers->eax = tasks[task_count - 1].registers->ebx = 0;  // 0 to child
-
-                params->eax = tasks[task_count - 1].pid >> 32;
-                params->ebx = (uint32_t)tasks[task_count - 1].pid;
-
-                LOG(DEBUG, "Done");
+                // switch_task(&params);
             } 
             break;
+
         default:
             if (multitasking_enabled)
             {

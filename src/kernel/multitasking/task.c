@@ -96,12 +96,14 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     LOG(DEBUG, "   Section header offset : 0x%x", header->shoff);
     LOG(DEBUG, "   Flags : 0x%x", header->flags);
 
+    _task->kernel_thread = false;
     _task->stack_phys = pfa_allocate_physical_page();
     _task->kernel_stack_phys = pfa_allocate_physical_page();
 
     LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
     LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
 
+    _task->registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
     task_create_virtual_address_space(_task);
 
     struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
@@ -126,6 +128,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     for (uint16_t i = 0; i < header->shnum; i++)
     {
         if (section_headers[i].sh_type == 0) continue;
+
         LOG(DEBUG, "   Elf section %u : ", i);
         LOG(DEBUG, "       Name : %s", &string_table[section_headers[i].sh_name]);
         LOG(DEBUG, "       Type : %u", section_headers[i].sh_type);
@@ -161,9 +164,6 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         }
     }
 
-    uint8_t* task_stack_top = (uint8_t*)TASK_STACK_TOP_ADDRESS; // physical_address_to_virtual((physical_address_t)_task->stack_phys) + 4096; //(uint8_t*)TASK_STACK_TOP_ADDRESS;
-
-    // struct interrupt_registers* registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
     struct interrupt_registers registers;
 
     registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
@@ -171,19 +171,19 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     registers.ss = registers.ds;
 
     registers.eflags = 0x200; // Interrupts enabled (bit 9)
-    registers.esp = (uint32_t)task_stack_top;
-    registers.handled_esp = (uint32_t)task_stack_top - 7 * 4;
+    registers.esp = TASK_STACK_TOP_ADDRESS;
+    registers.handled_esp = TASK_STACK_TOP_ADDRESS - 7 * 4;
     
     registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
     registers.esi = registers.edi = registers.ebp = 0;
 
     registers.eip = header->entry;
 
-    for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
-        write_physical_address_1b(_task->stack_phys + 0xfff - sizeof(struct interrupt_registers) + i, ((uint8_t*)&registers)[i]);
+    registers.cr3 = _task->page_directory_phys;
 
-    // _task->registers = registers;
-    _task->registers = (struct interrupt_registers*)(task_stack_top - sizeof(struct interrupt_registers) - 1);
+    // for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+    //     write_physical_address_1b(_task->stack_phys + 0xfff - sizeof(struct interrupt_registers) + i, ((uint8_t*)&registers)[i]);
+    _task->registers_data = registers;
 
     _task->name = name;
 
@@ -277,14 +277,15 @@ void task_create_virtual_address_space(struct task* _task)
 
     physical_add_page_table(_task->page_directory_phys, 1023, _task->page_directory_phys, PAGING_SUPERVISOR_LEVEL, true);
 
-    _task->registers->cr3 = _task->page_directory_phys;
+    // write_physical_address_4b((physical_address_t)((uint32_t)&_task->registers->cr3) + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS, _task->page_directory_phys);
+    _task->registers_data.cr3 = _task->page_directory_phys;
 
     task_virtual_address_space_create_page_table(_task, 0);
     physical_address_t first_mb_pt_address = read_physical_address_4b(_task->page_directory_phys) & 0xfffff000;
     for (uint16_t i = 0; i < 256; i++)
         physical_set_page(first_mb_pt_address, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
 
-    for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING I SPENT WAY TO MUCH TIME DEBUGGING THIS
+    for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING
     {
         task_virtual_address_space_create_page_table(_task, i + 768);
         for (uint16_t j = 0; j < 1024; j++)
@@ -302,12 +303,9 @@ void task_create_virtual_address_space(struct task* _task)
     task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access
 
     physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * 767) & 0xfffff000;
-    physical_set_page(pt_address, 1021, 0, PAGING_USER_LEVEL, true);
+    physical_set_page(pt_address, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
     physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
     physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
-
-    // LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
-    // LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
 }
 
 void multitasking_init()
@@ -315,11 +313,56 @@ void multitasking_init()
     task_count = 0;
     current_task_index = 0;
     current_pid = 0;
+
+    tasks[task_count].kernel_thread = true;
+    tasks[task_count].pid  = current_pid++;
+    tasks[task_count].system_task = true;
+    tasks[task_count].ring = 0;
+    tasks[task_count].name = "idle";
+
+    tasks[task_count].stack_phys = pfa_allocate_physical_page();
+    tasks[task_count].kernel_stack_phys = pfa_allocate_physical_page();
+
+    tasks[task_count].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
+
+    task_create_virtual_address_space(&tasks[task_count]);
+
+    // struct interrupt_registers registers;
+    // registers.eip = (uint32_t)&idle_main;
+    // registers.cs = KERNEL_CODE_SEGMENT;
+    // registers.ds = KERNEL_DATA_SEGMENT;
+    // registers.ss = registers.ds;
+
+    // registers.eflags = 0x200;
+    // registers.esp = TASK_STACK_TOP_ADDRESS;
+    // registers.handled_esp = TASK_STACK_TOP_ADDRESS - 7 * 4;
+    
+    // registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
+    // registers.esi = registers.edi = registers.ebp = 0;
+
+    // // for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+    // //     write_physical_address_1b(tasks[task_count].stack_phys + 0xfff - sizeof(struct interrupt_registers) + i, ((uint8_t*)&registers)[i]);
+    // tasks[task_count].registers_data = registers;
+
+    tasks[task_count].registers_data.eip = (uint32_t)&idle_main;
+    tasks[task_count].registers_data.cs = KERNEL_CODE_SEGMENT;
+    tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
+    tasks[task_count].registers_data.ss = tasks[task_count].registers_data.ds;
+
+    tasks[task_count].registers_data.eflags = 0x200;
+    tasks[task_count].registers_data.esp = TASK_STACK_TOP_ADDRESS;
+    tasks[task_count].registers_data.handled_esp = TASK_STACK_TOP_ADDRESS - 7 * 4;
+    
+    tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
+    tasks[task_count].registers_data.esi = tasks[task_count].registers_data.edi = tasks[task_count].registers_data.ebp = 0;
+
+    task_count++;
 }
 
 void multitasking_start()
 {
     multitasking_enabled = true;
+    current_task_index = task_count - 1;    // ((task_count - 1) + 1) % task_count = 0
     while(true);
 }
 
@@ -345,32 +388,43 @@ void switch_task(struct interrupt_registers** registers)
         abort();
     }
 
+    // LOG(TRACE, "Switching tasks (curr cr3 : 0x%x)", current_cr3);
+
+    // LOG(DEBUG, "REGADDR : 0x%x", tasks[current_task_index].registers);
+
     if (!first_task_switch) 
-        tasks[current_task_index].registers = *registers;
-    else
-        current_task_index = task_count - 1;
+        tasks[current_task_index].registers_data = **registers;
+    
     first_task_switch = false;
 
     current_task_index = (current_task_index + 1) % task_count;
 
-    // LOG(DEBUG, "Page directory physical address : 0x%lx", tasks[current_task_index].page_directory_phys);
+    // LOG(DEBUG, "Page directory physical address : 0x%x", tasks[current_task_index].registers_data.cr3);
 
     TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS; //(uint32_t)tasks[current_task_index].kernel_stack + 4096;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
+    
+    // load_pd_by_physaddr(tasks[current_task_index].page_directory_phys);
 
-    *registers = tasks[current_task_index].registers;
-    load_pd_by_physaddr(tasks[current_task_index].page_directory_phys);
+    // // while(true);
 
-    LOG(DEBUG, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
-        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
-        tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, 
-        tasks[current_task_index].registers->eip, tasks[current_task_index].registers->cs, tasks[current_task_index].registers->eflags, tasks[current_task_index].registers->ss, tasks[current_task_index].registers->cr3, tasks[current_task_index].registers->ds,
-        tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
+    // LOG(DEBUG, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+    //     tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
+    //     tasks[current_task_index].registers->esp, tasks[current_task_index].registers->handled_esp, *registers, 
+    //     tasks[current_task_index].registers->eip, tasks[current_task_index].registers->cs, tasks[current_task_index].registers->eflags, tasks[current_task_index].registers->ss, tasks[current_task_index].registers->cr3, tasks[current_task_index].registers->ds,
+    //     tasks[current_task_index].registers->eax, tasks[current_task_index].registers->ebx, tasks[current_task_index].registers->ecx, tasks[current_task_index].registers->edx, tasks[current_task_index].registers->esi, tasks[current_task_index].registers->edi);
 
-    tasks[current_task_index].registers->cr3 = tasks[current_task_index].page_directory_phys;
-    set_page(page_table_767, 1022, tasks[current_task_index].kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
-    set_page(page_table_767, 1023, tasks[current_task_index].stack_phys, PAGING_SUPERVISOR_LEVEL, true);
-    load_pd(page_directory);
+    // tasks[current_task_index].registers->cr3 = tasks[current_task_index].page_directory_phys;
+
+    // *registers = tasks[current_task_index].registers;
+
+    // write_physical_address_4b((physical_address_t)((uint32_t)&tasks[current_task_index].registers->cr3) + tasks[current_task_index].stack_phys - TASK_STACK_BOTTOM_ADDRESS, tasks[current_task_index].page_directory_phys);
+    // (*registers)->cr3 = tasks[current_task_index].page_directory_phys;
+    **registers = tasks[current_task_index].registers_data;
+
+    // set_page(page_table_767, 1022, tasks[current_task_index].kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+    // set_page(page_table_767, 1023, tasks[current_task_index].stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+    // load_pd(page_directory);
 }
 
 void task_kill(uint16_t index)
@@ -392,4 +446,11 @@ void task_kill(uint16_t index)
     if (current_task_index >= index)
         current_task_index--;
     task_count--;
+}
+
+void idle_main()
+{
+    while(true)
+        asm volatile("hlt");
+    // while (true);
 }

@@ -7,12 +7,13 @@ struct interrupt_registers;
 struct task
 {
     char* name;
-    struct interrupt_registers* registers;
+    struct interrupt_registers* registers_ptr;
+    struct interrupt_registers registers_data;
     physical_address_t stack_phys;
     physical_address_t kernel_stack_phys;
     uint8_t ring;
     pid_t pid;
-    bool system_task;
+    bool system_task, kernel_thread;    // system_task: cause kernel panics; kernel_thread: dont allocate a vas
     physical_address_t page_directory_phys;
 };
 
@@ -54,3 +55,5 @@ void multasking_init();
 void multitasking_start();
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs
 void task_kill(uint16_t index);
+
+void idle_main();

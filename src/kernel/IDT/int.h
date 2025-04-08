@@ -14,7 +14,7 @@ uint32_t current_cr3;
 
 char* errorString[32] = 
 {
-    "DIVISION_BY_ZERO__ERROR",
+    "DIVISION_BY_ZERO_ERROR",
     "DEBUG",
     "NON-MASKABLE_INTERRUPT",
     "BREAKPOINT",

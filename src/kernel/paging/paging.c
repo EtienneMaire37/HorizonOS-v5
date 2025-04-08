@@ -2,13 +2,15 @@
 
 void set_current_phys_mem_page(uint32_t page)
 {
+    if (page == current_phys_mem_page) return;
+
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
     *recursive_paging_pte = (page << 12) | 0b11;
 
     load_pd_by_physaddr(current_cr3);
 
-    current_phys_mem_page = page;   // !!!!!!!!!!!! May cause problems later on since an interrupt can happen between both lines
+    current_phys_mem_page = page;
 }
 
 uint8_t* get_physical_address_ptr(physical_address_t address)
@@ -16,8 +18,8 @@ uint8_t* get_physical_address_ptr(physical_address_t address)
     uint32_t addr = (uint32_t)address;
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
-    if (page != current_phys_mem_page)
-        set_current_phys_mem_page(page);
+    
+    set_current_phys_mem_page(page);
 
     return (uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
 }
@@ -42,7 +44,7 @@ void write_physical_address_1b(physical_address_t address, uint8_t value)
 {
     if (address >> 32)
     {
-        LOG(WARNING, "Tried to read from an address over the 4GB limit (0x%lx)", address);
+        LOG(WARNING, "Tried to write to an address over the 4GB limit (0x%lx)", address);
         return;
     }
 
