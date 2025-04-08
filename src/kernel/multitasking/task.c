@@ -88,20 +88,20 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         abort();
     }
 
-    LOG(DEBUG, "ELF header : ");
-    LOG(DEBUG, "   Type : %u", header->type);
-    LOG(DEBUG, "   Machine : %u", header->machine);
-    LOG(DEBUG, "   Entry : 0x%x", header->entry);
-    LOG(DEBUG, "   Program header offset : 0x%x", header->phoff);
-    LOG(DEBUG, "   Section header offset : 0x%x", header->shoff);
-    LOG(DEBUG, "   Flags : 0x%x", header->flags);
+    LOG(TRACE, "ELF header : ");
+    LOG(TRACE, "   Type : %u", header->type);
+    LOG(TRACE, "   Machine : %u", header->machine);
+    LOG(TRACE, "   Entry : 0x%x", header->entry);
+    LOG(TRACE, "   Program header offset : 0x%x", header->phoff);
+    LOG(TRACE, "   Section header offset : 0x%x", header->shoff);
+    LOG(TRACE, "   Flags : 0x%x", header->flags);
 
     _task->kernel_thread = false;
     _task->stack_phys = pfa_allocate_physical_page();
     _task->kernel_stack_phys = pfa_allocate_physical_page();
 
-    LOG(DEBUG, "Stack physical addres: 0x%lx", _task->stack_phys);
-    LOG(DEBUG, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
+    LOG(TRACE, "Stack physical addres: 0x%lx", _task->stack_phys);
+    LOG(TRACE, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
 
     _task->registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
     task_create_virtual_address_space(_task);
@@ -114,32 +114,32 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     for (uint16_t i = 0; i < header->phnum; i++)
     {
         if (program_headers[i].type == ELF_PROGRAM_TYPE_NULL) continue;
-        LOG(DEBUG, "   Program section %u : ", i);
-        LOG(DEBUG, "       Type : %u", program_headers[i].type);
-        LOG(DEBUG, "       Offset : 0x%x", program_headers[i].p_offset);
-        LOG(DEBUG, "       Virtual address : 0x%x", program_headers[i].p_vaddr);
-        LOG(DEBUG, "       Physical address : 0x%x", program_headers[i].p_paddr);
-        LOG(DEBUG, "       File size : %u", program_headers[i].p_filesz);
-        LOG(DEBUG, "       Memory size : %u", program_headers[i].p_memsz);
-        LOG(DEBUG, "       Flags : 0x%x", program_headers[i].flags);
-        LOG(DEBUG, "       Alignment : %u", program_headers[i].align);
+        LOG(TRACE, "   Program section %u : ", i);
+        LOG(TRACE, "       Type : %u", program_headers[i].type);
+        LOG(TRACE, "       Offset : 0x%x", program_headers[i].p_offset);
+        LOG(TRACE, "       Virtual address : 0x%x", program_headers[i].p_vaddr);
+        LOG(TRACE, "       Physical address : 0x%x", program_headers[i].p_paddr);
+        LOG(TRACE, "       File size : %u", program_headers[i].p_filesz);
+        LOG(TRACE, "       Memory size : %u", program_headers[i].p_memsz);
+        LOG(TRACE, "       Flags : 0x%x", program_headers[i].flags);
+        LOG(TRACE, "       Alignment : %u", program_headers[i].align);
     }
 
     for (uint16_t i = 0; i < header->shnum; i++)
     {
         if (section_headers[i].sh_type == 0) continue;
 
-        LOG(DEBUG, "   Elf section %u : ", i);
-        LOG(DEBUG, "       Name : %s", &string_table[section_headers[i].sh_name]);
-        LOG(DEBUG, "       Type : %u", section_headers[i].sh_type);
-        LOG(DEBUG, "       Flags : 0x%x", section_headers[i].sh_flags);
-        LOG(DEBUG, "       Address : 0x%x", section_headers[i].sh_addr);
-        LOG(DEBUG, "       Offset : 0x%x", section_headers[i].sh_offset);
-        LOG(DEBUG, "       Size : %u", section_headers[i].sh_size);
-        LOG(DEBUG, "       Link : %u", section_headers[i].sh_link);
-        LOG(DEBUG, "       Info : %u", section_headers[i].sh_info);
-        LOG(DEBUG, "       Address alignment : %u", section_headers[i].sh_addralign);
-        LOG(DEBUG, "       Entry size : %u", section_headers[i].sh_entsize);
+        LOG(TRACE, "   Elf section %u : ", i);
+        LOG(TRACE, "       Name : %s", &string_table[section_headers[i].sh_name]);
+        LOG(TRACE, "       Type : %u", section_headers[i].sh_type);
+        LOG(TRACE, "       Flags : 0x%x", section_headers[i].sh_flags);
+        LOG(TRACE, "       Address : 0x%x", section_headers[i].sh_addr);
+        LOG(TRACE, "       Offset : 0x%x", section_headers[i].sh_offset);
+        LOG(TRACE, "       Size : %u", section_headers[i].sh_size);
+        LOG(TRACE, "       Link : %u", section_headers[i].sh_link);
+        LOG(TRACE, "       Info : %u", section_headers[i].sh_info);
+        LOG(TRACE, "       Address alignment : %u", section_headers[i].sh_addralign);
+        LOG(TRACE, "       Entry size : %u", section_headers[i].sh_entsize);
 
         if (section_headers[i].sh_flags & ELF_SECTION_FLAG_ALLOC)   // Allocate section
         {
