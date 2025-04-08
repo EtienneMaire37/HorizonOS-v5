@@ -195,17 +195,17 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 void task_destroy(struct task* _task)
 {
     LOG(INFO, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
-    if (_task->stack_phys)
-    {
-        LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
-        pfa_free_physical_page(_task->stack_phys);
-    }
     LOG(TRACE, "Freeing virtual address space");
     task_virtual_address_space_destroy(_task);
     if (_task->kernel_stack_phys)
     {
         LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack_phys);
         pfa_free_physical_page(_task->kernel_stack_phys);
+    }
+    if (_task->stack_phys)
+    {
+        LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
+        pfa_free_physical_page(_task->stack_phys);
     }
 }
 
@@ -219,10 +219,8 @@ void task_virtual_address_space_destroy(struct task* _task)
 
             for (uint16_t j = 0; j < 1024; j++)
             {
-                if ((read_physical_address_4b(pt_paddr + 4 * j) & 1) && !(i == 0 && j < 256) && i < 768)
-                {
+                if ((read_physical_address_4b(pt_paddr + 4 * j) & 1) && !(i == 0 && j < 256) && !(i == 767 && j < 1021) && i < 768)
                     pfa_free_physical_page(read_physical_address_4b(pt_paddr + 4 * j) & 0xfffff000);
-                }
             }
             // LOG(TRACE, "Freeing page table at 0x%x", pt);
             pfa_free_physical_page(pt_paddr);

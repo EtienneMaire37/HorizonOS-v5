@@ -35,5 +35,5 @@ int main()
     fork();
     printf("pid : %lu\n", getpid());
 
-    return 0;
+    while(true);
 }
