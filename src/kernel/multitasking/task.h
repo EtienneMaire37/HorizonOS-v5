@@ -40,6 +40,8 @@ volatile bool first_task_switch = true;
 uint64_t current_pid;
 bool setting_cur_cr3 = false;
 
+uint16_t zombie_task_index;
+
 // void task_init(struct task* _task, uint32_t eip, char* name);
 void load_pd(void* ptr);
 void load_pd_by_physaddr(physical_address_t addr);

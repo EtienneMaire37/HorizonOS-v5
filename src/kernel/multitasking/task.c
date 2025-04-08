@@ -311,6 +311,7 @@ void multitasking_init()
     task_count = 0;
     current_task_index = 0;
     current_pid = 0;
+    zombie_task_index = 0;
 
     tasks[task_count].kernel_thread = true;
     tasks[task_count].pid  = current_pid++;

@@ -1,8 +1,28 @@
 #pragma once
 
-void handle_irq_0()
+void handle_irq_0(struct interrupt_registers* params)
 {
     global_timer += PIT_INCREMENT;
+
+    if (zombie_task_index != 0)
+    {
+        task_kill(zombie_task_index);
+        zombie_task_index = 0;
+    }
+
+    if (time_initialized)
+        system_increment_time();
+    if (multitasking_enabled)
+    {
+        multitasking_counter--;
+        if (multitasking_counter == 0)
+        {
+            switch_task(&params);
+            multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
+        }
+        if (multitasking_counter == 0xff)
+            multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
+    }
 }
 
 void pit_channel_0_set_frequency(uint32_t frequency)

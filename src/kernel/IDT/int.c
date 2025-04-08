@@ -92,22 +92,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         switch (irqNumber)
         {
         case 0:
-            handle_irq_0();
-            if (time_initialized)
-                system_increment_time();
-            {
-                if (multitasking_enabled)
-                {
-                    multitasking_counter--;
-                    if (multitasking_counter == 0)
-                    {
-                        switch_task(&params);
-                        multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
-                    }
-                    if (multitasking_counter == 0xff)
-                        multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
-                }
-            }
+            handle_irq_0(params);
             break;
 
         case 1:
@@ -131,13 +116,14 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         switch (params->eax)
         {
         case 0:     // exit
-            if (multitasking_enabled)
-            {
-                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
-                old_index = current_task_index;
-                switch_task(&params);
-                task_kill(old_index);
-            }
+            // if (multitasking_enabled)
+            // {
+            //     LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
+            //     // old_index = current_task_index;
+            //     // switch_task(&params);
+            //     // task_kill(old_index);
+            //     zombie_task_index = current_task_index;
+            // }
             break;
         case 1:     // fputc
             if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)
@@ -153,7 +139,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (true) // (task_count >= MAX_TASKS) // TODO: When a process exits we should switch the vas to the next process to avoid page faults
+            if (true) // task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
