@@ -323,14 +323,14 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     ps2_flush_buffer();
 
-    ksleep(100);
+    ksleep(10);
 
     ps2_controller_init();
     ps2_detect_keyboards();
 
     ps2_init_keyboards();
 
-    ksleep(100);
+    ksleep(10);
     
     ps2_enable_interrupts();
     

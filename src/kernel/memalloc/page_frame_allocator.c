@@ -13,8 +13,6 @@ void pfa_detect_usable_memory()
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
         uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
-        // if (addr + len > 0xffffffff)
-        //     continue; // Ignore memory blocks above 4GB
         if (addr >= 0xffffffff)
             continue;
         else if (addr + len > 0xffffffff)
@@ -57,8 +55,6 @@ void pfa_detect_usable_memory()
             usable_memory_map[usable_memory_blocks].length = len32;
             // printf("Memory block %u : address : 0x%lx ; length : %u\n", usable_memory_blocks, usable_memory_map[usable_memory_blocks].address, usable_memory_map[usable_memory_blocks].length);
             usable_memory_blocks++;
-
-            // printf("len : %u\n", len32);
         }   
     }
 
@@ -82,15 +78,12 @@ void pfa_bitmap_init()
     bitmap_size = (uint32_t)(usable_memory + 32768) / 32769;   // Round up the byte
     memory_allocated = 0;
     allocatable_memory = usable_memory - bitmap_size;
-    // if (usable_memory % 0x1000)
-    //     bitmap_size++;
     LOG(DEBUG, "Allocating %u bytes of bitmap", bitmap_size);
     virtual_address_t address = physical_address_to_virtual(usable_memory_map[0].address);
     uint8_t* bitmap_start = (uint8_t*)address;
     uint8_t current_block = 0;
     for (uint32_t i = 0; i < bitmap_size; i++)
     {
-        // LOG(DEBUG, "Bitmap address : 0x%x", address);
         *(uint8_t*)address = 0;
         address++;
         if (address >= (uint64_t)physical_address_to_virtual(usable_memory_map[current_block].address) + usable_memory_map[current_block].length)
@@ -129,17 +122,16 @@ physical_address_t pfa_allocate_physical_page()
     uint8_t current_block = 0;
     for (uint32_t i = 0; i < bitmap_size; i++)
     {
-        if (*(uint8_t*)bitmap_byte_address != 0xff)
+        uint8_t bb = *(uint8_t*)bitmap_byte_address;
+        if (bb != 0xff)
         {
             for (uint8_t j = 0; j < 8; j++)
             {
                 uint8_t bit = 1 << j;
-                if (!((*(uint8_t*)bitmap_byte_address) & bit))
+                if (!(bb & bit))
                 {
-                    *(uint8_t*)bitmap_byte_address |= bit;
+                    bb |= bit;
                     uint32_t page = i * 8 + j;
-                    // virtual_address_t address = page * 4096 + first_alloc_page;
-                    // virtual_address_t address = first_alloc_page;
                     physical_address_t address = virtual_address_to_physical(first_alloc_page);
                     current_block = 0;
                     for (uint32_t k = 0; k < page; k++)
@@ -156,8 +148,8 @@ physical_address_t pfa_allocate_physical_page()
                             address = usable_memory_map[current_block].address;
                         }
                     }
-                    // LOG(DEBUG, "Allocated page at 0x%x", address);
                     memory_allocated += 0x1000;
+                    *(uint8_t*)bitmap_byte_address = bb;
                     LOG_MEM_ALLOCATED();
                     return address;
                 }
@@ -216,16 +208,16 @@ void pfa_free_physical_page(physical_address_t address)
                 LOG_MEM_ALLOCATED();
                 return;
             }
-        }
 
-        if (address < current_address)
-        {
-            LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
-            abort();
+            if (address < current_address)
+            {
+                LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
+                abort();
+            }
         }
 
         byte_address++;
-        if (virtual_address_to_physical(byte_address) >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
+        if (current_address >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
         {
             current_block++;
             if (current_block >= usable_memory_blocks)
@@ -233,7 +225,7 @@ void pfa_free_physical_page(physical_address_t address)
                 LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
                 abort();
             }
-            byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
+            current_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }
     }
 }
