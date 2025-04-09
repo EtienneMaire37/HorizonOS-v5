@@ -13,4 +13,5 @@ void _start()
     atexit_stack_length = 0;
     int return_value = main();
     exit(return_value);
+    while(true) { asm volatile ("hlt"); };
 }

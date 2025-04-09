@@ -4,12 +4,6 @@ void handle_irq_0(struct interrupt_registers* params)
 {
     global_timer += PIT_INCREMENT;
 
-    if (zombie_task_index != 0)
-    {
-        task_kill(zombie_task_index);
-        zombie_task_index = 0;
-    }
-
     if (time_initialized)
         system_increment_time();
     if (multitasking_enabled)

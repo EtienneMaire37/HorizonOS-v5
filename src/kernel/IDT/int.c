@@ -35,8 +35,6 @@ void kernel_panic(struct interrupt_registers* params)
         }
     }
 
-    // LOG(ERROR, "Kernel panic : Exception number : %u ; Error : %s ; Error code = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code);
-
     halt();
 }
 
@@ -44,13 +42,6 @@ void kernel_panic(struct interrupt_registers* params)
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
 {
-    // if (multitasking_enabled)
-    //     LOG(DEBUG, "Current registers : esp : 0x%x, 0x%x | eip : 0x%x", 
-    //         params->esp, params->handled_esp, params->eip);
-
-    // if (current_task->name[0] == '.')   // TASK A
-    //     LOG(DEBUG, "0x100000 : 0x%x", *(uint32_t*)0x100000);
-
     current_cr3 = params->cr3; 
     current_phys_mem_page = 0xffffffff;
 
@@ -73,7 +64,14 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
         return_from_isr();
     }
-    else if (params->interrupt_number < 32 + 16)  // IRQ
+
+    if (zombie_task_index != 0 && zombie_task_index != current_task_index) // IRQ or syscall
+    {
+        task_kill(zombie_task_index);
+        zombie_task_index = 0;
+    }
+
+    if (params->interrupt_number < 32 + 16)  // IRQ
     {
         uint8_t irqNumber = params->interrupt_number - 32;
 
@@ -109,21 +107,23 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         pic_send_eoi(irqNumber);
         return_from_isr();
     }
-    else if (params->interrupt_number == 0xff)  // System call
+    if (params->interrupt_number == 0xff)  // System call
     {
         // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, params->eax);
         uint16_t old_index;
         switch (params->eax)
         {
         case 0:     // exit
-            // if (multitasking_enabled)
-            // {
-            //     LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
-            //     // old_index = current_task_index;
-            //     // switch_task(&params);
-            //     // task_kill(old_index);
-            //     zombie_task_index = current_task_index;
-            // }
+            if (multitasking_enabled)
+            {
+                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
+                if (zombie_task_index != 0)
+                {
+                    LOG(CRITICAL, "Tried to kill several tasks at once");
+                    abort();
+                }
+                zombie_task_index = current_task_index;
+            }
             break;
         case 1:     // fputc
             if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)

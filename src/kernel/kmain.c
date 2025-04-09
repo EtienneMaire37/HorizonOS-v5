@@ -254,42 +254,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initialized the PIT"); 
 
-    LOG(DEBUG, "Setting up paging"); 
-
-    for (uint16_t i = 256; i < 1024; i++)
-        remove_page(&page_table_0[0], i);
-
-    for (uint16_t i = 1; i < 256; i++)
-    {
-        for (uint16_t j = 0; j < 1024; j++)
-        {
-            struct virtual_address_layout layout;
-            layout.page_directory_entry = i + 768;
-            layout.page_table_entry = j;
-            layout.page_offset = 0;
-            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
-            set_page(&page_table_768_1023[i * 1024], j, address, PAGING_SUPERVISOR_LEVEL, true);
-        }
-    }
-
-    for (uint16_t i = 0; i < 1024; i++)
-        remove_page(page_table_767, i);
-
-    set_page(page_table_767, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);   // Phys mem access
-    // set_page(page_table_767, 1022, virtual_address_to_physical((virtual_address_t)&_kernel_kernel_stack), PAGING_SUPERVISOR_LEVEL, true);   // Kernel stack
-    // set_page(page_table_767, 1023, virtual_address_to_physical((virtual_address_t)&_kernel_stack), PAGING_SUPERVISOR_LEVEL, true);   // Stack
-    
-    for (uint16_t i = 769; i < 1023; i++)   // PDE 768 is defined in kernelentry.asm
-        add_page_table(page_directory, i, virtual_address_to_physical((virtual_address_t)&page_table_768_1023[(i - 768) * 1024]), PAGING_SUPERVISOR_LEVEL, true);  
-
-    add_page_table(page_directory, 767, virtual_address_to_physical((virtual_address_t)page_table_767), PAGING_SUPERVISOR_LEVEL, true);  
-
-    add_page_table(page_directory, 1023, virtual_address_to_physical((virtual_address_t)page_directory), PAGING_SUPERVISOR_LEVEL, true);    // Setup recursive mapping
-
-    reload_page_directory();
-
-    LOG(DEBUG, "Done setting up paging"); 
-
     LOG(DEBUG, "Setting up the initrd");
 
     if (multiboot_info->mods_count != 1)
@@ -352,15 +316,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     bios_get_ebda_pointer();
     acpi_find_tables();
 
-    // for (uint32_t i = 0; i < 1 * GB / (4 * KB); i++)
-    // {
-    //     pfa_allocate_physical_page();
-    //     if (i % KB == 0)
-    //     {
-    //         LOG(DEBUG, "i = %u", i * (4 * KB));
-    //     }
-    // }
-
     LOG(INFO, "Detecting PS/2 devices");
     printf("Detecting PS/2 devices\n");
 
@@ -371,20 +326,13 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     ksleep(100);
 
     ps2_controller_init();
-    // ps2_detect_devices();
     ps2_detect_keyboards();
 
     ps2_init_keyboards();
 
-    // ps2_controller_connected = true;
-    // ps2_device_1_connected = true;
-    // ps2_device_1_type = PS2_DEVICE_KEYBOARD;
-
     ksleep(100);
     
     ps2_enable_interrupts();
-
-    // ps2_flush_buffer();
     
     if (ps2_device_1_connected)
     {

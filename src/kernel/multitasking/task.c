@@ -211,18 +211,23 @@ void task_destroy(struct task* _task)
 
 void task_virtual_address_space_destroy(struct task* _task)
 {
-    for (uint16_t i = 0; i < 1024; i++)
+    for (uint16_t i = 0; i < 768; i++)
     {
-        if (read_physical_address_4b(_task->page_directory_phys + 4 * i) & 1)
+        uint32_t pde = read_physical_address_4b(_task->page_directory_phys + 4 * i);
+        if (pde & 1)
         {
-            physical_address_t pt_paddr = read_physical_address_4b(_task->page_directory_phys + 4 * i) & 0xfffff000;
+            physical_address_t pt_paddr = pde & 0xfffff000;
 
-            for (uint16_t j = 0; j < 1024; j++)
+            for (uint16_t j = (i == 0 ? 256 : 0); j < (i == 767 ? 1021 : 1024); j++)
             {
-                if ((read_physical_address_4b(pt_paddr + 4 * j) & 1) && !(i == 0 && j < 256) && !(i == 767 && j < 1021) && i < 768)
-                    pfa_free_physical_page(read_physical_address_4b(pt_paddr + 4 * j) & 0xfffff000);
+                uint32_t pte = read_physical_address_4b(pt_paddr + 4 * j);
+
+                if (pte & 1)
+                {
+                    // LOG(DEBUG, "Freeing %u:%u", i, j);
+                    pfa_free_physical_page(pte & 0xfffff000);
+                }
             }
-            // LOG(TRACE, "Freeing page table at 0x%x", pt);
             pfa_free_physical_page(pt_paddr);
         }
     }
