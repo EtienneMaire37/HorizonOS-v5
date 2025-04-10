@@ -167,12 +167,6 @@ physical_address_t pfa_allocate_physical_page()
             }
             bitmap_byte_address = physical_address_to_virtual(usable_memory_map[current_block].address);
         }
-
-        if(bitmap_byte_address >= 0xffffffff)
-        {
-            LOG(CRITICAL, "Out of memory !");
-            abort();
-        }
     }
 
     LOG(CRITICAL, "Out of memory !");
@@ -194,39 +188,42 @@ void pfa_free_physical_page(physical_address_t address)
     }
 
     physical_address_t current_address = virtual_address_to_physical(first_alloc_page);
-    uint8_t current_block = 0;
-    virtual_address_t byte_address = physical_address_to_virtual(usable_memory_map[0].address);
-    for (uint32_t i = 0; i < bitmap_size; i++)
+    uint8_t current_block_bitmap = 0, current_block_addr_index = 0;
+    uint32_t bitmap_byte_address = physical_address_to_virtual(usable_memory_map[0].address);
+    while(true)
     {
-        for(uint8_t j = 0; j < 8; j++)
-        {
-            current_address += 0x1000;
-            if (current_address == address)
-            {
-                *(uint8_t*)byte_address &= ~(1 << j);
-                memory_allocated -= 0x1000;
-                LOG_MEM_ALLOCATED();
-                return;
-            }
+        uint32_t offset = 0;
+        if (current_block_addr_index >= usable_memory_blocks - 1)
+            offset = 0xffffffff;
+        else
+            offset = physical_address_to_virtual(usable_memory_map[current_block_addr_index + 1].address - usable_memory_map[current_block_addr_index].address);
 
-            if (address < current_address)
-            {
-                LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
-                abort();
-            }
+        physical_address_t next_addr = current_address + offset;
+
+        if (address <= next_addr)
+        {
+            uint8_t* byte_ptr = (uint8_t*)(bitmap_byte_address + ((address - current_address) / (4096 * 8)));
+            uint8_t bit = ((address - current_address) / 4096) % 8;
+            *byte_ptr &= ~(1 << bit);
+            return;
         }
 
-        byte_address++;
-        if (current_address >= usable_memory_map[current_block].address + usable_memory_map[current_block].length)
+        if (offset == 0xffffffff)
+            return;
+
+        bitmap_byte_address += offset / (4096 * 8);
+        if (virtual_address_to_physical(bitmap_byte_address) >= usable_memory_map[current_block_bitmap].address + usable_memory_map[current_block_bitmap].length)
         {
-            current_block++;
-            if (current_block >= usable_memory_blocks)
+            current_block_bitmap++;
+            if (current_block_bitmap >= usable_memory_blocks)
             {
-                LOG(CRITICAL, "Tried to free an unallocated page (address : 0x%x)", address);
+                LOG(CRITICAL, "Out of memory !");
                 abort();
             }
-            current_address = physical_address_to_virtual(usable_memory_map[current_block].address);
+            bitmap_byte_address = physical_address_to_virtual(usable_memory_map[current_block_bitmap].address);
         }
+
+        current_block_addr_index++;
     }
 }
 

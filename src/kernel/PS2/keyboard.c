@@ -4,6 +4,7 @@ void ps2_kb_get_scancode_set()
 {
     if (PS2_DEVICE_1_KB)
     {
+        ps2_send_device_full_command_with_data(1, PS2_KB_GET_SET_SCANCODE_SET, 2, 1);
         if(ps2_send_device_full_command_with_data(1, PS2_KB_GET_SET_SCANCODE_SET, 0, 2))
             ps2_kb_1_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
         else
@@ -16,6 +17,7 @@ void ps2_kb_get_scancode_set()
 
     if (PS2_DEVICE_2_KB)
     {
+        ps2_send_device_full_command_with_data(2, PS2_KB_GET_SET_SCANCODE_SET, 2, 1);
         if(ps2_send_device_full_command_with_data(2, PS2_KB_GET_SET_SCANCODE_SET, 0, 2))
             ps2_kb_2_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
         else

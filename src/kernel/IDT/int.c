@@ -139,7 +139,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (true) // task_count >= MAX_TASKS)
+            if (true) // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -157,11 +157,12 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 if (tasks[current_task_index].kernel_stack_phys)
                     tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
 
-                tasks[task_count - 1].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers) - 1);
-
-                tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
+                tasks[task_count - 1].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
 
                 task_create_virtual_address_space(&tasks[task_count - 1]);
+
+                tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
+                tasks[task_count - 1].registers_data.cr3 = tasks[task_count - 1].page_directory_phys;
 
                 if (tasks[current_task_index].kernel_stack_phys)
                 {
@@ -200,7 +201,10 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                         }
                     }
                 }
-                LOG(DEBUG, "eip : 0x%x", tasks[task_count - 1].registers_data.eip);
+                *params = tasks[current_task_index].registers_data;
+
+                switch_task(&params);
+                // LOG(DEBUG, "eip : 0x%x", tasks[task_count - 1].registers_data.eip);
             } 
             break;
 

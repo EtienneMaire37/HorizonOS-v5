@@ -352,15 +352,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    load_pd(page_directory);
-
-    // disable_interrupts();
-
     multitasking_init();
 
     multasking_add_task_from_initrd("./bin/initrd/kernel32.elf", 0, true);
-
-    // enable_interrupts();
 
     multitasking_start();
 
