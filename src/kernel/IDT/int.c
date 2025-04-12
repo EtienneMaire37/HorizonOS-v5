@@ -145,7 +145,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (task_count >= MAX_TASKS)
+            LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
+
+            if (true) // (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -187,7 +189,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
                 for (uint16_t i = 0; i < 768; i++)
                 {
-                    for (uint16_t j = (i == 0 ? 256 : 0); j < ((i != 767) ? 1024 : 1021); j++)
+                    for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++) // FIXED: Always iterate full 1024 PTEs
                     {
                         uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i);
                         if (old_pde & 1)
@@ -197,12 +199,20 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                             physical_address_t mapping_phys = old_pte & 0xfffff000;
                             if (old_pte & 1)
                             {
-                                // LOG(DEBUG, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
-
-                                physical_address_t page_address = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true);
-
-                                for (uint16_t i = 0; i < 4096; i++)
-                                    write_physical_address_1b(page_address + i, read_physical_address_1b(mapping_phys + i));
+                                // Copy all pages including kernel stack (PDE 767, PTE 1022-1023)
+                                physical_address_t page_address = task_virtual_address_space_create_page(
+                                    &tasks[task_count - 1], 
+                                    i, 
+                                    j, 
+                                    (old_pte & 0x04) ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL,
+                                    true
+                                );
+                                
+                                // Use optimized 4-byte copy
+                                for (uint16_t k = 0; k < 4096; k += 4) {
+                                    uint32_t data = read_physical_address_4b(mapping_phys + k);
+                                    write_physical_address_4b(page_address + k, data);
+                                }
                             }
                         }
                     }

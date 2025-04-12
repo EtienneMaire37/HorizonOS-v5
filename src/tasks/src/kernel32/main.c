@@ -28,9 +28,9 @@ int main()
     printf("sqrt(%f) = %f\n", 1526.3, sqrt(1526.3));
     printf("%f\n", 133.16789134678891200042345);
     
-    // fork();
+    fork();
     printf("pid : %lu\n", getpid());
 
-    // while(true);
+    while(true);
     return 0;
 }
