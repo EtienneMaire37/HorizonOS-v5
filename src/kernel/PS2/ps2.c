@@ -171,6 +171,7 @@ bool ps2_send_device_full_command_with_data(uint8_t device, uint8_t command, uin
             if(!ps2_send_device_command(device, command))
                 return false;
             // ps2_read_data(extected_bytes);
+            ps2_read_data(1);
         }
         else
         {
