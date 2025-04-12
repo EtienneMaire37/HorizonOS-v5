@@ -45,18 +45,27 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
     current_cr3 = params->cr3; 
     current_phys_mem_page = 0xffffffff;
 
+    if (multitasking_enabled && !first_task_switch)
+    {
+        tasks[current_task_index].registers_data = *params;
+        // LOG(TRACE, "Saved register data");
+    }
+
     if (params->interrupt_number < 32)            // Fault
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2, params->cr3);
-        
-        // if (params->interrupt_number == 1)  // Debug
-        //     return_from_isr();
 
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || params->interrupt_number == 8 || params->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
             kernel_panic(params);
         else
         {
+            if (zombie_task_index != 0 && zombie_task_index != current_task_index)
+            {
+                task_kill(zombie_task_index);
+                zombie_task_index = 0;
+            }
+
             uint16_t old_index = current_task_index;
             switch_task(&params);
             task_kill(old_index);
@@ -73,21 +82,18 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
     if (params->interrupt_number < 32 + 16)  // IRQ
     {
-        uint8_t irqNumber = params->interrupt_number - 32;
+        uint8_t irq_number = params->interrupt_number - 32;
 
-        if (irqNumber == 7 && !(pic_get_isr() >> 7))
+        if (irq_number == 7 && !(pic_get_isr() >> 7))
             return_from_isr();
-        if (irqNumber == 15 && !(pic_get_isr() >> 15))
+        if (irq_number == 15 && !(pic_get_isr() >> 15))
         {
             outb(PIC1_CMD, PIC_EOI);
 	        io_wait();
             return_from_isr();
         }
 
-        // if (irqNumber != 0)
-        //     LOG(INFO, "IRQ %u", irqNumber);
-
-        switch (irqNumber)
+        switch (irq_number)
         {
         case 0:
             handle_irq_0(params);
@@ -104,7 +110,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             break;
         }
 
-        pic_send_eoi(irqNumber);
+        pic_send_eoi(irq_number);
         return_from_isr();
     }
     if (params->interrupt_number == 0xff)  // System call
@@ -125,7 +131,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 zombie_task_index = current_task_index;
             }
             break;
-        case 1:     // fputc
+        case 1:     // fputc    // !!!!!!!!!!! Not standard should definitely implement read/write family of functions not the fread/fwrite
             if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)
                 putchar(params->ebx);
             else
@@ -139,7 +145,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             params->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
-            if (true) // (task_count >= MAX_TASKS)
+            if (task_count >= MAX_TASKS)
             {
                 params->eax = 0xffffffff;
                 params->ebx = 0xffffffff;   // -1
@@ -202,9 +208,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                     }
                 }
                 *params = tasks[current_task_index].registers_data;
-
                 switch_task(&params);
-                // LOG(DEBUG, "eip : 0x%x", tasks[task_count - 1].registers_data.eip);
             } 
             break;
 

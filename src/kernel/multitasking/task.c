@@ -194,7 +194,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
 void task_destroy(struct task* _task)
 {
-    LOG(INFO, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
+    LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
     LOG(TRACE, "Freeing virtual address space");
     task_virtual_address_space_destroy(_task);
     if (_task->kernel_stack_phys)
@@ -375,9 +375,9 @@ void switch_task(struct interrupt_registers** registers)
         abort();
     }
 
-    // LOG(TRACE, "Switching tasks (curr cr3 : 0x%x)", current_cr3);
+    LOG(TRACE, "Switching tasks (curr cr3 : 0x%x)", current_cr3);
 
-    if (!first_task_switch) 
+    if (!first_task_switch)
         tasks[current_task_index].registers_data = **registers;
     
     first_task_switch = false;
@@ -387,11 +387,12 @@ void switch_task(struct interrupt_registers** registers)
     TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
     TSS.ss0 = KERNEL_DATA_SEGMENT;
 
-    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x", 
+    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x, 0x%x : end esp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ss : 0x%x, cr3 : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
         tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
         tasks[current_task_index].registers_data.esp, tasks[current_task_index].registers_data.handled_esp, *registers, 
         tasks[current_task_index].registers_data.eip, tasks[current_task_index].registers_data.cs, tasks[current_task_index].registers_data.eflags, tasks[current_task_index].registers_data.ss, tasks[current_task_index].registers_data.cr3, tasks[current_task_index].registers_data.ds,
-        tasks[current_task_index].registers_data.eax, tasks[current_task_index].registers_data.ebx, tasks[current_task_index].registers_data.ecx, tasks[current_task_index].registers_data.edx, tasks[current_task_index].registers_data.esi, tasks[current_task_index].registers_data.edi);
+        tasks[current_task_index].registers_data.eax, tasks[current_task_index].registers_data.ebx, tasks[current_task_index].registers_data.ecx, tasks[current_task_index].registers_data.edx, tasks[current_task_index].registers_data.esi, tasks[current_task_index].registers_data.edi,
+        tasks[current_task_index].registers_data.cr3);
 
     tasks[current_task_index].registers_data.cr3 = tasks[current_task_index].page_directory_phys;
 

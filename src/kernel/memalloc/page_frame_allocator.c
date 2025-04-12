@@ -187,6 +187,8 @@ void pfa_free_physical_page(physical_address_t address)
         abort();
     }
 
+    // return;
+
     physical_address_t current_address = virtual_address_to_physical(first_alloc_page);
     uint8_t current_block_bitmap = 0, current_block_addr_index = 0;
     uint32_t bitmap_byte_address = physical_address_to_virtual(usable_memory_map[0].address);
@@ -202,9 +204,12 @@ void pfa_free_physical_page(physical_address_t address)
 
         if (address <= next_addr)
         {
-            uint8_t* byte_ptr = (uint8_t*)(bitmap_byte_address + ((address - current_address) / (4096 * 8)));
+            uint8_t* byte_ptr = (uint8_t*)(bitmap_byte_address + (uint32_t)((address - current_address) / (4096 * 8)));
             uint8_t bit = ((address - current_address) / 4096) % 8;
             *byte_ptr &= ~(1 << bit);
+            
+            memory_allocated -= 0x1000;
+            LOG_MEM_ALLOCATED();
             return;
         }
 

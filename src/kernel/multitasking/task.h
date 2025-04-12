@@ -27,11 +27,11 @@ struct task
 struct task tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;
 
-#define TASK_SWITCH_DELAY 30 // ms
+#define TASK_SWITCH_DELAY 20 // ms
 
 uint8_t multitasking_counter = 0;
 
-uint8_t page_tmp[4096];
+// uint8_t page_tmp[4096];
 
 // struct task* current_task;
 uint16_t current_task_index = 0;

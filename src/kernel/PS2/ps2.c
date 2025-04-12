@@ -28,7 +28,7 @@ bool ps2_wait_for_input()
         if ((reg & PS2_STATUS_OUTPUT_FULL) == PS2_STATUS_OUTPUT_FULL)
             return false;
     }
-    LOG(DEBUG, "PS/2 wait to input timeout");
+    LOG(TRACE, "PS/2 wait to input timeout");
     return true;
 }
 
@@ -170,7 +170,7 @@ bool ps2_send_device_full_command_with_data(uint8_t device, uint8_t command, uin
         {
             if(!ps2_send_device_command(device, command))
                 return false;
-            ps2_read_data(extected_bytes);
+            // ps2_read_data(extected_bytes);
         }
         else
         {
@@ -390,7 +390,7 @@ invalid_port_2:
 
 void ps2_enable_interrupts()
 {
-    LOG(INFO, "Enabling PS/2 irqs");
+    LOG(INFO, "Enabling PS/2 IRQs");
     
     ps2_device_1_interrupt = ps2_device_1_connected;
     ps2_device_2_interrupt = ps2_device_2_connected;
@@ -398,9 +398,9 @@ void ps2_enable_interrupts()
     // config = ps2_send_command(PS2_GET_CONFIGURATION);
     // config &= ~0b01000000;   // Disable translation
     uint8_t config = 0b00000100;
-    if (ps2_device_1_connected) config |= 0b00000001; // Enable interrupts
-    if (ps2_device_2_connected) config |= 0b00000010;
-    ps2_send_command_with_data(PS2_SET_CONFIGURATION, config);
+    if (ps2_device_1_interrupt) config |= 0b00000001; // Enable interrupts
+    if (ps2_device_2_interrupt) config |= 0b00000010;
+    ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
     ksleep(10);
 

@@ -9,8 +9,6 @@ void ps2_kb_get_scancode_set()
             ps2_kb_1_scancode_set = ps2_data_buffer[0] == PS2_ACK ? ps2_data_buffer[1] : 0xff;
         else
             ps2_kb_1_scancode_set = 0xff;
-
-        ps2_print_read_buffer();
     }
     else
         ps2_kb_1_scancode_set = 0xff;

@@ -35,8 +35,6 @@ uint64_t available_memory = 0;
 extern void _halt();
 void halt();
 
-typedef struct FILE FILE;
-
 #define klog ((FILE*)3)
 
 #define enable_interrupts()  asm volatile("sti");

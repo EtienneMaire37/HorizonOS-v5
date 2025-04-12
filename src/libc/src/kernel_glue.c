@@ -43,11 +43,11 @@ pid_t fork()
     return ((pid_t)hi << 32) | lo;
 }
 
-void* sbrk(intptr_t increment)
-{
-    intptr_t incremented;
-    asm volatile("int 0xff" : "=a" (incremented)
-        : "a" (5), "b" (increment));
-    break_point += incremented;
-    return (void*)break_point;
-}
+// void* sbrk(intptr_t increment)
+// {
+//     intptr_t incremented;
+//     asm volatile("int 0xff" : "=a" (incremented)
+//         : "a" (5), "b" (increment));
+//     break_point += incremented;
+//     return (void*)break_point;
+// }

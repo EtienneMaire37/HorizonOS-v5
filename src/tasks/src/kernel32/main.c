@@ -9,10 +9,6 @@
 
 int main()
 {
-    // printf("isfinite : \n");
-    // printf("0.: %u\n", isfinite(0.));
-    // printf("1. / 0.: %u\n", isfinite(1. / 0.));
-    // printf("PI:  %f\n",  M_PI);
     printf("PIl: %lf\n", M_PIl);
     printf("exp(%f) = %lf\n", 135.183, expl(135.183));
     printf("exp(%f) = %f\n", 32.57, exp(32.57));
@@ -32,7 +28,7 @@ int main()
     printf("sqrt(%f) = %f\n", 1526.3, sqrt(1526.3));
     printf("%f\n", 133.16789134678891200042345);
     
-    fork();
+    // fork();
     printf("pid : %lu\n", getpid());
 
     // while(true);
