@@ -1,31 +1,35 @@
 #pragma once
 
-int fputc(int c, FILE* stream)
+ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
-    switch((unsigned int)stream)
+    if (fildes > 2)
     {
-    case (unsigned int)klog:
-        debug_outc((char)c);
-        break;
-    case (unsigned int)stderr:
-    case (unsigned int)stdout:
-        tty_outc((char)c);
-        tty_update_cursor();
-        break;
-
-    default:
         LOG(ERROR, "Invalid output stream");
         errno = EBADF;
-        return EOF;
+        return -1;
     }
 
-    return c;
+    switch(fildes)
+    {
+    case STDIN_FILENO: 
+        break;
+    case STDERR_FILENO: // Kernel writes to stderr -> log
+        for (size_t i = 0; i < nbyte; i++)
+            debug_outc(*((char*)buf + i));
+        break;
+    case STDOUT_FILENO: // Both stdout and stderr write to the terminal
+        for (size_t i = 0; i < nbyte; i++)
+            tty_outc(*((char*)buf + i));
+        tty_update_cursor();
+    }
+
+    return nbyte;
 }
 
 void exit(int r)
 {
     LOG(CRITICAL, "Kernel aborted");
-    fprintf(stderr, "\nKernel aborted.");
+    printf("\nKernel aborted.");
     halt();
 }
 

@@ -23,6 +23,8 @@ _start:
     mov [magic_number], eax
     mov [multiboot_info], ebx
 
+    fninit
+
     mov ebp, stack_top
     sub ebp, 0xc0000000
     mov esp, ebp

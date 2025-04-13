@@ -2,7 +2,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
@@ -10,7 +9,6 @@
 int main()
 {
     printf("PIl: %lf\n", M_PIl);
-    printf("exp(%f) = %lf\n", 135.183, expl(135.183));
     printf("exp(%f) = %f\n", 32.57, exp(32.57));
     printf("ln(%f) = %f\n", 10000000., log(10000000.));
     printf("ln(%f) = %f\n", 10000., log(10000.));
@@ -28,7 +26,7 @@ int main()
     printf("sqrt(%f) = %f\n", 1526.3, sqrt(1526.3));
     printf("%f\n", 133.16789134678891200042345);
     
-    fork();
+    printf("fork() : %ld\n", fork());
     printf("pid : %lu\n", getpid());
 
     while(true);

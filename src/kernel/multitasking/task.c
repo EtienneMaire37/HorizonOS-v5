@@ -181,8 +181,6 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     registers.cr3 = _task->page_directory_phys;
 
-    // for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
-    //     write_physical_address_1b(_task->stack_phys + 0xfff - sizeof(struct interrupt_registers) + i, ((uint8_t*)&registers)[i]);
     _task->registers_data = registers;
 
     _task->name = name;
@@ -223,10 +221,7 @@ void task_virtual_address_space_destroy(struct task* _task)
                 uint32_t pte = read_physical_address_4b(pt_paddr + 4 * j);
 
                 if (pte & 1)
-                {
-                    // LOG(DEBUG, "Freeing %u:%u", i, j);
                     pfa_free_physical_page(pte & 0xfffff000);
-                }
             }
             pfa_free_physical_page(pt_paddr);
         }
@@ -237,8 +232,6 @@ void task_virtual_address_space_destroy(struct task* _task)
 void task_virtual_address_space_create_page_table(struct task* _task, uint16_t index)
 {
     physical_address_t pt_phys = pfa_allocate_physical_page();
-
-    // LOG(DEBUG, "pd: 0x%lx, pt: 0x%lx", _task->page_directory_phys, pt_phys);
 
     physical_init_page_table(pt_phys);
 
@@ -262,10 +255,12 @@ void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t i
 
 physical_address_t task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
 {
-    if (!(read_physical_address_4b(_task->page_directory_phys + 4 * pd_index) & 1))
+    uint32_t pde = read_physical_address_4b(_task->page_directory_phys + 4 * pd_index);
+
+    if (!(pde & 1))
         task_virtual_address_space_create_page_table(_task, pd_index);
 
-    physical_address_t pt_phys = read_physical_address_4b(_task->page_directory_phys + 4 * pd_index) & 0xfffff000;
+    physical_address_t pt_phys = pde & 0xfffff000;
 
     physical_address_t page = pfa_allocate_physical_page();
     physical_set_page(pt_phys, pt_index, page, user_supervisor, read_write);
@@ -280,7 +275,6 @@ void task_create_virtual_address_space(struct task* _task)
 
     physical_add_page_table(_task->page_directory_phys, 1023, _task->page_directory_phys, PAGING_SUPERVISOR_LEVEL, true);
 
-    // write_physical_address_4b((physical_address_t)((uint32_t)&_task->registers->cr3) + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS, _task->page_directory_phys);
     _task->registers_data.cr3 = _task->page_directory_phys;
 
     task_virtual_address_space_create_page_table(_task, 0);
@@ -307,7 +301,7 @@ void task_create_virtual_address_space(struct task* _task)
 
     physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * 767) & 0xfffff000;
     physical_set_page(pt_address, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
-    physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_USER_LEVEL, true);
+    physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
     physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
 }
 
@@ -395,6 +389,9 @@ void switch_task(struct interrupt_registers** registers)
         tasks[current_task_index].registers_data.cr3);
 
     tasks[current_task_index].registers_data.cr3 = tasks[current_task_index].page_directory_phys;
+    physical_add_page_table(tasks[current_task_index].page_directory_phys, 1023, tasks[current_task_index].page_directory_phys, PAGING_SUPERVISOR_LEVEL, true);
+
+    tasks[current_task_index].registers_data.ss = tasks[current_task_index].registers_data.ds;
 
     **registers = tasks[current_task_index].registers_data;
 }

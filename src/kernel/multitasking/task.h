@@ -15,6 +15,7 @@ struct task
     pid_t pid;
     bool system_task, kernel_thread;    // system_task: cause kernel panics; kernel_thread: dont allocate a vas
     physical_address_t page_directory_phys;
+    // uint8_t fpu_state[108] __attribute__((aligned(16)));
 };
 
 #define TASK_STACK_BOTTOM_ADDRESS           (0xc0000000 - 0x1000)
@@ -31,9 +32,8 @@ uint16_t task_count;
 
 uint8_t multitasking_counter = 0;
 
-// uint8_t page_tmp[4096];
+uint8_t page_tmp[4096];
 
-// struct task* current_task;
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
@@ -42,7 +42,6 @@ bool setting_cur_cr3 = false;
 
 uint16_t zombie_task_index;
 
-// void task_init(struct task* _task, uint32_t eip, char* name);
 void load_pd(void* ptr);
 void load_pd_by_physaddr(physical_address_t addr);
 void task_load_from_initrd(struct task* _task, char* path, uint8_t ring);

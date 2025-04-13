@@ -8,4 +8,4 @@ typedef long long ptrdiff_t;
 typedef unsigned int size_t;
 typedef char wchar_t;
 
-#define offsetof(st, m) ((size_t)&(((st *)0)->m))
+#define offsetof(st, m) ((size_t)&(((st*)0)->m))

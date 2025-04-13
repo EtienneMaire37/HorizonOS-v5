@@ -1,5 +1,5 @@
 // #include <stddef.h>
-#include <stdint.h>
+// #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
 
@@ -11,12 +11,16 @@ multiboot_info_t* multiboot_info;
 #define GB (1024 * MB)
 #define TB (1024 * GB)
 
-// #include "../libc/include/inttypes.h"
 #include "../libc/include/errno.h"
 #include "../libc/include/stddef.h"
 #include "../libc/include/stdarg.h"
 #include "../libc/include/unistd.h"
 #include "../libc/include/sys/types.h"
+#include "../libc/include/inttypes.h"
+#include "../libc/include/string.h"
+#include "../libc/include/time.h"
+
+#include "../libc/src/kernel_glue.h"
 
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
@@ -34,8 +38,6 @@ uint64_t available_memory = 0;
 
 extern void _halt();
 void halt();
-
-#define klog ((FILE*)3)
 
 #define enable_interrupts()  asm volatile("sti");
 #define disable_interrupts() asm volatile("cli");
@@ -97,8 +99,6 @@ const char* multiboot_block_type_text[5] =
 #include "initrd/initrd.h"
 #include "time/gdn.h"
 #include "time/ktime.h"
-// #include "klibc/time.h"
-#include "../libc/include/time.h"
 
 
 // ---------------------------------------------------------------
@@ -128,7 +128,6 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 #include "multitasking/task.c"
 #include "PS2/ps2.c"
 
-#include "../libc/src/kernel_glue.h"
 #include "../libc/src/kernel.c"
 
 physical_address_t virtual_address_to_physical(virtual_address_t address)
@@ -298,8 +297,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(DEBUG, "Enabled interrupts"); 
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
-    LOG(INFO, "Time : %u:%u:%u %u-%u-%u", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
-    printf("Time : %u:%u:%u %u-%u-%u\n", system_hours, system_minutes, system_seconds, system_day, system_month, system_year);
+    LOG(INFO, "Time : %u-%u%u-%u%u %u%u:%u%u:%u%u", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
+    printf("Time : %u-%u%u-%u%u %u%u:%u%u:%u%u\n", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
 
     LOG(DEBUG, "Setting up multitasking");
 

@@ -1,10 +1,11 @@
 #pragma once
 
-int fputc(int c, FILE* stream)
+ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
-    asm volatile("int 0xff" : 
-        : "a" (1), "b" ((char)c), "c" (stream));
-    return c;
+    ssize_t bytes_written;
+    asm volatile("int 0xff" : "=a" (bytes_written), "=b" (errno)
+        : "a" (1), "b" (fildes), "c" (buf), "d" (nbyte));
+    return bytes_written;
 }
 
 void exit(int r)
@@ -40,7 +41,8 @@ pid_t fork()
     uint32_t hi, lo;
     asm volatile("int 0xff" : "=a" (hi), "=b" (lo)
         : "a" (4));
-    return ((pid_t)hi << 32) | lo;
+    uint64_t combined = ((uint64_t)hi << 32) | lo;
+    return *(pid_t*)&combined;
 }
 
 // void* sbrk(intptr_t increment)

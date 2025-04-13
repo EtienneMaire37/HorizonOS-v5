@@ -17,8 +17,12 @@ void kernel_panic(struct interrupt_registers* params)
     tty_color = (FG_WHITE | BG_BLUE);
 
     printf("Exception number: %u\n\n\t", params->interrupt_number);
-    printf("Error:       %s\n\t", errorString[params->interrupt_number]);
+    printf("Error:       %s\n\t", get_error_message(params->interrupt_number, params->error_code));
     printf("Error code:  0x%x\n\n\t", params->error_code);
+    printf("Segment error code:  %s|%s|0x%x\n\n\t", 
+        params->error_code & 1 ? "External" : "Internal",
+        seg_error_code[(params->error_code >> 1) & 0b11],
+        (params->error_code >> 3) & 0b1111111111111);
 
     if (params->interrupt_number == 14)
     {
@@ -53,7 +57,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
     if (params->interrupt_number < 32)            // Fault
     {
-        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, errorString[params->interrupt_number], params->error_code, params->cr2, params->cr3);
+        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, get_error_message(params->interrupt_number, params->error_code), params->error_code, params->cr2, params->cr3);
 
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || params->interrupt_number == 8 || params->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
@@ -131,11 +135,17 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 zombie_task_index = current_task_index;
             }
             break;
-        case 1:     // fputc    // !!!!!!!!!!! Not standard should definitely implement read/write family of functions not the fread/fwrite
-            if (params->ecx == (uint32_t)stdout || params->ecx == (uint32_t)stderr)
-                putchar(params->ebx);
+        case 1:     // write
+            if (params->ebx > 2)
+            {
+                params->eax = 0xffffffff;   // -1
+                params->ebx = EBADF;
+            }
             else
-                LOG(WARNING, "Unsupported file stream");
+            {
+                params->eax = write(params->ebx, (char*)params->ecx, params->edx);
+                params->ebx = errno;
+            }
             break;
         case 2:     // time
             params->eax = ktime(NULL);
@@ -159,6 +169,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 tasks[task_count - 1].name = tasks[current_task_index].name;
                 tasks[task_count - 1].ring = tasks[current_task_index].ring;
                 tasks[task_count - 1].pid = current_pid++;
+                tasks[task_count - 1].system_task = tasks[current_task_index].system_task;
+                tasks[task_count - 1].kernel_thread = tasks[current_task_index].kernel_thread;
 
                 if (tasks[current_task_index].stack_phys)
                     tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
@@ -167,20 +179,23 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
                 tasks[task_count - 1].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
 
+                tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
+
                 task_create_virtual_address_space(&tasks[task_count - 1]);
 
-                tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
-                tasks[task_count - 1].registers_data.cr3 = tasks[task_count - 1].page_directory_phys;
-
-                if (tasks[current_task_index].kernel_stack_phys)
+                if (tasks[task_count - 1].kernel_stack_phys)
                 {
-                    for (uint16_t i = 0; i < 4096; i++)
-                        write_physical_address_1b(tasks[task_count - 1].kernel_stack_phys + i, read_physical_address_1b(tasks[current_task_index].kernel_stack_phys + i));
+                    set_current_phys_mem_page(tasks[current_task_index].kernel_stack_phys >> 12);
+                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                    set_current_phys_mem_page(tasks[task_count - 1].kernel_stack_phys >> 12);
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
                 }
-                if (tasks[current_task_index].stack_phys)
+                if (tasks[task_count - 1].stack_phys)
                 {
-                    for (uint16_t i = 0; i < 4096; i++)
-                        write_physical_address_1b(tasks[task_count - 1].stack_phys + i, read_physical_address_1b(tasks[current_task_index].stack_phys + i));
+                    set_current_phys_mem_page(tasks[current_task_index].stack_phys >> 12);
+                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                    set_current_phys_mem_page(tasks[task_count - 1].stack_phys >> 12);
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
                 }
 
                 tasks[task_count - 1].registers_data.eax = tasks[task_count - 1].registers_data.ebx = 0;
@@ -189,7 +204,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
 
                 for (uint16_t i = 0; i < 768; i++)
                 {
-                    for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++) // FIXED: Always iterate full 1024 PTEs
+                    for (uint16_t j = (i == 0 ? 256 : 0); j < ((i == 767) ? 1021 : 1024); j++)
                     {
                         uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i);
                         if (old_pde & 1)
@@ -199,24 +214,23 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                             physical_address_t mapping_phys = old_pte & 0xfffff000;
                             if (old_pte & 1)
                             {
-                                // Copy all pages including kernel stack (PDE 767, PTE 1022-1023)
-                                physical_address_t page_address = task_virtual_address_space_create_page(
-                                    &tasks[task_count - 1], 
-                                    i, 
-                                    j, 
-                                    (old_pte & 0x04) ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL,
-                                    true
-                                );
-                                
-                                // Use optimized 4-byte copy
-                                for (uint16_t k = 0; k < 4096; k += 4) {
-                                    uint32_t data = read_physical_address_4b(mapping_phys + k);
-                                    write_physical_address_4b(page_address + k, data);
-                                }
+                                LOG(TRACE, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
+
+                                physical_address_t page_address = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true);
+
+                                set_current_phys_mem_page(mapping_phys >> 12);
+                                memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
+                                set_current_phys_mem_page(page_address >> 12);
+                                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
                             }
                         }
                     }
                 }
+
+                // memcpy(tasks[task_count - 1].fpu_state, 
+                //     tasks[current_task_index].fpu_state,
+                //     sizeof(tasks[current_task_index].fpu_state));  
+
                 *params = tasks[current_task_index].registers_data;
                 switch_task(&params);
             } 

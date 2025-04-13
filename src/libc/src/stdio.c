@@ -1,43 +1,16 @@
-// int fputc(int c, FILE* stream)
-// {
-//     asm volatile("int 0xff" : 
-//         : "a" (1), "b" ((char)c), "c" (stream));
-//     return c;
-// }
-
 #include "../include/math.h"
 // #include "../src/math.c"
 
 int putchar(int c)
 {
-    return fputc(c, stdout);
-}
-
-int fputs(const char* s, FILE* stream)
-{
-    while(*s)
-    {
-        fputc(*s, stream);
-        s++;
-    }
-    return 0;
+    write(STDOUT_FILENO, &c, 1);
+    return c;
 }
 
 int puts(const char* s)
 {
-    return fputs(s, stdout);
-}
-
-FILE* fopen(const char* path, const char* mode)
-{
-    errno = EACCES;
-    return NULL;
-}
-
-int fclose(FILE* stream)
-{
-    errno = EBADF;
-    return EOF;
+    write(STDOUT_FILENO, s, strlen(s));
+    return 1;
 }
 
 #define FLOAT_PRINT_MAX_DIGITS  18 // 34
@@ -337,24 +310,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         format++;
     }
 
-    return length;
-}
-
-int fprintf(FILE* stream, const char* format, ...)
-{
-    void _putc(char c)
-    {
-        fputc(c, stream);
-    }
-    void _puts(char* s)
-    {
-        fputs(s, stream);
-    }
-
-    va_list args;
-    va_start(args, format);
-    int length = _printf(_putc, _puts, format, args);
-    va_end(args);
     return length;
 }
 

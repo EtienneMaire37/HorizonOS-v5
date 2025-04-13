@@ -12,9 +12,9 @@ struct interrupt_registers
 
 uint32_t current_cr3;
 
-char* errorString[32] = 
+char* error_str[32] = 
 {
-    "DIVISION_BY_ZERO_ERROR",
+    "DIVISION_OVERFLOW_ERROR",
     "DEBUG",
     "NON-MASKABLE_INTERRUPT",
     "BREAKPOINT",
@@ -47,6 +47,25 @@ char* errorString[32] =
     "SECURITY_EXCEPTION",
     ""
 };
+
+char* seg_error_code[4] = 
+{
+    "GDT",
+    "IDT",
+    "LDT",
+    "IDT"
+};
+
+char* get_error_message(uint32_t fault, uint32_t error_code)
+{
+    if (fault >= 32) return "";
+    if (fault == 14)    // Page fault
+    {
+        if ((error_code >> 15) & 1)
+            return "SGX_VIOLATION_EXCEPTION";
+    }
+    return error_str[fault];
+}
 
 void kernel_panic(struct interrupt_registers* params);
 uint32_t interrupt_handler(struct interrupt_registers* params);

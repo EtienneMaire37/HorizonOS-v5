@@ -11,7 +11,7 @@ PHDRS
 
 SECTIONS 
 {
-    . = 0x100000;/* 0x08000000; */
+    . = 0x100000;
 
     .text ALIGN(0x1000) : 
     {
@@ -35,4 +35,6 @@ SECTIONS
         . = ALIGN(0x1000);
         _break_point = .;
     } :bss
+
+    /DISCARD/ : { *(.comment) *(.note) }
 }

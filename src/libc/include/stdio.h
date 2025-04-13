@@ -26,28 +26,23 @@ struct FILE
 
 typedef char* va_list;
 
-#define stdin   ((FILE*)0)
-#define stdout  ((FILE*)1)
-#define stderr  ((FILE*)2)
-
 #define _IOFBF 0
 #define _IOLBF 1
 #define _IONBF 2
 
 #define FILENAME_MAX    255
-#define FOPEN_MAX       8
+#define FOPEN_MAX       16
 #define TMP_MAX         65536
 
-FILE* fopen(const char* path, const char* mode);
-int fclose(FILE* stream);
+// FILE* fopen(const char* path, const char* mode);
+// int fclose(FILE* stream);
 
-int fputc(int c, FILE* stream);
-// int putc(int c, FILE* stream);
-#define putc fputc
+// int fputc(int c, FILE* stream);
+// #define putc fputc
 int putchar(int c);
-int fputs(const char* s, FILE* stream);
+// int fputs(const char* s, FILE* stream);
 int puts(const char* s);
-int fprintf(FILE* stream, const char* format, ...);
+// int fprintf(FILE* stream, const char* format, ...);
 // #define printf(...) fprintf(stdout, __VA_ARGS__);
 int printf(const char* format, ...);
 int sprintf(char* buffer, const char* format, ...);
