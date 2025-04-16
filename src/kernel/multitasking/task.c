@@ -353,7 +353,7 @@ void multitasking_init()
 void multitasking_start()
 {
     multitasking_enabled = true;
-    current_task_index = task_count - 1;    // ((task_count - 1) + 1) % task_count = 0
+    current_task_index = task_count - 1;    // ~ ((task_count - 1) + 1) % task_count = 0 - So it starts with the idle task
     while(true);
 }
 
@@ -402,7 +402,6 @@ void switch_task(struct interrupt_registers** registers)
 
     flush_tlb = true;
 
-    // **registers = tasks[current_task_index].registers_data;     // * For cr3
     (*registers)->cr3 = tasks[current_task_index].registers_data.cr3;
     iret_cr3 = tasks[current_task_index].registers_data.cr3;
     *registers = tasks[current_task_index].registers_ptr;       // * Then when poping esp load the correct values

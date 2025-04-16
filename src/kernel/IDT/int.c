@@ -162,7 +162,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* re
         case 4:     // fork
             LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
-            if (true) // (task_count >= MAX_TASKS)
+            if (task_count >= MAX_TASKS)
             {
                 registers->eax = 0xffffffff;
                 registers->ebx = 0xffffffff;   // -1
@@ -185,8 +185,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* re
                 if (tasks[current_task_index].kernel_stack_phys)
                     tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
 
-                tasks[task_count - 1].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
-
+                tasks[task_count - 1].registers_ptr = tasks[current_task_index].registers_ptr;
                 tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
 
                 task_create_virtual_address_space(&tasks[task_count - 1]);
@@ -235,12 +234,15 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* re
                     }
                 }
 
+                for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+                    write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count - 1].registers_ptr) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
+                        ((uint8_t*)&tasks[task_count - 1].registers_data)[i]);
+
                 // memcpy(tasks[task_count - 1].fpu_state, 
                 //     tasks[current_task_index].fpu_state,
                 //     sizeof(tasks[current_task_index].fpu_state));  
 
                 *registers = tasks[current_task_index].registers_data;
-                // switch_task(&registers);
             } 
             break;
 

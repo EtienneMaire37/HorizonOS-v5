@@ -36,12 +36,8 @@ bool acpi_table_valid(physical_address_t table_address)
 {
     uint8_t sum = 0;
     uint32_t length = table_read_member(struct sdt_header, table_address, length, true);
-    // LOG(DEBUG, "len: %u", length);
     for (uint32_t i = 0; i < length; i++)
-    {
-        // printf("%u (%u)\n", i, table_read_member(struct sdt_header, table_address, length, true));
         sum += table_read_bytes(table_address, i, 1, true);
-    }
     return sum == 0;
 }
 

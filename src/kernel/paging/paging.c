@@ -9,7 +9,7 @@ void set_current_phys_mem_page(uint32_t page)
     *recursive_paging_pte = (page << 12) | 0b11;
 
     reload_page_directory();
-    // asm volatile("invlpg [0xff400000]");  // (767*1024*1024+1021*1024)*4096
+    // asm volatile("invlpg [(767 * 1024 * 1024 + 1021 * 1024) * 4096]");   // !! Doesn't work on i386
 
     current_phys_mem_page = page;
 }
