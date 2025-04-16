@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -fno-pie -fno-stack-protector -fno-builtin -O0
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone # -fno-pie -fno-stack-protector -fno-builtin
 DATE := `date +"%Y-%m-%d"`
 CC := ./i386elfgcc/bin/i386-elf-gcc
 LD := ./i386elfgcc/bin/i386-elf-ld
@@ -36,7 +36,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
 	cp resources/pci.ids ./bin/initrd/pci.ids
 
-	tar -cvf ./root/boot/initrd.tar ./bin/initrd/*
+	tar -cvf ./root/boot/initrd.tar -C ./bin/initrd/ .
 	
 	cp ./bin/kernel.elf ./root/boot/kernel.elf
 	cp ./src/kernel/grub.cfg ./root/boot/grub/grub.cfg
@@ -57,10 +57,10 @@ src/libc/lib/libm.o: libm
 
 libc: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
+	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 $(CFLAGS)
 libm: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 -masm=intel -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone 
+	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS)
 
 rmbin:
 	rm -rf ./bin/*

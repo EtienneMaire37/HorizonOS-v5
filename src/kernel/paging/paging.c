@@ -8,7 +8,8 @@ void set_current_phys_mem_page(uint32_t page)
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
     *recursive_paging_pte = (page << 12) | 0b11;
 
-    load_pd_by_physaddr(current_cr3);
+    reload_page_directory();
+    // asm volatile("invlpg [0xff400000]");  // (767*1024*1024+1021*1024)*4096
 
     current_phys_mem_page = page;
 }

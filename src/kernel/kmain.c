@@ -26,6 +26,7 @@ typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
 
 extern uint8_t stack_top;
+extern uint8_t stack_bottom;
 
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
@@ -52,7 +53,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           DEBUG
+#define LOG_LEVEL           TRACE
 // #define NO_LOGS
 
 const char* multiboot_block_type_text[5] = 
@@ -169,6 +170,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     tty_reset_cursor();
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
+    LOG(INFO, "Stack : 0x%x-0x%x", &stack_bottom, &stack_top);
 
     // LOG(DEBUG, "Kernel page directory address : 0x%x", (uint32_t)&page_directory);
 
@@ -353,7 +355,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    multasking_add_task_from_initrd("./bin/initrd/kernel32.elf", 0, true);
+    multasking_add_task_from_initrd("./kernel32.elf", 0, true);
+    // multasking_add_task_from_initrd("./kernel32.elf", 0, true);
 
     multitasking_start();
 

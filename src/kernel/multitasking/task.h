@@ -28,7 +28,7 @@ struct task
 struct task tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;
 
-#define TASK_SWITCH_DELAY 20 // ms
+#define TASK_SWITCH_DELAY 30 // ms
 
 uint8_t multitasking_counter = 0;
 

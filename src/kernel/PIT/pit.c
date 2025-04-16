@@ -1,6 +1,6 @@
 #pragma once
 
-void handle_irq_0(struct interrupt_registers* params)
+void handle_irq_0(struct interrupt_registers** registers)
 {
     global_timer += PIT_INCREMENT;
 
@@ -11,7 +11,7 @@ void handle_irq_0(struct interrupt_registers* params)
         multitasking_counter--;
         if (multitasking_counter == 0)
         {
-            switch_task(&params);
+            switch_task(registers);
             multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
         }
         if (multitasking_counter == 0xff)

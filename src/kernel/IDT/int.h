@@ -7,10 +7,12 @@ struct interrupt_registers
     uint32_t edi, esi, ebp;
     uint32_t handled_esp, ebx, edx, ecx, eax;
     uint32_t interrupt_number, error_code;
-    uint32_t eip, cs, eflags, esp, ss;
+    uint32_t eip, cs, eflags;
 } __attribute__((packed));
 
 uint32_t current_cr3;
+uint32_t iret_cr3;
+bool flush_tlb;
 
 char* error_str[32] = 
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-void kernel_panic(struct interrupt_registers* params)
+void kernel_panic(struct interrupt_registers* registers)
 {
     disable_interrupts();
 
@@ -16,52 +16,57 @@ void kernel_panic(struct interrupt_registers* params)
 
     tty_color = (FG_WHITE | BG_BLUE);
 
-    printf("Exception number: %u\n\n\t", params->interrupt_number);
-    printf("Error:       %s\n\t", get_error_message(params->interrupt_number, params->error_code));
-    printf("Error code:  0x%x\n\n\t", params->error_code);
-    printf("Segment error code:  %s|%s|0x%x\n\n\t", 
-        params->error_code & 1 ? "External" : "Internal",
-        seg_error_code[(params->error_code >> 1) & 0b11],
-        (params->error_code >> 3) & 0b1111111111111);
+    printf("Exception number: %u\n\n\t", registers->interrupt_number);
+    printf("Error:       %s\n\t", get_error_message(registers->interrupt_number, registers->error_code));
+    printf("Error code:  0x%x\n\n\t", registers->error_code);
+    if (registers->interrupt_number == 13 && registers->error_code != 0)  // GPF with segment related error
+        printf("Segment error code:  %s|%s|0x%x\n\n\t", 
+            registers->error_code & 1 ? "External" : "Internal",
+            seg_error_code[(registers->error_code >> 1) & 0b11],
+            (registers->error_code >> 3) & 0b1111111111111);
 
-    if (params->interrupt_number == 14)
+    if (registers->interrupt_number == 14)
     {
-        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n\t", params->cr2, params->cr2 >> 22, (params->cr2 >> 12) & 0x3ff, params->cr2 & 0xfff);
-        printf("cr3:  0x%x\n\t", params->cr3);
+        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n\t", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
+        printf("cr3:  0x%x\n\t", registers->cr3);
 
-        uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (params->cr2 >> 22));
+        uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (registers->cr2 >> 22));
         
         LOG(DEBUG, "Page directory entry : 0x%x", pde);
 
         if (pde & 1)
         {
-            LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((params->cr2 >> 12) & 0x3ff)));
+            LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         }
     }
 
     halt();
 }
 
-#define return_from_isr() { return params->cr3; }
+#define return_from_isr() { return flush_tlb ? iret_cr3 : 0; }
 
-uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* params)
+uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* registers)
 {
-    current_cr3 = params->cr3; 
+    current_cr3 = registers->cr3; 
     current_phys_mem_page = 0xffffffff;
+    flush_tlb = false;
 
-    if (multitasking_enabled && !first_task_switch)
+    // if (multitasking_enabled && !first_task_switch)
+    // {
+    //     tasks[current_task_index].registers_data = *registers;
+    //     tasks[current_task_index].registers_ptr = registers;
+    //     // LOG(TRACE, "Saved register data");
+    // }
+
+    iret_cr3 = registers->cr3;
+
+    if (registers->interrupt_number < 32)            // Fault
     {
-        tasks[current_task_index].registers_data = *params;
-        // LOG(TRACE, "Saved register data");
-    }
+        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
 
-    if (params->interrupt_number < 32)            // Fault
-    {
-        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", params->interrupt_number, get_error_message(params->interrupt_number, params->error_code), params->error_code, params->cr2, params->cr3);
-
-        if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || params->interrupt_number == 8 || params->interrupt_number == 18)
+        if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
-            kernel_panic(params);
+            kernel_panic(registers);
         else
         {
             if (zombie_task_index != 0 && zombie_task_index != current_task_index)
@@ -71,7 +76,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             }
 
             uint16_t old_index = current_task_index;
-            switch_task(&params);
+            switch_task(&registers);
             task_kill(old_index);
         }
 
@@ -84,9 +89,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         zombie_task_index = 0;
     }
 
-    if (params->interrupt_number < 32 + 16)  // IRQ
+    if (registers->interrupt_number < 32 + 16)  // IRQ
     {
-        uint8_t irq_number = params->interrupt_number - 32;
+        uint8_t irq_number = registers->interrupt_number - 32;
 
         if (irq_number == 7 && !(pic_get_isr() >> 7))
             return_from_isr();
@@ -100,7 +105,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         switch (irq_number)
         {
         case 0:
-            handle_irq_0(params);
+            handle_irq_0(&registers);
             break;
 
         case 1:
@@ -117,16 +122,16 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
         pic_send_eoi(irq_number);
         return_from_isr();
     }
-    if (params->interrupt_number == 0xff)  // System call
+    if (registers->interrupt_number == 0xff)  // System call
     {
-        // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, params->eax);
+        // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
         uint16_t old_index;
-        switch (params->eax)
+        switch (registers->eax)
         {
         case 0:     // exit
             if (multitasking_enabled)
             {
-                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, params->ebx);
+                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
                 if (zombie_task_index != 0)
                 {
                     LOG(CRITICAL, "Tried to kill several tasks at once");
@@ -136,35 +141,38 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
             }
             break;
         case 1:     // write
-            if (params->ebx > 2)
+            if (registers->ebx > 2)
             {
-                params->eax = 0xffffffff;   // -1
-                params->ebx = EBADF;
+                registers->eax = 0xffffffff;   // -1
+                registers->ebx = EBADF;
             }
             else
             {
-                params->eax = write(params->ebx, (char*)params->ecx, params->edx);
-                params->ebx = errno;
+                registers->eax = write(registers->ebx, (char*)registers->ecx, registers->edx);
+                registers->ebx = errno;
             }
             break;
         case 2:     // time
-            params->eax = ktime(NULL);
+            registers->eax = ktime(NULL);
             break;
         case 3:     // getpid
-            params->eax = tasks[current_task_index].pid >> 32;
-            params->ebx = (uint32_t)tasks[current_task_index].pid;
+            registers->eax = tasks[current_task_index].pid >> 32;
+            registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case 4:     // fork
             LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
             if (true) // (task_count >= MAX_TASKS)
             {
-                params->eax = 0xffffffff;
-                params->ebx = 0xffffffff;   // -1
+                registers->eax = 0xffffffff;
+                registers->ebx = 0xffffffff;   // -1
             }
             else
             {
                 task_count++;
+
+                tasks[current_task_index].registers_data = *registers;
+                tasks[current_task_index].registers_ptr = registers;
 
                 tasks[task_count - 1].name = tasks[current_task_index].name;
                 tasks[task_count - 1].ring = tasks[current_task_index].ring;
@@ -231,17 +239,17 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* pa
                 //     tasks[current_task_index].fpu_state,
                 //     sizeof(tasks[current_task_index].fpu_state));  
 
-                *params = tasks[current_task_index].registers_data;
-                switch_task(&params);
+                *registers = tasks[current_task_index].registers_data;
+                // switch_task(&registers);
             } 
             break;
 
         default:
             if (multitasking_enabled)
             {
-                LOG(ERROR, "Undefined system call (0x%x)", params->eax);
+                LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
                 old_index = current_task_index;
-                switch_task(&params);
+                switch_task(&registers);
                 task_kill(old_index);
             }
         }            

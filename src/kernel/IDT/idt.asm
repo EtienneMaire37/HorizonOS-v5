@@ -93,7 +93,7 @@ _interrupt_handler:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    ; mov ss, ax
+    mov ss, ax
 
     mov eax, cr2
     push eax
@@ -103,10 +103,13 @@ _interrupt_handler:
     
     push esp
     call interrupt_handler
+    pop esp
+    
+    cmp eax, 0
+    je .dont_flush_tlb
     mov cr3, eax
 
-    pop esp
-
+.dont_flush_tlb:
     add esp, 8  ; skip cr2 and cr3
 
     pop eax
@@ -114,7 +117,7 @@ _interrupt_handler:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    ; mov ss, ax ; ss is supposedly handled by iret
+    mov ss, ax
 
     popa
     add esp, 8

@@ -135,8 +135,9 @@ _halt:
     hlt
     jmp .loop
 
-section .data
+section .bss
 global stack_top
+global stack_bottom
 stack_bottom:
     resb 16384
 stack_top:

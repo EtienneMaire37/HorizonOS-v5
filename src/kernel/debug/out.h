@@ -29,6 +29,8 @@ char* LOG_LEVEL_STR[6] =
     "FATAL"     // Changed from CRITICAL because it overflows the 4 space tab of vscode
 };
 
+int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_list args);
+
 int printf_log(const char* format, ...)
 {
     void _putc(char c)

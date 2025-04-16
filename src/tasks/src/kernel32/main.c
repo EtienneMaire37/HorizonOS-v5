@@ -29,6 +29,6 @@ int main()
     printf("fork() : %ld\n", fork());
     printf("pid : %lu\n", getpid());
 
-    while(true);
+    // while(true);
     return 0;
 }

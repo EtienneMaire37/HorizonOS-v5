@@ -39,20 +39,6 @@ struct virtual_address_layout
     uint16_t page_directory_entry : 10;
 } __attribute__((packed));
 
-// struct PageFault_ErrorCode
-// {
-//     uint8_t present : 1;    // 0: Non-present page ; 1: Page-Protection violatiob
-//     uint8_t write : 1;      // 0: Read Access ; 1: Write Access
-//     uint8_t user : 1;       // 0: CPL = 0-2 ; 1: CPL = 3
-//     uint8_t reserved_0 : 1;
-//     uint8_t instruction_fetch : 1;  // 0: PF caused by data access ; 1: PF caused by instruction fetch 
-//     uint8_t protection_key : 1;     // 1: PF caused by protection-key violation
-//     uint8_t shadow_stack : 1;       // 1: PF caused by shadow stack access
-//     uint8_t reserved_1 : 8;
-//     uint8_t SGX : 1;                // 1: PF caused by SGX violation
-//     uint8_t reserved_2 : 16;
-// };
-
 struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
 #define PHYS_MEM_PAGE_BOTTOM   (0xc0000000 - 3 * 0x1000)
