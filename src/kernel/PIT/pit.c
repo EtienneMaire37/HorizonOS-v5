@@ -1,6 +1,6 @@
 #pragma once
 
-void handle_irq_0(struct interrupt_registers** registers)
+void handle_irq_0(struct privilege_switch_interrupt_registers** registers)
 {
     global_timer += PIT_INCREMENT;
 

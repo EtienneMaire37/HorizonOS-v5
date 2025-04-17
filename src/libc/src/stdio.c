@@ -130,13 +130,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         }
         }
 
-        // long double fmodl(long double a, long double b)
-        // {
-        //     while (a >= b || a < 0)
-        //         a += b * (a < 0 ? 1 : -1);
-        //     return a;
-        // }
-
         uint64_t k = (uint64_t)val;
         long double p = val - (long double)k;
         printf_d(k);
@@ -159,7 +152,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         while(mul < max_mul)
         {
             uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10); // ((uint8_t)fmodl(p * mul, 10));
-            // p -= digit / (long double)max_mul;  // To optimize the fmodl call
             func('0' + digit);
             length++;
             mul *= 10;

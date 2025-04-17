@@ -10,6 +10,8 @@
 
 uint32_t global_timer = 0; // in milliseconds
 
-void handle_irq_0();
+struct privilege_switch_interrupt_registers;
+
+void handle_irq_0(struct privilege_switch_interrupt_registers** registers);
 void pit_channel_0_set_frequency(uint32_t frequency);
 void ksleep(uint32_t milliseconds);

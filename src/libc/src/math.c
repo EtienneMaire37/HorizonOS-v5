@@ -1,6 +1,7 @@
 #include "../include/math.h"
 #include "../include/errno_defs.h"
 extern int errno;
+// #include "../include/inttypes.h"
 #include <stdint.h>
 
 #define BIN_SEARCH_PRECISION    .00000000001
@@ -35,125 +36,6 @@ long double fmodl(long double a, long double b)
     while (a >= b || a < 0)
         a += b * (a < 0 ? 1 : -1);
     return a;
-}
-
-double frexp(double x, int *exp)
-{
-    if (x == 0.)
-    {
-        *exp = 0;
-        return 0.;
-    }
-    uint64_t bits = *(uint64_t*)&x;
-    int sign = (bits >> 63) & 1;
-    int exponent = (bits >> 52) & 0x7FF;
-    uint64_t mantissa = bits & 0x000FFFFFFFFFFFFFULL;
-
-    if (exponent == 0x7FF)
-    {
-        *exp = 0;
-        return x;
-    }
-
-    if (exponent == 0)
-    {
-        exponent = -1022;
-        while ((mantissa & 0x0008000000000000ULL) == 0)
-        {
-            mantissa <<= 1;
-            exponent--;
-        }
-        mantissa <<= 1;
-        mantissa &= 0x000FFFFFFFFFFFFFULL;
-        exponent--;
-    }
-    else
-    {
-        exponent -= 1023;
-    }
-
-    *exp = exponent + 1;
-    uint64_t new_bits = ((uint64_t)sign << 63) | ((uint64_t)(1022) << 52) | mantissa;
-    return *(double*)&new_bits;
-}
-
-float frexpf(float x, int *exp)
-{
-    if (x == 0.0f)
-    {
-        *exp = 0;
-        return 0.0f;
-    }
-    uint32_t bits = *(uint32_t*)&x;
-    int sign = (bits >> 31) & 1;
-    int exponent = (bits >> 23) & 0xFF;
-    uint32_t mantissa = bits & 0x007FFFFFUL;
-
-    if (exponent == 0xFF)
-    {
-        *exp = 0;
-        return x;
-    }
-
-    if (exponent == 0)
-    {
-        exponent = -126;
-        while ((mantissa & 0x00400000UL) == 0)
-        {
-            mantissa <<= 1;
-            exponent--;
-        }
-        mantissa <<= 1;
-        mantissa &= 0x007FFFFFUL;
-        exponent--;
-    }
-    else
-    {
-        exponent -= 127;
-    }
-
-    *exp = exponent + 1;
-    uint32_t new_bits = ((uint32_t)sign << 31) | ((uint32_t)(126) << 23) | mantissa;
-    return *(float*)&new_bits;
-}
-
-long double frexpl(long double x, int *exp)
-{
-    if (x == 0.L)
-    {
-        *exp = 0;
-        return 0.L;
-    }
-    uint16_t *parts = (uint16_t*)&x;
-    int sign = (parts[4] >> 15) & 1;
-    int exponent = parts[4] & 0x7FFF;
-    uint64_t mantissa = *(uint64_t*)parts;
-
-    if (exponent == 0x7FFF)
-    {
-        *exp = 0;
-        return x;
-    }
-
-    if (exponent == 0)
-    {
-        exponent = -16382;
-        while ((mantissa & 0x8000000000000000ULL) == 0)
-        {
-            mantissa <<= 1;
-            exponent--;
-        }
-        exponent--;
-    }
-    else
-    {
-        exponent -= 16383;
-    }
-
-    *exp = exponent + 1;
-    parts[4] = (sign << 15) | (16382);
-    *(uint64_t*)parts = mantissa;
-    return x;
 }
 
 double intpow(double a, int64_t b)
@@ -198,8 +80,8 @@ long double intpowl(long double a, int64_t b)
 #define exp_k4  0.0416666666667
 #define exp_k5  0.00833333333333
 
-#define EXP_TAYLOR_5(x) (1 + (x) * (1 + (x) * (exp_k2 + (x) * (exp_k3 + (x) * (exp_k4 + (x) * exp_k5)))))
-#define EXP_DIV  100.
+#define EXP_TAYLOR_5(x) (1 + (x) * (1 + (x) * (exp_k2 + (x) * (exp_k3 + (x) * (exp_k4 + (x) * exp_k5))))) // (1 + x + x * x * k2 + x * x * x * k3 + x * x * x * x * k4)
+#define EXP_DIV  100. // 5.
 #define M_SQRTE  1.6487212707001281941643356
 
 double exp(double x)
@@ -225,9 +107,9 @@ double exp2(double x)
 {
     int64_t k = (int64_t)x;
     double p = x - (double)k;
-    if (fabs(p) < 1e-50)
+    if (fabs(p) < 1e-50) // if (p < 1e-50)
         return intpow(2, k);
-    return pow(2, x);
+    return pow(2, x);   // Not the best way to do it
 }
 float exp2f(float x)
 {
@@ -235,7 +117,7 @@ float exp2f(float x)
     float p = x - (float)k;
     if (fabsf(p) < 1e-50)
         return intpowf(2, k);
-    return powf(2, x);
+    return pow(2, x);
 }
 long double exp2l(long double x)
 {
@@ -246,6 +128,8 @@ long double exp2l(long double x)
     return powl(2, x);
 }
 
+#define LOG_HALLEY_ITERATIONS   17
+
 double log(double x)
 {
     if (x < 0 || x == -INFINITY)
@@ -253,7 +137,7 @@ double log(double x)
         errno = EDOM;
         return NAN;
     }
-    if (x == 0.)
+    if (x == 0. || x == -0.)
     {
         errno = ERANGE;
         return -HUGE_VAL;
@@ -263,21 +147,11 @@ double log(double x)
         return x;
     }
 
-    int _exp;
-    double m = frexp(x, &_exp);
-    if (m < 0.5)
-    {
-        m *= 2;
-        _exp--;
-    }
-
-    double y = 0.;
-    for (int i = 0; i < 4; i++)
-    {
-        double ey = exp(y);
-        y += 2 * (m - ey) / (m + ey);
-    }
-    return y + _exp * M_LN2;
+    double y = 1;
+    uint8_t iterations = LOG_HALLEY_ITERATIONS;
+    for (uint8_t i = 0; i < iterations; i++)
+        y += 2 * (x - exp(y)) / (x + exp(y));
+    return y;
 }
 
 float logf(float x)
@@ -287,7 +161,7 @@ float logf(float x)
         errno = EDOM;
         return NAN;
     }
-    if (x == 0.0f)
+    if (x == 0. || x == -0.)
     {
         errno = ERANGE;
         return -HUGE_VALF;
@@ -297,21 +171,11 @@ float logf(float x)
         return x;
     }
 
-    int _exp;
-    float m = frexpf(x, &_exp);
-    if (m < 0.5f)
-    {
-        m *= 2;
-        _exp--;
-    }
-
-    float y = 0.0f;
-    for (int i = 0; i < 4; i++)
-    {
-        float ey = expf(y);
-        y += 2 * (m - ey) / (m + ey);
-    }
-    return y + _exp * (float)M_LN2;
+    float y = 1;
+    uint8_t iterations = LOG_HALLEY_ITERATIONS;
+    for (uint8_t i = 0; i < iterations; i++)
+        y += 2 * (x - expf(y)) / (x + expf(y));
+    return y;
 }
 
 long double logl(long double x)
@@ -321,7 +185,7 @@ long double logl(long double x)
         errno = EDOM;
         return NAN;
     }
-    if (x == 0.L)
+    if (x == 0. || x == -0.)
     {
         errno = ERANGE;
         return -HUGE_VALL;
@@ -331,21 +195,11 @@ long double logl(long double x)
         return x;
     }
 
-    int _exp;
-    long double m = frexpl(x, &_exp);
-    if (m < 0.5L)
-    {
-        m *= 2;
-        _exp--;
-    }
-
-    long double y = 0.L;
-    for (int i = 0; i < 4; i++)
-    {
-        long double ey = expl(y);
-        y += 2 * (m - ey) / (m + ey);
-    }
-    return y + _exp * M_LN2l;
+    long double y = 1;
+    uint8_t iterations = LOG_HALLEY_ITERATIONS;
+    for (uint8_t i = 0; i < iterations; i++)
+        y += 2 * (x - expl(y)) / (x + expl(y));
+    return y;
 }
 
 double pow(double a, double b)
@@ -363,18 +217,20 @@ long double powl(long double a, long double b)
 
 #define SIN_TAYLOR_4(xx) ((xx) - ((xx) * (xx) * (xx)) / 6. + ((xx) * (xx) * (xx) * (xx) * (xx)) / 120.)
 
-inline double _sin(double x)
+inline double _sin(double x) // -M_PI/4 <= x <= M_PI/4
 {
     double ax = fabs(x);
-    if (ax < 1.49011612e-8)
+
+    if (ax < 1.49011612e-8) // ~2^-26
         return x;
-    if (ax < 0.26179938779)
+
+    if (ax < 0.26179938779) // M_PI/12
     {
         double x3 = x * x * x;
         double x5 = x3 * x * x;
         return x - x3 / 6. + x5 / 120.;
-    }
-    else
+    } 
+    else 
     {
         double x2 = x * x;
         double x3 = x2 * x;
@@ -384,24 +240,27 @@ inline double _sin(double x)
     }
 }
 
-inline double _cos(double x)
+inline double _cos(double x) // -M_PI/4 <= x <= M_PI/4
 {
     double ax = fabs(x);
+
     if (ax < 1.49011612e-8)
         return 1.;
+
     double x2 = x * x;
     double x4 = x2 * x2;
     double x6 = x4 * x2;
-    if (ax < 0.26179938779)
+
+    if (ax < 0.26179938779) // M_PI/12
         return 1. - x2 / 2. + x4 / 24. - x6 / 720.;
-    else
+    else 
     {
         double x8 = x6 * x2;
         return 1. - x2 / 2. + x4 / 24. - x6 / 720. + x8 / 40320.;
     }
 }
 
-double sin(double x)
+double sin(double x) 
 {
     if (isnan(x)) return x;
     if (isinf(x)) return NAN;
@@ -410,7 +269,7 @@ double sin(double x)
     double sign = 1.;
 
     x = fmod(x, two_pi);
-    if (x < 0)
+    if (x < 0) 
     {
         x = -x;
         sign = -1.;
@@ -421,19 +280,18 @@ double sin(double x)
     quadrant %= 4;
 
     double sin_y, cos_y;
-    if (y <= M_PI / 4)
-    {
+    if (y <= M_PI / 4) {
         sin_y = _sin(y);
         cos_y = _cos(y);
-    }
-    else
+    } 
+    else 
     {
         double z = M_PI / 2 - y;
         sin_y = _cos(z);
         cos_y = _sin(z);
     }
 
-    switch (quadrant)
+    switch (quadrant) 
     {
         case 0: return sign * sin_y;
         case 1: return sign * cos_y;
@@ -443,7 +301,7 @@ double sin(double x)
     }
 }
 
-double cos(double x)
+double cos(double x) 
 {
     if (isnan(x)) return x;
     if (isinf(x)) return NAN;
@@ -458,19 +316,19 @@ double cos(double x)
     quadrant %= 4;
 
     double sin_y, cos_y;
-    if (y <= M_PI / 4)
+    if (y <= M_PI / 4) 
     {
         sin_y = _sin(y);
         cos_y = _cos(y);
-    }
-    else
+    } 
+    else 
     {
         double z = M_PI / 2 - y;
         sin_y = _cos(z);
         cos_y = _sin(z);
     }
 
-    switch (quadrant)
+    switch (quadrant) 
     {
         case 0: return cos_y;
         case 1: return -sin_y;
@@ -484,6 +342,14 @@ double tan(double x)
 {
     return sin(x) / cos(x);
 }
+// float tanf(float x)
+// {
+//     return sinf(x) / cosf(x);
+// }
+// long double tanl(long double x)
+// {
+//     return sinl(x) / cosl(x);
+// }
 
 double sqrt(double x)
 {
@@ -513,6 +379,9 @@ double sqrt(double x)
     return xmin;
 }
 
+// float sqrtf(float x);
+// long double sqrtl(long double x);
+
 double sinh(double x)
 {
     return .5 * (exp(x) - exp(-x));
@@ -523,5 +392,5 @@ double cosh(double x)
 }
 double tanh(double x)
 {
-    return (exp(x) - exp(-x)) / (exp(x) + exp(-x));
+    return (exp(x) - exp(-x)) / (exp(x) + exp(-x)); // sinh(x) / cosh(x)
 }

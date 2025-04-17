@@ -7,15 +7,14 @@ struct interrupt_registers;
 struct task
 {
     char* name;
-    struct interrupt_registers* registers_ptr;
-    struct interrupt_registers registers_data;
+    struct privilege_switch_interrupt_registers* registers_ptr;
+    struct privilege_switch_interrupt_registers registers_data;
     physical_address_t stack_phys;
     physical_address_t kernel_stack_phys;
     uint8_t ring;
     pid_t pid;
     bool system_task, kernel_thread;    // system_task: cause kernel panics; kernel_thread: dont allocate a vas
     physical_address_t page_directory_phys;
-    // uint8_t fpu_state[108] __attribute__((aligned(16)));
 };
 
 #define TASK_STACK_BOTTOM_ADDRESS           (0xc0000000 - 0x1000)
@@ -51,7 +50,7 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
 void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index);
 physical_address_t task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
 void task_create_virtual_address_space(struct task* _task);
-void switch_task(struct interrupt_registers** registers);
+void switch_task(struct privilege_switch_interrupt_registers** registers);
 void multasking_init();
 void multitasking_start();
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs

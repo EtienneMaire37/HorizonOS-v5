@@ -98,12 +98,12 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     _task->kernel_thread = false;
     _task->stack_phys = pfa_allocate_physical_page();
-    _task->kernel_stack_phys = pfa_allocate_physical_page();
+    if (ring != 0)
+        _task->kernel_stack_phys = pfa_allocate_physical_page();
 
     LOG(TRACE, "Stack physical addres: 0x%lx", _task->stack_phys);
     LOG(TRACE, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
 
-    _task->registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
     task_create_virtual_address_space(_task);
 
     struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
@@ -164,16 +164,18 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         }
     }
 
-    struct interrupt_registers registers;
+    struct privilege_switch_interrupt_registers registers;
 
     registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
     registers.ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    // registers.ss = registers.ds;
+    registers.ss = registers.ds;
 
     registers.eflags = 0x200; // Interrupts enabled (bit 9)
-    // registers.esp = TASK_STACK_TOP_ADDRESS;
-    registers.handled_esp = TASK_STACK_TOP_ADDRESS - 0x2c;
     registers.ebp = TASK_STACK_TOP_ADDRESS;
+    registers.esp = registers.ebp;
+    registers.handled_esp = registers.esp - 0x2c - 8;   // 8 for the user's ss and esp
+
+    _task->registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct privilege_switch_interrupt_registers));
     
     registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
     registers.esi = registers.edi = 0;
@@ -188,7 +190,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     _task->ring = ring;
 
-    for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+    for (uint16_t i = 0; i < sizeof(registers); i++)
         write_physical_address_1b((physical_address_t)((uint32_t)_task->registers_ptr) + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
             ((uint8_t*)&_task->registers_data)[i]);
 
@@ -274,6 +276,8 @@ physical_address_t task_virtual_address_space_create_page(struct task* _task, ui
 
 void task_create_virtual_address_space(struct task* _task)
 {
+    LOG(DEBUG, "Creating a new virtual address space...");
+
     _task->page_directory_phys = pfa_allocate_physical_page();
 
     physical_init_page_directory(_task->page_directory_phys);
@@ -308,6 +312,8 @@ void task_create_virtual_address_space(struct task* _task)
     physical_set_page(pt_address, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
     physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
     physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
+
+    LOG(DEBUG, "Done.");
 }
 
 void multitasking_init()
@@ -331,13 +337,11 @@ void multitasking_init()
     tasks[task_count].registers_data.eip = (uint32_t)&idle_main;
     tasks[task_count].registers_data.cs = KERNEL_CODE_SEGMENT;
     tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
-    // tasks[task_count].registers_data.ss = tasks[task_count].registers_data.ds;
 
     tasks[task_count].registers_data.eflags = 0x200;
-    // tasks[task_count].registers_data.esp = TASK_STACK_TOP_ADDRESS;
     tasks[task_count].registers_data.ebp = TASK_STACK_TOP_ADDRESS;
 
-    tasks[task_count].registers_ptr = (struct interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
+    tasks[task_count].registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
     tasks[task_count].registers_data.handled_esp = tasks[task_count].registers_data.ebp - 0x2c;
     
     tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
@@ -371,7 +375,7 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     task_count++;
 }
 
-void switch_task(struct interrupt_registers** registers)
+void switch_task(struct privilege_switch_interrupt_registers** registers)
 {
     if (task_count == 0)
     {
@@ -390,9 +394,6 @@ void switch_task(struct interrupt_registers** registers)
         return;
     current_task_index = next_task_index;
 
-    // TSS.ss0 = KERNEL_DATA_SEGMENT;
-    TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-
     LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
         tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
         tasks[current_task_index].registers_data.handled_esp, tasks[current_task_index].registers_ptr, tasks[current_task_index].registers_data.ebp,
@@ -402,16 +403,23 @@ void switch_task(struct interrupt_registers** registers)
 
     flush_tlb = true;
 
-    (*registers)->cr3 = tasks[current_task_index].registers_data.cr3;
+    if (tasks[current_task_index].ring == 3)
+    {
+        user_mode_switch = 1;
+
+        // TSS.ss0 = KERNEL_DATA_SEGMENT;
+        TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
+    }
+
     iret_cr3 = tasks[current_task_index].registers_data.cr3;
-    *registers = tasks[current_task_index].registers_ptr;       // * Then when poping esp load the correct values
+    *registers = tasks[current_task_index].registers_ptr;       // * When poping esp load the correct values
 
     first_task_switch = false;
 }
 
 void task_kill(uint16_t index)
 {
-    if (index >= task_count || index == 0)
+    if (index >= task_count || index == 0 || index == current_task_index)
     {
         LOG(CRITICAL, "Invalid task index %u", index);
         abort();

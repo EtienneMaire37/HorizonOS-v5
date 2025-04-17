@@ -26,8 +26,9 @@ struct idt_entry
     uint16_t offset_hi           : 16;
 } __attribute__((__packed__));
 
-struct idt_entry IDT[256];
-
+struct idt_entry IDT[256] __attribute__((aligned(8)));  // "The base addresses of the IDT should be aligned on an 8-byte boundary to maximize performance of cache line fills."
+                                                        // -- Intel manual vol 3A 7.10
+                                                        
 extern void load_idt();
 extern uint32_t interrupt_table[256];  // ptrs to the isrs
 

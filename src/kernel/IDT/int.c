@@ -1,6 +1,6 @@
 #pragma once
 
-void kernel_panic(struct interrupt_registers* registers)
+void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 {
     disable_interrupts();
 
@@ -11,7 +11,7 @@ void kernel_panic(struct interrupt_registers* registers)
     tty_update_cursor();
     tty_hide_cursor();
 
-    tty_color = (FG_LIGHTRED | BG_BLUE);
+    tty_color = (FG_RED | BG_BLUE);
     printf("Kernel panic\n\n\t");
 
     tty_color = (FG_WHITE | BG_BLUE);
@@ -19,11 +19,6 @@ void kernel_panic(struct interrupt_registers* registers)
     printf("Exception number: %u\n\n\t", registers->interrupt_number);
     printf("Error:       %s\n\t", get_error_message(registers->interrupt_number, registers->error_code));
     printf("Error code:  0x%x\n\n\t", registers->error_code);
-    if (registers->interrupt_number == 13 && registers->error_code != 0)  // GPF with segment related error
-        printf("Segment error code:  %s|%s|0x%x\n\n\t", 
-            registers->error_code & 1 ? "External" : "Internal",
-            seg_error_code[(registers->error_code >> 1) & 0b11],
-            (registers->error_code >> 3) & 0b1111111111111);
 
     if (registers->interrupt_number == 14)
     {
@@ -45,20 +40,14 @@ void kernel_panic(struct interrupt_registers* registers)
 
 #define return_from_isr() { return flush_tlb ? iret_cr3 : 0; }
 
-uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* registers)
+uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_registers* registers)
 {
     current_cr3 = registers->cr3; 
     current_phys_mem_page = 0xffffffff;
     flush_tlb = false;
 
-    // if (multitasking_enabled && !first_task_switch)
-    // {
-    //     tasks[current_task_index].registers_data = *registers;
-    //     tasks[current_task_index].registers_ptr = registers;
-    //     // LOG(TRACE, "Saved register data");
-    // }
-
     iret_cr3 = registers->cr3;
+    user_mode_switch = multitasking_enabled ? (tasks[current_task_index].ring != 0 ? 1 : 0) : 0;
 
     if (registers->interrupt_number < 32)            // Fault
     {
@@ -234,15 +223,19 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct interrupt_registers* re
                     }
                 }
 
-                for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+                for (uint16_t i = 0; i < (tasks[task_count - 1].ring != 0 ? sizeof(struct privilege_switch_interrupt_registers) : sizeof(struct interrupt_registers)); i++)
                     write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count - 1].registers_ptr) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
                         ((uint8_t*)&tasks[task_count - 1].registers_data)[i]);
 
-                // memcpy(tasks[task_count - 1].fpu_state, 
-                //     tasks[current_task_index].fpu_state,
-                //     sizeof(tasks[current_task_index].fpu_state));  
+                if (tasks[current_task_index].ring != 0)
+                {
+                    registers->esp = tasks[current_task_index].registers_data.esp;
+                    registers->ss = tasks[current_task_index].registers_data.ss;
+                }
 
-                *registers = tasks[current_task_index].registers_data;
+                *(struct interrupt_registers*)registers = *(struct interrupt_registers*)&tasks[current_task_index].registers_data;
+
+                switch_task(&registers);
             } 
             break;
 
