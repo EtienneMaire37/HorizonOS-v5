@@ -20,13 +20,13 @@ void install_idt()
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
     for(uint8_t i = 32; i < 32 + 16; i++)
+        setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);  // PIC IRQs
+
+    for(uint16_t i = 32 + 16; i < 0xff; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
-    for(uint16_t i = 32 + 16; i < 0xfe; i++)
-        setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
-
-    setup_idt_entry(&IDT[0xfe], KERNEL_CODE_SEGMENT, interrupt_table[0xfe], 0b00, ISR_INTERRUPT_GATE_32); // Kernel system call
-    setup_idt_entry(&IDT[0xff], KERNEL_CODE_SEGMENT, interrupt_table[0xff], 0b11, ISR_INTERRUPT_GATE_32); // System call
+    setup_idt_entry(&IDT[0xff], KERNEL_CODE_SEGMENT, interrupt_table[0xff], 0b11, ISR_INTERRUPT_GATE_32); // System call 
+    // TODO: Changed some of them to ISR_TRAP_GATE_32 and change from using global variables for interrupts to stack allocated ones
 
     _idtr.size = sizeof(IDT) - 1;
     _idtr.address = (uint32_t)&IDT;

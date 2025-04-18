@@ -119,11 +119,6 @@ _interrupt_handler:
     mov fs, ax
     mov gs, ax
 
-    ; cmp dword [user_mode_switch], 0
-    ; jne .dont_reload_ss
-    ; mov ss, ax
-
-; .dont_reload_ss:
     popa
     add esp, 8
     iret
