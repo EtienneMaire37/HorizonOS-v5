@@ -1,15 +1,23 @@
 #pragma once
 
+void invlpg(uint32_t addr)
+{
+    asm volatile("invlpg [%0]" :: "r" (addr) : "memory");
+}
+
 void set_current_phys_mem_page(uint32_t page)
 {
     if (page == current_phys_mem_page) return;
 
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
-    *recursive_paging_pte = (page << 12) | 0b11;
+    *recursive_paging_pte = (page << 12) | 0b1011;
 
-    reload_page_directory();
-    // asm volatile("invlpg [(767 * 1024 * 1024 + 1021 * 1024) * 4096]");   // !! Doesn't work on i386
+    // reload_page_directory();
+
+    // !! Only works on i486+
+    invlpg((uint32_t)recursive_paging_pte);
+    invlpg(4096 * (uint32_t)(1024 * 767 + 1021));
 
     current_phys_mem_page = page;
 }
@@ -17,6 +25,8 @@ void set_current_phys_mem_page(uint32_t page)
 uint8_t* get_physical_address_ptr(physical_address_t address)
 {
     uint32_t addr = (uint32_t)address;
+    // if (address < 0x100000)     return (uint8_t*)addr;
+    // if (address < 0x40000000)   return (uint8_t*)(addr + 0xc0000000); // ~~~ For some reason doesn't work with vbox
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
     
@@ -81,6 +91,20 @@ void write_physical_address_4b(physical_address_t address, uint32_t value)
     write_physical_address_1b(address + 3, value >> 24);
 }
 
+void copy_page(physical_address_t from, physical_address_t to)
+{
+    if ((from & 0xfff) || (to & 0xfff))
+    {
+        LOG(ERROR, "Tried to copy non page aligned pages : 0x%lx to 0x%lx", from, to);
+        abort();
+    }
+
+    for (uint16_t i = 0; i < 4096; i++)
+        page_tmp[i] = read_physical_address_1b(from + i);
+    for (uint16_t i = 0; i < 4096; i++)
+        write_physical_address_1b(to + i, page_tmp[i]);
+}
+
 void init_page_directory(struct page_directory_entry_4kb* pd)
 {
     for(uint16_t i = 0; i < 1024; i++)
@@ -103,7 +127,7 @@ void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physica
 
     pd[index].page_size = 0;
     pd[index].cache_disable = 0;
-    pd[index].write_through = 0;
+    pd[index].write_through = 1;
     pd[index].address = (((uint32_t)pt_address) >> 12);
     pd[index].user_supervisor = user_supervisor;
     pd[index].read_write = read_write;
@@ -131,7 +155,7 @@ void set_page(struct page_table_entry* pt, uint16_t index, physical_address_t ad
 
     pt[index].global = 0;
     pt[index].cache_disable = 0;
-    pt[index].write_through = 0;
+    pt[index].write_through = 1;
     pt[index].dirty = 0;
     pt[index].address = (address >> 12);
     pt[index].page_attribute_table = 0;
@@ -163,7 +187,7 @@ void physical_add_page_table(physical_address_t pd, uint16_t index, physical_add
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pd + 4 * index, 1 | (read_write << 1) | (user_supervisor << 2) | pt_address);
+    write_physical_address_4b(pd + 4 * index, 0b1001 | (read_write << 1) | (user_supervisor << 2) | pt_address);  // Present x Write Through
 }
 
 void physical_remove_page_table(physical_address_t pd, uint16_t index)
@@ -187,5 +211,5 @@ void physical_set_page(physical_address_t pt, uint16_t index, physical_address_t
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pt + 4 * index, 1 | (read_write << 1) | (user_supervisor << 2) | address);
+    write_physical_address_4b(pt + 4 * index, 0b1001 | (read_write << 1) | (user_supervisor << 2) | address);   // Present x Write Through
 }

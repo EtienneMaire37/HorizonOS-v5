@@ -1,6 +1,8 @@
-export PREFIX="$(pwd)/i386elfgcc"
-export TARGET=i386-elf
+export PREFIX="$(pwd)/i486elfgcc"
+export TARGET=i486-elf
 export PATH="$PREFIX/bin:$PATH"
+
+mkdir $PREFIX -p
 
 mkdir /tmp/src
 cd /tmp/src

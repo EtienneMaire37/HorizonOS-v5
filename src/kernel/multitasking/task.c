@@ -294,14 +294,14 @@ void task_create_virtual_address_space(struct task* _task)
     for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING
     {
         task_virtual_address_space_create_page_table(_task, i + 768);
+        struct virtual_address_layout layout;
+        layout.page_directory_entry = i + 768;
+        layout.page_offset = 0;
+        physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
         for (uint16_t j = 0; j < 1024; j++)
         {
-            struct virtual_address_layout layout;
-            layout.page_directory_entry = i + 768;
             layout.page_table_entry = j;
-            layout.page_offset = 0;
             uint32_t address = *(uint32_t*)&layout - 0xc0000000;
-            physical_address_t pt_address = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
             physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
         }
     }

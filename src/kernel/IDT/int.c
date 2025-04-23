@@ -38,11 +38,12 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     halt();
 }
 
-#define return_from_isr() { return flush_tlb ? iret_cr3 : 0; }
+#define return_from_isr() { current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; }
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_registers* registers)
 {
     current_cr3 = registers->cr3; 
+    uint32_t old_phys_mem_page = current_phys_mem_page;
     current_phys_mem_page = 0xffffffff;
     flush_tlb = false;
 
@@ -180,19 +181,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 task_create_virtual_address_space(&tasks[task_count - 1]);
 
                 if (tasks[task_count - 1].kernel_stack_phys)
-                {
-                    set_current_phys_mem_page(tasks[current_task_index].kernel_stack_phys >> 12);
-                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                    set_current_phys_mem_page(tasks[task_count - 1].kernel_stack_phys >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-                }
+                    copy_page(tasks[current_task_index].kernel_stack_phys, tasks[task_count - 1].kernel_stack_phys);
                 if (tasks[task_count - 1].stack_phys)
-                {
-                    set_current_phys_mem_page(tasks[current_task_index].stack_phys >> 12);
-                    memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                    set_current_phys_mem_page(tasks[task_count - 1].stack_phys >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
-                }
+                    copy_page(tasks[current_task_index].stack_phys, tasks[task_count - 1].stack_phys);
 
                 tasks[task_count - 1].registers_data.eax = tasks[task_count - 1].registers_data.ebx = 0;
                 tasks[current_task_index].registers_data.eax = tasks[task_count - 1].pid >> 32;
@@ -200,9 +191,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
 
                 for (uint16_t i = 0; i < 768; i++)
                 {
+                    uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i);
                     for (uint16_t j = (i == 0 ? 256 : 0); j < ((i == 767) ? 1021 : 1024); j++)
                     {
-                        uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * i);
                         if (old_pde & 1)
                         {
                             physical_address_t pt_old_phys = old_pde & 0xfffff000;
@@ -210,14 +201,11 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                             physical_address_t mapping_phys = old_pte & 0xfffff000;
                             if (old_pte & 1)
                             {
-                                LOG(TRACE, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
+                                // LOG(TRACE, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
 
                                 physical_address_t page_address = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true);
 
-                                set_current_phys_mem_page(mapping_phys >> 12);
-                                memcpy(page_tmp, (void*)PHYS_MEM_PAGE_BOTTOM, 4096);
-                                set_current_phys_mem_page(page_address >> 12);
-                                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, page_tmp, 4096);
+                                copy_page(mapping_phys, page_address);
                             }
                         }
                     }

@@ -24,7 +24,7 @@ jobs:
       uses: actions/cache@v3
       id: compiler-cache
       with:
-        path: ./i386elfgcc
+        path: ./i486elfgcc
         key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.39-gcc-12.2.0
 
     - name: Install cross-compiler

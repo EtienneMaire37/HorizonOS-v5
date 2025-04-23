@@ -197,7 +197,7 @@ void ps2_read_data(uint8_t extected_bytes)
     ps2_data_bytes_received = 0;
     if (!ps2_controller_connected || extected_bytes == 0)
         return;
-    for (uint8_t i = 0; !ps2_wait_for_input() && ps2_data_bytes_received < PS2_READ_BUFFER_SIZE; i++) 
+    for (uint8_t i = 0; !ps2_wait_for_input() && ps2_data_bytes_received < PS2_READ_BUFFER_SIZE; i++)   // && (inb(PS2_STATUS_REGISTER) & PS2_STATUS_OUTPUT_FULL)
     {
         ps2_data_buffer[ps2_data_bytes_received++] = inb(PS2_DATA);
         if (i >= extected_bytes - 1)

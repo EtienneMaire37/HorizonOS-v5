@@ -41,10 +41,10 @@ _start:
     loop .loop_pt0
 
     ; Map physical 0 through PDE 767:1021
-    mov eax, 0b11  ; Present + Writable
-    mov [page_table_767 - 0xc0000000 + 1021*4], eax
+    mov eax, 0b1011  ; Present + Writable + Write Through
+    mov [page_table_767 - 0xc0000000 + 1021 * 4], eax
 
-    ; Map 1GB higher half
+    ; Map higher half
     xor edi, edi
 .loop_tables:
     xor ebx, ebx
@@ -54,7 +54,7 @@ _start:
     mov edx, ebx
     shl edx, 12
     add eax, edx
-    or eax, 0b11
+    or eax, 0b1011
 
     mov edx, edi
     imul edx, 1024
@@ -71,19 +71,18 @@ _start:
     cmp edi, 256
     jl .loop_tables
 
-    ; Configure page directory
     mov eax, page_table_0 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b11
+    or eax, 0b1011
     mov [page_directory - 0xc0000000], eax
 
-    ; PDE 767 (physical memory access)
+    ; pde 767 (physical memory access)
     mov eax, page_table_767 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b11
+    or eax, 0b1011
     mov [page_directory - 0xc0000000 + 767*4], eax
 
-    ; PDE 768-1023 (higher half)
+    ; pde 768-1023 (higher half)
     mov edi, 768
     mov ecx, 256
 .loop_pde:
@@ -92,7 +91,7 @@ _start:
     shl eax, 12
     add eax, page_table_768_1023 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b11
+    or eax, 0b1011
     mov edx, page_directory - 0xc0000000
     mov [edx + edi*4], eax
     inc edi
@@ -101,7 +100,7 @@ _start:
     ; Recursive mapping
     mov eax, page_directory - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b11
+    or eax, 0b1011
     mov [page_directory - 0xc0000000 + 4092], eax
 
     ; Enable paging

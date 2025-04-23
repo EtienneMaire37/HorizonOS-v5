@@ -1,13 +1,13 @@
 CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone # -fno-pie -fno-stack-protector -fno-builtin
 DATE := `date +"%Y-%m-%d"`
-CC := ./i386elfgcc/bin/i386-elf-gcc
-LD := ./i386elfgcc/bin/i386-elf-ld
+CC := ./i486elfgcc/bin/i486-elf-gcc
+LD := ./i486elfgcc/bin/i486-elf-ld
 
 all: horizonos.iso
 
 run: all
 	mkdir debug -p
-	qemu-system-i386                               		\
+	qemu-system-x86_64                           		\
 	-accel tcg,thread=single                       		\
 	-cpu core2duo                                  		\
 	-debugcon file:debug/${DATE}.log					\
