@@ -375,7 +375,7 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     task_count++;
 }
 
-void switch_task(struct privilege_switch_interrupt_registers** registers)
+void switch_task(struct privilege_switch_interrupt_registers** registers, bool* flush_tlb, uint32_t* iret_cr3)
 {
     if (task_count == 0)
     {
@@ -401,17 +401,12 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
         tasks[current_task_index].registers_data.eax, tasks[current_task_index].registers_data.ebx, tasks[current_task_index].registers_data.ecx, tasks[current_task_index].registers_data.edx, tasks[current_task_index].registers_data.esi, tasks[current_task_index].registers_data.edi,
         tasks[current_task_index].registers_data.cr3);
 
-    flush_tlb = true;
+    *flush_tlb = true;
 
     if (tasks[current_task_index].ring == 3)
-    {
-        user_mode_switch = 1;
-
-        // TSS.ss0 = KERNEL_DATA_SEGMENT;
         TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    }
 
-    iret_cr3 = tasks[current_task_index].registers_data.cr3;
+    *iret_cr3 = tasks[current_task_index].registers_data.cr3;
     *registers = tasks[current_task_index].registers_ptr;       // * When poping esp load the correct values
 
     first_task_switch = false;

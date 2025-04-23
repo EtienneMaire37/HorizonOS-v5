@@ -23,9 +23,10 @@ struct privilege_switch_interrupt_registers
 } __attribute__((packed));
 
 uint32_t current_cr3;
-uint32_t iret_cr3;
-bool flush_tlb;
-uint32_t user_mode_switch;
+
+// ^ Changed to local variables
+// uint32_t iret_cr3;
+// bool flush_tlb;  
 
 char* error_str[32] = 
 {

@@ -38,17 +38,16 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     halt();
 }
 
-#define return_from_isr() { current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; }
+#define return_from_isr() { if (flush_tlb) current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; }
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_registers* registers)
 {
     current_cr3 = registers->cr3; 
     uint32_t old_phys_mem_page = current_phys_mem_page;
     current_phys_mem_page = 0xffffffff;
-    flush_tlb = false;
 
-    iret_cr3 = registers->cr3;
-    user_mode_switch = multitasking_enabled ? (tasks[current_task_index].ring != 0 ? 1 : 0) : 0;
+    bool flush_tlb = false; // ~ Allocated on the stack
+    uint32_t iret_cr3 = registers->cr3;
 
     if (registers->interrupt_number < 32)            // Fault
     {
@@ -66,7 +65,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             }
 
             uint16_t old_index = current_task_index;
-            switch_task(&registers);
+            switch_task(&registers, &flush_tlb, &iret_cr3);
             task_kill(old_index);
         }
 
@@ -95,7 +94,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
         switch (irq_number)
         {
         case 0:
-            handle_irq_0(&registers);
+            handle_irq_0(&registers, &flush_tlb, &iret_cr3);
             break;
 
         case 1:
@@ -223,7 +222,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
 
                 *(struct interrupt_registers*)registers = *(struct interrupt_registers*)&tasks[current_task_index].registers_data;
 
-                switch_task(&registers);
+                switch_task(&registers, &flush_tlb, &iret_cr3);
             } 
             break;
 
@@ -232,7 +231,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             {
                 LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
                 old_index = current_task_index;
-                switch_task(&registers);
+                switch_task(&registers, &flush_tlb, &iret_cr3);
                 task_kill(old_index);
             }
         }            

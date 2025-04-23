@@ -26,7 +26,9 @@ void install_idt()
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
     setup_idt_entry(&IDT[0xff], KERNEL_CODE_SEGMENT, interrupt_table[0xff], 0b11, ISR_INTERRUPT_GATE_32); // System call 
-    // TODO: Changed some of them to ISR_TRAP_GATE_32 and change from using global variables for interrupts to stack allocated ones
+    // TODO: Change some of them to ISR_TRAP_GATE_32 and change from using global variables for interrupts to stack allocated ones
+    // !! Update : Doesn't work because of the way i do physical memory access...
+    // TODO: Fix this asap 
 
     _idtr.size = sizeof(IDT) - 1;
     _idtr.address = (uint32_t)&IDT;

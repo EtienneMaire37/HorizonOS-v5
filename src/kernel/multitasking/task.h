@@ -50,7 +50,7 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
 void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index);
 physical_address_t task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
 void task_create_virtual_address_space(struct task* _task);
-void switch_task(struct privilege_switch_interrupt_registers** registers);
+void switch_task(struct privilege_switch_interrupt_registers** registers, bool* flush_tlb, uint32_t* iret_cr3);
 void multasking_init();
 void multitasking_start();
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs
