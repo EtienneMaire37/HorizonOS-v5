@@ -45,6 +45,8 @@ void tty_clear_screen(char c)
 
 void tty_outc(char c)
 {
+	if (c == 0) return;
+	
 	switch(c)
 	{
 	case '\n':

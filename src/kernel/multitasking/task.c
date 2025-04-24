@@ -96,7 +96,9 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     LOG(TRACE, "   Section header offset : 0x%x", header->shoff);
     LOG(TRACE, "   Flags : 0x%x", header->flags);
 
+    utf32_buffer_init(&_task->input_buffer);
     _task->kernel_thread = false;
+    _task->reading_stdin = false;
     _task->stack_phys = pfa_allocate_physical_page();
     if (ring != 0)
         _task->kernel_stack_phys = pfa_allocate_physical_page();
@@ -212,6 +214,8 @@ void task_destroy(struct task* _task)
         LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
         pfa_free_physical_page(_task->stack_phys);
     }
+    LOG(TRACE, "Freeing input buffer");
+    utf32_buffer_destroy(&_task->input_buffer);
 }
 
 void task_virtual_address_space_destroy(struct task* _task)
@@ -328,6 +332,8 @@ void multitasking_init()
     tasks[task_count].system_task = true;
     tasks[task_count].ring = 0;
     tasks[task_count].name = "idle";
+    tasks[task_count].reading_stdin = false;
+    utf32_buffer_init(&tasks[task_count].input_buffer);
 
     tasks[task_count].stack_phys = pfa_allocate_physical_page();
     tasks[task_count].kernel_stack_phys = pfa_allocate_physical_page();
@@ -389,7 +395,7 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
         tasks[current_task_index].registers_ptr = *registers;
     }
 
-    uint16_t next_task_index = (current_task_index + 1) % task_count;
+    uint16_t next_task_index = find_next_task_index();
     if (next_task_index == current_task_index && !first_task_switch)
         return;
     current_task_index = next_task_index;

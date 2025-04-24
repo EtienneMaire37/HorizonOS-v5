@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stdarg.h"
+
 #ifndef NULL
 #define NULL ((void*)0)
 #endif
@@ -16,16 +18,6 @@ typedef unsigned int size_t;
 
 typedef unsigned int fpos_t;
 
-typedef struct FILE FILE;
-struct FILE
-{
-    char path[256];
-    fpos_t pos;
-    unsigned char drive;
-};
-
-typedef char* va_list;
-
 #define _IOFBF 0
 #define _IOLBF 1
 #define _IONBF 2
@@ -33,6 +25,14 @@ typedef char* va_list;
 #define FILENAME_MAX    255
 #define FOPEN_MAX       16
 #define TMP_MAX         65536
+
+// typedef struct FILE FILE;
+// struct FILE
+// {
+//     char path[FILENAME_MAX];
+//     fpos_t pos;
+//     unsigned char drive;
+// };
 
 // FILE* fopen(const char* path, const char* mode);
 // int fclose(FILE* stream);

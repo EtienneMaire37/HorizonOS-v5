@@ -24,20 +24,19 @@ HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and rea
 - Custom C standard library (libc and libm) under development
 
 ### Planned 📅
-- Multi-core support (SMP)
+- Symmetric multiprocessing support
+- APIC support
 - PCI device enumeration
 - USB drivers and mouse support
 - Network stack support + ethernet and wifi drivers
 - Graphical display support
-- Improved filesystem and VFS support
+- FAT filesystem and better VFS support
 - PATA/SATA drivers
 - Full ACPI support (probably with uACPI or LAI)
 - Threading API
 - Complete (or near complete) libc and libstdc++ implementations
-- System idle task and CPU usage management (including process blocking)
-- General system optimizations
 - Porting GCC, Make, and other third-party software
-- GPU drivers (NVIDIA and AMD)
+- GPU drivers (NVIDIA, AMD and Intel)
 
 ## Building HorizonOS 🛠️
 

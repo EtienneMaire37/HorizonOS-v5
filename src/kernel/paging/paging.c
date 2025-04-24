@@ -24,9 +24,11 @@ void set_current_phys_mem_page(uint32_t page)
 
 uint8_t* get_physical_address_ptr(physical_address_t address)
 {
+    if (address >= 0x100000000) return NULL;
+
     uint32_t addr = (uint32_t)address;
-    if (address < 0x100000)     return (uint8_t*)addr;
-    // if (address < 0x40000000)   return (uint8_t*)(addr + 0xc0000000); // ~~~ For some reason doesn't work in vbox
+    if (addr < 0x100000) return (uint8_t*)addr;
+    if (addr < (uint32_t)4 * 1024 * 1024 * 1023 - 0xc0000000) return (uint8_t*)(addr + 0xc0000000);
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
     

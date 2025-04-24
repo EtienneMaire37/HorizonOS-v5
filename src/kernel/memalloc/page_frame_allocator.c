@@ -137,7 +137,7 @@ physical_address_t pfa_allocate_physical_page()
     if (memory_allocated + 0x1000 > allocatable_memory) 
     {
         LOG(CRITICAL, "Out of memory!");
-        abort();
+        return 0;
     }
 
     virtual_address_t bitmap_virt = physical_address_to_virtual(usable_memory_map[0].address);
@@ -163,7 +163,6 @@ physical_address_t pfa_allocate_physical_page()
                     {
                         physical_address_t addr = usable_memory_map[j].address + remaining * 0x1000;
                         LOG_MEM_ALLOCATED();
-                        // LOG(DEBUG, "0x%lx", addr);
                         return addr;
                     }
                     remaining -= block_pages;
@@ -176,7 +175,7 @@ physical_address_t pfa_allocate_physical_page()
     }
 
     LOG(CRITICAL, "Out of memory!");
-    abort();
+    // abort();
     return 0;
 }
 
@@ -189,7 +188,7 @@ void pfa_free_physical_page(physical_address_t address)
 {
     if (address & 0xfff) 
     {
-        LOG(CRITICAL, "Unaligned address");
+        LOG(CRITICAL, "Unaligned address (0x%lx)", address);
         abort();
     }
 

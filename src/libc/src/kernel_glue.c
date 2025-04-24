@@ -4,8 +4,16 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
     ssize_t bytes_written;
     asm volatile("int 0xff" : "=a" (bytes_written), "=b" (errno)
-        : "a" (1), "b" (fildes), "c" (buf), "d" (nbyte));
+        : "a" (SYSCALL_WRITE), "b" (fildes), "c" (buf), "d" (nbyte));
     return bytes_written;
+}
+
+ssize_t read(int fildes, void *buf, size_t nbyte)
+{
+    ssize_t bytes_read;
+    asm volatile("int 0xff" : "=a" (bytes_read), "=b" (errno)
+        : "a" (SYSCALL_READ), "b" (fildes), "c" (buf), "d" (nbyte));
+    return bytes_read;
 }
 
 void exit(int r)
@@ -15,15 +23,16 @@ void exit(int r)
             atexit_stack[atexit_stack_length - i - 1]();
 
     asm volatile("int 0xff" : 
-        : "a" (0), "b" (r));
-    while(1);
+        : "a" (SYSCALL_EXIT), "b" (r));
+
+    while (true);
 }
 
 time_t time(time_t* t)
 {
     time_t now = 0;
     asm volatile("int 0xff" : "=a" (now)
-        : "a" (2));
+        : "a" (SYSCALL_TIME));
     if (t) *t = now;
     return now;
 }
@@ -32,7 +41,7 @@ pid_t getpid()
 {
     uint32_t hi, lo;
     asm volatile("int 0xff" : "=a" (hi), "=b" (lo)
-        : "a" (3));
+        : "a" (SYSCALL_GETPID));
     return ((pid_t)hi << 32) | lo;
 }
 
@@ -40,16 +49,7 @@ pid_t fork()
 {
     uint32_t hi, lo;
     asm volatile("int 0xff" : "=a" (hi), "=b" (lo)
-        : "a" (4));
+        : "a" (SYSCALL_FORK));
     uint64_t combined = ((uint64_t)hi << 32) | lo;
     return *(pid_t*)&combined;
 }
-
-// void* sbrk(intptr_t increment)
-// {
-//     intptr_t incremented;
-//     asm volatile("int 0xff" : "=a" (incremented)
-//         : "a" (5), "b" (increment));
-//     break_point += incremented;
-//     return (void*)break_point;
-// }

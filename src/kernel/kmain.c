@@ -2,6 +2,7 @@
 // #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <stdatomic.h>
 
 #include "multiboot.h"
 multiboot_info_t* multiboot_info;
@@ -21,6 +22,16 @@ multiboot_info_t* multiboot_info;
 #include "../libc/include/time.h"
 
 #include "../libc/src/kernel_glue.h"
+
+int imod(int a, int b)
+{
+    if(b < 0)
+        return -imod(-a, -b);   
+    int ret = a % b;
+    if (ret < 0)
+        ret += b;
+    return ret;
+}
 
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
@@ -53,7 +64,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address);
 
 multiboot_module_t* initrd_module;
 
-#define LOG_LEVEL           TRACE
+#define LOG_LEVEL           DEBUG
 // #define NO_LOGS
 
 const char* multiboot_block_type_text[5] = 
@@ -68,11 +79,13 @@ const char* multiboot_block_type_text[5] =
 // #include "klibc/arithmetic.c"
 #include "../libc/src/arithmetic.c"
 
+#include "multicore/spinlock.h"
+
 #include "IO/io.h"
 #include "PS2/ps2.h"
 #include "debug/out.h"
 
-// #include "IO/keyboard.h"
+#include "IO/keyboard.h"
 #include "PS2/keyboard.h"
 #include "ACPI/tables.h"
 #include "IO/textio.h"
@@ -113,6 +126,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 
 #include "../libc/src/time.c"
 
+#include "IO/keyboard.c"
 #include "PS2/keyboard.c"
 #include "ACPI/tables.c"
 #include "memalloc/page_frame_allocator.c"

@@ -117,7 +117,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
         uint16_t old_index;
         switch (registers->eax)
         {
-        case 0:     // exit
+        case SYSCALL_EXIT:     // exit
             if (multitasking_enabled)
             {
                 LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
@@ -129,7 +129,43 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 zombie_task_index = current_task_index;
             }
             break;
-        case 1:     // write
+        case SYSCALL_TIME:     // time
+            registers->eax = ktime(NULL);
+            break;
+        case SYSCALL_READ:     // read
+            if (registers->ebx > 2)
+            {
+                registers->eax = 0xffffffff;   // -1
+                registers->ebx = EBADF;
+            } 
+            else
+            {
+                if (registers->ebx == STDIN_FILENO)
+                {
+                    registers->ebx = 0;
+                    if (no_buffered_characters(tasks[current_task_index].input_buffer))
+                    {
+                        tasks[current_task_index].reading_stdin = true;
+                        switch_task(&registers, &flush_tlb, &iret_cr3);
+                    }
+                    else
+                    {
+                        registers->eax = min(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
+                        for (uint32_t i = 0; i < registers->eax; i++)
+                        {
+                            // *** Only ASCII for now ***
+                            ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer));
+                        }
+                    }
+                }
+                else
+                {
+                    registers->eax = read(registers->ebx, (char*)registers->ecx, registers->edx);
+                    registers->ebx = errno;
+                }
+            }
+            break;
+        case SYSCALL_WRITE:     // write
             if (registers->ebx > 2)
             {
                 registers->eax = 0xffffffff;   // -1
@@ -141,14 +177,11 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 registers->ebx = errno;
             }
             break;
-        case 2:     // time
-            registers->eax = ktime(NULL);
-            break;
-        case 3:     // getpid
+        case SYSCALL_GETPID:     // getpid
             registers->eax = tasks[current_task_index].pid >> 32;
             registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
-        case 4:     // fork
+        case SYSCALL_FORK:     // fork
             LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
             if (task_count >= MAX_TASKS)
@@ -168,6 +201,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 tasks[task_count - 1].pid = current_pid++;
                 tasks[task_count - 1].system_task = tasks[current_task_index].system_task;
                 tasks[task_count - 1].kernel_thread = tasks[current_task_index].kernel_thread;
+                tasks[task_count - 1].reading_stdin = false;    // * Can't fork if the process is blocked
+                utf32_buffer_init(&tasks[task_count - 1].input_buffer);
 
                 if (tasks[current_task_index].stack_phys)
                     tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();

@@ -50,4 +50,7 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)
     if (port == 2)
         if (ps2_kb_2_scancode_set != 2)
             return;
+
+    utf32_char_t character = (utf32_char_t)'A';
+    keyboard_handle_character(character);
 }
