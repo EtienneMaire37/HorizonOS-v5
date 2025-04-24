@@ -23,8 +23,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
 
 	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
-	nasm -f elf32 -o "bin/gdt.o" "src/kernel/GDT/gdt.asm"
-	nasm -f elf32 -o "bin/idt.o" "src/kernel/IDT/idt.asm"
+	nasm -f elf32 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
+	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
 	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)

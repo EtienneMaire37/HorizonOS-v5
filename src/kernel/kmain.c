@@ -71,7 +71,7 @@ const char* multiboot_block_type_text[5] =
 {
     "MULTIBOOT_MEMORY_AVAILABLE",
     "MULTIBOOT_MEMORY_RESERVED",
-    "MULTIBOOT_MEMORY_ACPI_RECLAIMABLE",
+    "MULTIBOOT_MEMORY_acpi_RECLAIMABLE",
     "MULTIBOOT_MEMORY_NVS",
     "MULTIBOOT_MEMORY_BADRAM"
 };
@@ -80,15 +80,16 @@ const char* multiboot_block_type_text[5] =
 #include "../libc/src/arithmetic.c"
 
 #include "multicore/spinlock.h"
+#include "cpu/cpuid.h"
 
-#include "IO/io.h"
-#include "PS2/ps2.h"
+#include "io/io.h"
+#include "ps2/ps2.h"
 #include "debug/out.h"
 
-#include "IO/keyboard.h"
-#include "PS2/keyboard.h"
-#include "ACPI/tables.h"
-#include "IO/textio.h"
+#include "io/keyboard.h"
+#include "ps2/keyboard.h"
+#include "acpi/tables.h"
+#include "io/textio.h"
 // #include "klibc/stdio.h"
 // #include "klibc/string.h"
 // #include "klibc/stdlib.h"
@@ -98,15 +99,15 @@ const char* multiboot_block_type_text[5] =
 #include "../libc/src/stdio.c"
 #include "../libc/src/string.c"
 #include "../libc/src/stdlib.c"
-#include "GDT/gdt.h"
+#include "gdt/gdt.h"
 #include "paging/paging.h"
-#include "PIT/pit.h"
-#include "IDT/idt.h"
-#include "IDT/int.h"
-#include "IDT/pic.h"
+#include "pit/pit.h"
+#include "idt/idt.h"
+#include "idt/int.h"
+#include "idt/pic.h"
 #include "multitasking/task.h"
-#include "CMOS/cmos.h"
-#include "CMOS/rtc.h"
+#include "cmos/cmos.h"
+#include "cmos/rtc.h"
 #include "memalloc/page_frame_allocator.h"
 #include "files/ustar.h"
 #include "files/elf.h"
@@ -126,22 +127,22 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 
 #include "../libc/src/time.c"
 
-#include "IO/keyboard.c"
-#include "PS2/keyboard.c"
-#include "ACPI/tables.c"
+#include "io/keyboard.c"
+#include "ps2/keyboard.c"
+#include "acpi/tables.c"
 #include "memalloc/page_frame_allocator.c"
 // #include "klibc/string.c"
-#include "IO/textio.c"
+#include "io/textio.c"
 // #include "klibc/stdio.c"
 // #include "klibc/stdlib.c"
-#include "GDT/gdt.c"
+#include "gdt/gdt.c"
 #include "paging/paging.c"
-#include "PIT/pit.c"
-#include "IDT/idt.c"
-#include "IDT/int.c"
-#include "IDT/pic.c"
+#include "pit/pit.c"
+#include "idt/idt.c"
+#include "idt/int.c"
+#include "idt/pic.c"
 #include "multitasking/task.c"
-#include "PS2/ps2.c"
+#include "ps2/ps2.c"
 
 #include "../libc/src/kernel.c"
 
@@ -177,6 +178,14 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     current_phys_mem_page = 0xffffffff;
     kernel_size = &_kernel_end - &_kernel_start;
+    cpuid_highest_function_parameter = 0xffffffff;
+    uint32_t ebx, ecx, edx;
+    cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
+
+    manufacturer_id_string[3] = ebx >> 24; manufacturer_id_string[2] = (ebx >> 16) & 0xff; manufacturer_id_string[1] = (ebx >> 8) & 0xff; manufacturer_id_string[0] = ebx & 0xff;
+    manufacturer_id_string[7] = edx >> 24; manufacturer_id_string[6] = (edx >> 16) & 0xff; manufacturer_id_string[5] = (edx >> 8) & 0xff; manufacturer_id_string[4] = edx & 0xff;
+    manufacturer_id_string[11] = ecx >> 24; manufacturer_id_string[10] = (ecx >> 16) & 0xff; manufacturer_id_string[9] = (ecx >> 8) & 0xff; manufacturer_id_string[8] = ecx & 0xff;
+    manufacturer_id_string[12] = 0;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
 
@@ -185,6 +194,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
     LOG(INFO, "Stack : 0x%x-0x%x", &stack_bottom, &stack_top);
+
+    LOG(INFO, "CPU manufacturer string : %s", manufacturer_id_string);
+    printf("CPU manufacturer string : %s\n", manufacturer_id_string);
 
     // LOG(DEBUG, "Kernel page directory address : 0x%x", (uint32_t)&page_directory);
 
@@ -229,7 +241,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     printf(" | Done (%u bytes found)\n", available_memory);
 
-    printf("Loading a GDT...");
+    printf("Loading a gdt...");
     memset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
@@ -245,27 +257,27 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     load_tss();
     printf(" | Done\n");
 
-    LOG(DEBUG, "Loaded the GDT"); 
+    LOG(DEBUG, "Loaded the gdt"); 
 
-    printf("Loading an IDT...");
+    printf("Loading an idt...");
     install_idt();
     printf(" | Done\n");
 
-    LOG(DEBUG, "Loaded the IDT"); 
+    LOG(DEBUG, "Loaded the idt"); 
 
-    printf("Initializing the PIC...");
+    printf("Initializing the pic...");
     pic_remap(32, 32 + 8);
     printf(" | Done\n");
 
-    LOG(DEBUG, "Initialized the PIC"); 
+    LOG(DEBUG, "Initialized the pic"); 
 
-    printf("Initializing the PIT...");
+    printf("Initializing the pit...");
     pit_channel_0_set_frequency(PIT_FREQUENCY);
     printf(" | Done\n");
 
     ps2_controller_connected = ps2_device_1_connected = ps2_device_2_connected = false;
 
-    LOG(DEBUG, "Initialized the PIT"); 
+    LOG(DEBUG, "Initialized the pit"); 
 
     LOG(DEBUG, "Setting up the initrd");
 
@@ -299,8 +311,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     pfa_detect_usable_memory();
     pfa_bitmap_init();
 
-    LOG(DEBUG, "Retrieving CMOS data");
-    printf("Retrieving CMOS data...");
+    LOG(DEBUG, "Retrieving cmos data");
+    printf("Retrieving cmos data...");
 
     rtc_detect_mode();
     rtc_get_time();
@@ -324,7 +336,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
 
-    LOG(INFO, "Detecting ACPI tables and EBDA");
+    LOG(INFO, "Detecting acpi tables and ebda");
 
     bios_get_ebda_pointer();
     acpi_find_tables();
