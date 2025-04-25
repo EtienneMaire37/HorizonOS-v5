@@ -189,7 +189,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
 
-    current_keyboard_layout = us_qwerty;
+    current_keyboard_layout = us_qwerty; // fr_azerty
 
     tty_clear_screen(' ');
     tty_reset_cursor();
