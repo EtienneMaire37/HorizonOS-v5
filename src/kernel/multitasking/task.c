@@ -98,7 +98,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     utf32_buffer_init(&_task->input_buffer);
     _task->kernel_thread = false;
-    _task->reading_stdin = false;
+    _task->reading_stdin = _task->was_reading_stdin = false;
     _task->stack_phys = pfa_allocate_physical_page();
     if (ring != 0)
         _task->kernel_stack_phys = pfa_allocate_physical_page();
@@ -332,7 +332,7 @@ void multitasking_init()
     tasks[task_count].system_task = true;
     tasks[task_count].ring = 0;
     tasks[task_count].name = "idle";
-    tasks[task_count].reading_stdin = false;
+    tasks[task_count].reading_stdin = tasks[task_count].was_reading_stdin = false;
     utf32_buffer_init(&tasks[task_count].input_buffer);
 
     tasks[task_count].stack_phys = pfa_allocate_physical_page();
@@ -381,6 +381,19 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     task_count++;
 }
 
+void task_write_at_address_1b(struct task* _task, uint32_t address, uint8_t value)
+{
+    struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
+    uint32_t pde = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry);
+    if (!(pde & 1)) return;
+    physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
+    uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+    if (!(pte & 1)) return;
+    physical_address_t page_address = (physical_address_t)pte & 0xfffff000;
+    physical_address_t byte_address = page_address | layout.page_offset;
+    write_physical_address_1b(byte_address, value);
+}
+
 void switch_task(struct privilege_switch_interrupt_registers** registers, bool* flush_tlb, uint32_t* iret_cr3)
 {
     if (task_count == 0)
@@ -414,6 +427,19 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
 
     *iret_cr3 = tasks[current_task_index].registers_data.cr3;
     *registers = tasks[current_task_index].registers_ptr;       // * When poping esp load the correct values
+
+    if (tasks[current_task_index].was_reading_stdin)
+    {
+        uint32_t _eax = min(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
+        task_write_register_data(&tasks[current_task_index], eax, _eax);
+        for (uint32_t i = 0; i < _eax; i++)
+        {
+            // *** Only ASCII for now ***
+            task_write_at_address_1b(&tasks[current_task_index], tasks[current_task_index].registers_data.ecx + i, utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer)));
+        }
+    }
+
+    tasks[current_task_index].was_reading_stdin = false;
 
     first_task_switch = false;
 }

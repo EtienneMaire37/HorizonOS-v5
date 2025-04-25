@@ -19,19 +19,30 @@ void utf32_buffer_destroy(utf32_buffer_t* buffer)
 void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character)
 {
     if (!buffer->characters) return;
-    if (get_buffered_characters(*buffer) == buffer->size - 1) return;     // No space to put characters
+    if (get_buffered_characters(*buffer) >= buffer->size - 1) return;     // No space to put characters
 
-    buffer->characters[buffer->put_index++] = character;
-    buffer->put_index %= buffer->size;
+    buffer->characters[buffer->put_index] = character;
+    buffer->put_index = (buffer->put_index + 1) % buffer->size;
 }
 
 utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer)
 {
     if (!buffer->characters) return 0;
     if (no_buffered_characters(*buffer)) return 0;     // No characters to get
-    size_t _get_index = buffer->get_index;
+
+    utf32_char_t ch = buffer->characters[buffer->get_index];
     buffer->get_index = (buffer->get_index + 1) % buffer->size;
-    return buffer->characters[_get_index];
+    return ch;
+}
+
+void utf32_buffer_clear(utf32_buffer_t* buffer)
+{
+    buffer->get_index = buffer->put_index = 0;
+}
+
+bool keyboard_is_key_pressed(virtual_address_t vk)
+{
+    return ps2_kb_is_key_pressed(vk);
 }
 
 void keyboard_handle_character(utf32_char_t character)
@@ -40,20 +51,15 @@ void keyboard_handle_character(utf32_char_t character)
     {
         if (tasks[i].reading_stdin)
         {
+            utf32_buffer_putchar(&tasks[i].input_buffer, character);
+            
+            putchar(utf32_to_bios_oem(character));
+            
             if (character == '\n')
             {
                 tasks[i].reading_stdin = false;
-                uint32_t _eax = min(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[i].registers_data.edx);
-                task_write_register_data(&tasks[i], eax, _eax);
-                for (uint32_t i = 0; i < _eax; i++)
-                {
-                    // *** Only ASCII for now ***
-                    ((char*)tasks[i].registers_data.ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer));
-                }
+                tasks[i].was_reading_stdin = true;
             }
-            else
-                utf32_buffer_putchar(&tasks[i].input_buffer, character);
-            putchar(utf32_to_bios_oem(character));
         }
     }
 }

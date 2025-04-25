@@ -97,7 +97,7 @@ _start:
     inc edi
     loop .loop_pde
 
-    ; Recursive mapping
+    ; Recursive paging
     mov eax, page_directory - 0xc0000000
     and eax, 0xfffff000
     or eax, 0b1011
@@ -106,8 +106,10 @@ _start:
     ; Enable paging
     mov ecx, page_directory - 0xc0000000
     mov cr3, ecx
-    mov eax, cr0
-    or eax, 0x80000000
+
+    ; mov eax, cr0
+    ; or eax, 0x80000000
+    mov eax, 0x80000001
     mov cr0, eax
 
     lea eax, [.higher_half]

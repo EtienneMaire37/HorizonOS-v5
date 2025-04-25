@@ -11,8 +11,9 @@ int main()
     while (true)
     {
         uint8_t bytes_read = read(STDIN_FILENO, c, BUF_LEN);
-        /*for (uint8_t i = 0; i < bytes_read; i++)
-            putchar(c[i]);*/
+        for (uint8_t i = 0; i < bytes_read; i++)
+            putchar(c[i]);
+        putchar('\n');
         printf("%d\n", bytes_read);
     }
 }

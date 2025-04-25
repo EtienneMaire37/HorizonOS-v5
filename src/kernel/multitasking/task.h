@@ -15,7 +15,7 @@ struct task
     uint8_t ring;
     pid_t pid;
     bool system_task, kernel_thread;    // system_task: cause kernel panics ////; kernel_thread: dont allocate a vas
-    bool reading_stdin;
+    bool reading_stdin, was_reading_stdin;
     physical_address_t page_directory_phys;
 };
 
@@ -56,6 +56,7 @@ uint16_t find_next_task_index()
 
 #define task_write_register_data(task_ptr, register, data)  write_physical_address_4b((physical_address_t)((uint32_t)(task_ptr)->registers_ptr) + (task_ptr)->stack_phys - TASK_STACK_BOTTOM_ADDRESS + offsetof(struct privilege_switch_interrupt_registers, register), data);
 // ~~ Caller's responsability to check whether or not the task has the register actually pushed on the stack
+void task_write_at_address_1b(struct task* _task, uint32_t address, uint8_t value);
 
 void load_pd(void* ptr);
 void load_pd_by_physaddr(physical_address_t addr);
