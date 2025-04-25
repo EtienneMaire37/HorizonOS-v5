@@ -27,7 +27,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
-	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS)
+	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3
 	$(LD) -T src/kernel/link.ld 
 	
 	mkdir -p ./root/boot/grub
@@ -45,7 +45,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
 	mkdir -p ./src/tasks/bin
-	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" # -ffunction-sections -fdata-sections
+	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(LD) -T src/tasks/link.ld -nostdlib --nmagic -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \

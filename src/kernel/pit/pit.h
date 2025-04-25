@@ -8,7 +8,7 @@
 #define PIT_FREQUENCY       1000
 #define PIT_INCREMENT       (1000 / PIT_FREQUENCY)
 
-uint32_t global_timer = 0; // in milliseconds
+volatile uint32_t global_timer = 0; // in milliseconds
 
 struct privilege_switch_interrupt_registers;
 

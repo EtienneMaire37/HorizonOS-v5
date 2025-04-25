@@ -27,6 +27,8 @@ uint8_t ps2_keyboard_state_e0[256] =
     0
 };
 
+bool ps2_kb_caps_lock[2] = { false, false }, ps2_kb_num_lock[2] = { false, false }, ps2_kb_scroll_lock[2] = { false, false };
+
 struct ps2_full_scancode;
 
 typedef struct ps2_full_scancode ps2_full_scancode_t;

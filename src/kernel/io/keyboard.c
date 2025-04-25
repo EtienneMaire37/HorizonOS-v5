@@ -51,14 +51,25 @@ void keyboard_handle_character(utf32_char_t character)
     {
         if (tasks[i].reading_stdin)
         {
-            utf32_buffer_putchar(&tasks[i].input_buffer, character);
-            
-            putchar(utf32_to_bios_oem(character));
-            
-            if (character == '\n')
+            if (character == '\b')
             {
-                tasks[i].reading_stdin = false;
-                tasks[i].was_reading_stdin = true;
+                if (!no_buffered_characters(tasks[i].input_buffer))
+                {
+                    putchar(utf32_to_bios_oem('\b'));
+                    utf32_buffer_getchar(&tasks[i].input_buffer);
+                }
+            }
+            else
+            {
+                utf32_buffer_putchar(&tasks[i].input_buffer, character);
+                
+                putchar(utf32_to_bios_oem(character));
+                
+                if (character == '\n')
+                {
+                    tasks[i].reading_stdin = false;
+                    tasks[i].was_reading_stdin = true;
+                }
             }
         }
     }
