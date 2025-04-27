@@ -81,10 +81,12 @@ const char* multiboot_block_type_text[5] =
 
 #include "multicore/spinlock.h"
 #include "cpu/cpuid.h"
+#include "cpu/registers.h"
 
 #include "io/io.h"
 #include "ps2/ps2.h"
 #include "debug/out.h"
+#include "fpu/fpu.h"
 
 #include "io/keyboard.h"
 #include "ps2/keyboard.h"
@@ -127,6 +129,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 
 #include "../libc/src/time.c"
 
+#include "fpu/fpu.c"
 #include "io/keyboard.c"
 #include "ps2/keyboard.c"
 #include "acpi/tables.c"
@@ -174,22 +177,11 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 {
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
-    setting_cur_cr3 = false;
 
     current_phys_mem_page = 0xffffffff;
     kernel_size = &_kernel_end - &_kernel_start;
-    cpuid_highest_function_parameter = 0xffffffff;
-    uint32_t ebx, ecx, edx;
-    cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
-
-    manufacturer_id_string[3] = ebx >> 24; manufacturer_id_string[2] = (ebx >> 16) & 0xff; manufacturer_id_string[1] = (ebx >> 8) & 0xff; manufacturer_id_string[0] = ebx & 0xff;
-    manufacturer_id_string[7] = edx >> 24; manufacturer_id_string[6] = (edx >> 16) & 0xff; manufacturer_id_string[5] = (edx >> 8) & 0xff; manufacturer_id_string[4] = edx & 0xff;
-    manufacturer_id_string[11] = ecx >> 24; manufacturer_id_string[10] = (ecx >> 16) & 0xff; manufacturer_id_string[9] = (ecx >> 8) & 0xff; manufacturer_id_string[8] = ecx & 0xff;
-    manufacturer_id_string[12] = 0;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
-
-    current_keyboard_layout = us_qwerty; // fr_azerty
 
     tty_clear_screen(' ');
     tty_reset_cursor();
@@ -197,22 +189,13 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
     LOG(INFO, "Stack : 0x%x-0x%x", &stack_bottom, &stack_top);
 
-    LOG(INFO, "CPU manufacturer string : %s", manufacturer_id_string);
-    printf("CPU manufacturer string : %s\n", manufacturer_id_string);
-
-    // LOG(DEBUG, "Kernel page directory address : 0x%x", (uint32_t)&page_directory);
-
-    // halt();
-
-    uint32_t max_kernel_size = (uint32_t)(-(uint32_t)&_kernel_start);
+    uint32_t max_kernel_size = (uint32_t)(((uint32_t)4096 * 1023 * 1024) - (uint32_t)&_kernel_start);
     if (kernel_size >= max_kernel_size)
     {
         LOG(CRITICAL, "Kernel is too big (max %uB)", max_kernel_size); 
         printf("Kernel is too big (max %uB)\n", max_kernel_size);
         abort();
     }
-
-    printf("Detecting available memory...");
 
     if(magic_number != MULTIBOOT_BOOTLOADER_MAGIC) 
     {
@@ -227,7 +210,40 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         abort();
     }
 
+    cpuid_highest_function_parameter = 0xffffffff;
+    uint32_t ebx, ecx, edx;
+    cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
+
+    manufacturer_id_string[3] = ebx >> 24; manufacturer_id_string[2] = (ebx >> 16) & 0xff; manufacturer_id_string[1] = (ebx >> 8) & 0xff; manufacturer_id_string[0] = ebx & 0xff;
+    manufacturer_id_string[7] = edx >> 24; manufacturer_id_string[6] = (edx >> 16) & 0xff; manufacturer_id_string[5] = (edx >> 8) & 0xff; manufacturer_id_string[4] = edx & 0xff;
+    manufacturer_id_string[11] = ecx >> 24; manufacturer_id_string[10] = (ecx >> 16) & 0xff; manufacturer_id_string[9] = (ecx >> 8) & 0xff; manufacturer_id_string[8] = ecx & 0xff;
+    manufacturer_id_string[12] = 0;
+    
+    current_keyboard_layout = us_qwerty; // fr_azerty
+
+    LOG(INFO, "CPU manufacturer string : %s", manufacturer_id_string);
+    printf("CPU manufacturer string : %s\n", manufacturer_id_string);
+
+    LOG(INFO, "CPUID highest function parameter : 0x%x", cpuid_highest_function_parameter);
+    printf("CPUID highest function parameter : 0x%x\n", cpuid_highest_function_parameter);
+
+    LOG(DEBUG, "FPU test word : 0x%x", fpu_test);
+    has_fpu = (fpu_test == 0);
+    if (has_fpu)
+    {
+        LOG(INFO, "FPU found");
+        printf("FPU found\n");
+    }
+
+    uint32_t cr0 =  get_cr0() | 
+                    ((!has_fpu) << 2) |  // emulate fpu only if there is none
+                    (1 << 5) | // you shouldn't try running hos on a i386 anyways...
+                    (has_fpu << 2);
+    load_cr0(cr0);
+
     LOG(INFO, "Memory map:");
+
+    printf("Detecting available memory...");
 
     for (uint32_t i = 0; i < multiboot_info->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {

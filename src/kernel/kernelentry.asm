@@ -107,9 +107,12 @@ _start:
     mov ecx, page_directory - 0xc0000000
     mov cr3, ecx
 
-    ; mov eax, cr0
-    ; or eax, 0x80000000
-    mov eax, 0x80000001
+    mov eax, cr0
+    or eax, (1 << 31) ; enable paging
+    and eax, ~(1 << 30) ; enable cache
+    and eax, ~(1 << 29) ; enable write-through
+    and eax, ~(1 << 2) ; disable fpu emulation
+    and eax, ~(1 << 3) ; don't use hardware multitasking (and force fpu access)
     mov cr0, eax
 
     lea eax, [.higher_half]
@@ -117,6 +120,9 @@ _start:
 .higher_half:
     mov ebp, stack_top
     mov esp, ebp
+
+    fninit ; initialize the fpu
+    fnstsw [fpu_test] ; write the status word
 
     push dword [magic_number]
     push dword [multiboot_info]
@@ -127,6 +133,9 @@ _start:
 
 magic_number: dd 0
 multiboot_info: dd 0
+
+global fpu_test
+fpu_test: dw 0x1234
 
 section .text
 global _halt

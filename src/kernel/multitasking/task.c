@@ -1,38 +1,5 @@
 #pragma once
 
-void load_pd(void* ptr)
-{
-    load_pd_by_physaddr(virtual_address_to_physical((virtual_address_t)ptr));
-}
-
-void load_pd_by_physaddr(physical_address_t addr)
-{
-    if (addr >> 32)
-    {
-        LOG(CRITICAL, "Tried to load a page directory above 4GB");
-        abort();
-    }
-
-    if (setting_cur_cr3) 
-    {
-        LOG(DEBUG, "Recursive CR3 load detected");
-        abort();
-    }
-
-    // if (current_cr3 != (uint32_t)addr)
-    // {
-    //     LOG(DEBUG, "Setting cr3 to 0x%lx", addr);
-    // }
-
-    setting_cur_cr3 = true;
-    current_cr3 = (uint32_t)addr;
-    
-    asm volatile("mov cr3, eax" : : "a" (current_cr3));
-    
-    current_phys_mem_page = 0xffffffff;
-    setting_cur_cr3 = false;
-}
-
 void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 {
     if (ring != 3 && ring != 0)

@@ -42,8 +42,16 @@ typedef unsigned int fpos_t;
 int putchar(int c);
 // int fputs(const char* s, FILE* stream);
 int puts(const char* s);
+
 // int fprintf(FILE* stream, const char* format, ...);
-// #define printf(...) fprintf(stdout, __VA_ARGS__);
+// int vfprintf(FILE* stream, const char* format, va_list args);
 int printf(const char* format, ...);
+int vprintf(const char* format, va_list args);
+int dprintf(int fd, const char *format, ...);
+int vdprintf(int fd, const char *format, va_list args);
 int sprintf(char* buffer, const char* format, ...);
 int snprintf(char* buffer, size_t bufsz, const char* format, ...);
+int vsprintf(char* buffer, const char* format, va_list args);
+int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args);
+
+int scanf(const char* buffer, ...);

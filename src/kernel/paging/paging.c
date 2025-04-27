@@ -1,5 +1,25 @@
 #pragma once
 
+void load_pd(void* ptr)
+{
+    load_pd_by_physaddr(virtual_address_to_physical((virtual_address_t)ptr));
+}
+
+void load_pd_by_physaddr(physical_address_t addr)
+{
+    if (addr >> 32)
+    {
+        LOG(CRITICAL, "Tried to load a page directory above 4GB");
+        abort();
+    }
+
+    current_cr3 = (uint32_t)addr;
+    
+    asm volatile("mov cr3, eax" : : "a" (current_cr3));
+    
+    current_phys_mem_page = 0xffffffff;
+}
+
 void invlpg(uint32_t addr)
 {
     asm volatile("invlpg [%0]" :: "r" (addr) : "memory");

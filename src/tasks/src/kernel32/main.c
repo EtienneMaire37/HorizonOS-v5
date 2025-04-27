@@ -1,19 +1,18 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
-// #include <stdint.h>
+#include <stdint.h>
 
-#define BUF_LEN 5
+#include <horizonos.h>
 
 int main()
 {
-    char c[BUF_LEN];
-    while (true)
-    {
-        uint8_t bytes_read = read(STDIN_FILENO, c, BUF_LEN);
-        for (uint8_t i = 0; i < bytes_read; i++)
-            putchar(c[i]);
-        putchar('\n');
-        printf("%d\n", bytes_read);
-    }
+    printf("--- Start of HorizonOS configuration ---\n\n");
+    printf("Please enter your preferred keyboard layout:\n");
+    printf("1: us_qwerty      2: fr_azerty\n");
+    printf("->");
+    uint8_t kb_layout_choice = 0;
+    char kb_layout_choice_str[2] = { 0 };
+    scanf("%1[1-9]", &kb_layout_choice);
+    return 0;
 }

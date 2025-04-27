@@ -39,7 +39,6 @@ uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 uint64_t current_pid;
-bool setting_cur_cr3 = false;
 
 uint16_t zombie_task_index;
 
@@ -58,8 +57,6 @@ uint16_t find_next_task_index()
 // ~~ Caller's responsability to check whether or not the task has the register actually pushed on the stack
 void task_write_at_address_1b(struct task* _task, uint32_t address, uint8_t value);
 
-void load_pd(void* ptr);
-void load_pd_by_physaddr(physical_address_t addr);
 void task_load_from_initrd(struct task* _task, char* path, uint8_t ring);
 void task_destroy(struct task* _task);
 void task_virtual_address_space_destroy(struct task* _task);

@@ -307,23 +307,32 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
 
 int printf(const char* format, ...)
 {
-    void _putc(char c)
-    {
-        putchar(c);
-    }
-    void _puts(char* s)
-    {
-        puts(s);
-    }
-
     va_list args;
     va_start(args, format);
-    int length = _printf(_putc, _puts, format, args);
+    int length = vprintf(format, args);
     va_end(args);
     return length;
 }
 
 int sprintf(char* buffer, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vsprintf(buffer, format, args);
+    va_end(args);
+    return length;
+}
+
+int snprintf(char* buffer, size_t bufsz, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vsnprintf(buffer, bufsz, format, args);
+    va_end(args);
+    return length;
+}
+
+int vsprintf(char* buffer, const char* format, va_list args)
 {
     uint32_t index = 0;
     void _putc(char c)
@@ -339,16 +348,15 @@ int sprintf(char* buffer, const char* format, ...)
         }
     }
 
-    va_list args;
-    va_start(args, format);
     int length = _printf(_putc, _puts, format, args);
-    va_end(args);
     buffer[index] = 0;
     return length;
 }
 
-int snprintf(char* buffer, size_t bufsz, const char* format, ...)
+int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args)
 {
+    if (bufsz == 0) return 0;
+
     uint32_t index = 0;
     void _putc(char c)
     {
@@ -364,11 +372,50 @@ int snprintf(char* buffer, size_t bufsz, const char* format, ...)
         }
     }
 
+    int length = _printf(_putc, _puts, format, args);
+    // if (bufsz != 0)
+    buffer[index] = 0;
+    return length;
+}
+
+int vprintf(const char* format, va_list args)
+{
+    void _putc(char c)
+    {
+        putchar(c);
+    }
+    void _puts(char* s)
+    {
+        puts(s);
+    }
+
+    return _printf(_putc, _puts, format, args);
+}
+
+int dprintf(int fd, const char *format, ...)
+{
     va_list args;
     va_start(args, format);
-    int length = _printf(_putc, _puts, format, args);
+    int length = vdprintf(fd, format, args);
     va_end(args);
-    if (bufsz != 0)
-        buffer[index] = 0;
     return length;
+}
+
+int vdprintf(int fd, const char *format, va_list args)
+{
+    void _putc(char c)
+    {
+        write(fd, &c, 1);
+    }
+    void _puts(char* s)
+    {
+        write(fd, s, strlen(s));
+    }
+
+    return _printf(_putc, _puts, format, args);
+}
+
+int scanf(const char* buffer, ...)
+{
+    
 }

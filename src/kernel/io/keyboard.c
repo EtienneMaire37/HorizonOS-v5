@@ -52,7 +52,7 @@ void keyboard_handle_character(utf32_char_t character)
         if (tasks[i].reading_stdin)
         {
             if (utf32_to_bios_oem(character) == 0) continue;
-            if (character == '\t')  continue;
+            // if (character == '\t')  continue;
             
             if (character == '\b')
             {
@@ -64,11 +64,21 @@ void keyboard_handle_character(utf32_char_t character)
             }
             else
             {
-                if (get_buffered_characters(tasks[i].input_buffer) < tasks[i].input_buffer.size - 1)
+                if (get_buffered_characters(tasks[i].input_buffer) < tasks[i].input_buffer.size - 1 - (character == '\t' ? TAB_LENGTH : 0))
                 {
-                    utf32_buffer_putchar(&tasks[i].input_buffer, character);
-                    
-                    putchar(utf32_to_bios_oem(character));
+                    if (character == '\t')
+                    {
+                        for (uint8_t j = 0; j < TAB_LENGTH; j++)
+                        {
+                            utf32_buffer_putchar(&tasks[i].input_buffer, ' ');                    
+                            putchar(' ');
+                        }
+                    }
+                    else
+                    {
+                        utf32_buffer_putchar(&tasks[i].input_buffer, character);                    
+                        putchar(utf32_to_bios_oem(character));
+                    }
                     
                     if (character == '\n')
                     {
