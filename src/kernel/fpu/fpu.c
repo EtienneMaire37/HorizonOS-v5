@@ -2,21 +2,25 @@
 
 void fpu_init()
 {
+    if (!has_fpu) return;
     asm volatile ("fninit");
 }
 
 void fpu_save_state(fpu_state_t* fpu_state)
 {
+    if (!has_fpu) return;
     asm volatile ("fsave [eax]" :: "a"(fpu_state));
 }
 
 void fpu_restore_state(fpu_state_t* fpu_state)
 {
+    if (!has_fpu) return;
     asm volatile ("frstor [eax]" :: "a"(fpu_state));
 }
 
 void fpu_state_init(fpu_state_t* fpu_state)
 {
+    if (!has_fpu) return;
     // * "Sets the FPU control, status, tag, instruction pointer, and data pointer registers to their default states. 
     // * The FPU control word is set to 037FH (round to nearest, all exceptions masked, 64-bit precision). 
     // * The status word is cleared (no exception flags set, TOP is set to 0). 
