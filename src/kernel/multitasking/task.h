@@ -17,6 +17,8 @@ struct task
     bool system_task, kernel_thread;    // system_task: cause kernel panics ////; kernel_thread: dont allocate a vas
     bool reading_stdin, was_reading_stdin;
     physical_address_t page_directory_phys;
+
+    fpu_state_t fpu_state;
 };
 
 #define TASK_STACK_BOTTOM_ADDRESS           (0xc0000000 - 0x1000)
@@ -24,7 +26,7 @@ struct task
 #define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (0xc0000000 - 2 * 0x1000)
 #define TASK_KERNEL_STACK_TOP_ADDRESS       (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 0x1000)
 
-#define MAX_TASKS 8192
+#define MAX_TASKS 256
 
 struct task tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;

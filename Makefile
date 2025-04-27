@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone # -fno-pie -fno-stack-protector -fno-builtin
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80
 DATE := `date +"%Y-%m-%d"`
 CC := ./i486elfgcc/bin/i486-elf-gcc
 LD := ./i486elfgcc/bin/i486-elf-ld
@@ -8,16 +8,12 @@ all: horizonos.iso
 run: all
 	mkdir debug -p
 	qemu-system-x86_64                           		\
-	-accel tcg,thread=single                       		\
-	-cpu core2duo                                  		\
+	-accel kvm                       					\
+	-cpu host                                  			\
 	-debugcon file:debug/${DATE}.log					\
 	-m 4096                                        		\
-	-drive format=raw,media=cdrom,file=horizonos.iso    \
-	-serial stdio                                  		\
-	-vga std 
-	# -smp 1                                         		\
-	# -usb                                           		\
-	# -d int												\
+	-hda horizonos.iso    								\
+	-smp 8                                         		
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
@@ -60,7 +56,7 @@ libc: src/libc/src/* src/libc/include/*
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 $(CFLAGS)
 libm: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS)
+	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
 
 rmbin:
 	rm -rf ./bin/*

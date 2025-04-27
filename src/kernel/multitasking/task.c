@@ -133,6 +133,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
         }
     }
 
+    fpu_state_init(&(_task->fpu_state));
+
     struct privilege_switch_interrupt_registers registers;
 
     registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
@@ -294,6 +296,8 @@ void multitasking_init()
     current_pid = 0;
     zombie_task_index = 0;
 
+    fpu_state_init(&(tasks[task_count].fpu_state));
+
     tasks[task_count].kernel_thread = true;
     tasks[task_count].pid = current_pid++;
     tasks[task_count].system_task = true;
@@ -373,6 +377,8 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
     {
         tasks[current_task_index].registers_data = **registers;
         tasks[current_task_index].registers_ptr = *registers;
+
+        fpu_save_state(&tasks[current_task_index].fpu_state);
     }
 
     uint16_t next_task_index = find_next_task_index();
@@ -407,6 +413,8 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
     }
 
     tasks[current_task_index].was_reading_stdin = false;
+
+    fpu_restore_state(&tasks[current_task_index].fpu_state);
 
     first_task_switch = false;
 }
