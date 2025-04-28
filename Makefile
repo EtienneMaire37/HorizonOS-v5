@@ -13,7 +13,7 @@ run: all
 	-debugcon file:debug/${DATE}.log					\
 	-m 4096                                        		\
 	-hda horizonos.iso    								\
-	-smp 8                                         		
+	-smp 8
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	mkdir bin -p
@@ -42,7 +42,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
 	mkdir -p ./src/tasks/bin
 	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
-	$(LD) -T src/tasks/link.ld -nostdlib --nmagic -m elf_i386 \
+	$(LD) -T src/tasks/link.ld -nostdlib -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \
     "src/libc/lib/libc.o" \

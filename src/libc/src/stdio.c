@@ -1,4 +1,5 @@
 #include "../include/math.h"
+#include "math_float_util.h"
 // #include "../src/math.c"
 
 int putchar(int c)
@@ -13,8 +14,11 @@ int puts(const char* s)
     return 1;
 }
 
-#define FLOAT_PRINT_MAX_DIGITS  18 // 34
-#define DOUBLE_PRINT_MAX_DIGITS 18 // 308
+#define DOUBLE_PRINT_MAX_DIGITS         34      // 18
+#define LONG_DOUBLE_PRINT_MAX_DIGITS    308     // 18
+
+#define DOUBLE_PRINT_LIMIT      1e-10
+#define LONG_DOUBLE_PRINT_LIMIT 1e-15
 
 int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_list args)
 {
@@ -37,7 +41,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             length++;
             return;
         }
-        int64_t div = 1000000000000000000;
+        int64_t div = 1000000000000000000ULL;
         bool first0 = true;
         while(div > 0)
         {
@@ -60,7 +64,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             length++;
             return;
         }
-        uint64_t div = 10000000000000000000;
+        uint64_t div = 10000000000000000000ULL;
         bool first0 = true;
         while(div > 0)
         {
@@ -90,6 +94,70 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             }
         }
     }
+    void printf_fld(long double val)
+    {
+        if(val < 0)
+        {
+            func('-');
+            length++;
+            val = -val;
+        }
+        if(val == 0)
+        {
+            func('0');
+            length++;
+            return;
+        }
+        bool first0 = true;
+        uint16_t digits = 0;
+        long double div = 1;
+        while (val / div >= 1) div *= 10;
+        div /= 10;
+        while(div > 1)
+        {
+            uint8_t digit = (uint8_t)fmodl(floorl(val / div), 10.L);
+            if(digit || div == 1)
+                first0 = false;
+            if(!first0)
+            {
+                func('0' + digit);
+                length++;
+            }
+            div /= 10;
+        }
+    }
+    void printf_fd(double val)
+    {
+        if(val < 0)
+        {
+            func('-');
+            length++;
+            val = -val;
+        }
+        if(val == 0)
+        {
+            func('0');
+            length++;
+            return;
+        }
+        bool first0 = true;
+        uint16_t digits = 0;
+        double div = 1;
+        while (val / div >= 1) div *= 10;
+        div /= 10;
+        while(div > 1)
+        {
+            uint8_t digit = (uint8_t)fmod(floor(val / div), 10.);
+            if(digit || div == 1)
+                first0 = false;
+            if(!first0)
+            {
+                func('0' + digit);
+                length++;
+            }
+            div /= 10;
+        }
+    }
     void printf_X(uint64_t val, uint8_t padding)
     {
         bool first0 = true;
@@ -107,6 +175,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     }
     void printf_lf(long double val)
     {
+#include "math_fmod.c"
         if (val < 0)
         {
             func('-');
@@ -130,35 +199,30 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         }
         }
 
-        uint64_t k = (uint64_t)val;
-        long double p = val - (long double)k;
-        printf_d(k);
-        if (p < 1e-10)
+        long double k = floorl(val);
+        long double p = val - k;
+        printf_fld(k);
+        if (p < LONG_DOUBLE_PRINT_LIMIT)
             return;
         func('.');
         length++;
         uint64_t mul = 10;
         uint64_t max_mul = 10;
-        // long double mul = 10, max_mul = 10;
         long double _p = p;
         uint16_t digits = 0;
-        while (_p != 0 && digits < DOUBLE_PRINT_MAX_DIGITS)
+        while (_p > LONG_DOUBLE_PRINT_LIMIT && digits < LONG_DOUBLE_PRINT_MAX_DIGITS)
         {
-            uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10);
-            _p -= digit / (long double)max_mul;
-            max_mul *= 10;
-            digits++;
-        }
-        while(mul < max_mul)
-        {
-            uint8_t digit = (uint8_t)((uint64_t)(p * mul) % 10); // ((uint8_t)fmodl(p * mul, 10));
+            uint8_t digit = (((uint8_t)floorl(_p * mul)) % 10);
             func('0' + digit);
             length++;
+            _p -= digit / (long double)mul;
             mul *= 10;
+            digits++;
         }
     }
     void printf_f(double val)
     {
+#include "math_fmod.c"
         if (val < 0)
         {
             func('-');
@@ -182,30 +246,24 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         }
         }
 
-        uint64_t k = (uint64_t)val;
-        double p = val - (double)k;
-        printf_d(k);
-        if (p < 1e-10)
+        double k = floor(val);
+        double p = val - k;
+        printf_fd(k);
+        if (p < DOUBLE_PRINT_LIMIT)
             return;
         func('.');
         length++;
         uint64_t mul = 10;
-        uint64_t max_mul = 10;
         double _p = p;
         uint8_t digits = 0;
-        while (_p != 0 && digits < FLOAT_PRINT_MAX_DIGITS)
+        while (_p > DOUBLE_PRINT_LIMIT && digits < DOUBLE_PRINT_MAX_DIGITS)
         {
-            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
-            _p -= digit / (long double)max_mul;
-            max_mul *= 10;
-            digits++;
-        }
-        while(mul < max_mul)
-        {
-            uint8_t digit = ((uint8_t)((uint64_t)(p * mul) % 10));
+            uint8_t digit = (((uint8_t)floor(_p * mul)) % 10);
             func('0' + digit);
             length++;
+            _p -= digit / (double)mul;
             mul *= 10;
+            digits++;
         }
     }
 
@@ -417,5 +475,5 @@ int vdprintf(int fd, const char *format, va_list args)
 
 int scanf(const char* buffer, ...)
 {
-    
+
 }

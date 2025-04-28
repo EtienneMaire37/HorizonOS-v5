@@ -211,6 +211,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     }
 
     cpuid_highest_function_parameter = 0xffffffff;
+    has_cpuid = true;
     uint32_t ebx, ecx, edx;
     cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
 
@@ -397,7 +398,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initializing multitasking");
 
-    fpu_init();
+    // fpu_init();  // ^ No need to call it another time
 
     multitasking_init();
 

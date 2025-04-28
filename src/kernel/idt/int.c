@@ -38,7 +38,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     halt();
 }
 
-#define return_from_isr() { if (flush_tlb) current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; }
+#define return_from_isr() do { if (flush_tlb) current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; } while(0)
 
 uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_registers* registers)
 {
@@ -53,6 +53,12 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
     {
         LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
 
+        if (registers->interrupt_number == 6 && *((uint16_t*)registers->eip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
+        {
+            has_cpuid = false;
+            return_from_isr();
+        }
+        
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
             kernel_panic(registers);

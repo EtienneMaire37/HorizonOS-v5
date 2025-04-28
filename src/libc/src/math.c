@@ -4,7 +4,75 @@ extern int errno;
 // #include "../include/inttypes.h"
 #include <stdint.h>
 
-#define BIN_SEARCH_PRECISION    .00000000001
+#include "math_float_util.h"
+#include "math_fmod.c"
+
+double trunc(double x)
+{
+    if (isnan(x) || isinf(x)) return x;
+    
+    uint64_t sign, mantissa;
+    int64_t exponent;
+    DECOMPOSE_DOUBLE(x, sign, exponent, mantissa);
+
+    const int64_t precision_bits = 52;
+    const int64_t shift = precision_bits - (exponent - 1023);
+    
+    if (shift <= 0) return x;
+    if (shift > 53) return copysign(0., x);
+    
+    uint64_t mask = ~((1ULL << shift) - 1);
+    uint64_t truncated = mantissa & mask;
+    
+    double result;
+    RECOMPOSE_DOUBLE(sign, exponent, truncated, result);
+    return result;
+}
+
+float truncf(float x)
+{
+    if (isnan(x) || isinf(x)) return x;
+    
+    uint32_t sign, mantissa;
+    int32_t exponent;
+    DECOMPOSE_FLOAT(x, sign, exponent, mantissa);
+
+    const int32_t precision_bits = 23;
+    const int32_t shift = precision_bits - (exponent - 127);
+    
+    if (shift <= 0) return x;
+    if (shift > 24) return copysignf(0.f, x);
+    
+    uint32_t mask = ~((1U << shift) - 1);
+    uint32_t truncated = mantissa & mask;
+    
+    float result;
+    RECOMPOSE_FLOAT(sign, exponent, truncated, result);
+    return result;
+}
+
+long double truncl(long double x)
+{
+    if (isnan(x) || isinf(x)) return x;
+    
+    uint16_t sign;
+    int32_t exponent;
+    uint64_t mantissa;
+    DECOMPOSE_LONG_DOUBLE(x, sign, exponent, mantissa);
+
+    const int32_t precision_bits = 63;
+    const int32_t shift = precision_bits - (exponent - 16383);
+    
+    if (shift <= 0) return x;
+    if (shift > 64) return copysignl(0.L, x);
+    
+    uint64_t mask = ~((1ULL << shift) - 1);
+    uint64_t truncated = mantissa & mask;
+    
+    long double result;
+    RECOMPOSE_LONG_DOUBLE(sign, exponent, truncated, result);
+    return result;
+}
 
 double fabs(double x)
 {
@@ -19,23 +87,34 @@ long double fabsl(long double x)
     return x < 0 ? -x : x;
 }
 
-double fmod(double a, double b)
+double round(double x)
 {
-    while (a >= b || a < 0)
-        a += b * (a < 0 ? 1 : -1);
-    return a;
+    double t = trunc(x);
+    double frac = x - t;
+    
+    if (fabs(frac) >= 0.5)
+        return t + copysign(1.0, x);
+    return t;
 }
-float fmodf(float a, float b)
+
+float roundf(float x)
 {
-    while (a >= b || a < 0)
-        a += b * (a < 0 ? 1 : -1);
-    return a;
+    float t = truncf(x);
+    float frac = x - t;
+    
+    if (fabsf(frac) >= 0.5f)
+        return t + copysignf(1.0f, x);
+    return t;
 }
-long double fmodl(long double a, long double b)
+
+long double roundl(long double x)
 {
-    while (a >= b || a < 0)
-        a += b * (a < 0 ? 1 : -1);
-    return a;
+    long double t = truncl(x);
+    long double frac = x - t;
+    
+    if (fabsl(frac) >= 0.5L)
+        return t + copysignl(1.0L, x);
+    return t;
 }
 
 double intpow(double a, int64_t b)
@@ -128,8 +207,6 @@ long double exp2l(long double x)
     return powl(2, x);
 }
 
-#define LOG_HALLEY_ITERATIONS   17
-
 double log(double x)
 {
     if (x < 0 || x == -INFINITY)
@@ -143,63 +220,66 @@ double log(double x)
         return -HUGE_VAL;
     }
     if (x == INFINITY)
-    {
         return x;
-    }
+    
+    int e;
+    double m = frexp(x, &e);
 
-    double y = 1;
-    uint8_t iterations = LOG_HALLEY_ITERATIONS;
-    for (uint8_t i = 0; i < iterations; i++)
-        y += 2 * (x - exp(y)) / (x + exp(y));
-    return y;
+    double y = (m - 1.0) / (m + 1.0) * 2.88927 + 0.96167;   // Initial approximation
+
+    for (uint8_t i = 0; i < 6; i++)
+        y += 2 * (m - exp(y)) / (m + exp(y));
+    return y + e * M_LN2;
 }
 
 float logf(float x)
 {
-    if (x < 0 || x == -INFINITY)
+    if (x < 0.f || x == -INFINITY)
     {
         errno = EDOM;
         return NAN;
     }
-    if (x == 0. || x == -0.)
+    if (x == 0.f || x == -0.f)
     {
         errno = ERANGE;
         return -HUGE_VALF;
     }
     if (x == INFINITY)
-    {
         return x;
-    }
+    
+    int e;
+    float m = frexpf(x, &e);
 
-    float y = 1;
-    uint8_t iterations = LOG_HALLEY_ITERATIONS;
-    for (uint8_t i = 0; i < iterations; i++)
-        y += 2 * (x - expf(y)) / (x + expf(y));
-    return y;
+    float y = (m - 1.0f) / (m + 1.0f) * 2.88927f + 0.96167f;
+
+    for (uint8_t i = 0; i < 6; i++)
+        y += 2 * (m - expf(y)) / (m + expf(y));
+    return y + e * (float)M_LN2;
 }
 
 long double logl(long double x)
 {
-    if (x < 0 || x == -INFINITY)
+    if (x < 0.L || x == -INFINITY)
     {
         errno = EDOM;
         return NAN;
     }
-    if (x == 0. || x == -0.)
+    if (x == 0.L || x == -0.L)
     {
         errno = ERANGE;
         return -HUGE_VALL;
     }
     if (x == INFINITY)
-    {
         return x;
-    }
+    
+    int e;
+    long double m = frexpl(x, &e);
 
-    long double y = 1;
-    uint8_t iterations = LOG_HALLEY_ITERATIONS;
-    for (uint8_t i = 0; i < iterations; i++)
-        y += 2 * (x - expl(y)) / (x + expl(y));
-    return y;
+    long double y = (m - 1.0L) / (m + 1.0L) * 2.88927L + 0.96167L;
+
+    for (uint8_t i = 0; i < 6; i++)
+        y += 2 * (m - expl(y)) / (m + expl(y));
+    return y + e * (long double)M_LN2;
 }
 
 double pow(double a, double b)
@@ -369,18 +449,71 @@ double sqrt(double x)
         double mid2 = mid * mid;
         if (mid2 < x)
         {
-            xmin = mid + BIN_SEARCH_PRECISION;
+            xmin = mid + .000000000000000001;
         }
         else if (mid2 > x)
         {
-            xmax = mid - BIN_SEARCH_PRECISION;
+            xmax = mid - .000000000000000001;
         }
     }
     return xmin;
 }
 
-// float sqrtf(float x);
-// long double sqrtl(long double x);
+float sqrtf(float x)
+{
+    if (x < -0.f)
+    {
+        errno = EDOM;
+        return NAN;
+    }
+    if (x == 0) return 0;
+    if (x == 1) return 1;
+    double xmin, xmax;
+    if (x > 1) { xmin = 0; xmax = x; }
+    else       { xmin = x; xmax = 1; }
+    while (xmin < xmax)
+    {
+        double mid = (xmin + xmax) * .5;
+        double mid2 = mid * mid;
+        if (mid2 < x)
+        {
+            xmin = mid + .0000000000000001f;
+        }
+        else if (mid2 > x)
+        {
+            xmax = mid - .0000000000000001f;
+        }
+    }
+    return xmin;
+}
+
+long double sqrtl(long double x)
+{
+    if (x < -0.L)
+    {
+        errno = EDOM;
+        return NAN;
+    }
+    if (x == 0) return 0;
+    if (x == 1) return 1;
+    double xmin, xmax;
+    if (x > 1) { xmin = 0; xmax = x; }
+    else       { xmin = x; xmax = 1; }
+    while (xmin < xmax)
+    {
+        double mid = (xmin + xmax) * .5;
+        double mid2 = mid * mid;
+        if (mid2 < x)
+        {
+            xmin = mid + .00000000000000000001L;
+        }
+        else if (mid2 > x)
+        {
+            xmax = mid - .00000000000000000001L;
+        }
+    }
+    return xmin;
+}
 
 double sinh(double x)
 {

@@ -60,5 +60,5 @@ int printf_log(const char* format, ...)
         system_thousands / 100, (system_thousands / 10) % 10, system_thousands % 10, level_text); \
         else printf_log("0000-00-00 \t 00:00:00,000 \t %s \t", level_text); \
         printf_log(__VA_ARGS__); printf_log("\n"); }
-#define LOG(level, ...)                 { if (LOG_LEVEL <= level) { _LOG(LOG_LEVEL_STR[level], __VA_ARGS__) } }
+#define LOG(level, ...)                 do { if (LOG_LEVEL <= level) { _LOG(LOG_LEVEL_STR[level], __VA_ARGS__) } } while(0)
 #endif
