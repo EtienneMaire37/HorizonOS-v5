@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -Wall -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80
 DATE := `date +"%Y-%m-%d"`
 CC := ./i486elfgcc/bin/i486-elf-gcc
 LD := ./i486elfgcc/bin/i486-elf-ld

@@ -37,6 +37,7 @@ HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and rea
 - Complete (or near complete) libc and libstdc++ implementations
 - Porting GCC, Make, and other third-party software
 - GPU drivers (NVIDIA, AMD and Intel)
+- AC97 audio support
 
 ## Building HorizonOS 🛠️
 
