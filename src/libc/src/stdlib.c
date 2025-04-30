@@ -1,3 +1,5 @@
+#include <limits.h>
+
 uint32_t rand_next = 1;
 
 int rand()
@@ -74,16 +76,158 @@ int atexit(void (*function)(void))
     return 0;
 }
 
-// void exit(int r)
-// {
-//     for (uint8_t i = 0; i < atexit_stack_length; i++)
-//         if (atexit_stack[atexit_stack_length - i - 1] != NULL)
-//             atexit_stack[atexit_stack_length - i - 1]();
+int isdigit(int c)
+{
+    return (c >= '0' && c <= '9');
+}
 
-//     asm volatile("int 0xff" : 
-//         : "a" (0), "b" (r));
-//     while(1);
-// }
+int isspace(int c)
+{
+    return (c == ' ' || c == '\t' || c == '\n' || 
+            c == '\v' || c == '\f' || c == '\r');
+}
+
+int isalpha(int c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+int tolower(int c)
+{
+    if (c >= 'A' && c <= 'Z')
+        return c + ('a' - 'A');
+    return c;
+}
+
+int toupper(int c)
+{
+    if (c >= 'a' && c <= 'z')
+        return c - ('a' - 'A');
+    return c;
+}
+
+long strtol(const char* nptr, char** endptr, int base) 
+{
+    const char *s = nptr;
+    long result = 0;
+    int neg = 0;
+    int overflow = 0;
+    int any_digits = 0;
+    long cutoff;
+    int cutlim;
+
+    while (isspace((unsigned char)*s))
+        s++;
+
+    if (*s == '-') 
+    {
+        neg = 1;
+        s++;
+    } 
+    else if (*s == '+')
+        s++;
+
+    if (base == 0) 
+    {
+        if (*s == '0') 
+        {
+            if (s[1] == 'x' || s[1] == 'X') 
+            {
+                base = 16;
+                s += 2;
+            } 
+            else 
+            {
+                base = 8;
+                s++;
+            }
+        } 
+        else 
+        {
+            base = 10;
+        }
+    } 
+    else if (base == 16) 
+    {
+        if (*s == '0' && (s[1] == 'x' || s[1] == 'X'))
+            s += 2;
+    }
+
+    if (base < 2 || base > 36) 
+    {
+        if (endptr != NULL) 
+            *endptr = (char *)nptr;
+        errno = EINVAL;
+        return 0;
+    }
+
+    cutoff = neg ? LONG_MIN / base : LONG_MAX / base;
+    cutlim = neg ? -(LONG_MIN % base) : LONG_MAX % base;
+
+    while(true)
+    {
+        int c = (unsigned char)*s;
+        int digit;
+
+        if (isdigit(c)) 
+            digit = c - '0';
+        else if (isalpha(c)) 
+            digit = tolower(c) - 'a' + 10;
+        else
+            break; 
+
+        if (digit >= base)
+            break;
+
+        any_digits = 1;
+
+        if (neg) 
+        {
+            if (result < cutoff || (result == cutoff && digit > cutlim)) 
+            {
+                overflow = 1;
+                break;
+            }
+            result = result * base - digit;
+        } 
+        else 
+        {
+            if (result > cutoff || (result == cutoff && digit > cutlim)) 
+            {
+                overflow = 1;
+                break;
+            }
+            result = result * base + digit;
+        }
+        s++;
+    }
+
+    if (!any_digits) 
+    {
+        if (endptr != NULL) 
+            *endptr = (char *)nptr;
+        errno = EINVAL;
+        return 0;
+    }
+
+    if (overflow) 
+    {
+        errno = ERANGE;
+        result = neg ? LONG_MIN : LONG_MAX;
+    } 
+    else if (neg) 
+        result = -result;
+
+    if (endptr != NULL) 
+        *endptr = (char *)s;
+
+    return result;
+}
+
+int atoi(const char* str)
+{
+    return (int)strtol(str, (char**)NULL, 10);
+}
 
 void abort()
 {

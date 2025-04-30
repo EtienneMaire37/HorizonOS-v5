@@ -58,7 +58,7 @@ void keyboard_handle_character(utf32_char_t character)
             {
                 if (!no_buffered_characters(tasks[i].input_buffer))
                 {
-                    putchar(utf32_to_bios_oem('\b'));
+                    putchar('\b');
                     utf32_buffer_getchar(&tasks[i].input_buffer);
                 }
             }

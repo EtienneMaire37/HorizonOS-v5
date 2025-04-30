@@ -2,9 +2,16 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
 
 #include <horizonos.h>
+
+void flush_stdin()
+{
+    // ...
+}
 
 int main()
 {
@@ -12,8 +19,9 @@ int main()
     printf("Please enter your preferred keyboard layout:\n");
     printf("1: us_qwerty      2: fr_azerty\n");
     printf("->");
-    uint8_t kb_layout_choice = 0;
     char kb_layout_choice_str[2] = { 0 };
-    scanf("%1[1-9]", &kb_layout_choice);
+    read(STDIN_FILENO, &kb_layout_choice_str[0], 1);
+    uint8_t kb_layout_choice = atoi(kb_layout_choice_str);
+    flush_stdin();
     return 0;
 }
