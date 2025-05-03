@@ -473,7 +473,20 @@ int vdprintf(int fd, const char *format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
-int scanf(const char* buffer, ...)
+int getchar()
 {
+    static unsigned char buffer[BUFSIZ];
+    static size_t start = 0, end = 0;
+    ssize_t bytes_read;
 
+    if (start >= end) 
+    {
+        bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer));
+        if (bytes_read <= 0) 
+            return EOF; 
+        start = 0;
+        end = (size_t)bytes_read;
+    }
+
+    return (int)buffer[start++];
 }

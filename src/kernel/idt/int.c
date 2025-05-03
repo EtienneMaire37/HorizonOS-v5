@@ -45,10 +45,10 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     } call_frame_t;
 
     call_frame_t* ebp = (call_frame_t*)registers->ebp;
-    while ((uint32_t)ebp != 0 && (uint32_t)ebp != stack_top)
+    while ((uint32_t)ebp->ebp != 0 && (uint32_t)ebp->ebp != stack_top)
     {
-        printf("ebp : 0x%x\n", ebp);
-        LOG(DEBUG, "ebp : 0x%x", ebp);
+        printf("eip : 0x%x\n", ebp->eip);
+        LOG(DEBUG, "eip : 0x%x", ebp->eip);
         ebp = ebp->ebp;
     }
 

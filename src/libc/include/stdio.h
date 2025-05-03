@@ -54,4 +54,4 @@ int snprintf(char* buffer, size_t bufsz, const char* format, ...);
 int vsprintf(char* buffer, const char* format, va_list args);
 int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args);
 
-int scanf(const char* buffer, ...);
+int getchar();
