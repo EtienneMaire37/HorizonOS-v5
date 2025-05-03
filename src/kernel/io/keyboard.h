@@ -73,9 +73,11 @@ static const uint8_t extended_numlock_map[256] =
     [0x71] = 0x71,   // Delete → Numpad .
 };
 
-keyboard_layout_t current_keyboard_layout;  // TODO: Make it so we can have one layout per keyboard
+keyboard_layout_t* current_keyboard_layout;  // TODO: Make it so we can have one layout per keyboard
 
-const keyboard_layout_t us_qwerty = 
+#define NUM_KB_LAYOUTS  2
+
+keyboard_layout_t us_qwerty = 
 {
     .ps2_layout_data = 
     {
@@ -182,7 +184,7 @@ const keyboard_layout_t us_qwerty =
     }
 };
 
-const keyboard_layout_t fr_azerty = 
+keyboard_layout_t fr_azerty = 
 {
     .ps2_layout_data = 
     {
@@ -276,6 +278,12 @@ const keyboard_layout_t fr_azerty =
             [0x22] = U'×',        [0x2A] = U'√',        [0x1A] = U'Ω',
         }
     }
+};
+
+keyboard_layout_t* keyboard_layouts[NUM_KB_LAYOUTS] = 
+{
+    &us_qwerty,
+    &fr_azerty
 };
 
 #define get_buffered_characters(buffer) imod(((int)(buffer).put_index - (buffer).get_index), (buffer).size)

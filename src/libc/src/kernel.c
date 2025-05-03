@@ -36,6 +36,8 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
         return -1;
     }
 
+    if (nbyte == 0) return 0;
+
     switch(fildes)
     {
     case STDIN_FILENO:

@@ -10,6 +10,7 @@
 #include "../include/string.h"
 #include "../include/errno.h"
 #include "../include/sys/types.h"
+#include "../include/horizonos.h"
 
 #include "kernel_glue.h"
 
@@ -22,3 +23,4 @@
 #include "crt0.c"
 
 #include "kernel_glue.c"
+#include "horizonos.c"

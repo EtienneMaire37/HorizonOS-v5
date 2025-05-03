@@ -142,8 +142,8 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     registers.ss = registers.ds;
 
     registers.eflags = 0x200; // Interrupts enabled (bit 9)
-    registers.ebp = TASK_STACK_TOP_ADDRESS;
-    registers.esp = registers.ebp;
+    registers.ebp = 0;
+    registers.esp = TASK_STACK_TOP_ADDRESS;
     registers.handled_esp = registers.esp - 0x2c - 8;   // 8 for the user's ss and esp
 
     _task->registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct privilege_switch_interrupt_registers));
@@ -316,10 +316,10 @@ void multitasking_init()
     tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
 
     tasks[task_count].registers_data.eflags = 0x200;
-    tasks[task_count].registers_data.ebp = TASK_STACK_TOP_ADDRESS;
+    tasks[task_count].registers_data.ebp = 0;
 
     tasks[task_count].registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
-    tasks[task_count].registers_data.handled_esp = tasks[task_count].registers_data.ebp - 0x2c;
+    tasks[task_count].registers_data.handled_esp = TASK_STACK_TOP_ADDRESS - 0x2c;
     
     tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
     tasks[task_count].registers_data.esi = tasks[task_count].registers_data.edi = 0;

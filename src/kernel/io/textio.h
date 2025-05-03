@@ -25,14 +25,14 @@
 #define BG_MAGENTA       0x50
 #define BG_BROWN         0x60
 #define BG_LIGHTGRAY     0x70
-#define BG_DARKGRAY      0x80
+// #define BG_DARKGRAY      0x80
 // #define BG_LIGHTBLUE     0x90
 // #define BG_LIGHTGREEN    0xa0
 // #define BG_LIGHTCYAN     0xb0
 // #define BG_LIGHTRED      0xc0
 // #define BG_LIGHTMAGENTA  0xd0
-#define BG_YELLOW        0xe0
-#define BG_WHITE         0xf0
+// #define BG_YELLOW        0xe0
+// #define BG_WHITE         0xf0
 
 #define TAB_LENGTH       4
 

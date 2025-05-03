@@ -220,7 +220,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     manufacturer_id_string[11] = ecx >> 24; manufacturer_id_string[10] = (ecx >> 16) & 0xff; manufacturer_id_string[9] = (ecx >> 8) & 0xff; manufacturer_id_string[8] = ecx & 0xff;
     manufacturer_id_string[12] = 0;
     
-    current_keyboard_layout = us_qwerty; // fr_azerty
+    current_keyboard_layout = &us_qwerty;
 
     LOG(INFO, "CPU manufacturer string : %s", manufacturer_id_string);
     printf("CPU manufacturer string : %s\n", manufacturer_id_string);

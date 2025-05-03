@@ -75,11 +75,11 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
     else 
     {
         base_char = scancode.extended 
-            ? current_keyboard_layout.ps2_layout_data.char_table_e0[scancode.scancode]
-            : current_keyboard_layout.ps2_layout_data.char_table[scancode.scancode];
+            ? current_keyboard_layout->ps2_layout_data.char_table_e0[scancode.scancode]
+            : current_keyboard_layout->ps2_layout_data.char_table[scancode.scancode];
     }
 
-    utf32_char_t shifted_char = current_keyboard_layout.ps2_layout_data.char_table_shift[scancode.scancode];
+    utf32_char_t shifted_char = current_keyboard_layout->ps2_layout_data.char_table_shift[scancode.scancode];
     
     if (is_keypad) 
     {
@@ -94,7 +94,7 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
 
     if (altgr) 
     {
-        utf32_char_t altgr_char = current_keyboard_layout.ps2_layout_data.char_table_altgr[scancode.scancode];
+        utf32_char_t altgr_char = current_keyboard_layout->ps2_layout_data.char_table_altgr[scancode.scancode];
         if (altgr_char != 0) return altgr_char;
     }
 
@@ -136,7 +136,7 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
                 ps2_keyboard_state_e0[current_ps2_keyboard_scancodes[port_index].scancode] |= (1 << port_index);
             else
                 ps2_keyboard_state[current_ps2_keyboard_scancodes[port_index].scancode] |= (1 << port_index);
-            virtual_key_t vk = current_ps2_keyboard_scancodes[port_index].extended ? current_keyboard_layout.ps2_layout_data.vk_table_e0[current_ps2_keyboard_scancodes[port_index].scancode] : current_keyboard_layout.ps2_layout_data.vk_table[current_ps2_keyboard_scancodes[port_index].scancode];
+            virtual_key_t vk = current_ps2_keyboard_scancodes[port_index].extended ? current_keyboard_layout->ps2_layout_data.vk_table_e0[current_ps2_keyboard_scancodes[port_index].scancode] : current_keyboard_layout->ps2_layout_data.vk_table[current_ps2_keyboard_scancodes[port_index].scancode];
             if (!current_ps2_keyboard_scancodes[port_index].release)
             {
                 switch (vk)
@@ -171,12 +171,12 @@ bool ps2_kb_is_key_pressed_with_port(virtual_key_t vk, uint8_t port)  // Port of
 
     for (uint16_t i = 0; i < 256; i++)
     {
-        if ((current_keyboard_layout.ps2_layout_data.vk_table[i] == vk) && (ps2_keyboard_state[i] & (1 << (port - 1))))
+        if ((current_keyboard_layout->ps2_layout_data.vk_table[i] == vk) && (ps2_keyboard_state[i] & (1 << (port - 1))))
             return true;
     }
     for (uint16_t i = 0; i < 256; i++)
     {
-        if ((current_keyboard_layout.ps2_layout_data.vk_table_e0[i] == vk) && (ps2_keyboard_state_e0[i] & (1 << (port - 1))))
+        if ((current_keyboard_layout->ps2_layout_data.vk_table_e0[i] == vk) && (ps2_keyboard_state_e0[i] & (1 << (port - 1))))
             return true;
     }
     return false;
@@ -186,12 +186,12 @@ bool ps2_kb_is_key_pressed(virtual_key_t vk)
 {
     for (uint16_t i = 0; i < 256; i++)
     {
-        if ((current_keyboard_layout.ps2_layout_data.vk_table[i] == vk) && (ps2_keyboard_state[i] & 0b11))
+        if ((current_keyboard_layout->ps2_layout_data.vk_table[i] == vk) && (ps2_keyboard_state[i] & 0b11))
             return true;
     }
     for (uint16_t i = 0; i < 256; i++)
     {
-        if ((current_keyboard_layout.ps2_layout_data.vk_table_e0[i] == vk) && (ps2_keyboard_state_e0[i] & 0b11))
+        if ((current_keyboard_layout->ps2_layout_data.vk_table_e0[i] == vk) && (ps2_keyboard_state_e0[i] & 0b11))
             return true;
     }
     return false;

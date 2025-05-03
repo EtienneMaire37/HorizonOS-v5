@@ -4,26 +4,26 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 {
     disable_interrupts();
 
-    tty_color = BG_BLUE;
+    tty_color = BG_BLACK;
     tty_clear_screen(' ');
 
-    tty_cursor = 4 + 2 * 80;
+    tty_cursor = 0;
     tty_update_cursor();
-    tty_hide_cursor();
+    // tty_hide_cursor();
 
-    tty_color = (FG_RED | BG_BLUE);
-    printf("Kernel panic\n\n\t");
+    tty_color = (FG_RED | BG_BLACK);
+    printf("Kernel panic\n\n");
 
-    tty_color = (FG_WHITE | BG_BLUE);
+    tty_color = (FG_WHITE | BG_BLACK);
 
-    printf("Exception number: %u\n\n\t", registers->interrupt_number);
-    printf("Error:       %s\n\t", get_error_message(registers->interrupt_number, registers->error_code));
-    printf("Error code:  0x%x\n\n\t", registers->error_code);
+    printf("Exception number: %u\n", registers->interrupt_number);
+    printf("Error:       %s\n", get_error_message(registers->interrupt_number, registers->error_code));
+    printf("Error code:  0x%x\n\n", registers->error_code);
 
     if (registers->interrupt_number == 14)
     {
-        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n\t", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
-        printf("cr3:  0x%x\n\t", registers->cr3);
+        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
+        printf("cr3:  0x%x\n", registers->cr3);
 
         uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (registers->cr2 >> 22));
         
@@ -33,6 +33,23 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
         {
             LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         }
+    }
+
+    printf("Stack trace : \n");
+    LOG(DEBUG, "Stack trace : ");
+
+    typedef struct call_frame
+    {
+        struct call_frame* ebp;
+        uint32_t eip;
+    } call_frame_t;
+
+    call_frame_t* ebp = (call_frame_t*)registers->ebp;
+    while ((uint32_t)ebp != 0 && (uint32_t)ebp != stack_top)
+    {
+        printf("ebp : 0x%x\n", ebp);
+        LOG(DEBUG, "ebp : 0x%x", ebp);
+        ebp = ebp->ebp;
     }
 
     halt();
@@ -120,20 +137,19 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
     if (registers->interrupt_number == 0xff)  // System call
     {
         // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
+        if (!multitasking_enabled) return_from_isr();
+
         uint16_t old_index;
         switch (registers->eax)
         {
         case SYSCALL_EXIT:     // exit
-            if (multitasking_enabled)
+            LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+            if (zombie_task_index != 0)
             {
-                LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
-                if (zombie_task_index != 0)
-                {
-                    LOG(CRITICAL, "Tried to kill several tasks at once");
-                    abort();
-                }
-                zombie_task_index = current_task_index;
+                LOG(CRITICAL, "Tried to kill several tasks at once");
+                abort();
             }
+            zombie_task_index = current_task_index;
             break;
         case SYSCALL_TIME:     // time
             registers->eax = ktime(NULL);
@@ -149,6 +165,11 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 if (registers->ebx == STDIN_FILENO)
                 {
                     registers->ebx = 0;
+                    if (registers->edx == 0)
+                    {
+                        registers->eax = 0;
+                        break;
+                    }
                     if (no_buffered_characters(tasks[current_task_index].input_buffer))
                     {
                         tasks[current_task_index].reading_stdin = true;
@@ -267,14 +288,25 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             } 
             break;
 
-        default:
-            if (multitasking_enabled)
+        case SYSCALL_FLUSH_INPUT_BUFFER:
+            utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
+            break;
+
+        case SYSCALL_SET_KB_LAYOUT:
+            if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
             {
-                LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
-                old_index = current_task_index;
-                switch_task(&registers, &flush_tlb, &iret_cr3);
-                task_kill(old_index);
+                current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
+                registers->eax = 1;
             }
+            else
+                registers->eax = 0;
+            break;
+
+        default:
+            LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
+            old_index = current_task_index;
+            switch_task(&registers, &flush_tlb, &iret_cr3);
+            task_kill(old_index);
         }            
     }
 
