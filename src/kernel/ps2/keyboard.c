@@ -25,9 +25,19 @@ void ps2_kb_get_scancode_set()
         ps2_kb_2_scancode_set = 0xff;
 }
 
+void ps2_kb_set_typematic()
+{
+    if (PS2_DEVICE_1_KB)
+        ps2_send_device_full_command_with_data(1, PS2_KB_SET_TYPEMATIC_BYTE, 0, 1); // 250ms before keys repeat, 30hz repeat
+
+    if (PS2_DEVICE_2_KB)
+        ps2_send_device_full_command_with_data(2, PS2_KB_SET_TYPEMATIC_BYTE, 0, 1); // Same
+}
+
 void ps2_init_keyboards()
 {
     ps2_kb_get_scancode_set();
+    ps2_kb_set_typematic();
 
     if (PS2_DEVICE_1_KB)
     {
