@@ -29,3 +29,5 @@ int atoi(const char* str);
 void abort(void);
 long strtol(const char* nptr, char** endptr, int base);
 int atoi(const char* str);
+
+#include "../src/liballoc.h"

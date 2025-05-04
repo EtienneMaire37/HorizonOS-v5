@@ -27,7 +27,7 @@ void pfa_detect_usable_memory()
             addr = kernel_end_phys;
         }
 
-        uint32_t align = addr % 0x1000;
+        uint32_t align = addr & 0xfff;
         if (align != 0) 
         {
             uint32_t adjust = 0x1000 - align;
@@ -121,7 +121,7 @@ void pfa_bitmap_init()
         }
 
         uint32_t byte_idx = page_index / 8;
-        uint8_t bit_idx = page_index % 8;
+        uint8_t bit_idx = page_index & 0b111;
         ((uint8_t*)bitmap_virt)[byte_idx] |= (1 << bit_idx);
     }
 
@@ -205,7 +205,7 @@ void pfa_free_physical_page(physical_address_t address)
     }
 
     uint32_t byte_idx = page_index / 8;
-    uint8_t bit_idx = page_index % 8;
+    uint8_t bit_idx = page_index & 0b111;
     ((uint8_t*)physical_address_to_virtual(usable_memory_map[0].address))[byte_idx] &= ~(1 << bit_idx);
 
     memory_allocated -= 0x1000;

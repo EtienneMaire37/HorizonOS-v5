@@ -22,5 +22,8 @@
 #include "arithmetic.c"
 #include "crt0.c"
 
+#include "liballoc_hooks.c"
+#include "liballoc.c"
+
 #include "kernel_glue.c"
 #include "horizonos.c"
