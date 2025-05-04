@@ -2,6 +2,7 @@ CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields
 DATE := `date +"%Y-%m-%d"`
 CC := ./i486elfgcc/bin/i486-elf-gcc
 LD := ./i486elfgcc/bin/i486-elf-ld
+AR := ./i486elfgcc/bin/i486-elf-ar
 
 all: horizonos.iso
 
@@ -54,11 +55,11 @@ src/libc/lib/libm.o: libm
 libc: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 $(CFLAGS)
-	ar rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
+	$(AR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 libm: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
-	ar rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
+	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 rmbin:
 	rm -rf ./bin/*
