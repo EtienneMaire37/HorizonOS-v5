@@ -479,7 +479,7 @@ int getchar()
     static size_t start = 0, end = 0;
     ssize_t bytes_read;
 
-    if (start >= end) 
+    if (start >= end)
     {
         bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer));
         if (bytes_read <= 0) 

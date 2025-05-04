@@ -70,5 +70,12 @@ pid_t getpid()
 
 pid_t fork()
 {
+    errno = ENOMEM; // ...
     return (pid_t)-1;
+}
+
+int brk(void *addr)
+{
+    errno = ENOMEM;
+    return -1;
 }

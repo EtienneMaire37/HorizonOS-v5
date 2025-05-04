@@ -288,6 +288,72 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             } 
             break;
 
+        case SYSCALL_BRK_ALLOC:
+            {
+                if (registers->ebx & 0xfff)
+                {
+                    registers->eax = 0;
+                    break;
+                }
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * layout.page_directory_entry);
+                physical_address_t pt_address;
+                if (!(pde & 1))
+                {
+                    pt_address = pfa_allocate_physical_page();
+                    physical_init_page_table(pt_address);
+                    physical_add_page_table(tasks[current_task_index].page_directory_phys, 
+                                            layout.page_directory_entry, 
+                                            pt_address, 
+                                            PAGING_USER_LEVEL, 
+                                            true);
+                }
+                else
+                    pt_address = (physical_address_t)pde & 0xfffff000;
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                if (!(pte & 1))
+                {
+                    physical_set_page(      pt_address, 
+                                            layout.page_table_entry, 
+                                            pfa_allocate_physical_page(), 
+                                            PAGING_USER_LEVEL, 
+                                            true);
+                    registers->eax = 1;
+                }
+                else
+                    registers->eax = 0;
+            }
+            break;
+
+        case SYSCALL_BRK_FREE:
+            {
+                if (registers->ebx & 0xfff)
+                {
+                    registers->eax = 0;
+                    break;
+                }
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].page_directory_phys + 4 * layout.page_directory_entry);
+                if (!(pde & 1))
+                {
+                    registers->eax = 0;
+                    break;
+                }                
+                physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                if (!(pte & 1))
+                {
+                    registers->eax = 0;
+                }
+                else
+                {
+                    pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
+                    physical_remove_page(pt_address, layout.page_table_entry);
+                    registers->eax = 1;
+                }
+            }
+            break;
+
         case SYSCALL_FLUSH_INPUT_BUFFER:
             utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
             break;

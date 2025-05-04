@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <stdint.h>
+// #include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
@@ -26,7 +26,7 @@ int main()
         kb_layout_choice = atoi(kb_layout_choice_str);
         flush_stdin();
     }
-    
+
     if (set_kb_layout(kb_layout_choice))
         printf("Successfully set keyboard layout to : %s\n", kb_layouts[kb_layout_choice - 1]);
     else
