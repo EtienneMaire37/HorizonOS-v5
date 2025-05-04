@@ -24,7 +24,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
 	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3
-	$(LD) -T src/kernel/link.ld 
+	$(LD) -T src/kernel/link.ld "src/libc/lib/libm.a"
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
@@ -45,8 +45,8 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
 	$(LD) -T src/tasks/link.ld -nostdlib -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \
-    "src/libc/lib/libc.o" \
-    "src/libc/lib/libm.o"
+    "src/libc/lib/libc.a" \
+    "src/libc/lib/libm.a"
 
 src/libc/lib/libc.o: libc
 src/libc/lib/libm.o: libm
@@ -54,9 +54,11 @@ src/libc/lib/libm.o: libm
 libc: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 $(CFLAGS)
+	ar rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 libm: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
+	ar rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 rmbin:
 	rm -rf ./bin/*

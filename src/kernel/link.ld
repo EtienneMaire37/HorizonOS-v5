@@ -7,7 +7,6 @@ INPUT
 	"bin/gdt.o"
 	"bin/idt.o" 
 	"bin/paging.o"
-    "src/libc/lib/libm.o"
 )
 
 OUTPUT_FORMAT(elf32-i386)
