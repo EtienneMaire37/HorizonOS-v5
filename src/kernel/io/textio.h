@@ -25,6 +25,8 @@
 #define BG_MAGENTA       0x50
 #define BG_BROWN         0x60
 #define BG_LIGHTGRAY     0x70
+
+// ^ Those have the blink attribute on
 // #define BG_DARKGRAY      0x80
 // #define BG_LIGHTBLUE     0x90
 // #define BG_LIGHTGREEN    0xa0

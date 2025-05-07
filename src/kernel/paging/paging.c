@@ -127,6 +127,18 @@ void copy_page(physical_address_t from, physical_address_t to)
         write_physical_address_1b(to + i, page_tmp[i]);
 }
 
+void memset_page(physical_address_t page, uint8_t value)
+{
+    if (page & 0xfff)
+    {
+        LOG(ERROR, "Tried to copy a non page aligned page : 0x%lx", page);
+        abort();
+    }
+
+    for (uint16_t i = 0; i < 4096; i++)
+        write_physical_address_1b(page + i, value);
+}
+
 void init_page_directory(struct page_directory_entry_4kb* pd)
 {
     for(uint16_t i = 0; i < 1024; i++)

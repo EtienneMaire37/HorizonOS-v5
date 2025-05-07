@@ -32,6 +32,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 
 	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
 	cp resources/pci.ids ./bin/initrd/pci.ids
+	nm -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
 	tar -cvf ./root/boot/initrd.tar -C ./bin/initrd/ .
 	

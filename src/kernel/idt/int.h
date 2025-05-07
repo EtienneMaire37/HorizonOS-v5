@@ -22,6 +22,8 @@ struct privilege_switch_interrupt_registers
     uint32_t esp, ss;   // Read Intel Manuals ->> Vol. 3A 7-13
 } __attribute__((packed));
 
+#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R') //  || (symbol_type) == 't' || (symbol_type) == 'r'
+
 uint32_t current_cr3;
 
 // ^ Changed to local variables
@@ -83,5 +85,10 @@ char* get_error_message(uint32_t fault, uint32_t error_code)
     return error_str[fault];
 }
 
-void kernel_panic(struct privilege_switch_interrupt_registers* params);
-uint32_t interrupt_handler(struct privilege_switch_interrupt_registers* params);
+
+struct initrd_file* kernel_symbols_file = NULL;
+char* kernel_symbols_data = NULL;
+
+void kernel_panic(struct privilege_switch_interrupt_registers* registers);
+void print_kernel_symbol_name(uint32_t eip);
+uint32_t interrupt_handler(struct privilege_switch_interrupt_registers* registers);

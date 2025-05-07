@@ -14,6 +14,11 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     tty_color = (FG_RED | BG_BLACK);
     printf("Kernel panic\n\n");
 
+    tty_color = (FG_LIGHTGREEN | BG_BLACK);
+
+    if (multitasking_enabled)
+        printf("Task : \"%s\" (pid = %lu) | ring = %u\n\n", tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring);
+
     tty_color = (FG_WHITE | BG_BLACK);
 
     printf("Exception number: %u\n", registers->interrupt_number);
@@ -23,7 +28,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     if (registers->interrupt_number == 14)
     {
         printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
-        printf("cr3:  0x%x\n", registers->cr3);
+        printf("cr3:  0x%x\n\n", registers->cr3);
 
         uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (registers->cr2 >> 22));
         
@@ -45,14 +50,87 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     } call_frame_t;
 
     call_frame_t* ebp = (call_frame_t*)registers->ebp;
-    while ((uint32_t)ebp->ebp != 0 && (uint32_t)ebp->ebp != stack_top)
+    // asm volatile ("mov eax, ebp" : "=a"(ebp));
+
+    // ~ Log the last function (the one the exception happened in)
+    printf("eip : 0x%x ", registers->eip);
+    LOG(DEBUG, "eip : 0x%x", registers->eip);
+    if (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))
+        print_kernel_symbol_name(registers->eip);
+    putchar('\n');
+
+    while ((uint32_t)ebp != 0 && ((uint32_t)ebp != (uint32_t)&stack_top) && ((uint32_t)ebp != TASK_STACK_TOP_ADDRESS))
     {
-        printf("eip : 0x%x\n", ebp->eip);
-        LOG(DEBUG, "eip : 0x%x", ebp->eip);
+        printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
+        LOG(DEBUG, "eip : 0x%x | ebp : 0x%x", ebp->eip, ebp);
+        if (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))
+        {
+            print_kernel_symbol_name(ebp->eip);
+        }
+        putchar('\n');
         ebp = ebp->ebp;
     }
 
     halt();
+}
+
+void print_kernel_symbol_name(uint32_t eip)
+{
+    if (kernel_symbols_file == NULL || kernel_symbols_data == NULL) return;
+
+    uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
+    uint32_t file_offset = 0, line_offset = 0;
+    char last_symbol_buffer[64] = {0};
+    uint16_t last_symbol_buffer_length = 0;
+    bool finished_reading = false;
+    char current_symbol_type = ' ';
+    while (file_offset < kernel_symbols_file->size && !finished_reading)
+    {
+        char ch = kernel_symbols_data[file_offset];
+        if (ch == '\n')
+        {
+            if (last_symbol_address <= eip && symbol_address > eip)
+            {
+                printf("[");
+                tty_color = (BG_BLACK | FG_LIGHTRED);
+                for (uint8_t i = 0; i < min(64, last_symbol_buffer_length); i++)
+                    putchar(last_symbol_buffer[i]);
+                tty_color = (BG_BLACK | FG_WHITE);
+                putchar(']');
+                finished_reading = true;
+            }
+            else if (is_a_valid_function(current_symbol_type))
+            {
+                last_symbol_buffer_length = line_offset - 11;
+            }
+            line_offset = 0;
+        }
+        else
+        {
+            if (line_offset < 8)
+            {
+                uint32_t val = (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0));
+                current_symbol_address &= ~((uint32_t)0xf << ((7 - line_offset) * 4));
+                current_symbol_address |= val << ((7 - line_offset) * 4);
+            }
+            if (line_offset == 9)
+            {
+                current_symbol_type = ch;
+                if (is_a_valid_function(current_symbol_type) && current_symbol_address != 0)
+                {
+                    last_symbol_address = symbol_address;
+                    symbol_address = current_symbol_address;
+                }
+            }
+            if (line_offset >= 11 && line_offset < 64 + 11 && is_a_valid_function(current_symbol_type))
+            {
+                if (!(last_symbol_address <= eip && symbol_address > eip))
+                    last_symbol_buffer[line_offset - 11] = ch;
+            }
+            line_offset++;
+        }
+        file_offset++;
+    }
 }
 
 #define return_from_isr() do { if (flush_tlb) current_cr3 = iret_cr3; current_phys_mem_page = old_phys_mem_page; return flush_tlb ? iret_cr3 : 0; } while(0)
@@ -313,12 +391,17 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
                 if (!(pte & 1))
                 {
+                    physical_address_t page = pfa_allocate_physical_page();
                     physical_set_page(      pt_address, 
                                             layout.page_table_entry, 
-                                            pfa_allocate_physical_page(), 
+                                            page, 
                                             PAGING_USER_LEVEL, 
                                             true);
+                    flush_tlb = true;
+                    memset_page(page, 0);
                     registers->eax = 1;
+
+                    // LOG(DEBUG, "Allocated page at address : 0x%x", registers->ebx);
                 }
                 else
                     registers->eax = 0;

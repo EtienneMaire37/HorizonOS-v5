@@ -120,6 +120,7 @@ _start:
 .higher_half:
     mov ebp, stack_top
     mov esp, ebp
+    push ebp
 
     fninit ; initialize the fpu
     fnstsw [fpu_test] ; write the status word

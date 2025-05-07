@@ -81,7 +81,7 @@ void tty_outc(char c)
 		tty_cursor++;
 	}
 
-	while((tty_cursor / 80) >= 24)	// Last line
+	while((tty_cursor / 80) >= 25)	// Last line
 	{
 		memcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
 		

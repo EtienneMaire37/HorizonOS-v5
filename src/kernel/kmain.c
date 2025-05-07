@@ -325,6 +325,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     initrd_parse();
 
+    kernel_symbols_file = initrd_find_file("./symbols.txt");
+    kernel_symbols_data = kernel_symbols_file ? (char*)kernel_symbols_file->data : NULL;
+
     LOG(DEBUG, "Setting up memory allocation");
 
     pfa_detect_usable_memory();
@@ -397,6 +400,10 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     putchar('\n');
 
     LOG(DEBUG, "Initializing multitasking");
+
+    // ^ To test stack tracing
+    // int a = 1 / 0;
+    // printf("%d", a);
 
     // fpu_init();  // ^ No need to call it another time
 

@@ -12,6 +12,11 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
 {
+    // uint8_t* data = (uint8_t*)malloc(10000000);
+    // if (data)
+    //     for (uint8_t i = 0; i < 64; i++)
+    //         printf("%u : 0x%x\n", i + 1000, data[i + 1000]);
+
     printf("--- Start of HorizonOS configuration ---\n\n");
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)

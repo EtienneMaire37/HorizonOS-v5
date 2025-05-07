@@ -1,5 +1,8 @@
 #include <stdbool.h>
 // #include <stdint.h>
+#include <stdatomic.h>
+
+#include "../../kernel/multicore/spinlock.h"
 
 #include "../include/inttypes.h"
 #include "../include/unistd.h"
