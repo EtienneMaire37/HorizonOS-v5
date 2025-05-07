@@ -11,7 +11,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     tty_update_cursor();
     // tty_hide_cursor();
 
-    tty_color = (FG_RED | BG_BLACK);
+    tty_color = (FG_LIGHTRED | BG_BLACK);
     printf("Kernel panic\n\n");
 
     tty_color = (FG_LIGHTGREEN | BG_BLACK);
@@ -83,7 +83,7 @@ void print_kernel_symbol_name(uint32_t eip)
     char last_symbol_buffer[64] = {0};
     uint16_t last_symbol_buffer_length = 0;
     bool finished_reading = false;
-    char current_symbol_type = ' ';
+    char current_symbol_type = ' ', found_symbol_type = ' ';
     while (file_offset < kernel_symbols_file->size && !finished_reading)
     {
         char ch = kernel_symbols_data[file_offset];
@@ -92,10 +92,14 @@ void print_kernel_symbol_name(uint32_t eip)
             if (last_symbol_address <= eip && symbol_address > eip)
             {
                 printf("[");
-                tty_color = (BG_BLACK | FG_LIGHTRED);
+                
+                tty_color =  found_symbol_type == 'T' ? (FG_LIGHTCYAN | BG_BLACK) : 
+                            (found_symbol_type == 'R' ? (FG_LIGHTMAGENTA | BG_BLACK) : 
+                            (FG_LIGHTGRAY | BG_BLACK));
+
                 for (uint8_t i = 0; i < min(64, last_symbol_buffer_length); i++)
                     putchar(last_symbol_buffer[i]);
-                tty_color = (BG_BLACK | FG_WHITE);
+                tty_color = (FG_WHITE | BG_BLACK);
                 putchar(']');
                 finished_reading = true;
             }
@@ -125,7 +129,10 @@ void print_kernel_symbol_name(uint32_t eip)
             if (line_offset >= 11 && line_offset < 64 + 11 && is_a_valid_function(current_symbol_type))
             {
                 if (!(last_symbol_address <= eip && symbol_address > eip))
+                {
                     last_symbol_buffer[line_offset - 11] = ch;
+                    found_symbol_type = current_symbol_type;
+                }
             }
             line_offset++;
         }

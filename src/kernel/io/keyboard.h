@@ -142,6 +142,7 @@ keyboard_layout_t us_qwerty =
             [0x3E] = U'8',        [0x46] = U'9',        [0x45] = U'0',
             [0x4E] = U'-',        [0x55] = U'=',        [0x5D] = U'\\',
             [0x7C] = U'*',        [0x7E] = U' ',        [0x29] = U' ',
+            [0x61] = U'\\',
 
             [0x70] = U'0', [0x69] = U'1', [0x72] = U'2',
             [0x7A] = U'3', [0x6B] = U'4', [0x73] = U'5',
@@ -177,7 +178,9 @@ keyboard_layout_t us_qwerty =
             [0x3E] = U'*',        [0x46] = U'(',        [0x45] = U')',
             [0x4E] = U'_',        [0x55] = U'+',        [0x5D] = U'|',
             [0x5D] = U'|',        [0x7C] = U'*',
-            [0x29] = U' '
+            [0x29] = U' ',
+
+            [0x61] = U'|',
         },
         .char_table_altgr = 
         { 0 },
@@ -248,6 +251,12 @@ keyboard_layout_t fr_azerty =
             [0x72] = U'2',        [0x7A] = U'3',        [0x6B] = U'4',
             [0x73] = U'5',        [0x74] = U'6',        [0x6C] = U'7',
             [0x75] = U'8',        [0x7D] = U'9',        [0x71] = U'.',
+            [0x61] = U'<',
+            [0x7B] = U'-',        [0x79] = U'+',        [0x7c] = U'*'
+        },
+        .char_table_e0 = 
+        {
+            [0x4A] = U'/',        [0x5A] = '\n'
         },
         .char_table_shift = 
         {
@@ -263,6 +272,7 @@ keyboard_layout_t fr_azerty =
             [0x3A] = U'?',        [0x41] = U'.',        [0x49] = U'/',
             [0x4A] = U'§',        [0x76] = U'\x1B',    [0x0D] = U'\t',
             [0x66] = U'\b',       [0x29] = U' ',
+            [0x61] = U'>',
         },
         .char_table_altgr = 
         {
@@ -276,6 +286,7 @@ keyboard_layout_t fr_azerty =
             [0x32] = U'ß',        [0x43] = U'î',        [0x44] = U'ô',
             [0x35] = U'ÿ',        [0x31] = U'ñ',        [0x21] = U'©',
             [0x22] = U'×',        [0x2A] = U'√',        [0x1A] = U'Ω',
+            [0x61] = U'|',
         }
     }
 };

@@ -401,7 +401,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initializing multitasking");
 
-    // ^ To test stack tracing
+    // // ^ To test stack tracing
     // int a = 1 / 0;
     // printf("%d", a);
 

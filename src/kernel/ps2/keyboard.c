@@ -66,7 +66,7 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
 
     if (!scancode.extended) 
     {
-        for (int i = 0; i < 10; i++) 
+        for (int i = 0; i < sizeof(keypad_scancodes); i++) 
         {
             if (scancode.scancode == keypad_scancodes[i]) 
             {
@@ -163,6 +163,8 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
                 default:
                     ;
                 }
+
+                // LOG(DEBUG, "PS/2 keyboard scancode : 0x%x %s", current_ps2_keyboard_scancodes[port_index].scancode, current_ps2_keyboard_scancodes[port_index].extended ? "(extended)" : "");
             }
 
             ps2_kb_update_leds(port);
