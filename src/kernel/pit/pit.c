@@ -22,7 +22,7 @@ void handle_irq_0(struct privilege_switch_interrupt_registers** registers, bool*
 void pit_channel_0_set_frequency(uint32_t frequency)
 {
     uint32_t divider = 1193180 / frequency;
-    outb(PIT_MODE_CMD, 0x36);            
+    outb(PIT_MODE_CMD, PIT_BINARY_MODE | PIT_OPERATING_MODE(3) | PIT_ACCESS_MODE_LOHIBYTE | PIT_MODE_CHANNEL_0);            
     io_wait();
     outb(PIT_CHANNEL_0_DATA, divider & 0xff);   
     io_wait();

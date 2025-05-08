@@ -91,7 +91,7 @@ const char* multiboot_block_type_text[5] =
 #include "io/keyboard.h"
 #include "ps2/keyboard.h"
 #include "acpi/tables.h"
-#include "io/textio.h"
+#include "vga/textio.h"
 // #include "klibc/stdio.h"
 // #include "klibc/string.h"
 // #include "klibc/stdlib.h"
@@ -132,10 +132,11 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 #include "fpu/fpu.c"
 #include "io/keyboard.c"
 #include "ps2/keyboard.c"
+#include "vga/vga.h"
 #include "acpi/tables.c"
 #include "memalloc/page_frame_allocator.c"
 // #include "klibc/string.c"
-#include "io/textio.c"
+#include "vga/textio.c"
 // #include "klibc/stdio.c"
 // #include "klibc/stdlib.c"
 #include "gdt/gdt.c"
@@ -182,6 +183,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     kernel_size = &_kernel_end - &_kernel_start;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
+
+    vga_init();
 
     tty_clear_screen(' ');
     tty_reset_cursor();
