@@ -2,7 +2,7 @@ int main();
 void exit();
 extern void* _break_address;
 
-void _start()
+void _main()
 {
     errno = 0;
     heap_size = 0;

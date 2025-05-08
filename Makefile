@@ -41,23 +41,22 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld libc libm
+src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
-	$(LD) -T src/tasks/link.ld -nostdlib -m elf_i386 \
+	$(LD) -T src/tasks/link.ld -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \
     "src/libc/lib/libc.a" \
     "src/libc/lib/libm.a"
 
-src/libc/lib/libc.o: libc
-src/libc/lib/libm.o: libm
-
-libc: src/libc/src/* src/libc/include/*
+src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O0 $(CFLAGS)
+	nasm -f elf32 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
+	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O0 $(CFLAGS)
+	$(LD) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -m elf_i386 -o "src/libc/lib/libc.o" -r
 	$(AR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
-libm: src/libc/src/* src/libc/include/*
+src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
 	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"

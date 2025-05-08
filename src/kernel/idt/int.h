@@ -22,7 +22,7 @@ struct privilege_switch_interrupt_registers
     uint32_t esp, ss;   // Read Intel Manuals ->> Vol. 3A 7-13
 } __attribute__((packed));
 
-#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R') //  || (symbol_type) == 't' || (symbol_type) == 'r'
+#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
 uint32_t current_cr3;
 

@@ -93,12 +93,27 @@ void print_kernel_symbol_name(uint32_t eip)
             {
                 printf("[");
                 
-                tty_color =  found_symbol_type == 'T' ? (FG_LIGHTCYAN | BG_BLACK) : 
-                            (found_symbol_type == 'R' ? (FG_LIGHTMAGENTA | BG_BLACK) : 
+                tty_color =  (found_symbol_type == 'T' || found_symbol_type == 't') ? (FG_LIGHTCYAN | BG_BLACK) : 
+                            ((found_symbol_type == 'R' || found_symbol_type == 'r') ? (FG_LIGHTMAGENTA | BG_BLACK) : 
                             (FG_LIGHTGRAY | BG_BLACK));
 
+                uint8_t light_tty_color = tty_color;
+                bool subfunction = false;
+
                 for (uint8_t i = 0; i < min(64, last_symbol_buffer_length); i++)
+                {
+                    if (last_symbol_buffer[i] == '.')
+                    {
+                        tty_color = (FG_LIGHTGRAY | BG_BLACK);
+                        subfunction = true;
+                    }
                     putchar(last_symbol_buffer[i]);
+                    if (subfunction)
+                    {
+                        tty_color = (light_tty_color & 0b01110111);
+                        subfunction = false;
+                    }
+                }
                 tty_color = (FG_WHITE | BG_BLACK);
                 putchar(']');
                 finished_reading = true;
