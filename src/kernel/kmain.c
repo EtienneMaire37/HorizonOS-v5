@@ -334,7 +334,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(DEBUG, "Setting up memory allocation");
 
     pfa_detect_usable_memory();
-    pfa_bitmap_init();
 
     LOG(DEBUG, "Retrieving cmos data");
     printf("Retrieving cmos data...");
@@ -402,10 +401,21 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    LOG(DEBUG, "Initializing multitasking");
+    // ~ Debugging
+        // // ^ To test stack tracing
+        // volatile int a = 1 / 0;
 
-    // // ^ To test stack tracing
-    // volatile int a = 1 / 0;
+        // physical_address_t addresses[10000000 / 4096] = {0};
+        // for(uint32_t i = 0; i < 10000000 / 4096; i++)
+        // {
+        //     addresses[i] = pfa_allocate_physical_page();
+        //     volatile uint8_t a = read_physical_address_1b(addresses[i]);
+        // }
+        // for(uint32_t i = 0; i < 10000000 / 4096; i++)
+        //     pfa_free_physical_page(addresses[10000000 / 4096 - i - 1]);
+        
+
+    LOG(DEBUG, "Initializing multitasking");
 
     // fpu_init();  // ^ No need to call it another time
 

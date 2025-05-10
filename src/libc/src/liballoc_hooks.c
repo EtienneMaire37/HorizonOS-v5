@@ -37,34 +37,39 @@ void malloc_bitmap_set_page(uint32_t page, bool state)
         if (!(malloc_pages_bitmap[byte] & (1 << bit)))
             malloc_allocated_pages++;
         malloc_pages_bitmap[byte] |= (1 << bit);
-    }
+        if (malloc_last_allocated_page_index < page) 
+            malloc_last_allocated_page_index = page;
+    }   
     else
     {
         if (malloc_pages_bitmap[byte] & (1 << bit))
             malloc_allocated_pages--;
         malloc_pages_bitmap[byte] &= ~(1 << bit);
-    }
 
-    if (state && malloc_last_allocated_page_index < page) 
-        malloc_last_allocated_page_index = page;
-    if ((!state) && malloc_last_allocated_page_index == page)
-    {
-        uint32_t new_last_allocated_page = malloc_last_allocated_page_index - 1;
-        while (malloc_bitmap_get_page(new_last_allocated_page) == 0)
-            new_last_allocated_page--;
-        malloc_last_allocated_page_index = new_last_allocated_page;
+        if (malloc_last_allocated_page_index == page)
+        {
+            if (malloc_allocated_pages == 0)
+            {
+                malloc_last_allocated_page_index = 0;
+                return;
+            }
+            uint32_t new_last_allocated_page = malloc_last_allocated_page_index - 1;
+            while (malloc_bitmap_get_page(new_last_allocated_page) == 0)
+                new_last_allocated_page--;
+            malloc_last_allocated_page_index = new_last_allocated_page;
+        }
     }
 }
 
 int liballoc_lock()
 {
-	// acquire_spinlock(&spinlock_state);
+	acquire_spinlock(&spinlock_state);
 	return 0;
 }
 
 int liballoc_unlock()
 {
-	// release_spinlock(&spinlock_state);
+	release_spinlock(&spinlock_state);
 	return 0;
 }
 
@@ -98,6 +103,7 @@ void* liballoc_alloc(int pages)
 
 int liballoc_free(void* ptr, int pages)
 {
+    if (ptr == NULL) return 1;
     uint32_t page_number = ((uint32_t)ptr - heap_address) / 4096;
 	for (uint32_t i = page_number; i < page_number + pages; i++)
         malloc_bitmap_set_page(i, false);

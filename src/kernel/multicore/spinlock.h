@@ -8,5 +8,5 @@ void acquire_spinlock(atomic_flag* spinlock)
 
 void release_spinlock(atomic_flag* spinlock)
 {
-	atomic_flag_clear(spinlock);
+	atomic_flag_clear_explicit(spinlock, memory_order_release);
 }
