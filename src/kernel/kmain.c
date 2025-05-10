@@ -329,7 +329,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     initrd_parse();
 
     kernel_symbols_file = initrd_find_file("./symbols.txt");
-    kernel_symbols_data = kernel_symbols_file ? (char*)kernel_symbols_file->data : NULL;
+    kernel_task_symbols_file = initrd_find_file("./kernel32_symbols.txt");
 
     LOG(DEBUG, "Setting up memory allocation");
 

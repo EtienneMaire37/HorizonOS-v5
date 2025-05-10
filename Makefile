@@ -49,6 +49,8 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/
     "src/tasks/bin/kernel32.o" \
     "src/libc/lib/libc.a" \
     "src/libc/lib/libm.a"
+	mkdir -p ./bin/initrd
+	nm -n --defined-only -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib

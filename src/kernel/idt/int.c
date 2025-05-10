@@ -55,18 +55,18 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     // ~ Log the last function (the one the exception happened in)
     printf("eip : 0x%x ", registers->eip);
     LOG(DEBUG, "eip : 0x%x", registers->eip);
-    if (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))
-        print_kernel_symbol_name(registers->eip);
+    if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
+    (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
+        print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
     putchar('\n');
 
     while ((uint32_t)ebp != 0 && ((uint32_t)ebp != (uint32_t)&stack_top) && ((uint32_t)ebp != TASK_STACK_TOP_ADDRESS))
     {
         printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
         LOG(DEBUG, "eip : 0x%x | ebp : 0x%x", ebp->eip, ebp);
-        if (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))
-        {
-            print_kernel_symbol_name(ebp->eip);
-        }
+        if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
+        (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
+            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 cause it pushes the return address not the calling address
         putchar('\n');
         ebp = ebp->ebp;
     }
@@ -74,24 +74,24 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     halt();
 }
 
-void print_kernel_symbol_name(uint32_t eip)
+void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
 {
-    if (kernel_symbols_file == NULL || kernel_symbols_data == NULL) return;
-
+    struct initrd_file* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
+    if (file == NULL) return;
+    
     uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
     uint32_t file_offset = 0, line_offset = 0;
     char last_symbol_buffer[64] = {0};
     uint16_t last_symbol_buffer_length = 0;
-    bool finished_reading = false;
     char current_symbol_type = ' ', found_symbol_type = ' ';
-    while (file_offset < kernel_symbols_file->size && !finished_reading)
+    while (file_offset < file->size)
     {
-        char ch = kernel_symbols_data[file_offset];
+        char ch = file->data[file_offset];
         if (ch == '\n')
         {
             if (last_symbol_address <= eip && symbol_address > eip)
             {
-                printf("[");
+                putchar(file == kernel_symbols_file ? '[' : '(');
                 
                 tty_color =  (found_symbol_type == 'T' || found_symbol_type == 't') ? (FG_LIGHTCYAN | BG_BLACK) : 
                             ((found_symbol_type == 'R' || found_symbol_type == 'r') ? (FG_LIGHTMAGENTA | BG_BLACK) : 
@@ -115,8 +115,8 @@ void print_kernel_symbol_name(uint32_t eip)
                     }
                 }
                 tty_color = (FG_WHITE | BG_BLACK);
-                putchar(']');
-                finished_reading = true;
+                putchar(file == kernel_symbols_file ? ']' : ')');
+                return;
             }
             else if (is_a_valid_function(current_symbol_type))
             {

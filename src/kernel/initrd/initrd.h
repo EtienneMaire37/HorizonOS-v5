@@ -65,11 +65,15 @@ void initrd_parse()
 
 struct initrd_file* initrd_find_file(char* name)
 {
+    LOG(INFO, "Opening file \"%s\" from initrd", name);
+
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
         if (strcmp(initrd_files[i].name, name) == 0)
             return &initrd_files[i];
     }
+
+    LOG(INFO, "Error opening file \"%s\"", name);
 
     return NULL;
 }
