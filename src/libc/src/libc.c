@@ -25,6 +25,7 @@
 #include "arithmetic.c"
 #include "crt0.c"
 
+#include "liballoc.h"
 #include "liballoc_hooks.c"
 #include "liballoc.c"
 

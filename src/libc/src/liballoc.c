@@ -277,7 +277,7 @@ static struct boundary_tag* allocate_new_tag( unsigned int size )
 
 
 
-void *malloc(size_t size)
+void *_malloc(size_t size)
 {
 	int index;
 	void *ptr;
@@ -392,7 +392,7 @@ void *malloc(size_t size)
 
 
 
-void free(void *ptr)
+void _free(void *ptr)
 {
 	int index;
 	struct boundary_tag *tag;
@@ -487,7 +487,7 @@ void free(void *ptr)
 
 
 
-void* calloc(size_t nobj, size_t size)
+void* _calloc(size_t nobj, size_t size)
 {
        int real_size;
        void *p;
@@ -503,7 +503,7 @@ void* calloc(size_t nobj, size_t size)
 
 
 
-void*   realloc(void *p, size_t size)
+void*   _realloc(void *p, size_t size)
 {
 	void *ptr;
 	struct boundary_tag *tag;
@@ -528,4 +528,23 @@ void*   realloc(void *p, size_t size)
 	free( p );
 
 	return ptr;
+}
+
+// ^ Hooking code
+
+void* malloc(size_t size)
+{
+    return _malloc(size);
+}
+void* realloc(void* ptr, size_t size)
+{
+    return _realloc(ptr, size);
+}
+void* calloc(size_t num, size_t size)
+{
+    return _calloc(num, size);
+}
+void  free(void* ptr)
+{
+    _free(ptr);
 }

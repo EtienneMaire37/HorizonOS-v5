@@ -6,6 +6,7 @@ atomic_flag spinlock_state = ATOMIC_FLAG_INIT;
 uint8_t malloc_pages_bitmap[MALLOC_BITMAP_SIZE]; // 3GB / 4KB / 8B
 uint32_t malloc_last_allocated_page_index;
 uint32_t malloc_allocated_pages;
+bool bitmap_initialized = false;
 
 void malloc_bitmap_init()
 {
@@ -19,6 +20,12 @@ void malloc_bitmap_init()
 
 bool malloc_bitmap_get_page(uint32_t page) 
 {
+    if (!bitmap_initialized)
+    {
+        malloc_bitmap_init();
+        bitmap_initialized = true;
+    }
+
     if (malloc_allocated_pages != 0 && page >= (uint32_t)malloc_last_allocated_page_index) return 1;
 
     uint32_t byte = page / 8;
@@ -29,6 +36,12 @@ bool malloc_bitmap_get_page(uint32_t page)
 
 void malloc_bitmap_set_page(uint32_t page, bool state)
 {
+    if (!bitmap_initialized)
+    {
+        malloc_bitmap_init();
+        bitmap_initialized = true;
+    }
+    
     uint32_t byte = page / 8;
     if (byte >= MALLOC_BITMAP_SIZE) return;
     uint8_t bit = page & 0b111;

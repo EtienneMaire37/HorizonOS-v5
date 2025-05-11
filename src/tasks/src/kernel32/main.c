@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
-// #include <stdint.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <math.h>
-#include <unistd.h>
 
 #include <horizonos.h>
 

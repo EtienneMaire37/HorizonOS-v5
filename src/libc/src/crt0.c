@@ -10,7 +10,16 @@ void _main()
     break_address = ((break_address + 4095) / 4096) * 4096;
     heap_address = break_address;
     alloc_break_address = break_address;
-    malloc_bitmap_init();
+    // FILE* FILE_create()
+    // {
+    //     FILE* f = (FILE*)malloc(sizeof(FILE));
+    //     f->input_buffer = (uint8_t*)malloc(BUFSIZ);
+    //     f->output_buffer = (uint8_t*)malloc(BUFSIZ);
+    //     return f;
+    // }
+    // stdin = FILE_create();
+    // stdout = FILE_create();
+    // stderr = FILE_create();
     // printf("Break address : 0x%x\n\n", break_address);
     create_b64_decoding_table();
     memset(atexit_stack, 0, 32);

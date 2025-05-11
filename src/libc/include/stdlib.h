@@ -30,4 +30,8 @@ void abort(void);
 long strtol(const char* nptr, char** endptr, int base);
 int atoi(const char* str);
 
-#include "../src/liballoc.h"
+// ~ From liballoc.h
+void     *malloc(size_t);				//< The standard function.
+void     *realloc(void *, size_t);		//< The standard function.
+void     *calloc(size_t, size_t);		//< The standard function.
+void      free(void *);				//< The standard function

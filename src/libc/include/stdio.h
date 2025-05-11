@@ -26,13 +26,17 @@ typedef unsigned int fpos_t;
 #define FOPEN_MAX       16
 #define TMP_MAX         65536
 
-// typedef struct FILE FILE;
-// struct FILE
-// {
-//     char path[FILENAME_MAX];
-//     fpos_t pos;
-//     unsigned char drive;
-// };
+typedef struct FILE FILE;
+struct FILE
+{
+    int fd;
+    unsigned char* input_buffer;
+    unsigned char* output_buffer;
+};
+
+// FILE* stdin;
+// FILE* stdout;
+// FILE* stderr;
 
 // FILE* fopen(const char* path, const char* mode);
 // int fclose(FILE* stream);

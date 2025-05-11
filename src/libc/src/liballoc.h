@@ -84,10 +84,10 @@ extern int liballoc_free(void*,int);
 
        
 
-void     *malloc(size_t);				//< The standard function.
-void     *realloc(void *, size_t);		//< The standard function.
-void     *calloc(size_t, size_t);		//< The standard function.
-void      free(void *);					//< The standard function.
+void     *_malloc(size_t);				//< The standard function.
+void     *_realloc(void *, size_t);		//< The standard function.
+void     *_calloc(size_t, size_t);		//< The standard function.
+void      _free(void *);				//< The standard function.
 
 
 #ifdef __cplusplus
