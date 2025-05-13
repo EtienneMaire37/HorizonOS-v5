@@ -2,13 +2,15 @@
 
 void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 {
-	vga_write_port_3d4(0x0a, (vga_read_port_3d4(0x0a) & 0xc0) | scanline_start);
-	vga_write_port_3d4(0x0b, (vga_read_port_3d4(0x0b) & 0xe0) | scanline_end);
+// ~ bit 6,7 : reserved; bit 5 : (0: show, 1: hide); bit 0-4: scanline_start
+	vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) & 0b11000000) | scanline_start);
+// ~ bit 7 : reserved; bit 5,6 : offset (in chars); bit 0-4: scanline_end
+	vga_write_port_3d4(VGA_REG_3D4_CURSOR_END, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_END) & 0b10000000) | scanline_end);
 }
 
 void tty_hide_cursor()
 {
-	vga_write_port_3d4(0x0a, 0x20);
+	vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) | (1 << 5));
 }
 
 void tty_reset_cursor()
@@ -18,8 +20,8 @@ void tty_reset_cursor()
 
 void tty_set_cursor_pos(uint16_t pos)
 {
-	vga_write_port_3d4(0x0f, pos & 0xff);
-	vga_write_port_3d4(0x0e, (pos >> 8) & 0xff);
+	vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_LOW, pos & 0xff);
+	vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_HIGH, (pos >> 8) & 0xff);
 }
 
 void tty_update_cursor()
