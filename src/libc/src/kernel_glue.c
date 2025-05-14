@@ -102,3 +102,15 @@ int brk(void* addr)
     alloc_break_address += 4096 * (uint32_t)pages_to_allocate;
     return 0;
 }
+
+int open(const char* path, int oflag, ...)
+{
+    errno = ENOENT;
+    return -1;
+}
+
+int close(int fildes)
+{
+    errno = EBADF;
+    return -1;
+}

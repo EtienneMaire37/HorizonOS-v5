@@ -9,7 +9,7 @@
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
-{
+{    
     printf("--- Start of HorizonOS configuration ---\n\n");
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)

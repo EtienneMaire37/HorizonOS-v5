@@ -1,4 +1,4 @@
-atomic_flag spinlock_state = ATOMIC_FLAG_INIT;
+atomic_flag malloc_spinlock_state = ATOMIC_FLAG_INIT;
 
 #define MALLOC_BITMAP_SIZE      98304
 #define MALLOC_BITMAP_SIZE_4    24576
@@ -6,7 +6,6 @@ atomic_flag spinlock_state = ATOMIC_FLAG_INIT;
 uint8_t malloc_pages_bitmap[MALLOC_BITMAP_SIZE]; // 3GB / 4KB / 8B
 uint32_t malloc_last_allocated_page_index;
 uint32_t malloc_allocated_pages;
-bool bitmap_initialized = false;
 
 void malloc_bitmap_init()
 {
@@ -20,13 +19,7 @@ void malloc_bitmap_init()
 
 bool malloc_bitmap_get_page(uint32_t page) 
 {
-    if (!bitmap_initialized)
-    {
-        malloc_bitmap_init();
-        bitmap_initialized = true;
-    }
-
-    if (malloc_allocated_pages != 0 && page >= (uint32_t)malloc_last_allocated_page_index) return 1;
+    if (malloc_allocated_pages != 0 && page >= (uint32_t)malloc_last_allocated_page_index) return 0;
 
     uint32_t byte = page / 8;
     if (byte >= MALLOC_BITMAP_SIZE) return 1;
@@ -35,13 +28,7 @@ bool malloc_bitmap_get_page(uint32_t page)
 }
 
 void malloc_bitmap_set_page(uint32_t page, bool state)
-{
-    if (!bitmap_initialized)
-    {
-        malloc_bitmap_init();
-        bitmap_initialized = true;
-    }
-    
+{    
     uint32_t byte = page / 8;
     if (byte >= MALLOC_BITMAP_SIZE) return;
     uint8_t bit = page & 0b111;
@@ -76,13 +63,13 @@ void malloc_bitmap_set_page(uint32_t page, bool state)
 
 int liballoc_lock()
 {
-	acquire_spinlock(&spinlock_state);
+	acquire_spinlock(&malloc_spinlock_state);
 	return 0;
 }
 
 int liballoc_unlock()
 {
-	release_spinlock(&spinlock_state);
+	release_spinlock(&malloc_spinlock_state);
 	return 0;
 }
 
@@ -109,6 +96,7 @@ void* liballoc_alloc(int pages)
                     return NULL;
             for (uint32_t i = page_number; i < page_number + pages; i++)
                 malloc_bitmap_set_page(i, true);
+            // printf("Successfully allocated pages 0x%x-0x%x\n", page_number, page_number + pages);
             return (void*)page_address;
         }
     }

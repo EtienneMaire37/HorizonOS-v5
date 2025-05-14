@@ -1,3 +1,5 @@
+#define BUILDING_C_LIB
+
 #include <stdbool.h>
 // #include <stdint.h>
 #include <stdatomic.h>
@@ -23,7 +25,6 @@
 #include "time.c"
 #include "string.c"
 #include "arithmetic.c"
-#include "crt0.c"
 
 #include "liballoc.h"
 #include "liballoc_hooks.c"
@@ -31,3 +32,5 @@
 
 #include "kernel_glue.c"
 #include "horizonos.c"
+
+#include "crt0.c"

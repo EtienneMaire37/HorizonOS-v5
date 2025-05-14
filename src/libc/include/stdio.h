@@ -34,9 +34,15 @@ struct FILE
     unsigned char* output_buffer;
 };
 
-// FILE* stdin;
-// FILE* stdout;
-// FILE* stderr;
+#ifdef BUILDING_C_LIB
+FILE* stdin;
+FILE* stdout;
+FILE* stderr;
+#else
+extern FILE* stdin;
+extern FILE* stdout;
+extern FILE* stderr;
+#endif
 
 // FILE* fopen(const char* path, const char* mode);
 // int fclose(FILE* stream);

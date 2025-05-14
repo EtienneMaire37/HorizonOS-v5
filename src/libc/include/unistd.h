@@ -11,4 +11,5 @@ pid_t getpid();
 pid_t fork();
 ssize_t write(int fildes, const void *buf, size_t nbyte);
 ssize_t read(int fildes, void *buf, size_t nbyte);
+int close(int fildes);
 void *sbrk(intptr_t incr);

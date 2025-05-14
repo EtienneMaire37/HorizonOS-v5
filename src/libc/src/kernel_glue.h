@@ -1,5 +1,7 @@
 #pragma once
 
+int open(const char* path, int oflag, ...);
+int close(int fildes);
 ssize_t write(int fildes, const void *buf, size_t nbyte);
 ssize_t read(int fildes, void *buf, size_t nbyte);
 void exit(int r);

@@ -23,18 +23,18 @@ SECTIONS
         *(.rodata .rodata.*)
     } :text
 
+    .data ALIGN(0x1000) : 
+    {
+        *(.data .data.*)
+    } :data
+
     .bss ALIGN(0x1000) : 
     {
         *(COMMON)
         *(.bss .bss.*)
         . = ALIGN(0x1000);
-    } :bss
-
-    .data ALIGN(0x1000) : 
-    {
-        *(.data .data.*)
         _break_address = .;
-    } :data
+    } :bss
 
     /DISCARD/ : { *(.comment) *(.note) }
 }

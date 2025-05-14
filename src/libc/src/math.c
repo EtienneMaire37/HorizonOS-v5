@@ -449,13 +449,16 @@ double sqrt(double x)
         double mid2 = mid * mid;
         if (mid2 < x)
         {
-            xmin = mid + .000000000000000001;
+            xmin = mid + 1.;
         }
         else if (mid2 > x)
         {
-            xmax = mid - .000000000000000001;
+            xmax = mid - 1.;
         }
     }
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
     return xmin;
 }
 
@@ -477,13 +480,16 @@ float sqrtf(float x)
         double mid2 = mid * mid;
         if (mid2 < x)
         {
-            xmin = mid + .0000000000000001f;
+            xmin = mid + 1.f;
         }
         else if (mid2 > x)
         {
-            xmax = mid - .0000000000000001f;
+            xmax = mid - 1.f;
         }
     }
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
     return xmin;
 }
 
@@ -505,13 +511,16 @@ long double sqrtl(long double x)
         double mid2 = mid * mid;
         if (mid2 < x)
         {
-            xmin = mid + .00000000000000000001L;
+            xmin = mid + 1.L;
         }
         else if (mid2 > x)
         {
-            xmax = mid - .00000000000000000001L;
+            xmax = mid - 1.L;
         }
     }
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
+    xmin = xmin - (xmin * xmin - x) / (2 * xmin);
     return xmin;
 }
 
