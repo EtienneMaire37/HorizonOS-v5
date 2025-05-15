@@ -1,4 +1,5 @@
-# HorizonOS v5
+# HorizonOS
+
 <div align="center">
    
    ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg) 
@@ -8,82 +9,80 @@
    ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/EtienneMaire37/HorizonOS-v5/.github%2Fworkflows%2Fmakefile.yml)
 </div>
 
-A 32-bit monolithic kernel for the x86 architecture
+HorizonOS is a hobby 32-bit monolithic kernel for the x86 architecture. This project aims to explore operating system concepts and provide a minimal yet functional environment.
 
-## Overview 🌟
-HorizonOS is a hobby kernel targeting x86 systems, built with simplicity and readability in mind.
+## Features
 
-## Features 🛠️
+HorizonOS currently supports the following features:
 
-### Implemented ✅
-- Single core execution
-- Basic memory management supporting up to 4GB RAM
-- Preemptive multitasking implementation
-- Basic ACPI parsing
-- PS/2 drivers (only keyboard for now)
-- Custom C standard library (libc and libm) under development
+* **Kernel Features:**
+    * Single-core multitasking with basic scheduling.
+    * Memory management limited to the 4GB address space of 32-bit architecture.
+    * Basic POSIX-like C library implementation.
+    * Virtual File System (VFS) infrastructure.
+    * Initial RAM disk (initrd) support.
+    * Extremely basic ACPI parsing for system information.
+    * GRUB bootloader support.
+* **Device Drivers:**
+    * VGA text mode driver.
+    * PS/2 keyboard driver with QWERTY and AZERTY layout support.
 
-### Planned 📅
-- Symmetric multiprocessing support
-- APIC support
-- PCI device enumeration
-- USB drivers and mouse support
-- Network stack support + ethernet and wifi drivers
-- Graphical display support
-- FAT filesystem and better VFS support
-- PATA/SATA drivers
-- Full ACPI support (probably with uACPI or LAI)
-- Threading API
-- Complete (or near complete) libc and libstdc++ implementations
-- Porting GCC, Make, and other third-party software
-- GPU drivers (NVIDIA, AMD and Intel)
-- AC97 audio support
+## Building HorizonOS
 
-## Building HorizonOS 🛠️
+These instructions assume you have a Unix-like environment with basic development tools.
 
-### Prerequisites 📦
-- i386-elf cross-compiler
-- NASM assembler
-- GRUB 2.0+
-- QEMU (for emulation)
+### Prerequisites
 
-### Install build dependencies (Debian/Ubuntu) 🐧
+* **GNU Make:** For automating the build process.
+* **NASM:** Netwide Assembler for assembling assembly files.
+* **i486-elf Toolchain:** A cross-compiler toolchain targeting the i486-elf architecture is required to build the kernel and user-mode programs.
+* **QEMU:** A machine emulator for testing the operating system.
+* **GRUB Utilities:** Specifically `grub-mkrescue` to create the bootable ISO image.
+
+### Setting up the i486-elf Cross-Compiler
+
+The provided `install-cross-compiler.sh` script automates the process of building and installing the necessary cross-compiler toolchain. To use it:
+
+Run the script:
 ```bash
-sudo apt install nasm grub-pc-bin qemu-system-i386
+./install-cross-compiler.sh
 ```
+This script will download, build, and install Binutils and GCC targeting the `i486-elf` architecture in a directory named `i486elfgcc` within the project. It will also update your `PATH` environment variable for the current session.
 
-### Set up cross-compiler (using included script) ⚙️
-```bash
-sudo sh install-cross-compiler.sh
-```
+### Building the Operating System
 
-### Compilation 🔨
-```bash
-make all
-```
+Once the cross-compiler is set up, you can build HorizonOS using the `Makefile`:
 
-### Running in QEMU 🚀
-```bash
-make run
-```
+1.  Ensure you are in the root directory of the HorizonOS repository.
+2.  Execute the `make` command:
+    ```bash
+    make all
+    ```
+    This command will compile the kernel, the basic user-mode task, build the C library, create the initial RAM disk, and finally generate the `horizonos.iso` bootable ISO image in the root directory.
 
-The `horizonos.iso` file will be generated in the repository root.
+### Running HorizonOS
 
-This will:
-1. Build the kernel ISO
-2. Launch QEMU with:
-   - 256MB RAM
-   - CD-ROM boot
-   - Serial output
-   - VGA display
-   - Logging to debug/ directory
+To run HorizonOS in QEMU:
 
-## Contributing 🧑‍💻
-Contributions are welcome ! Feel free to open issues and send pull requests.
+1.  From the root directory of the HorizonOS repository, execute the `make run` command:
+    ```bash
+    make run
+    ```
+    This will launch QEMU, booting from the generated `horizonos.iso` image. You should see the kernel initialize and the basic user-mode task start. Debug output will be written to a file named `debug/YYYY-MM-DD.log`.
 
-## License 📜
-Distributed under the MIT License. See `LICENSE` for more information.
+## Current Development
 
----
+The following features are planned:
 
-**Note:** This is experimental software - use at your own risk. Not recommended for production environments or critical systems.
+* ATA/SATA drivers for hard disk access.
+* FAT32 filesystem support.
+* PS/2 mouse driver.
+* USB HID (Human Interface Device) support.
+* Physical Address Extension (PAE) support to potentially access more than 4GB of RAM.
+* Symmetric Multiprocessing (SMP) for multi-core support.
+* Porting to other CPU architectures.
+* Ethernet and Wi-Fi drivers along with a basic internet protocol stack.
+
+## License
+
+HorizonOS is licensed under the MIT License. See the `LICENSE` file for more details.
