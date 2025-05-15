@@ -6,7 +6,7 @@ AR := ./i486elfgcc/bin/i486-elf-ar
 
 all: horizonos.iso
 
-run: all
+run:
 	mkdir debug -p
 	qemu-system-x86_64                           		\
 	-accel kvm                       					\
