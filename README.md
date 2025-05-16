@@ -85,4 +85,4 @@ The following features are planned:
 
 ## License
 
-HorizonOS is licensed under the MIT License. See the `LICENSE` file for more details.
+HorizonOS is licensed under the GNU GPLv3 License. See the `LICENSE` file for more details.
