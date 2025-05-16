@@ -6,3 +6,4 @@ root/
 src/libc/lib/*
 i486elfgcc/
 tmp/
+pci.ids

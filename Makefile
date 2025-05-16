@@ -16,7 +16,7 @@ run:
 	-hda horizonos.iso    								\
 	-smp 8
 
-horizonos.iso: rmbin src/tasks/bin/kernel32.elf
+horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	mkdir bin -p
 
 	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
@@ -62,6 +62,9 @@ src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
 	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
+
+resources/pci.ids:
+	wget https://raw.githubusercontent.com/pciutils/pciids/refs/heads/master/pci.ids -O resources/pci.ids
 
 rmbin:
 	rm -rf ./bin/*
