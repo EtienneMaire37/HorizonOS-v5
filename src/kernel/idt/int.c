@@ -287,8 +287,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 }
                 else
                 {
-                    registers->eax = read(registers->ebx, (char*)registers->ecx, registers->edx);
-                    registers->ebx = errno;
+                    registers->eax = 0xffffffff;   // -1
+                    registers->ebx = EBADF;
                 }
             }
             break;
@@ -300,8 +300,18 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             }
             else
             {
-                registers->eax = write(registers->ebx, (char*)registers->ecx, registers->edx);
-                registers->ebx = errno;
+                if (registers->ebx == STDOUT_FILENO || registers->ebx == STDERR_FILENO)
+                {
+                    for (uint32_t i = 0; i < registers->edx; i++)
+                        tty_outc(((char*)registers->ecx)[i]);
+                    tty_update_cursor();
+                    registers->eax = registers->edx;
+                }
+                else
+                {
+                    registers->eax = 0xffffffff;
+                    registers->ebx = EBADF;
+                }
             }
             break;
         case SYSCALL_GETPID:     // getpid

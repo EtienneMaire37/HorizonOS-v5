@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <horizonos.h>
 
@@ -10,7 +11,10 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
 {    
+    // assert(("string", false));
+    
     printf("--- Start of HorizonOS configuration ---\n\n");
+
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)
         printf("%u: %s    ", i + 1, kb_layouts[i]);

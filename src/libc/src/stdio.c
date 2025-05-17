@@ -10,7 +10,9 @@ int putchar(int c)
 
 int puts(const char* s)
 {
+    if (!s) return 1;
     write(STDOUT_FILENO, s, strlen(s));
+    putchar('\n');
     return 1;
 }
 
@@ -444,7 +446,11 @@ int vprintf(const char* format, va_list args)
     }
     void _puts(char* s)
     {
-        puts(s);
+        while (*s)
+        {
+            _putc(*s);
+            s++;
+        }
     }
 
     return _printf(_putc, _puts, format, args);

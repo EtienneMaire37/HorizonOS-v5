@@ -24,7 +24,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
-	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3
+	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow
 	$(LD) -T src/kernel/link.ld "src/libc/lib/libm.a"
 	
 	mkdir -p ./root/boot/grub

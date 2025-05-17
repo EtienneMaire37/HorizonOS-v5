@@ -27,7 +27,7 @@ void invlpg(uint32_t addr)
 
 void set_current_phys_mem_page(uint32_t page)
 {
-    if (page == current_phys_mem_page) return;
+    // if (page == current_phys_mem_page) return;
 
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
@@ -44,7 +44,7 @@ void set_current_phys_mem_page(uint32_t page)
 
 uint8_t* get_physical_address_ptr(physical_address_t address)
 {
-    if (address >= 0x100000000) return NULL;
+    if (address >> 32) return NULL;
 
     uint32_t addr = (uint32_t)address;
     if (addr < 0x100000) return (uint8_t*)addr;

@@ -83,6 +83,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     for (uint16_t i = 0; i < header->phnum; i++)
     {
         if (program_headers[i].type == ELF_PROGRAM_TYPE_NULL) continue;
+
         LOG(TRACE, "   Program section %u : ", i);
         LOG(TRACE, "       Type : %u", program_headers[i].type);
         LOG(TRACE, "       Offset : 0x%x", program_headers[i].p_offset);
@@ -124,11 +125,18 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
                 struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
             
                 task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
-            
-                physical_address_t pte_phys = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
-            
-                set_current_phys_mem_page(read_physical_address_4b(pte_phys + 4 * layout.page_table_entry) >> 12);
-                memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), 0x1000);
+                physical_address_t pt_phys = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry) & 0xfffff000;
+                
+                if (section_headers[i].sh_type == ELF_SECTION_TYPE_PROGBITS)
+                {
+                    set_current_phys_mem_page(read_physical_address_4b(pt_phys + 4 * layout.page_table_entry) >> 12);
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), min(0x1000, section_headers[i].sh_size - j));
+                }
+                else
+                {
+                    // ~ Assumes page aligned sections
+                    memset_page(read_physical_address_4b(pt_phys + 4 * layout.page_table_entry) & 0xfffff000, 0);
+                }
             }
         }
     }
