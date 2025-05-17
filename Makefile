@@ -64,7 +64,8 @@ src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 resources/pci.ids:
-	wget https://raw.githubusercontent.com/pciutils/pciids/refs/heads/master/pci.ids -O resources/pci.ids
+	mkdir -p resources
+	wget https://raw.githubusercontent.com/pciutils/pciids/refs/heads/master/pci.ids -O ./resources/pci.ids
 
 rmbin:
 	rm -rf ./bin/*

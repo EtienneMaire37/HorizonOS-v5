@@ -21,21 +21,25 @@ void pic_disable()
 void pic_remap(uint8_t master_offset, uint8_t slave_offset)
 {
     // Init sequence
-    outb(PIC1_CMD, 0x11);
+    outb(PIC1_CMD, ICW1_INIT | ICW1_ICW4);
     io_wait();
-    outb(PIC2_CMD, 0x11);
+    outb(PIC2_CMD, ICW1_INIT | ICW1_ICW4);
     io_wait();
-    outb(PIC1_DATA, master_offset);
+    
+    outb(PIC1_DATA, master_offset); // ~ Master ICW2
     io_wait();
-    outb(PIC2_DATA, slave_offset);
+    outb(PIC2_DATA, slave_offset);  // ~ Slave ICW2
     io_wait();
-    outb(PIC1_DATA, 0x04);
+
+    // ^ Use the IRQ 2 (Cascade) for the PIC (never actually raised)
+    outb(PIC1_DATA, ICW3_MASTER_SLAVE_IQR(2));
     io_wait();
-    outb(PIC2_DATA, 0x02);
+    outb(PIC2_DATA, ICW3_SLAVE_MASTER_IRQ(2));
     io_wait();
-    outb(PIC1_DATA, 0x01);
+
+    outb(PIC1_DATA, ICW4_8086 | ICW4_NORMAL);
     io_wait();
-    outb(PIC2_DATA, 0x01);
+    outb(PIC2_DATA, ICW4_8086 | ICW4_NORMAL);
     io_wait();
 
     // No masking 
