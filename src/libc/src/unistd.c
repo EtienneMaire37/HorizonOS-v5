@@ -8,3 +8,10 @@ void* sbrk(intptr_t incr)
         return (void*)-1;
     return old_break;
 }
+
+off_t lseek(int fildes, off_t offset, int whence)
+{
+// ! For now we assume only standard streams
+    errno = ESPIPE;
+    return -1;
+}

@@ -6,6 +6,7 @@
 
 #include "../../kernel/multicore/spinlock.h"
 
+#include "../include/errno.h"
 #include "../include/inttypes.h"
 #include "../include/unistd.h"
 #include "../include/stdio.h"
@@ -13,7 +14,6 @@
 #include "../include/time.h"
 #include "../include/stdarg.h"
 #include "../include/string.h"
-#include "../include/errno.h"
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
 

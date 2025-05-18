@@ -10,9 +10,7 @@ typedef unsigned int size_t;
 
 #define EOF (-1)
 
-#define SEEK_CUR 0
-#define SEEK_END 1
-#define SEEK_SET 2
+#include "seek_defs.h"
 
 #define BUFSIZ 4096
 
@@ -30,8 +28,8 @@ typedef struct FILE FILE;
 struct FILE
 {
     int fd;
-    unsigned char* input_buffer;
-    unsigned char* output_buffer;
+    unsigned char* buffer;
+    size_t buffer_size;
 };
 
 #ifdef BUILDING_C_LIB

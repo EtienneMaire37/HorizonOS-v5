@@ -16,22 +16,23 @@ void _main()
     {
         FILE* f = (FILE*)malloc(sizeof(FILE));
         if (f == NULL) return NULL;
-        f->input_buffer = (uint8_t*)malloc(BUFSIZ);
-        f->output_buffer = (uint8_t*)malloc(BUFSIZ);
+        f->buffer = (uint8_t*)malloc(BUFSIZ);
+        f->fd = -1;
+        f->buffer_size = BUFSIZ;
         return f;
     }
 
     stdin = FILE_create();
     if (stdin == NULL) exit(EXIT_FAILURE);
-    if (stdin->input_buffer == NULL || stdin->output_buffer == NULL) exit(EXIT_FAILURE);
+    if (stdin->buffer == NULL) exit(EXIT_FAILURE);
     stdin->fd = STDIN_FILENO;
     stdout = FILE_create();
     if (stdout == NULL) exit(EXIT_FAILURE);
-    if (stdout->input_buffer == NULL || stdout->output_buffer == NULL) exit(EXIT_FAILURE);
+    if (stdout->buffer == NULL) exit(EXIT_FAILURE);
     stdout->fd = STDOUT_FILENO;
     stderr = FILE_create();
     if (stderr == NULL) exit(EXIT_FAILURE);
-    if (stderr->input_buffer == NULL || stderr->output_buffer == NULL) exit(EXIT_FAILURE);
+    if (stderr->buffer == NULL) exit(EXIT_FAILURE);
     stderr->fd = STDERR_FILENO;
 
     create_b64_decoding_table();

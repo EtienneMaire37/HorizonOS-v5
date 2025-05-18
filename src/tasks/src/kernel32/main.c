@@ -4,15 +4,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
 
 #include <horizonos.h>
 
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
-{    
-    // assert(("string", false));
-    
+{        
     printf("--- Start of HorizonOS configuration ---\n\n");
 
     printf("Please enter your preferred keyboard layout:\n");
