@@ -12,28 +12,20 @@ void _main()
     malloc_bitmap_init();
     // // printf("Break address : 0x%x\n\n", break_address);
 
-    FILE* FILE_create()
-    {
-        FILE* f = (FILE*)malloc(sizeof(FILE));
-        if (f == NULL) return NULL;
-        f->buffer = (uint8_t*)malloc(BUFSIZ);
-        f->fd = -1;
-        f->buffer_size = BUFSIZ;
-        return f;
-    }
-
     stdin = FILE_create();
     if (stdin == NULL) exit(EXIT_FAILURE);
-    if (stdin->buffer == NULL) exit(EXIT_FAILURE);
     stdin->fd = STDIN_FILENO;
+    stdin->flags = FILE_FLAGS_READ;
+
     stdout = FILE_create();
     if (stdout == NULL) exit(EXIT_FAILURE);
-    if (stdout->buffer == NULL) exit(EXIT_FAILURE);
     stdout->fd = STDOUT_FILENO;
+    stdout->flags = FILE_FLAGS_WRITE | FILE_FLAGS_LBF;
+
     stderr = FILE_create();
     if (stderr == NULL) exit(EXIT_FAILURE);
-    if (stderr->buffer == NULL) exit(EXIT_FAILURE);
     stderr->fd = STDERR_FILENO;
+    stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
 
     create_b64_decoding_table();
 

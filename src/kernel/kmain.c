@@ -13,6 +13,7 @@ multiboot_info_t* multiboot_info;
 #define TB (1024 * GB)
 
 #define BUILDING_C_LIB
+#define BUILDING_KERNEL
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stddef.h"
@@ -146,6 +147,38 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 
 #include "../libc/src/kernel.c"
 
+FILE _stdin, _stdout, _stderr;
+
+uint8_t stdin_buffer[BUFSIZ];
+uint8_t stdout_buffer[BUFSIZ];
+uint8_t stderr_buffer[BUFSIZ];
+
+#define _init_file_flags(f) { f->fd = -1; f->buffer_size = BUFSIZ; f->buffer_index = 0; f->buffer_mode = 0; f->flags = 0; f->current_flags = 0; f->errno = 0; f->buffer_end_index = 0;}
+
+void kernel_init_std()
+{
+    stdin = &_stdin;
+    stdout = &_stdout;
+    stderr = &_stderr;
+
+    stdin->buffer = stdin_buffer;
+    stdout->buffer = stdout_buffer;
+    stderr->buffer = stderr_buffer;
+
+    _init_file_flags(stdin);
+    _init_file_flags(stdout);
+    _init_file_flags(stderr);
+    
+    stdin->fd = STDIN_FILENO;
+    stdin->flags = FILE_FLAGS_READ;
+
+    stdout->fd = STDOUT_FILENO;
+    stdout->flags = FILE_FLAGS_WRITE | FILE_FLAGS_LBF;
+
+    stderr->fd = STDERR_FILENO;
+    stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
+}
+
 physical_address_t virtual_address_to_physical(virtual_address_t address)
 {
     if (address < 0x100000) return (physical_address_t)address;
@@ -179,6 +212,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     kernel_size = &_kernel_end - &_kernel_start;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
+
+    kernel_init_std();
 
     vga_init();
 

@@ -79,3 +79,26 @@ int brk(void *addr)
     errno = ENOMEM;
     return -1;
 }
+
+int open(const char* path, int oflag, ...)
+{
+    errno = ENOENT;
+    return -1;
+}
+
+int close(int fildes)
+{
+    errno = EBADF;
+    return -1;
+}
+
+void* malloc(size_t bytes)
+{
+    errno = ENOMEM;
+    return NULL;
+}
+
+void free(void* ptr)
+{
+    ;
+}

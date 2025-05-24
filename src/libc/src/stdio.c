@@ -4,14 +4,14 @@
 
 int putchar(int c)
 {
-    write(STDOUT_FILENO, &c, 1);
+    fwrite(&c, 1, 1, stdout);
     return c;
 }
 
 int puts(const char* s)
 {
     if (!s) return 1;
-    write(STDOUT_FILENO, s, strlen(s));
+    fwrite(s, strlen(s), 1, stdout);
     putchar('\n');
     return 1;
 }
@@ -365,14 +365,14 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     return length;
 }
 
-int printf(const char* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    int length = vprintf(format, args);
-    va_end(args);
-    return length;
-}
+// int printf(const char* format, ...)
+// {
+//     va_list args;
+//     va_start(args, format);
+//     int length = vprintf(format, args);
+//     va_end(args);
+//     return length;
+// }
 
 int sprintf(char* buffer, const char* format, ...)
 {
@@ -479,21 +479,190 @@ int vdprintf(int fd, const char *format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
+int fprintf(FILE* stream, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vfprintf(stream, format, args);
+    va_end(args);
+    return length;
+}
+
+int vfprintf(FILE* stream, const char *format, va_list args)
+{
+    void _putc(char c)
+    {
+        fwrite(&c, 1, 1, stream);
+    }
+    void _puts(char* s)
+    {
+        fwrite(s, strlen(s), 1, stream);
+    }
+
+    return _printf(_putc, _puts, format, args);
+}
+
+FILE* fopen(const char* path, const char* mode)
+{
+    errno = EACCES;
+    return NULL;    // * Currently the open syscall is not supported
+    // int fd = open(path);
+    // if (fd < 0) return NULL;
+    // FILE* f = FILE_create();
+    // if (!f) return NULL;
+    // f->fd = fd;
+}
+
+int fclose(FILE* stream)
+{
+    if (!stream) 
+    {
+        errno = EBADF;
+        return EOF;
+    }
+    fflush(stream);
+    if (stream->buffer) free(stream->buffer);
+    close(stream->fd);
+    free(stream);
+    return 0;
+}
+
+size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
+{
+    if (!stream || !ptr || size == 0 || nitems == 0)
+    {
+        if (stream)
+            stream->errno = EINVAL;
+        return 0;
+    }
+    
+    if (stream->fd == STDIN_FILENO) // ! Not defined by the standard but a lot of programs rely on it
+        fflush(stdout);
+
+    if (stream->buffer_mode == FILE_BFMD_WRITE)
+    {
+        fflush(stream);
+        stream->buffer_mode = FILE_BFMD_READ;
+        int ret = read(stream->fd, stream->buffer, stream->buffer_size);
+        if (ret < 0) 
+        {
+            stream->errno = EIO;
+            stream->buffer_end_index = 0;
+            return 0;
+        }
+        stream->buffer_end_index = ret;
+    }
+
+    uint32_t bytes = size * nitems; // ! Might overflow
+    for (uint32_t i = 0; i < bytes; i++)
+    {
+        if (stream->buffer_index >= stream->buffer_end_index || stream->buffer_end_index == 0)
+        {
+            stream->buffer_index = 0;
+            int ret = read(stream->fd, stream->buffer, stream->buffer_size);
+            if (ret < stream->buffer_size)
+            {
+                if (ret >= 0)
+                    stream->current_flags |= FILE_CFLAGS_EOF;
+                else
+                    stream->errno = errno;
+                return i / nitems;
+            }
+            stream->buffer_end_index = ret;
+        }
+        uint8_t byte = stream->buffer[stream->buffer_index];
+        stream->buffer_index++;
+        ((uint8_t*)ptr)[i] = byte;
+    }
+}
+
+size_t fwrite(const void* ptr, size_t size, size_t nitems, FILE* stream)
+{
+    if (!stream || !ptr || size == 0 || nitems == 0)
+    {
+        if (stream)
+            stream->errno = EINVAL;
+        return 0;
+    }
+
+    if (stream->buffer_mode == FILE_BFMD_READ)
+    {
+        stream->buffer_index = 0;
+        stream->buffer_end_index = 0;
+        stream->buffer_mode = FILE_BFMD_WRITE;
+    }
+
+    const uint8_t* data = ptr;
+    size_t bytes = size * nitems;
+
+    for (size_t i = 0; i < bytes; i++)
+    {
+        if (stream->buffer_index >= stream->buffer_size)
+        {
+            if (fflush(stream) != 0)
+                return i / size;
+        }
+
+        stream->buffer[stream->buffer_index] = data[i];
+        stream->buffer_index++;
+
+        if ((stream->flags & FILE_FLAGS_LBF) && data[i] == '\n')
+        {
+            if (fflush(stream) != 0)
+                return i / size;
+        }
+    }
+
+    if (stream->flags & FILE_FLAGS_NBF)
+    {
+        if (fflush(stream) != 0)
+            return (bytes - (stream->buffer_size - stream->buffer_index)) / size;
+    }
+
+    return nitems;
+}
+
+int fflush(FILE* stream)
+{
+    if (!stream)
+    {
+        errno = EBADF;
+        return EOF;
+    }
+
+    if (stream->buffer_mode == FILE_BFMD_READ || stream->buffer_index == 0)
+        return 0;
+
+    if (write(stream->fd, stream->buffer, min(stream->buffer_index, stream->buffer_size)) < 0)
+        return EOF; // * write already sets errno appropriately
+    stream->buffer_index = 0;
+
+    return 0;
+}
+
+int feof(FILE* stream)
+{
+    return stream->current_flags & FILE_CFLAGS_EOF;
+}
+
+int ferror(FILE* stream)
+{
+    if (stream->errno)
+        errno = stream->errno;
+    return stream->errno;
+}
+
+int fgetc(FILE* stream)
+{
+    if (feof(stream)) return EOF;
+
+    unsigned char c;
+    int ret = fread(&c, 1, 1, stream);
+    if (ret < 0) return EOF;
+    return (int)c;
+}
+
 int getchar()
 {
-    // static unsigned char buffer[BUFSIZ];
-    // static size_t start = 0, end = 0;
-    // ssize_t bytes_read;
-
-    // if (start >= end)
-    // {
-    //     bytes_read = read(STDIN_FILENO, buffer, sizeof(buffer));
-    //     if (bytes_read <= 0) 
-    //         return EOF; 
-    //     start = 0;
-    //     end = (size_t)bytes_read;
-    // }
-
-    // return (int)buffer[start++];
-    return EOF;
+    return getc(stdin);
 }

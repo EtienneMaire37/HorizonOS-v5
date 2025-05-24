@@ -89,4 +89,6 @@ void keyboard_handle_character(utf32_char_t character)
             }
         }
     }
+
+    fflush(stdout);
 }

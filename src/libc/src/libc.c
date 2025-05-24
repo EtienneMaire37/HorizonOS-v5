@@ -4,6 +4,9 @@
 // #include <stdint.h>
 #include <stdatomic.h>
 
+#define min(a, b)   ((a) > (b) ? (b) : (a))
+#define max(a, b)   ((a) < (b) ? (b) : (a))
+
 #include "../../kernel/multicore/spinlock.h"
 
 #include "../include/errno.h"
@@ -18,6 +21,27 @@
 #include "../include/horizonos.h"
 
 #include "kernel_glue.h"
+
+FILE* FILE_create()
+{
+    FILE* f = (FILE*)malloc(sizeof(FILE));
+    if (!f) return NULL;
+    f->buffer = (uint8_t*)malloc(BUFSIZ);
+    if (!f->buffer)
+    {
+        free(f);
+        return NULL;
+    }
+    f->fd = -1;
+    f->buffer_size = BUFSIZ;
+    f->buffer_index = 0;
+    f->buffer_mode = 0;
+    f->flags = 0;
+    f->current_flags = 0;
+    f->errno = 0;
+    f->buffer_end_index = 0;
+    return f;
+}
 
 #include "unistd.c"
 #include "stdio.c"

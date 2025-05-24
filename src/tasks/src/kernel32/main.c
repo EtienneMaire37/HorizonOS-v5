@@ -9,10 +9,13 @@
 
 #include <horizonos.h>
 
+// #define min(a, b)   ((a) > (b) ? (b) : (a))
+// #define max(a, b)   ((a) < (b) ? (b) : (a))
+
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
-{        
+{
     printf("--- Start of HorizonOS configuration ---\n\n");
 
     printf("Please enter your preferred keyboard layout:\n");
@@ -23,6 +26,7 @@ int main()
     while (!(kb_layout_choice >= 1 && kb_layout_choice <= 2))
     {
         printf("->");
+        fflush(stdout);
         char kb_layout_choice_str[2] = { 0 };
         read(STDIN_FILENO, &kb_layout_choice_str[0], 2);
         if (kb_layout_choice_str[1] != EOF && kb_layout_choice_str[1] != '\n')
@@ -43,6 +47,7 @@ int main()
     while (true)
     {
         printf("$ ");
+        fflush(stdout);
         char ch = 0;
         read(STDIN_FILENO, &ch, 1);
         flush_stdin();

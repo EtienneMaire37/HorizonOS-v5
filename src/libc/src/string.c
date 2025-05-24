@@ -155,6 +155,7 @@ char* errno_messages[] =
 
 char* strerror(int errnum)
 {
+    if (errnum < 0 || errnum > 81) return NULL;
     strcpy(&internal_error_message[0], errno_messages[errnum]);
     return &internal_error_message[0];
 }
