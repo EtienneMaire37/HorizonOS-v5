@@ -34,7 +34,6 @@ struct FILE
     unsigned char buffer_mode;
     unsigned char flags;
     unsigned char current_flags;
-    int errno;
 };
 
 #define FILE_FLAGS_READ     0x01
@@ -44,8 +43,11 @@ struct FILE
 #define FILE_FLAGS_LBF      0x08
 #define FILE_FLAGS_NBF      0x10
 
+#define FILE_FLAGS_BF_ALLOC 0x20
+
 
 #define FILE_CFLAGS_EOF     0x01
+#define FILE_CFLAGS_ERR     0x02
 
 #define FILE_BFMD_READ      0
 #define FILE_BFMD_WRITE     1

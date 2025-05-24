@@ -153,7 +153,7 @@ uint8_t stdin_buffer[BUFSIZ];
 uint8_t stdout_buffer[BUFSIZ];
 uint8_t stderr_buffer[BUFSIZ];
 
-#define _init_file_flags(f) { f->fd = -1; f->buffer_size = BUFSIZ; f->buffer_index = 0; f->buffer_mode = 0; f->flags = 0; f->current_flags = 0; f->errno = 0; f->buffer_end_index = 0;}
+#define _init_file_flags(f) { f->fd = -1; f->buffer_size = BUFSIZ; f->buffer_index = 0; f->buffer_mode = 0; f->flags = FILE_FLAGS_BF_ALLOC; f->current_flags = 0; f->buffer_end_index = 0;}
 
 void kernel_init_std()
 {

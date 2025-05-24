@@ -36,9 +36,8 @@ FILE* FILE_create()
     f->buffer_size = BUFSIZ;
     f->buffer_index = 0;
     f->buffer_mode = 0;
-    f->flags = 0;
+    f->flags = FILE_FLAGS_BF_ALLOC;
     f->current_flags = 0;
-    f->errno = 0;
     f->buffer_end_index = 0;
     return f;
 }
