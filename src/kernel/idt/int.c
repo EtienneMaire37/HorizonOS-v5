@@ -238,7 +238,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
         pic_send_eoi(irq_number);
         return_from_isr();
     }
-    if (registers->interrupt_number == 0xff)  // System call
+    if (registers->interrupt_number == 0xf0)  // System call
     {
         // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
         if (!multitasking_enabled) return_from_isr();

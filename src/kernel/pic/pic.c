@@ -21,9 +21,9 @@ void pic_disable()
 void pic_remap(uint8_t master_offset, uint8_t slave_offset)
 {
     // Init sequence
-    outb(PIC1_CMD, ICW1_INIT | ICW1_ICW4);
+    outb(PIC1_CMD, ICW1_INIT | ICW1_ICW4 | ICW1_CASCADE);
     io_wait();
-    outb(PIC2_CMD, ICW1_INIT | ICW1_ICW4);
+    outb(PIC2_CMD, ICW1_INIT | ICW1_ICW4 | ICW1_CASCADE);
     io_wait();
     
     outb(PIC1_DATA, master_offset); // ~ Master ICW2

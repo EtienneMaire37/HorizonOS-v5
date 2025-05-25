@@ -22,10 +22,10 @@ void install_idt()
     for(uint8_t i = 32; i < 32 + 16; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);  // PIC IRQs
 
-    for(uint16_t i = 32 + 16; i < 0xff; i++)
+    for(uint16_t i = 32 + 16; i < 256; i++)
         setup_idt_entry(&IDT[i], KERNEL_CODE_SEGMENT, interrupt_table[i], 0b00, ISR_INTERRUPT_GATE_32);
 
-    setup_idt_entry(&IDT[0xff], KERNEL_CODE_SEGMENT, interrupt_table[0xff], 0b11, ISR_INTERRUPT_GATE_32); // System call 
+    setup_idt_entry(&IDT[0xf0], KERNEL_CODE_SEGMENT, interrupt_table[0xf0], 0b11, ISR_INTERRUPT_GATE_32); // System call 
     // TODO: Change some of them to ISR_TRAP_GATE_32 and change from using global variables for interrupts to stack allocated ones
     // !! Update : Doesn't work because of the way i do physical memory access...
     // TODO: Fix this asap

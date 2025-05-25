@@ -15,7 +15,7 @@
 // ^ Initialization command words
 #define ICW1_ICW4	            0x01        // Use ICW4
 #define ICW1_SINGLE	            0x02		// Single mode
-#define ICW1_CASCADE	        0x02		// Cascade mode
+#define ICW1_CASCADE	        0x00		// Cascade mode
 #define ICW1_INTERVAL4	        0x04
 #define ICW1_INTERVAL8	        0x00
 #define ICW1_LEVEL_TRIGGERED	0x08
