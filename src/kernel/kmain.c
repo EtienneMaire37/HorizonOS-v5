@@ -106,7 +106,8 @@ const char* multiboot_block_type_text[5] =
 #include "pit/pit.h"
 #include "idt/idt.h"
 #include "idt/int.h"
-#include "idt/pic.h"
+#include "pic/pic.h"
+#include "pic/apic.h"
 #include "multitasking/task.h"
 #include "cmos/cmos.h"
 #include "cmos/rtc.h"
@@ -141,7 +142,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 #include "pit/pit.c"
 #include "idt/idt.c"
 #include "idt/int.c"
-#include "idt/pic.c"
+#include "pic/pic.c"
 #include "multitasking/task.c"
 #include "ps2/ps2.c"
 
@@ -444,7 +445,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         // }
         // for(uint32_t i = 0; i < 10000000 / 4096; i++)
         //     pfa_free_physical_page(addresses[10000000 / 4096 - i - 1]);
-        
+
+        // LOG(DEBUG, "0x%x", offsetof(struct local_apic_registers, divide_configuration_register));
 
     LOG(DEBUG, "Initializing multitasking");
 

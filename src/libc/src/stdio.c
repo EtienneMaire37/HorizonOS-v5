@@ -660,7 +660,7 @@ int fflush(FILE* stream)
 
 int feof(FILE* stream)
 {
-    return stream->current_flags & FILE_CFLAGS_EOF;
+    return (stream->current_flags & FILE_CFLAGS_EOF) != 0;  // Posix doesn't imply that it should be 0 or 1 but helps
 }
 
 int ferror(FILE* stream)

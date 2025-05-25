@@ -92,6 +92,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
             if (last_symbol_address <= eip && symbol_address > eip)
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
+                fflush(stdout);
                 
                 tty_color =  (found_symbol_type == 'T' || found_symbol_type == 't') ? (FG_LIGHTCYAN | BG_BLACK) : 
                             ((found_symbol_type == 'R' || found_symbol_type == 'r') ? (FG_LIGHTMAGENTA | BG_BLACK) : 
@@ -104,16 +105,19 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                 {
                     if (last_symbol_buffer[i] == '.')
                     {
+                        fflush(stdout);
                         tty_color = (FG_LIGHTGRAY | BG_BLACK);
                         subfunction = true;
                     }
                     putchar(last_symbol_buffer[i]);
                     if (subfunction)
                     {
+                        fflush(stdout);
                         tty_color = (light_tty_color & 0b01110111);
                         subfunction = false;
                     }
                 }
+                fflush(stdout);
                 tty_color = (FG_WHITE | BG_BLACK);
                 putchar(file == kernel_symbols_file ? ']' : ')');
                 return;
