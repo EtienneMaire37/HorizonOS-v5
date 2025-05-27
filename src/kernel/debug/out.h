@@ -49,7 +49,7 @@ int printf_log(const char* format, ...)
     return length;
 }
 
-#ifdef NO_LOGS 
+#ifndef LOG_LEVEL 
 #define _LOG(level_text, ...)
 #define LOG(level, ...)
 #else

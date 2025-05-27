@@ -3,8 +3,9 @@ DATE := `date +"%Y-%m-%d"`
 CC := ./i486elfgcc/bin/i486-elf-gcc
 LD := ./i486elfgcc/bin/i486-elf-ld
 AR := ./i486elfgcc/bin/i486-elf-ar
+CLOGLEVEL := 
 
-all: horizonos.iso
+all: $(CC) horizonos.iso
 
 run:
 	mkdir debug -p
@@ -24,7 +25,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
-	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow
+	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow $(CLOGLEVEL)
 	$(LD) -T src/kernel/link.ld "src/libc/lib/libm.a"
 	
 	mkdir -p ./root/boot/grub
@@ -62,6 +63,9 @@ src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
 	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
+
+$(CC):
+	sh install-cross-compiler.sh
 
 resources/pci.ids:
 	mkdir -p resources
