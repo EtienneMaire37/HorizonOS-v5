@@ -55,4 +55,5 @@ void tty_reset_cursor();
 void tty_set_cursor_pos(uint16_t pos);
 void tty_update();
 void tty_clear_screen(char c);
+void tty_set_color(uint8_t fg_color, uint8_t bg_color);
 void outc(char c);

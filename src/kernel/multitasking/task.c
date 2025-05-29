@@ -341,6 +341,7 @@ void multitasking_init()
 
 void multitasking_start()
 {
+    fflush(stdout);
     multitasking_enabled = true;
     current_task_index = task_count - 1;    // ~ ((task_count - 1) + 1) % task_count = 0 - So it starts with the idle task
     while(true);

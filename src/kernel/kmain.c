@@ -26,6 +26,12 @@ multiboot_info_t* multiboot_info;
 
 #include "../libc/src/kernel_glue.h"
 
+const char* text_logo = "    __  __           _                  ____  _____            ______ \n\
+   / / / /___  _____(_)___ ____  ____  / __ \\/ ___/     _   __/ ____/ \n\
+  / /_/ / __ \\/ ___/ /_  // __ \\/ __ \\/ / / /\\__ \\_____| | / /___ \\ \n\
+ / __  / /_/ / /  / / / // /_/ / / / / /_/ /___/ /_____/ |/ /___/ / \n\
+/_/ /_/\\____/_/  /_/ /___|____/_/ /_/\\____//____/      |___/_____/\n";
+
 int imod(int a, int b)
 {
     if(b < 0)
@@ -448,6 +454,21 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         //     pfa_free_physical_page(addresses[10000000 / 4096 - i - 1]);
 
         // LOG(DEBUG, "0x%x", offsetof(struct local_apic_registers, divide_configuration_register));
+
+    printf("VGA color codes:\n");
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        tty_set_color(i, BG_BLACK);
+        putchar('#');
+    }
+
+    tty_set_color(FG_WHITE, BG_BLACK);
+    putchar('\n');
+
+    tty_set_color(FG_RED, BG_BLACK);
+    puts(text_logo);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    putchar('\n');
 
     LOG(DEBUG, "Initializing multitasking");
 

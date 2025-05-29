@@ -51,7 +51,9 @@ void pci_scan_buses()
 
                     printf("PCI Device at 0x%x:0x%x:0x%x (Header type : %u) :\n", i, j, k, header_type);
                     printf("    Device ID: 0x%x | Vendor ID: 0x%x\n", device_id, vendor_id);
-                    printf("    Vendor : \"");
+                    printf("    Vendor : ");
+                    tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+                    putchar('\"');
 
                     uint32_t line = 0;
                     int32_t line_offset = 0;
@@ -69,7 +71,11 @@ void pci_scan_buses()
                             vendor_id_line = device_id_line = true;
                             if (found_vendor && !printed_vendor)
                             {
-                                printf("\"\n    Device : \"");
+                                putchar('\"');
+                                tty_set_color(FG_WHITE, BG_BLACK);
+                                printf("\n    Device : ");
+                                tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+                                putchar('\"');
                                 fputc('\"', stderr);
                                 LOG(DEBUG, "    Device : \"");
                                 printed_vendor = true;
@@ -78,6 +84,7 @@ void pci_scan_buses()
                             {
                                 printf("\"\n");
                                 fputc('\"', stderr);
+                                tty_set_color(FG_WHITE, BG_BLACK);
                                 break;
                             }
                             continue;
@@ -139,9 +146,11 @@ void pci_scan_buses()
                     }
                     if (!found_device)
                     {
+                        tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                         putchar('\"');
                         fputc('\"', stderr);
                         putchar('\n');
+                        tty_set_color(FG_WHITE, BG_BLACK);
                     }
                 }
             }

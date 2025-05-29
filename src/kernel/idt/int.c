@@ -4,22 +4,22 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 {
     disable_interrupts();
 
-    tty_color = BG_BLACK;
+    tty_set_color(FG_WHITE, BG_BLACK);
     tty_clear_screen(' ');
 
     tty_cursor = 0;
     tty_update_cursor();
     // tty_hide_cursor();
 
-    tty_color = (FG_LIGHTRED | BG_BLACK);
+    tty_set_color(FG_LIGHTRED, BG_BLACK);
     printf("Kernel panic\n\n");
 
-    tty_color = (FG_LIGHTGREEN | BG_BLACK);
+    tty_set_color(FG_LIGHTGREEN, BG_BLACK);
 
     if (multitasking_enabled)
         printf("Task : \"%s\" (pid = %lu) | ring = %u\n\n", tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring);
 
-    tty_color = (FG_WHITE | BG_BLACK);
+    tty_set_color(FG_WHITE, BG_BLACK);
 
     printf("Exception number: %u\n", registers->interrupt_number);
     printf("Error:       %s\n", get_error_message(registers->interrupt_number, registers->error_code));
@@ -93,11 +93,13 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
                 fputc(file == kernel_symbols_file ? '[' : '(', stderr);
-                fflush(stdout);
                 
-                tty_color =  (found_symbol_type == 'T' || found_symbol_type == 't') ? (FG_LIGHTCYAN | BG_BLACK) : 
-                            ((found_symbol_type == 'R' || found_symbol_type == 'r') ? (FG_LIGHTMAGENTA | BG_BLACK) : 
-                            (FG_LIGHTGRAY | BG_BLACK));
+                if (found_symbol_type == 'T' || found_symbol_type == 't')
+                    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+                else if (found_symbol_type == 'R' || found_symbol_type == 'r')
+                    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+                else
+                    tty_set_color(FG_LIGHTGRAY, BG_BLACK);
 
                 uint8_t light_tty_color = tty_color;
                 bool subfunction = false;
@@ -106,21 +108,18 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                 {
                     if (last_symbol_buffer[i] == '.')
                     {
-                        fflush(stdout);
-                        tty_color = (FG_LIGHTGRAY | BG_BLACK);
+                        tty_set_color(FG_LIGHTGRAY, BG_BLACK);
                         subfunction = true;
                     }
                     putchar(last_symbol_buffer[i]);
                     fputc(last_symbol_buffer[i], stderr);
                     if (subfunction)
                     {
-                        fflush(stdout);
-                        tty_color = (light_tty_color & 0b01110111);
+                        tty_set_color(light_tty_color & 0x07, light_tty_color & 0x70);
                         subfunction = false;
                     }
                 }
-                fflush(stdout);
-                tty_color = (FG_WHITE | BG_BLACK);
+                tty_set_color(FG_WHITE, BG_BLACK);
                 putchar(file == kernel_symbols_file ? ']' : ')');
                 fputc(file == kernel_symbols_file ? ']' : ')', stderr);
                 return;
