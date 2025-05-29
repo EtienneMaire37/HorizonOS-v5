@@ -92,6 +92,7 @@ const char* multiboot_block_type_text[5] =
 #include "ps2/keyboard.h"
 #include "acpi/tables.h"
 #include "vga/textio.h"
+#include "pci/pci.h"
 #include "../libc/include/stdio.h"
 #include "../libc/include/string.h"
 #include "../libc/include/stdlib.h"
@@ -142,6 +143,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 #include "pic/pic.c"
 #include "multitasking/task.c"
 #include "ps2/ps2.c"
+#include "pci/pci.c"
 
 #include "../libc/src/kernel.c"
 
@@ -373,6 +375,11 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     time_initialized = true;
     
     printf(" | Done\n");
+
+    LOG(DEBUG, "Scanning pci buses...");
+    printf("Scanning pci buses...");
+
+    pci_scan_buses();
 
     enable_interrupts(); 
     LOG(DEBUG, "Enabled interrupts"); 
