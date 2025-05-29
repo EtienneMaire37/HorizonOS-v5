@@ -90,8 +90,19 @@ void pci_scan_buses()
                             continue;
                         }
 
-                        if (comment_line)
+                        if (!found_vendor && pci_ids->data[file_offset - line_offset] == '\t')
+                        {
+                            while (pci_ids->data[file_offset++] != '\n');
+                            file_offset -= 2;
                             continue;
+                        }
+
+                        if (comment_line)
+                        {
+                            while (pci_ids->data[file_offset++] != '\n');
+                            file_offset -= 2;
+                            continue;
+                        }
 
                         if (byte == '#')
                         {
