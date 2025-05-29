@@ -54,8 +54,12 @@ uint64_t available_memory = 0;
 extern void _halt();
 void halt();
 
-#define enable_interrupts()  asm volatile("sti");
-#define disable_interrupts() asm volatile("cli");
+#define hlt()                   asm volatile ("hlt");
+
+#define enable_interrupts()     asm volatile("sti");
+#define disable_interrupts()    asm volatile("cli");
+
+#define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
@@ -199,6 +203,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
 
 void halt()
 {
+    disable_interrupts();
     LOG(WARNING, "Kernel halted");
     _halt();
 }
@@ -294,7 +299,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     printf(" | Done (%u bytes found)\n", available_memory);
 
-    printf("Loading a gdt...");
+    printf("Loading a GDT...");
     memset(&GDT[0], 0, sizeof(struct gdt_entry));   // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0b10011011, 0b1100);  // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0b10010011, 0b1100);  // Kernel mode data segment
@@ -308,29 +313,21 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     setup_gdt_entry(&GDT[5], (uint32_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
     install_gdt();
     load_tss();
-    printf(" | Done\n");
+    printf(" | Done\n"); 
 
-    LOG(DEBUG, "Loaded the gdt"); 
-
-    printf("Loading an idt...");
+    printf("Loading an IDT...");
     install_idt();
     printf(" | Done\n");
 
-    LOG(DEBUG, "Loaded the idt"); 
-
-    printf("Initializing the pic...");
+    printf("Initializing the PIC...");
     pic_remap(32, 32 + 8);
     printf(" | Done\n");
 
-    LOG(DEBUG, "Initialized the pic"); 
-
-    printf("Initializing the pit...");
+    printf("Initializing the PIT...");
     pit_channel_0_set_frequency(PIT_FREQUENCY);
     printf(" | Done\n");
 
     ps2_controller_connected = ps2_device_1_connected = ps2_device_2_connected = false;
-
-    LOG(DEBUG, "Initialized the pit"); 
 
     LOG(DEBUG, "Setting up the initrd");
 
@@ -366,8 +363,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     pfa_detect_usable_memory();
 
-    LOG(DEBUG, "Retrieving cmos data");
-    printf("Retrieving cmos data...");
+    LOG(DEBUG, "Retrieving CMOS data");
+    printf("Retrieving CMOS data...");
 
     rtc_detect_mode();
     rtc_get_time();
@@ -376,17 +373,17 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     
     printf(" | Done\n");
 
-    LOG(DEBUG, "Scanning pci buses...");
-    printf("Scanning pci buses...");
-
-    pci_scan_buses();
-
     enable_interrupts(); 
     LOG(DEBUG, "Enabled interrupts"); 
 
     LOG(DEBUG, "CMOS mode : binary = %u, 24-hour = %u", rtc_binary_mode, rtc_24_hour_mode);
     LOG(INFO, "Time : %u-%u%u-%u%u %u%u:%u%u:%u%u", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
     printf("Time : %u-%u%u-%u%u %u%u:%u%u:%u%u\n", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
+
+    LOG(DEBUG, "Scanning PCI buses...");
+    printf("Scanning PCI buses...");
+
+    pci_scan_buses();
 
     LOG(DEBUG, "Setting up multitasking");
 
@@ -396,7 +393,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
 
-    LOG(INFO, "Detecting acpi tables and ebda");
+    LOG(INFO, "Detecting ACPI tables and ebda");
 
     bios_get_ebda_pointer();
     acpi_find_tables();

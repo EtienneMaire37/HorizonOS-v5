@@ -450,6 +450,5 @@ void task_kill(uint16_t index)
 
 void idle_main()
 {
-    while(true)
-        asm volatile("hlt");
+    while(true) hlt();
 }

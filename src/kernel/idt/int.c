@@ -54,7 +54,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 
     // ~ Log the last function (the one the exception happened in)
     printf("eip : 0x%x ", registers->eip);
-    LOG(DEBUG, "eip : 0x%x", registers->eip);
+    LOG(DEBUG, "eip : 0x%x ", registers->eip);
     if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
     (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
         print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
@@ -63,7 +63,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
     while ((uint32_t)ebp != 0 && ((uint32_t)ebp != (uint32_t)&stack_top) && ((uint32_t)ebp != TASK_STACK_TOP_ADDRESS))
     {
         printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-        LOG(DEBUG, "eip : 0x%x | ebp : 0x%x", ebp->eip, ebp);
+        LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
         if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
         (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
             print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 cause it pushes the return address not the calling address
@@ -92,6 +92,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
             if (last_symbol_address <= eip && symbol_address > eip)
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
+                fputc(file == kernel_symbols_file ? '[' : '(', stderr);
                 fflush(stdout);
                 
                 tty_color =  (found_symbol_type == 'T' || found_symbol_type == 't') ? (FG_LIGHTCYAN | BG_BLACK) : 
@@ -110,6 +111,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                         subfunction = true;
                     }
                     putchar(last_symbol_buffer[i]);
+                    fputc(last_symbol_buffer[i], stderr);
                     if (subfunction)
                     {
                         fflush(stdout);
@@ -120,6 +122,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                 fflush(stdout);
                 tty_color = (FG_WHITE | BG_BLACK);
                 putchar(file == kernel_symbols_file ? ']' : ')');
+                fputc(file == kernel_symbols_file ? ']' : ')', stderr);
                 return;
             }
             else if (is_a_valid_function(current_symbol_type))
@@ -132,7 +135,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
         {
             if (line_offset < 8)
             {
-                uint32_t val = (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0));
+                uint32_t val = hex_char_to_int(ch);
                 current_symbol_address &= ~((uint32_t)0xf << ((7 - line_offset) * 4));
                 current_symbol_address |= val << ((7 - line_offset) * 4);
             }

@@ -70,9 +70,9 @@ int fflush(FILE *stream);
 int feof(FILE* stream);
 int ferror(FILE* stream);
 int fgetc(FILE* stream);
-
+int fputc(int c, FILE* stream);
 int getchar();
-// int fputc(int c, FILE* stream);
+
 #define putc fputc
 #define getc fgetc
 

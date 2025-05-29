@@ -4,7 +4,7 @@
 
 int putchar(int c)
 {
-    fwrite(&c, 1, 1, stdout);
+    fputc(c, stdout);
     return c;
 }
 
@@ -674,7 +674,13 @@ int fgetc(FILE* stream)
     size_t ret = fread(&c, 1, 1, stream);
     if (ret != 1) return EOF;
     return (int)c;
+}
 
+int fputc(int c, FILE* stream)
+{
+    size_t ret = fwrite(&c, 1, 1, stream);
+    if (ret != 1) return EOF;
+    return (int)c;
 }
 
 int getchar()
