@@ -103,7 +103,7 @@ _start:
     or eax, 0b1011
     mov [page_directory - 0xc0000000 + 4092], eax
 
-    ; Enable paging
+    ; Set up paging
     mov ecx, page_directory - 0xc0000000
     mov cr3, ecx
 

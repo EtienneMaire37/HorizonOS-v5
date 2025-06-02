@@ -58,7 +58,7 @@ void acpi_find_tables()
     fadt_address = madt_address = ssdt_address = dsdt_address = 0;
     
     LOG(INFO, "Searching for the RSDP");
-    printf("Searching for the RSDP\n");
+    // printf("Searching for the RSDP\n");
 
     LOG(DEBUG, "\tChecking the 1rst KB of EBDA");
 
@@ -207,7 +207,8 @@ void fadt_extract_data()
         preferred_power_management_profile = _preferred_power_management_profile;
 
     LOG(INFO, "Preferred power management profile : %s (%u)", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
-    printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
+    if (preferred_power_management_profile != 0)
+        printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
 
     uint32_t _dsdt_address = table_read_member(struct fadt_table, fadt_address, dsdt_address, true);
     // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
@@ -216,7 +217,7 @@ void fadt_extract_data()
         if (acpi_table_valid(_dsdt_address))
         {
             LOG(INFO, "Valid DSDT");
-            printf("Found valid DSDT\n");
+            // printf("Found valid DSDT\n");
             dsdt_address = _dsdt_address;
         }
     }

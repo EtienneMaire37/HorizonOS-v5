@@ -235,6 +235,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     vga_init();
 
+    vga_write_port_3c0(0x10 | (1 << 5), vga_read_port_3c0(0x10 | (1 << 5)) & (~(1 << 3)));    // * Disable blinking
+
     tty_clear_screen(' ');
     tty_reset_cursor();
 
@@ -289,7 +291,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     }
 
     uint32_t cr0 =  get_cr0() | 
-                    ((!has_fpu) << 2) |  // emulate fpu only if there is none
+                    // ((!has_fpu) << 2) |  // emulate fpu only if there is none // ~ Actually never emulate it
                     (1 << 5) | // you shouldn't try running hos on a i386 anyways...
                     (has_fpu << 1);
     load_cr0(cr0);
@@ -465,8 +467,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     printf("VGA color codes:\n");
     for (uint8_t i = 0; i < 16; i++)
     {
-        tty_set_color(i, BG_BLACK);
-        putchar('#');
+        tty_set_color(FG_BLACK, i << 4);
+        putchar(' ');
+        putchar(' ');
     }
 
     tty_set_color(FG_WHITE, BG_BLACK);
@@ -479,7 +482,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initializing multitasking");
 
-    // fpu_init();  // ^ No need to call it another time
+    // fpu_init();  // ~ No need to call it another time
 
     multitasking_init();
 

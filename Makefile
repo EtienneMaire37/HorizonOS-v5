@@ -1,11 +1,12 @@
 CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer
 DATE := `date +"%Y-%m-%d"`
-CC := ./i486elfgcc/bin/i486-elf-gcc
-LD := ./i486elfgcc/bin/i486-elf-ld
-AR := ./i486elfgcc/bin/i486-elf-ar
+CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
+CROSSLD := ./i486elfgcc/bin/i486-elf-ld
+CROSSAR := ./i486elfgcc/bin/i486-elf-ar
+USERGCC := 
 CLOGLEVEL := 
 
-all: $(CC) horizonos.iso
+all: $(CROSSGCC) $(USERGCC) horizonos.iso
 
 run:
 	mkdir debug -p
@@ -25,8 +26,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	 
-	$(CC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow $(CLOGLEVEL)
-	$(LD) -T src/kernel/link.ld "src/libc/lib/libm.a"
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow $(CLOGLEVEL)
+	$(CROSSLD) -T src/kernel/link.ld "src/libc/lib/libm.a"
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
@@ -44,8 +45,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
-	$(LD) -T src/tasks/link.ld -m elf_i386 \
+	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
+	$(CROSSLD) -T src/tasks/link.ld -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \
     "src/libc/lib/libc.a" \
@@ -56,16 +57,20 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	nasm -f elf32 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
-	$(CC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O0 $(CFLAGS)
-	$(LD) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -m elf_i386 -o "src/libc/lib/libc.o" -r
-	$(AR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
+	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O0 $(CFLAGS)
+	$(CROSSLD) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -m elf_i386 -o "src/libc/lib/libc.o" -r
+	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
-	$(AR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
+	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
+	$(CROSSAR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
-$(CC):
+$(CROSSGCC):
 	sh install-cross-compiler.sh
+
+$(USERGCC):
+	rm -rf build-area horizonos-toolchain
+	sh install-custom-toolchain.sh
 
 resources/pci.ids:
 	mkdir -p resources
