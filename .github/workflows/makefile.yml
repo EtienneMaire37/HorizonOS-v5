@@ -32,4 +32,4 @@ jobs:
       run: sh install-cross-compiler.sh
 
     - name: Build
-      run: make all
+      run: make all && cp ./horizonos.iso dist/horizonos.iso
