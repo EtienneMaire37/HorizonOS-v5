@@ -32,4 +32,10 @@ jobs:
       run: sh install-cross-compiler.sh
 
     - name: Build
-      run: make all && cp ./horizonos.iso dist/horizonos.iso
+      run: make all
+
+    - name: Upload file 
+      uses: actions/upload-artifact@v4
+      with:
+        name: Disk image
+        path: ./horizonos.iso
