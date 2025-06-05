@@ -87,7 +87,10 @@ void acpi_find_tables()
 
     LOG(CRITICAL, "Couldn't find the RSDP table");
     printf("Couldn't find the RSDP table\n");
-    abort();
+    
+    rsdp = NULL:
+    sdt_count = 0;
+    return;
 
 found_rsdp:
     LOG(INFO, "Found rsdp at address 0x%x", rsdp);
