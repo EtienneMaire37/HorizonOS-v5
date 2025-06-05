@@ -88,7 +88,7 @@ void acpi_find_tables()
     LOG(CRITICAL, "Couldn't find the RSDP table");
     printf("Couldn't find the RSDP table\n");
     
-    rsdp = NULL:
+    rsdp = NULL;
     sdt_count = 0;
     return;
 
