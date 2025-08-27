@@ -651,7 +651,7 @@ int fflush(FILE* stream)
     if (stream->buffer_mode == FILE_BFMD_READ || stream->buffer_index == 0)
         return 0;
 
-    if (write(stream->fd, stream->buffer, min(stream->buffer_index, stream->buffer_size)) < 0)
+    if (write(stream->fd, stream->buffer, minint(stream->buffer_index, stream->buffer_size)) < 0)
         return EOF; // * write already sets errno appropriately
     stream->buffer_index = 0;
 

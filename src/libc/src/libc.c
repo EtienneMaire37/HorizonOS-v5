@@ -4,9 +4,6 @@
 // #include <stdint.h>
 #include <stdatomic.h>
 
-#define min(a, b)   ((a) > (b) ? (b) : (a))
-#define max(a, b)   ((a) < (b) ? (b) : (a))
-
 #include "../../kernel/multicore/spinlock.h"
 
 #include "../include/errno.h"
@@ -19,6 +16,15 @@
 #include "../include/string.h"
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
+
+int64_t minint(int64_t a, int64_t b)
+{
+    return a < b ? a : b;
+}
+int64_t maxint(int64_t a, int64_t b)
+{
+    return a > b ? a : b;
+}
 
 #include "kernel_glue.h"
 

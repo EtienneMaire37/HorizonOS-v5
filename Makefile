@@ -15,7 +15,7 @@ run:
 	-cpu host                                  			\
 	-debugcon file:debug/${DATE}.log					\
 	-m 4096                                        		\
-	-hda horizonos.iso    								\
+	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids

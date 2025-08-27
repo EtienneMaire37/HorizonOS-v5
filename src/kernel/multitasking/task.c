@@ -130,7 +130,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
                 if (section_headers[i].sh_type == ELF_SECTION_TYPE_PROGBITS)
                 {
                     set_current_phys_mem_page(read_physical_address_4b(pt_phys + 4 * layout.page_table_entry) >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), min(0x1000, section_headers[i].sh_size - j));
+                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), minint(0x1000, section_headers[i].sh_size - j));
                 }
                 else
                 {
@@ -412,7 +412,7 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
 
     if (tasks[current_task_index].was_reading_stdin)
     {
-        uint32_t _eax = min(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
+        uint32_t _eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
         task_write_register_data(&tasks[current_task_index], eax, _eax);
         for (uint32_t i = 0; i < _eax; i++)
         {

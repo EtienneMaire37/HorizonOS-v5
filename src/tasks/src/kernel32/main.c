@@ -9,9 +9,6 @@
 
 #include <horizonos.h>
 
-// #define min(a, b)   ((a) > (b) ? (b) : (a))
-// #define max(a, b)   ((a) < (b) ? (b) : (a))
-
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 int main()
@@ -44,8 +41,11 @@ int main()
     else
         printf("Error : Defaulting to the us_qwerty keyboard layout\n");
 
+    // uint8_t data[0x8000] = { 0 };
+
     while (true)
     {
+        // printf("%s\n", &data[0]);
         printf("$ ");
         fflush(stdout);
         char ch = 0;

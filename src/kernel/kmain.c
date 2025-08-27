@@ -67,15 +67,21 @@ uint64_t available_memory = 0;
 extern void _halt();
 void halt();
 
-#define hlt()                   asm volatile ("hlt");
+#define hlt()                   asm volatile ("hlt")
 
-#define enable_interrupts()     asm volatile("sti");
-#define disable_interrupts()    asm volatile("cli");
+#define enable_interrupts()     asm volatile("sti")
+#define disable_interrupts()    asm volatile("cli")
 
 #define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
 
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#define max(a, b) ((a) > (b) ? (a) : (b))
+int64_t minint(int64_t a, int64_t b)
+{
+    return a < b ? a : b;
+}
+int64_t maxint(int64_t a, int64_t b)
+{
+    return a > b ? a : b;
+}
 
 #define bcd_to_binary(bcd) (((bcd) & 0x0f) + ((bcd) >> 4) * 10)
 
@@ -367,7 +373,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     kernel_end = (virtual_address_t)&_kernel_end;
     kernel_start = (virtual_address_t)&_kernel_start;
 
-    kernel_end = max(kernel_end, initrd_module->mod_end);
+    kernel_end = maxint(kernel_end, initrd_module->mod_end);
 
     initrd_parse();
 

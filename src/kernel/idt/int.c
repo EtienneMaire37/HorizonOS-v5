@@ -104,7 +104,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                 uint8_t light_tty_color = tty_color;
                 bool subfunction = false;
 
-                for (uint8_t i = 0; i < min(64, last_symbol_buffer_length); i++)
+                for (uint8_t i = 0; i < minint(64, last_symbol_buffer_length); i++)
                 {
                     if (last_symbol_buffer[i] == '.')
                     {
@@ -283,7 +283,7 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                     }
                     else
                     {
-                        registers->eax = min(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
+                        registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
                         for (uint32_t i = 0; i < registers->eax; i++)
                         {
                             // *** Only ASCII for now ***

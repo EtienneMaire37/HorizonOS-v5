@@ -9,3 +9,4 @@ tmp/
 pci.ids
 custom-toolchain/
 settings.json
+.vscode/
