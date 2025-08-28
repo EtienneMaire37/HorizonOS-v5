@@ -7,6 +7,7 @@ INPUT
 	"bin/gdt.o"
 	"bin/idt.o" 
 	"bin/paging.o"
+    "bin/context_switch.o"
 )
 
 OUTPUT_FORMAT(elf32-i386)

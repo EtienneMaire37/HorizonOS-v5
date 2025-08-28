@@ -1,6 +1,6 @@
 #pragma once
 
-void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
+void task_load_from_initrd(task_t* _task, char* name, uint8_t ring)
 {
     if (ring != 3 && ring != 0)
     {
@@ -154,7 +154,7 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
     registers.esp = TASK_STACK_TOP_ADDRESS;
     registers.handled_esp = registers.esp - 0x2c - 8;   // 8 for the user's ss and esp
 
-    _task->registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct privilege_switch_interrupt_registers));
+    // _task->registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct privilege_switch_interrupt_registers));
     
     registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
     registers.esi = registers.edi = 0;
@@ -163,20 +163,20 @@ void task_load_from_initrd(struct task* _task, char* name, uint8_t ring)
 
     registers.cr3 = _task->page_directory_phys;
 
-    _task->registers_data = registers;
+    // _task->registers_data = registers;
 
     _task->name = name;
 
     _task->ring = ring;
 
-    for (uint16_t i = 0; i < sizeof(registers); i++)
-        write_physical_address_1b((physical_address_t)((uint32_t)_task->registers_ptr) + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-            ((uint8_t*)&_task->registers_data)[i]);
+    // for (uint16_t i = 0; i < sizeof(registers); i++)
+    //     write_physical_address_1b((physical_address_t)((uint32_t)_task->registers_ptr) + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
+    //         ((uint8_t*)&_task->registers_data)[i]);
 
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
 }
 
-void task_destroy(struct task* _task)
+void task_destroy(task_t* _task)
 {
     LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
     LOG(TRACE, "Freeing virtual address space");
@@ -195,7 +195,7 @@ void task_destroy(struct task* _task)
     utf32_buffer_destroy(&_task->input_buffer);
 }
 
-void task_virtual_address_space_destroy(struct task* _task)
+void task_virtual_address_space_destroy(task_t* _task)
 {
     for (uint16_t i = 0; i < 768; i++)
     {
@@ -217,7 +217,7 @@ void task_virtual_address_space_destroy(struct task* _task)
     pfa_free_physical_page(_task->page_directory_phys);
 }
 
-void task_virtual_address_space_create_page_table(struct task* _task, uint16_t index)
+void task_virtual_address_space_create_page_table(task_t* _task, uint16_t index)
 {
     physical_address_t pt_phys = pfa_allocate_physical_page();
 
@@ -226,7 +226,7 @@ void task_virtual_address_space_create_page_table(struct task* _task, uint16_t i
     physical_add_page_table(_task->page_directory_phys, index, pt_phys, PAGING_USER_LEVEL, true);
 }
 
-void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t index)
+void task_virtual_address_space_remove_page_table(task_t* _task, uint16_t index)
 {
     physical_address_t pt_phys = read_physical_address_4b(_task->page_directory_phys + 4 * index) & 0xfffff000;
 
@@ -241,7 +241,7 @@ void task_virtual_address_space_remove_page_table(struct task* _task, uint16_t i
     physical_remove_page_table(_task->page_directory_phys, index);
 }
 
-physical_address_t task_virtual_address_space_create_page(struct task* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
+physical_address_t task_virtual_address_space_create_page(task_t* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
 {
     uint32_t pde = read_physical_address_4b(_task->page_directory_phys + 4 * pd_index);
 
@@ -255,7 +255,7 @@ physical_address_t task_virtual_address_space_create_page(struct task* _task, ui
     return page;
 }
 
-void task_create_virtual_address_space(struct task* _task)
+void task_create_virtual_address_space(task_t* _task)
 {
     LOG(DEBUG, "Creating a new virtual address space...");
 
@@ -265,7 +265,7 @@ void task_create_virtual_address_space(struct task* _task)
 
     physical_add_page_table(_task->page_directory_phys, 1023, _task->page_directory_phys, PAGING_SUPERVISOR_LEVEL, true);
 
-    _task->registers_data.cr3 = _task->page_directory_phys;
+    // _task->registers_data.cr3 = _task->page_directory_phys;
 
     task_virtual_address_space_create_page_table(_task, 0);
     physical_address_t first_mb_pt_address = read_physical_address_4b(_task->page_directory_phys) & 0xfffff000;
@@ -319,22 +319,22 @@ void multitasking_init()
 
     task_create_virtual_address_space(&tasks[task_count]);
 
-    tasks[task_count].registers_data.eip = (uint32_t)&idle_main;
-    tasks[task_count].registers_data.cs = KERNEL_CODE_SEGMENT;
-    tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
+    // tasks[task_count].registers_data.eip = (uint32_t)&idle_main;
+    // tasks[task_count].registers_data.cs = KERNEL_CODE_SEGMENT;
+    // tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
 
-    tasks[task_count].registers_data.eflags = 0x200;
-    tasks[task_count].registers_data.ebp = 0;
+    // tasks[task_count].registers_data.eflags = 0x200;
+    // tasks[task_count].registers_data.ebp = 0;
 
-    tasks[task_count].registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
-    tasks[task_count].registers_data.handled_esp = TASK_STACK_TOP_ADDRESS - 0x2c;
+    // tasks[task_count].registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
+    // tasks[task_count].registers_data.handled_esp = TASK_STACK_TOP_ADDRESS - 0x2c;
     
-    tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
-    tasks[task_count].registers_data.esi = tasks[task_count].registers_data.edi = 0;
+    // tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
+    // tasks[task_count].registers_data.esi = tasks[task_count].registers_data.edi = 0;
 
-    for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
-        write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count].registers_ptr) + tasks[task_count].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-            ((uint8_t*)&tasks[task_count].registers_data)[i]);
+    // for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
+    //     write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count].registers_ptr) + tasks[task_count].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
+    //         ((uint8_t*)&tasks[task_count].registers_data)[i]);
 
     task_count++;
 }
@@ -361,7 +361,7 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     task_count++;
 }
 
-void task_write_at_address_1b(struct task* _task, uint32_t address, uint8_t value)
+void task_write_at_address_1b(task_t* _task, uint32_t address, uint8_t value)
 {
     struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
     uint32_t pde = read_physical_address_4b(_task->page_directory_phys + 4 * layout.page_directory_entry);
@@ -382,50 +382,52 @@ void switch_task(struct privilege_switch_interrupt_registers** registers, bool* 
         abort();
     }
 
-    if (!first_task_switch)
-    {
-        tasks[current_task_index].registers_data = **registers;
-        tasks[current_task_index].registers_ptr = *registers;
+    abort();
 
-        fpu_save_state(&tasks[current_task_index].fpu_state);
-    }
+    // if (!first_task_switch)
+    // {
+    //     // tasks[current_task_index].registers_data = **registers;
+    //     // tasks[current_task_index].registers_ptr = *registers;
 
-    uint16_t next_task_index = find_next_task_index();
-    if (next_task_index == current_task_index && !first_task_switch)
-        return;
-    current_task_index = next_task_index;
+    //     fpu_save_state(&tasks[current_task_index].fpu_state);
+    // }
 
-    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
-        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
-        tasks[current_task_index].registers_data.handled_esp, tasks[current_task_index].registers_ptr, tasks[current_task_index].registers_data.ebp,
-        tasks[current_task_index].registers_data.eip, tasks[current_task_index].registers_data.cs, tasks[current_task_index].registers_data.eflags, tasks[current_task_index].registers_data.ds,
-        tasks[current_task_index].registers_data.eax, tasks[current_task_index].registers_data.ebx, tasks[current_task_index].registers_data.ecx, tasks[current_task_index].registers_data.edx, tasks[current_task_index].registers_data.esi, tasks[current_task_index].registers_data.edi,
-        tasks[current_task_index].registers_data.cr3);
+    // uint16_t next_task_index = find_next_task_index();
+    // if (next_task_index == current_task_index && !first_task_switch)
+    //     return;
+    // current_task_index = next_task_index;
 
-    *flush_tlb = true;
+    // // LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
+    // //     tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
+    // //     tasks[current_task_index].registers_data.handled_esp, tasks[current_task_index].registers_ptr, tasks[current_task_index].registers_data.ebp,
+    // //     tasks[current_task_index].registers_data.eip, tasks[current_task_index].registers_data.cs, tasks[current_task_index].registers_data.eflags, tasks[current_task_index].registers_data.ds,
+    // //     tasks[current_task_index].registers_data.eax, tasks[current_task_index].registers_data.ebx, tasks[current_task_index].registers_data.ecx, tasks[current_task_index].registers_data.edx, tasks[current_task_index].registers_data.esi, tasks[current_task_index].registers_data.edi,
+    // //     tasks[current_task_index].registers_data.cr3);
 
-    if (tasks[current_task_index].ring == 3)
-        TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
+    // *flush_tlb = true;
 
-    *iret_cr3 = tasks[current_task_index].registers_data.cr3;
-    *registers = tasks[current_task_index].registers_ptr;       // * When poping esp load the correct values
+    // if (tasks[current_task_index].ring == 3)
+    //     TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
 
-    if (tasks[current_task_index].was_reading_stdin)
-    {
-        uint32_t _eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
-        task_write_register_data(&tasks[current_task_index], eax, _eax);
-        for (uint32_t i = 0; i < _eax; i++)
-        {
-            // *** Only ASCII for now ***
-            task_write_at_address_1b(&tasks[current_task_index], tasks[current_task_index].registers_data.ecx + i, utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer)));
-        }
-    }
+    // // *iret_cr3 = tasks[current_task_index].registers_data.cr3;
+    // // *registers = tasks[current_task_index].registers_ptr;       // * When poping esp load the correct values
 
-    tasks[current_task_index].was_reading_stdin = false;
+    // // if (tasks[current_task_index].was_reading_stdin)
+    // // {
+    // //     uint32_t _eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
+    // //     task_write_register_data(&tasks[current_task_index], eax, _eax);
+    // //     for (uint32_t i = 0; i < _eax; i++)
+    // //     {
+    // //         // *** Only ASCII for now ***
+    // //         task_write_at_address_1b(&tasks[current_task_index], tasks[current_task_index].registers_data.ecx + i, utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer)));
+    // //     }
+    // // }
 
-    fpu_restore_state(&tasks[current_task_index].fpu_state);
+    // tasks[current_task_index].was_reading_stdin = false;
 
-    first_task_switch = false;
+    // fpu_restore_state(&tasks[current_task_index].fpu_state);
+
+    // first_task_switch = false;
 }
 
 void task_kill(uint16_t index)

@@ -408,7 +408,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Setting up multitasking");
 
-    LOG(TRACE, "sizeof(struct task) : %u", sizeof(struct task));
+    LOG(TRACE, "sizeof(task_t) : %u", sizeof(task_t));
 
     putchar('\n');
 
@@ -488,7 +488,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(DEBUG, "Initializing multitasking");
 
-    // fpu_init();  // ~ No need to call it another time
+    // ~ No need to call it another time
+    // fpu_init();  
 
     multitasking_init();
 

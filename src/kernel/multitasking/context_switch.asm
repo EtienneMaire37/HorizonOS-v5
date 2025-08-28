@@ -1,0 +1,41 @@
+section .text
+bits 32
+
+extern task_esp_offset
+extern task_esp0_offset
+extern task_cr3_offset
+
+extern TSS
+extern TSS_esp0_offset
+
+; void __attribute__((cdecl)) context_switch(task_t* old_tcb, task_t* next_tcb)
+global context_switch
+context_switch:
+    push ebx
+    push esi
+    push edi
+    push ebp
+
+    mov ebx, [task_esp_offset]
+    mov edi, [esp + (4 + 2) * 4]        ; $edi = old_tcb
+    mov [edi + ebx], esp                ; edi->esp = $esp
+
+    mov esi, [esp + (4 + 1) * 4]        ; $esi = next_tcb
+
+    mov esp, [esi + ebx]
+    mov ebx, [task_cr3_offset]
+    mov eax, [esi + ebx]                ; $eax = next_tcb->cr3
+
+    mov ebx, [esi + ebx]
+    mov ecx, cr3
+
+    cmp eax, ecx
+    je .end
+    mov cr3, eax
+.end:
+    pop ebp
+    pop edi
+    pop esi
+    pop ebx
+
+    ret

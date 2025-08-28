@@ -336,8 +336,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
             {
                 task_count++;
 
-                tasks[current_task_index].registers_data = *registers;
-                tasks[current_task_index].registers_ptr = registers;
+                // tasks[current_task_index].registers_data = *registers;
+                // tasks[current_task_index].registers_ptr = registers;
 
                 tasks[task_count - 1].name = tasks[current_task_index].name;
                 tasks[task_count - 1].ring = tasks[current_task_index].ring;
@@ -352,8 +352,8 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 if (tasks[current_task_index].kernel_stack_phys)
                     tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
 
-                tasks[task_count - 1].registers_ptr = tasks[current_task_index].registers_ptr;
-                tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
+                // tasks[task_count - 1].registers_ptr = tasks[current_task_index].registers_ptr;
+                // tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
 
                 task_create_virtual_address_space(&tasks[task_count - 1]);
 
@@ -362,9 +362,9 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                 if (tasks[task_count - 1].stack_phys)
                     copy_page(tasks[current_task_index].stack_phys, tasks[task_count - 1].stack_phys);
 
-                tasks[task_count - 1].registers_data.eax = tasks[task_count - 1].registers_data.ebx = 0;
-                tasks[current_task_index].registers_data.eax = tasks[task_count - 1].pid >> 32;
-                tasks[current_task_index].registers_data.ebx = tasks[task_count - 1].pid;
+                // tasks[task_count - 1].registers_data.eax = tasks[task_count - 1].registers_data.ebx = 0;
+                // tasks[current_task_index].registers_data.eax = tasks[task_count - 1].pid >> 32;
+                // tasks[current_task_index].registers_data.ebx = tasks[task_count - 1].pid;
 
                 for (uint16_t i = 0; i < 768; i++)
                 {
@@ -388,17 +388,17 @@ uint32_t __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interr
                     }
                 }
 
-                for (uint16_t i = 0; i < (tasks[task_count - 1].ring != 0 ? sizeof(struct privilege_switch_interrupt_registers) : sizeof(struct interrupt_registers)); i++)
-                    write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count - 1].registers_ptr) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-                        ((uint8_t*)&tasks[task_count - 1].registers_data)[i]);
+                // for (uint16_t i = 0; i < (tasks[task_count - 1].ring != 0 ? sizeof(struct privilege_switch_interrupt_registers) : sizeof(struct interrupt_registers)); i++)
+                //     write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count - 1].registers_ptr) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
+                //         ((uint8_t*)&tasks[task_count - 1].registers_data)[i]);
 
-                if (tasks[current_task_index].ring != 0)
-                {
-                    registers->esp = tasks[current_task_index].registers_data.esp;
-                    registers->ss = tasks[current_task_index].registers_data.ss;
-                }
+                // if (tasks[current_task_index].ring != 0)
+                // {
+                //     registers->esp = tasks[current_task_index].registers_data.esp;
+                //     registers->ss = tasks[current_task_index].registers_data.ss;
+                // }
 
-                *(struct interrupt_registers*)registers = *(struct interrupt_registers*)&tasks[current_task_index].registers_data;
+                // *(struct interrupt_registers*)registers = *(struct interrupt_registers*)&tasks[current_task_index].registers_data;
 
                 switch_task(&registers, &flush_tlb, &iret_cr3);
             } 
