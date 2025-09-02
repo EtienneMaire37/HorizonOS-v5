@@ -17,10 +17,10 @@ context_switch:
     push ebp
 
     mov ebx, [task_esp_offset]
-    mov edi, [esp + (4 + 2) * 4]        ; $edi = old_tcb
+    mov edi, [esp + (4 + 1) * 4]        ; $edi = (uint32_t)old_tcb
     mov [edi + ebx], esp                ; edi->esp = $esp
 
-    mov esi, [esp + (4 + 1) * 4]        ; $esi = next_tcb
+    mov esi, [esp + (4 + 2) * 4]        ; $esi = (uint32_t)next_tcb
 
     mov esp, [esi + ebx]
     mov ebx, [task_cr3_offset]

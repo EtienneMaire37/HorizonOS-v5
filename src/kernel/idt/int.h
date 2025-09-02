@@ -91,4 +91,4 @@ struct initrd_file* kernel_task_symbols_file = NULL;
 
 void kernel_panic(struct privilege_switch_interrupt_registers* registers);
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
-uint32_t interrupt_handler(struct privilege_switch_interrupt_registers* registers);
+void interrupt_handler(struct privilege_switch_interrupt_registers* registers);

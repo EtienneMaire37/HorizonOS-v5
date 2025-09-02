@@ -52,6 +52,8 @@ int imod(int a, int b)
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
 
+#define physical_null ((physical_address_t)0)
+
 extern uint8_t stack_top;
 extern uint8_t stack_bottom;
 
@@ -65,12 +67,15 @@ uint64_t kernel_size = 0;
 uint64_t available_memory = 0;
 
 extern void _halt();
-void halt();
+void cause_halt(const char* func, const char* file, int line);
+void simple_cause_halt();
 
 #define hlt()                   asm volatile ("hlt")
 
 #define enable_interrupts()     asm volatile("sti")
 #define disable_interrupts()    asm volatile("cli")
+
+#define halt() (fflush(stdout), cause_halt(__FUNCTION__, __FILE__, __LINE__))
 
 #define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
 
@@ -139,7 +144,6 @@ const char* multiboot_block_type_text[5] =
 #include "time/gdn.h"
 #include "time/ktime.h"
 
-
 // ---------------------------------------------------------------
 
 struct page_table_entry page_table_0[1024] __attribute__((aligned(4096)));
@@ -175,6 +179,20 @@ FILE _stdin, _stdout, _stderr;
 uint8_t stdin_buffer[BUFSIZ];
 uint8_t stdout_buffer[BUFSIZ];
 uint8_t stderr_buffer[BUFSIZ];
+
+void cause_halt(const char* func, const char* file, int line)
+{
+    disable_interrupts();
+    LOG(WARNING, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
+    _halt();
+}
+
+void simple_cause_halt()
+{
+    disable_interrupts();
+    LOG(WARNING, "Kernel halted");
+    _halt();
+}
 
 #define _init_file_flags(f) { f->fd = -1; f->buffer_size = BUFSIZ; f->buffer_index = 0; f->buffer_mode = 0; f->flags = FILE_FLAGS_BF_ALLOC; f->current_flags = 0; f->buffer_end_index = 0;}
 
@@ -218,13 +236,6 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
     LOG(CRITICAL, "Unmapped physical address 0x%lx", address);
     abort();
     return 0;
-}
-
-void halt()
-{
-    disable_interrupts();
-    LOG(WARNING, "Kernel halted");
-    _halt();
 }
 
 void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
@@ -405,11 +416,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     printf("Scanning PCI buses...");
 
     pci_scan_buses();
-
-    LOG(DEBUG, "Setting up multitasking");
-
-    LOG(TRACE, "sizeof(task_t) : %u", sizeof(task_t));
-
+    
     putchar('\n');
 
     LOG(INFO, "Unix time : %u", ktime(NULL));
@@ -487,13 +494,17 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     putchar('\n');
 
     LOG(DEBUG, "Initializing multitasking");
+    LOG(DEBUG, "memory allocated to TCBs : %u bytes", sizeof(tasks));
 
     // ~ No need to call it another time
     // fpu_init();  
 
+    // abort();
+
     multitasking_init();
 
-    multasking_add_task_from_initrd("./kernel32.elf", 0, true);
+    // multasking_add_task_from_initrd("./kernel32.elf", 0, true);
+    multitasking_add_task_from_function("idle_task");
 
     multitasking_start();
 

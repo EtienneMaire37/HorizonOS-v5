@@ -41,7 +41,7 @@ int main()
     else
         printf("Error : Defaulting to the us_qwerty keyboard layout\n");
 
-    // uint8_t data[0x8000] = { 0 };
+    // volatile uint8_t data[0x8000] = { 0 };
 
     while (true)
     {

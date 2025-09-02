@@ -229,10 +229,14 @@ int atoi(const char* str)
     return (int)strtol(str, (char**)NULL, 10);
 }
 
+#ifdef BUILDING_KERNEL
+#define abort() (printf("Kernel aborted. (func: \"%s\"; line: %d; file: \"%s\")\n", __FUNCTION__, __LINE__, __FILE__), halt())
+#else
 void abort()
 {
     exit(EXIT_FAILURE);
 }
+#endif
 
 void malloc_bitmap_init();
 bool malloc_bitmap_get_page(uint32_t page);

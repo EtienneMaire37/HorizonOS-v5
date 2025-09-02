@@ -113,6 +113,8 @@ void write_physical_address_4b(physical_address_t address, uint32_t value)
     write_physical_address_1b(address + 3, value >> 24);
 }
 
+static uint8_t page_tmp[4096] = {0};
+
 void copy_page(physical_address_t from, physical_address_t to)
 {
     if ((from & 0xfff) || (to & 0xfff))

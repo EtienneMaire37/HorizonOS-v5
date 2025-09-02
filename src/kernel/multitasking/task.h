@@ -1,9 +1,5 @@
 #pragma once
 
-struct interrupt_registers;
-
-// #define KERNEL_STACK_SIZE 4096 // (2 * sizeof(struct interrupt_registers) + 24)  // 4 bytes for the pointer to the stack
-
 typedef struct task
 {
     char* name;
@@ -16,8 +12,7 @@ typedef struct task
 
     uint8_t ring;
     pid_t pid;
-    bool system_task, kernel_thread;    // system_task: cause kernel panics ////; kernel_thread: dont allocate a vas
-    physical_address_t page_directory_phys;
+    bool system_task;    // system_task: cause kernel panics
 
     fpu_state_t fpu_state;
 } task_t;
@@ -39,8 +34,6 @@ uint16_t task_count;
 #define TASK_SWITCH_DELAY 30 // ms
 
 uint8_t multitasking_counter = 0;
-
-uint8_t page_tmp[4096];
 
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
@@ -79,7 +72,7 @@ void task_virtual_address_space_create_page_table(task_t* _task, uint16_t index)
 void task_virtual_address_space_remove_page_table(task_t* _task, uint16_t index);
 physical_address_t task_virtual_address_space_create_page(task_t* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
 void task_create_virtual_address_space(task_t* _task);
-void switch_task(struct privilege_switch_interrupt_registers** registers, bool* flush_tlb, uint32_t* iret_cr3);
+void switch_task(struct privilege_switch_interrupt_registers** registers);
 void multasking_init();
 void multitasking_start();
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs

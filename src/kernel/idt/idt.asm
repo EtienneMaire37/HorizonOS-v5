@@ -106,11 +106,6 @@ _interrupt_handler:
     call interrupt_handler
     pop esp
     
-    cmp eax, 0
-    je .dont_flush_tlb
-    mov cr3, eax
-
-.dont_flush_tlb:
     add esp, 8  ; skip cr2 and cr3
 
     pop eax

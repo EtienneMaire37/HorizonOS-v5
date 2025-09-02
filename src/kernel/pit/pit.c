@@ -1,6 +1,6 @@
 #pragma once
 
-void handle_irq_0(struct privilege_switch_interrupt_registers** registers, bool* flush_tlb, uint32_t* iret_cr3)
+void handle_irq_0(struct privilege_switch_interrupt_registers** registers)
 {
     global_timer += PIT_INCREMENT;
 
@@ -11,7 +11,7 @@ void handle_irq_0(struct privilege_switch_interrupt_registers** registers, bool*
         multitasking_counter--;
         if (multitasking_counter == 0)
         {
-            switch_task(registers, flush_tlb, iret_cr3);
+            switch_task(registers);
             multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
         }
         if (multitasking_counter == 0xff)
