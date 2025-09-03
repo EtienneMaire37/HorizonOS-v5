@@ -446,18 +446,18 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
     first_task_switch = false;
 
     uint16_t next_task_index = find_next_task_index();
+    // LOG(TRACE, "Current task index : %u; Next task index : %u", current_task_index, next_task_index);
     if (next_task_index == current_task_index)
         return;
 
-    if (!was_first_task_switch)
-        fpu_save_state(&tasks[current_task_index].fpu_state);
+    fpu_save_state(&tasks[current_task_index].fpu_state);
 
-    LOG(TRACE, "Switching from task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
-        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
-        (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
-        (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
-        (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
-        (*registers)->cr3);
+    // LOG(TRACE, "Switching from task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
+    //     tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
+    //     (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
+    //     (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
+    //     (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
+    //     (*registers)->cr3);
 
     full_context_switch(next_task_index);
 
@@ -489,7 +489,7 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
 
     // tasks[current_task_index].was_reading_stdin = false;
 
-    // fpu_restore_state(&tasks[current_task_index].fpu_state);
+    fpu_restore_state(&tasks[current_task_index].fpu_state);
 }
 
 void task_kill(uint16_t index)

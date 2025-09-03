@@ -508,5 +508,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_start();
 
+    while (true);
+
     halt();
 }
