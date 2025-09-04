@@ -35,10 +35,7 @@ void initrd_parse()
         struct ustar_header* header = (struct ustar_header*)(initrd_start + initrd_offset);
 
         if (header->name[0] == '\0')
-        {
-            // LOG(INFO, "End of USTAR archive");
             break;
-        }
 
         if (!USTAR_IS_VALID_HEADER(*header))
         {
@@ -46,9 +43,7 @@ void initrd_parse()
             break;
         }
 
-        uint32_t file_size = ustar_get_number(header->size);    // 32bit here but theoretically it should be 64bit
-
-        LOG(INFO, "    File : %s ; Size : %u bytes", header->name, file_size);
+        uint64_t file_size = ustar_get_number(header->size);
 
         initrd_files[initrd_files_count].name = &header->name[0];
         initrd_files[initrd_files_count].size = file_size;
@@ -58,6 +53,11 @@ void initrd_parse()
         initrd_files_count++;
 
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;
+    }
+
+    for (uint8_t i = 0; i < initrd_files_count; i++)
+    {
+        LOG(INFO, "%s── File : %s ; Size : %u bytes", initrd_files_count - i > 1 ? "├" : "└", initrd_files[i].name, initrd_files[i].size);
     }
 
     LOG(INFO, "Done parsing initrd (%u files)", initrd_files_count);

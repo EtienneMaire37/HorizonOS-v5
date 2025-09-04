@@ -139,22 +139,18 @@ found_rsdp:
                 {
                 case 0x50434146:    // FACP : FADT
                     LOG(INFO, "\t\tValid FADT");
-                    // printf("Found FADT\n");
                     fadt_address = address;
                     break;
                 case 0x43495041:    // APIC : MADT
                     LOG(INFO, "\t\tValid MADT");
-                    // printf("Found MADT\n");
                     madt_address = address;
                     break;
                 case 0x54445344:    // DSDT : DSDT
                     LOG(INFO, "\t\tValid DSDT");
-                    // printf("Found DSDT\n");
                     dsdt_address = address;
                     break;
                 case 0x54445353:    // SSDT : SSDT
                     LOG(INFO, "\t\tValid SSDT");
-                    // printf("Found SSDT\n");
                     ssdt_address = address;
                     break;
                 default:

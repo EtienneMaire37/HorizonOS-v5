@@ -417,9 +417,8 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
 
             LOG(TRACE, "CPU usage:");
             LOG(TRACE, "total : %f %%", 100 * (1 - tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND));
-            LOG(TRACE, "\ttask 0 : %f %% (* idle task *)", 100 * tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
-            for (uint16_t i = 1; i < task_count; i++)
-                LOG(TRACE, "\ttask %d : %f %%", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
+            for (uint16_t i = 0; i < task_count; i++)
+                LOG(TRACE, "%s── task %d : %f %%\t%s[pid = %ld]", task_count - i > 1 ? "├" : "└", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND, i == 0 ? "(* idle task *) " : "", tasks[i].pid);
         }
         global_cpu_ticks = 0;
     }
