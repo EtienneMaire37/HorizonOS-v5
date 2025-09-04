@@ -496,6 +496,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(DEBUG, "Initializing multitasking");
     LOG(DEBUG, "memory allocated to TCBs : %u bytes", sizeof(tasks));
 
+    if (1000 % TASK_SWITCH_DELAY != 0) abort(); // Task switch delay does not divide a second evenly
+
     // ~ No need to call it another time
     // fpu_init();  
 

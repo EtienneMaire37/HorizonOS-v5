@@ -8,7 +8,8 @@ extern task_cr3_offset
 ; void __attribute__((cdecl)) context_switch(task_t* old_tcb, task_t* next_tcb)
 global context_switch
 context_switch:
-    ; ret
+    ; * eax, ecx and edx are caller-saved * ;
+
     push ebx
     push esi
     push edi

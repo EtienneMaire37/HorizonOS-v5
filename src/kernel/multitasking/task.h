@@ -33,7 +33,7 @@ int task_cr3_offset = offsetof(task_t, cr3);
 #define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
 #define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
 
-#define MAX_TASKS 256
+#define MAX_TASKS 1024
 
 task_t tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;

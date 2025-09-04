@@ -283,8 +283,6 @@ void task_create_virtual_address_space(task_t* _task)
 
     physical_add_page_table(_task->cr3, 1023, _task->cr3, PAGING_SUPERVISOR_LEVEL, true);
 
-    // _task->registers_data.cr3 = _task->cr3;
-
     task_virtual_address_space_create_page_table(_task, 0);
     physical_address_t first_mb_pt_address = read_physical_address_4b(_task->cr3) & 0xfffff000;
     for (uint16_t i = 0; i < 256; i++)
@@ -323,51 +321,16 @@ void multitasking_init()
     zombie_task_index = 0;
 
     multitasking_add_idle_task("idle");
-
-    return;
-
-    fpu_state_init(&(tasks[task_count].fpu_state));
-
-    // tasks[task_count].kernel_thread = true;
-    tasks[task_count].pid = current_pid++;
-    tasks[task_count].system_task = true;
-    tasks[task_count].ring = 0;
-    tasks[task_count].name = "idle";
-    tasks[task_count].reading_stdin = tasks[task_count].was_reading_stdin = false;
-    utf32_buffer_init(&tasks[task_count].input_buffer);
-
-    tasks[task_count].stack_phys = pfa_allocate_physical_page();
-    tasks[task_count].kernel_stack_phys = pfa_allocate_physical_page();
-
-    task_create_virtual_address_space(&tasks[task_count]);
-
-    // tasks[task_count].registers_data.eip = (uint32_t)&idle_main;
-    // tasks[task_count].registers_data.cs = KERNEL_CODE_SEGMENT;
-    // tasks[task_count].registers_data.ds = KERNEL_DATA_SEGMENT;
-
-    // tasks[task_count].registers_data.eflags = 0x200;
-    // tasks[task_count].registers_data.ebp = 0;
-
-    // tasks[task_count].registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct interrupt_registers));
-    // tasks[task_count].registers_data.handled_esp = TASK_STACK_TOP_ADDRESS - 0x2c;
-    
-    // tasks[task_count].registers_data.eax = tasks[task_count].registers_data.ebx = tasks[task_count].registers_data.ecx = tasks[task_count].registers_data.edx = 0;
-    // tasks[task_count].registers_data.esi = tasks[task_count].registers_data.edi = 0;
-
-    // for (uint16_t i = 0; i < sizeof(struct interrupt_registers); i++)
-    //     write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count].registers_ptr) + tasks[task_count].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-    //         ((uint8_t*)&tasks[task_count].registers_data)[i]);
-
-    task_count++;
 }
 
 void multitasking_start()
 {
     fflush(stdout);
     multitasking_enabled = true;
-    current_task_index = task_count - 1;    // ~ ((task_count - 1) + 1) % task_count = 0 - So it starts with the idle task
+    current_task_index = 0;
+
     idle_main();
-    abort();
+    abort();    // !!! Critical error if eip somehow gets there (impossible)
 }
 
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
@@ -409,7 +372,7 @@ void multitasking_add_idle_task(char* name)
     tasks[task_count].cr3 = (uint32_t)&page_directory;
     tasks[task_count].ring = 0;
 
-    tasks[task_count].pid  = current_pid++;
+    tasks[task_count].pid = current_pid++;
     tasks[task_count].system_task = true;
 
     fpu_state_init(&tasks[task_count].fpu_state);
@@ -454,8 +417,9 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
 
             LOG(TRACE, "CPU usage:");
             LOG(TRACE, "total : %f %%", 100 * (1 - tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND));
-            for (uint16_t i = 0; i < task_count; i++)
-                LOG(TRACE, "task %d : %f %%", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
+            LOG(TRACE, "\ttask 0 : %f %% (* idle task *)", 100 * tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
+            for (uint16_t i = 1; i < task_count; i++)
+                LOG(TRACE, "\ttask %d : %f %%", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
         }
         global_cpu_ticks = 0;
     }
