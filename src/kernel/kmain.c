@@ -224,7 +224,7 @@ physical_address_t virtual_address_to_physical(virtual_address_t address)
 {
     if (address < 0x100000) return (physical_address_t)address;
     if (address >= 0xc0000000 && address < (uint32_t)4 * 1024 * 1024 * 1023) return address - 0xc0000000;
-    LOG(CRITICAL, "Invalid virtual address 0x%x", address);
+    LOG(CRITICAL, "Unmapped virtual address 0x%x", address);
     abort();
     return 0;
 }
@@ -504,7 +504,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     multitasking_init();
 
     // multasking_add_task_from_initrd("./kernel32.elf", 0, true);
-    multitasking_add_task_from_function("idle_task");
+    // multitasking_add_task_from_function("idle_task", idle_main);
 
     multitasking_start();
 

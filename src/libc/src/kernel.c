@@ -54,9 +54,13 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
 void exit(int r)
 {
     disable_interrupts();
-    LOG(CRITICAL, "Kernel aborted");
+    LOG(CRITICAL, "Kernel exited with return code %d", r);
     tty_set_color(FG_WHITE, BG_BLACK);
-    printf("\nKernel aborted.");
+    printf("\nKernel exited with return code ");
+    tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+    printf("%d", r);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    printf(".");
     fflush(stdout);
     halt();
 }

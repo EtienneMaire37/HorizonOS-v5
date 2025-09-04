@@ -322,6 +322,8 @@ void multitasking_init()
     current_pid = 0;
     zombie_task_index = 0;
 
+    multitasking_add_idle_task("idle");
+
     return;
 
     fpu_state_init(&(tasks[task_count].fpu_state));
@@ -364,14 +366,8 @@ void multitasking_start()
     fflush(stdout);
     multitasking_enabled = true;
     current_task_index = task_count - 1;    // ~ ((task_count - 1) + 1) % task_count = 0 - So it starts with the idle task
-    while(true)
-    {
-        if (!first_task_switch)
-        {
-            printf("Running code from kernel task\n");
-            break;
-        }
-    }
+    idle_main();
+    abort();
 }
 
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
@@ -390,11 +386,17 @@ void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
     task_count++;
 }
 
-void multitasking_add_task_from_function(char* name)
+void multitasking_add_idle_task(char* name)
 {
     if (task_count >= MAX_TASKS)
     {
         LOG(CRITICAL, "Too many tasks");
+        abort();
+    }
+
+    if (task_count != 0)
+    {
+        LOG(CRITICAL, "The kernel task must be the first one");
         abort();
     }
 
@@ -415,6 +417,11 @@ void multitasking_add_task_from_function(char* name)
     task_count++;
 }
 
+void multitasking_add_task_from_function(const char* name, void (*func)())
+{
+
+}
+
 void task_write_at_address_1b(task_t* _task, uint32_t address, uint8_t value)
 {
     abort();
@@ -432,7 +439,26 @@ void task_write_at_address_1b(task_t* _task, uint32_t address, uint8_t value)
 
 void switch_task(struct privilege_switch_interrupt_registers** registers)
 {
-    // abort();
+    tasks[current_task_index].current_cpu_ticks++;
+
+    global_cpu_ticks++;
+    if (global_cpu_ticks >= TASK_SWITCHES_PER_SECOND)
+    {
+        if (task_count != 0)
+        {
+            for (uint16_t i = 0; i < task_count; i++)
+            {
+                tasks[i].stored_cpu_ticks = tasks[i].current_cpu_ticks;
+                tasks[i].current_cpu_ticks = 0;
+            }
+
+            LOG(TRACE, "CPU usage:");
+            LOG(TRACE, "total : %f %%", 100 * (1 - tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND));
+            for (uint16_t i = 0; i < task_count; i++)
+                LOG(TRACE, "task %d : %f %%", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND);
+        }
+        global_cpu_ticks = 0;
+    }
 
     if (task_count == 0)
     {

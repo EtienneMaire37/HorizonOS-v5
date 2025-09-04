@@ -1,20 +1,27 @@
 #include "../include/math.h"
 #include "math_float_util.h"
+#include "math_fmod.c"
 // #include "../src/math.c"
 
 int putchar(int c)
 {
-    fputc(c, stdout);
-    return c;
+    unsigned char ch = (unsigned char)c;
+    if (fputc(ch, stdout) == EOF) return EOF;
+    return ch;
 }
 
 int puts(const char* s)
 {
-    if (!s) return 1;
-    fwrite(s, strlen(s), 1, stdout);
-    putchar('\n');
-    return 1;
+    if (!s) 
+    {
+        errno = EINVAL; 
+        return EOF;
+    }
+    if (fwrite(s, strlen(s), 1, stdout) != 1) return EOF;
+    if (putchar('\n') == EOF) return EOF;
+    return 0;
 }
+
 
 #define DOUBLE_PRINT_MAX_DIGITS         34      // 18
 #define LONG_DOUBLE_PRINT_MAX_DIGITS    308     // 18
@@ -115,12 +122,12 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         long double div = 1;
         while (val / div >= 1) div *= 10;
         div /= 10;
-        while(div > 1)
+        while(div >= 1)
         {
             uint8_t digit = (uint8_t)fmodl(floorl(val / div), 10.L);
-            if(digit || div == 1)
+            if (digit || div == 1)
                 first0 = false;
-            if(!first0)
+            if (!first0)
             {
                 func('0' + digit);
                 length++;
@@ -147,7 +154,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         double div = 1;
         while (val / div >= 1) div *= 10;
         div /= 10;
-        while(div > 1)
+        while(div >= 1)
         {
             uint8_t digit = (uint8_t)fmod(floor(val / div), 10.);
             if(digit || div == 1)
@@ -177,7 +184,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     }
     void printf_lf(long double val)
     {
-#include "math_fmod.c"
         if (val < 0)
         {
             func('-');
@@ -224,7 +230,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
     }
     void printf_f(double val)
     {
-#include "math_fmod.c"
         if (val < 0)
         {
             func('-');
@@ -320,7 +325,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                     printf_f(va_arg(args, double));
                 break;
             case 'c':
-                func((char)va_arg(args, uint32_t));
+                func((char)va_arg(args, int));
                 length++;
                 break;
             case 'l':
@@ -329,10 +334,15 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             case 's':
             {
                 char* s = va_arg(args, char*);
-                while(*s)
+                if (s == NULL)
+                    func_s("(null)");
+                else
                 {
-                    func(*s++);
-                    length++;
+                    while(*s)
+                    {
+                        func(*s++);
+                        length++;
+                    }
                 }
                 break;
             }
@@ -364,15 +374,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
 
     return length;
 }
-
-// int printf(const char* format, ...)
-// {
-//     va_list args;
-//     va_start(args, format);
-//     int length = vprintf(format, args);
-//     va_end(args);
-//     return length;
-// }
 
 int sprintf(char* buffer, const char* format, ...)
 {
@@ -435,7 +436,7 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args)
     int length = _printf(_putc, _puts, format, args);
     // if (bufsz != 0)
     buffer[index] = 0;
-    return length;
+    return index;
 }
 
 int vprintf(const char* format, va_list args)
@@ -579,6 +580,7 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
         stream->buffer_index++;
         ((uint8_t*)ptr)[i] = byte;
     }
+    return nitems;
 }
 
 size_t fwrite(const void* ptr, size_t size, size_t nitems, FILE* stream)
@@ -678,9 +680,10 @@ int fgetc(FILE* stream)
 
 int fputc(int c, FILE* stream)
 {
-    size_t ret = fwrite(&c, 1, 1, stream);
-    if (ret != 1) return EOF;
-    return (int)c;
+    if (!stream) { errno = EBADF; return EOF; }
+    unsigned char ch = (unsigned char)c;
+    size_t ret = fwrite(&ch, 1, 1, stream);
+    return ret == 1 ? (int)ch : EOF;
 }
 
 int getchar()

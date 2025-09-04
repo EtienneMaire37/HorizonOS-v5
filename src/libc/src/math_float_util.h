@@ -6,7 +6,6 @@ typedef union
     uint32_t u;
 } float_union;
 
-/* Decompose float into sign, exponent, mantissa */
 #define DECOMPOSE_FLOAT(value, sign, exponent, mantissa) do { \
     float_union fu = {.f = (value)}; \
     (sign) = (fu.u >> 31) & 1; \
@@ -16,7 +15,6 @@ typedef union
     (mantissa) = exp_stored ? (0x00800000 | mant_stored) : mant_stored; \
 } while(0)
 
-/* Recompose float from components */
 #define RECOMPOSE_FLOAT(sign, exponent, mantissa, result) do { \
     uint32_t s = (sign) & 1; \
     int32_t exp = (exponent); \
@@ -51,7 +49,6 @@ typedef union
     uint64_t u;
 } double_union;
 
-/* Decompose double into sign, exponent, mantissa */
 #define DECOMPOSE_DOUBLE(value, sign, exponent, mantissa) do { \
     double_union du = {.d = (value)}; \
     (sign) = (du.u >> 63) & 1; \
@@ -61,7 +58,6 @@ typedef union
     (mantissa) = exp_stored ? (0x10000000000000 | mant_stored) : mant_stored; \
 } while(0)
 
-/* Recompose double from components */
 #define RECOMPOSE_DOUBLE(sign, exponent, mantissa, result) do { \
     uint64_t s = (sign) & 1; \
     int64_t exp = (exponent); \
@@ -103,7 +99,6 @@ typedef union
     long_double_parts parts;
 } long_double_union;
 
-/* Decompose long double into sign, exponent, mantissa */
 #define DECOMPOSE_LONG_DOUBLE(value, sign, exponent, _mantissa) do { \
     long_double_union ldu = {.ld = (value)}; \
     (sign) = (ldu.parts.sign_exp >> 15) & 1; \
@@ -112,7 +107,6 @@ typedef union
     (_mantissa) = ldu.parts.mantissa; \
 } while(0)
 
-/* Recompose long double from components */
 #define RECOMPOSE_LONG_DOUBLE(sign, exponent, _mantissa, result) do { \
     uint16_t s = (sign) & 1; \
     int32_t exp = (exponent); \

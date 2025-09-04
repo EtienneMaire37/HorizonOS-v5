@@ -15,23 +15,31 @@ typedef struct task
     bool system_task;    // system_task: cause kernel panics
 
     fpu_state_t fpu_state;
+
+    uint8_t stored_cpu_ticks, current_cpu_ticks;
 } task_t;
+
+uint8_t global_cpu_ticks = 0;
 
 int task_esp_offset = offsetof(task_t, esp);
 int task_esp0_offset = offsetof(task_t, esp0);
 int task_cr3_offset = offsetof(task_t, cr3);
 
-#define TASK_STACK_BOTTOM_ADDRESS           (0xc0000000 - 0x1000)
-#define TASK_STACK_TOP_ADDRESS              (TASK_STACK_BOTTOM_ADDRESS + 0x1000)
-#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (0xc0000000 - 2 * 0x1000)
-#define TASK_KERNEL_STACK_TOP_ADDRESS       (TASK_KERNEL_STACK_BOTTOM_ADDRESS + 0x1000)
+#define TASK_STACK_PAGES 1          // 0x100  // 1MB
+#define TASK_KERNEL_STACK_PAGES 1   // 4KB
+
+#define TASK_STACK_TOP_ADDRESS              0xc0000000
+#define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
+#define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
 
 #define MAX_TASKS 256
 
 task_t tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;
 
-#define TASK_SWITCH_DELAY 30 // ms
+#define TASK_SWITCH_DELAY 40 // ms
+#define TASK_SWITCHES_PER_SECOND (1000 / TASK_SWITCH_DELAY)
 
 uint8_t multitasking_counter = 0;
 
@@ -77,5 +85,6 @@ void multasking_init();
 void multitasking_start();
 void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs
 void task_kill(uint16_t index);
+void multitasking_add_idle_task();
 
 void idle_main();
