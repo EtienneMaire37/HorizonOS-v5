@@ -76,14 +76,16 @@ void pci_scan_buses()
                                 printf("\n    Device : ");
                                 tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                                 putchar('\"');
-                                fputc('\"', stderr);
+                                // fputc('\"', stderr);
+                                CONTINUE_LOG(DEBUG, "\"");
                                 LOG(DEBUG, "    Device : \"");
                                 printed_vendor = true;
                             }
                             if (found_device)
                             {
                                 printf("\"\n");
-                                fputc('\"', stderr);
+                                // fputc('\"', stderr);
+                                CONTINUE_LOG(DEBUG, "\"");
                                 tty_set_color(FG_WHITE, BG_BLACK);
                                 break;
                             }
@@ -144,14 +146,16 @@ void pci_scan_buses()
                         if (vendor_id_line && current_vendor_id == vendor_id && line_offset >= 6)
                         {
                             putchar(byte);
-                            fputc(byte, stderr);
+                            // fputc(byte, stderr);
+                            CONTINUE_LOG(DEBUG, "%c", byte);
                             found_vendor = true;
                         }
 
                         if (device_id_line && current_line_device_id == device_id && current_vendor_id == vendor_id && line_offset >= 7)
                         {
                             putchar(byte);
-                            fputc(byte, stderr);
+                            // fputc(byte, stderr);
+                            CONTINUE_LOG(DEBUG, "%c", byte);
                             found_device = true;
                         }
                     }
@@ -159,7 +163,8 @@ void pci_scan_buses()
                     {
                         tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                         putchar('\"');
-                        fputc('\"', stderr);
+                        // fputc('\"', stderr);
+                        CONTINUE_LOG(DEBUG, "\"");
                         putchar('\n');
                         tty_set_color(FG_WHITE, BG_BLACK);
                     }

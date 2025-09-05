@@ -230,7 +230,7 @@ int atoi(const char* str)
 }
 
 #ifdef BUILDING_KERNEL
-#define abort() (printf("Kernel aborted. (func: \"%s\"; line: %d; file: \"%s\")\n", __FUNCTION__, __LINE__, __FILE__), halt())
+#define abort() (printf("Kernel aborted. (func: \"%s\"; line: %d; file: \"%s\")\n", __CURRENT_FUNC__, __LINE__, __FILE__), halt())
 #else
 void abort()
 {

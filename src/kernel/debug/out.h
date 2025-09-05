@@ -51,14 +51,15 @@ bool first_log = true;
 #define _LOG(level_text, ...)
 #define LOG(level, ...)
 #else
-#define _LOG(level_text, ...)           { \
+#define _LOG(level_text, ...) { \
     if (!first_log) fputc('\n', stderr); \
     first_log = false;  \
     if (time_initialized) \
         fprintf(stderr, LOG_FMT, \
         system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10, \
         system_thousands / 100, (system_thousands / 10) % 10, system_thousands % 10, level_text); \
-        else fprintf(stderr, LOG_FMT_NOTIME, level_text); \
-        fprintf(stderr, __VA_ARGS__); }
-#define LOG(level, ...)                 do { if (LOG_LEVEL <= level) { _LOG(LOG_LEVEL_STR[level], __VA_ARGS__) } } while(0)
+    else fprintf(stderr, LOG_FMT_NOTIME, level_text); \
+    fprintf(stderr, __VA_ARGS__); }
+#define LOG(level, ...)                 do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) { _LOG(LOG_LEVEL_STR[level], __VA_ARGS__) } } while(0)
+#define CONTINUE_LOG(level, ...)    do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) fprintf(stderr, __VA_ARGS__); } while (0)
 #endif

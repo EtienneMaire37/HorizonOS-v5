@@ -27,7 +27,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -O3 -Wno-stringop-overflow $(CLOGLEVEL)
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -Ofast -Wno-stringop-overflow $(CLOGLEVEL)
 	$(CROSSLD) -T src/kernel/link.ld "src/libc/lib/libm.a"
 	
 	mkdir -p ./root/boot/grub

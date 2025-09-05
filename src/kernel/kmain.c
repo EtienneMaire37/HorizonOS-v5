@@ -15,6 +15,18 @@ multiboot_info_t* multiboot_info;
 #define BUILDING_C_LIB
 #define BUILDING_KERNEL
 
+#ifndef __CURRENT_FUNC__
+
+#if __STDC_VERSION__ >= 199901L
+#define __CURRENT_FUNC__    __func__
+#elif __GNUC__ >= 2
+#define __CURRENT_FUNC__    __FUNCTION__
+#else
+#define __CURRENT_FUNC__    ""
+#endif
+
+#endif
+
 #include "../libc/include/errno.h"
 #include "../libc/include/stddef.h"
 #include "../libc/include/stdarg.h"
@@ -75,7 +87,7 @@ void simple_cause_halt();
 #define enable_interrupts()     asm volatile("sti")
 #define disable_interrupts()    asm volatile("cli")
 
-#define halt() (fflush(stdout), cause_halt(__FUNCTION__, __FILE__, __LINE__))
+#define halt() (fflush(stdout), cause_halt(__CURRENT_FUNC__, __FILE__, __LINE__))
 
 #define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
 
@@ -183,14 +195,14 @@ uint8_t stderr_buffer[BUFSIZ];
 void cause_halt(const char* func, const char* file, int line)
 {
     disable_interrupts();
-    LOG(WARNING, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
+    LOG(ERROR, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
     _halt();
 }
 
 void simple_cause_halt()
 {
     disable_interrupts();
-    LOG(WARNING, "Kernel halted");
+    LOG(ERROR, "Kernel halted");
     _halt();
 }
 
@@ -464,7 +476,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     // ~ Debugging
         // // ^ To test stack tracing
-        // volatile int a = 1 / 0;
+        // asm volatile("div ecx" :: "c" (0));
 
         // physical_address_t addresses[10000000 / 4096] = {0};
         // for(uint32_t i = 0; i < 10000000 / 4096; i++)
@@ -496,17 +508,14 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(DEBUG, "Initializing multitasking");
     LOG(DEBUG, "memory allocated to TCBs : %u bytes", sizeof(tasks));
 
-    if (1000 % TASK_SWITCH_DELAY != 0) abort(); // Task switch delay does not divide a second evenly
+    if (1000 % TASK_SWITCH_DELAY != 0) abort(); // ! Task switch delay does not divide a second evenly
 
     // ~ No need to call it another time
     // fpu_init();  
 
-    // abort();
-
     multitasking_init();
 
     // multasking_add_task_from_initrd("./kernel32.elf", 0, true);
-    // multitasking_add_task_from_function("idle_task", idle_main);
 
     multitasking_start();
 

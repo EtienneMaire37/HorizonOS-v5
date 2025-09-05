@@ -23,13 +23,14 @@ struct ustar_header
 
 #define USTAR_BLOCK_SIZE 512
 
-#define USTAR_TYPE_FILE '0' // Or 0
-#define USTAR_TYPE_HARD_LINK '1'
-#define USTAR_TYPE_SYMBOLIC_LINK '2'
-#define USTAR_TYPE_CHARACTER_SPECIAL '3'
-#define USTAR_TYPE_BLOCK_SPECIAL '4'
-#define USTAR_TYPE_DIRECTORY '5'
-#define USTAR_TYPE_FIFO '6'
+#define USTAR_TYPE_FILE_1           '0'
+#define USTAR_TYPE_FILE_2            0
+#define USTAR_TYPE_HARD_LINK        '1'
+#define USTAR_TYPE_SYMBOLIC_LINK    '2'
+#define USTAR_TYPE_CHARACTER_DEVICE '3'
+#define USTAR_TYPE_BLOCK_DEVICE     '4'
+#define USTAR_TYPE_DIRECTORY        '5'
+#define USTAR_TYPE_NAMED_PIPE       '6'
 
 #define USTAR_IS_VALID_HEADER(header) ((header).ustar[0] == 'u' && (header).ustar[1] == 's' && (header).ustar[2] == 't' && (header).ustar[3] == 'a' && (header).ustar[4] == 'r')
 

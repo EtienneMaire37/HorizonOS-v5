@@ -8,8 +8,7 @@ struct initrd_file
     uint32_t size;
     uint8_t* data;
     tar_file_type type;
-
-    // 12 bytes
+    uint8_t* link;
 };
 
 #define MAX_INITRD_FILES 32
@@ -45,11 +44,15 @@ void initrd_parse()
 
         uint64_t file_size = ustar_get_number(header->size);
 
+        // if (header->type != USTAR_TYPE_FILE_1 && header->type != USTAR_TYPE_FILE_2 && header->type != USTAR_TYPE_DIRECTORY)
+        //     continue;
+
         initrd_files[initrd_files_count].name = &header->name[0];
         initrd_files[initrd_files_count].size = file_size;
         initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
         if (header->type == 0) header->type = '0';
         initrd_files[initrd_files_count].type = header->type;
+        initrd_files[initrd_files_count].link = &header->linked_file[0];
         initrd_files_count++;
 
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;
@@ -57,7 +60,39 @@ void initrd_parse()
 
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
-        LOG(INFO, "%s── File : %s ; Size : %u bytes", initrd_files_count - i > 1 ? "├" : "└", initrd_files[i].name, initrd_files[i].size);
+        // if (initrd_files[i].size != 0 && 
+        //     initrd_files[i].name != NULL)
+        {
+            char* tree_inter = initrd_files_count - i > 1 ? "├" : "└";
+            tar_file_type this_type = initrd_files[i].type;
+            switch (this_type)
+            {
+            case USTAR_TYPE_FILE_1:
+            case USTAR_TYPE_FILE_2:
+                LOG(INFO, "%s── File : \"%s\" ; Size : %u bytes", tree_inter, initrd_files[i].name, initrd_files[i].size);
+                break;
+            case USTAR_TYPE_HARD_LINK:
+                LOG(INFO, "%s── Hard link : \"%s\" pointing to \"%s\"", tree_inter, initrd_files[i].name, initrd_files[i].link);
+                break;
+            case USTAR_TYPE_SYMBOLIC_LINK:
+                LOG(INFO, "%s── Symbolic link : \"%s\" pointing to \"%s\"", tree_inter, initrd_files[i].name, initrd_files[i].link);
+                break;
+            case USTAR_TYPE_CHARACTER_DEVICE:
+                LOG(INFO, "%s── Character device : \"%s\"", tree_inter, initrd_files[i].name);
+                break;
+            case USTAR_TYPE_BLOCK_DEVICE:
+                LOG(INFO, "%s── Block device : \"%s\"", tree_inter, initrd_files[i].name);
+                break;
+            case USTAR_TYPE_DIRECTORY:
+                LOG(INFO, "%s── Directory : \"%s\"", tree_inter, initrd_files[i].name);
+                break;
+            case USTAR_TYPE_NAMED_PIPE:
+                LOG(INFO, "%s── FIFO : \"%s\"", tree_inter, initrd_files[i].name);
+                break;
+            default:
+                ;
+            }
+        }
     }
 
     LOG(INFO, "Done parsing initrd (%u files)", initrd_files_count);

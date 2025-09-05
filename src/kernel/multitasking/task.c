@@ -415,10 +415,14 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
                 tasks[i].current_cpu_ticks = 0;
             }
 
+            float total = (100 - .01 * (10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND));
+            if (total <= 0) total = +0;
+            if (total >= 1) total = 1;
+
             LOG(TRACE, "CPU usage:");
-            LOG(TRACE, "total : %f %%", 100 * (1 - tasks[0].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND));
+            LOG(TRACE, "total : %f %%", total);
             for (uint16_t i = 0; i < task_count; i++)
-                LOG(TRACE, "%s── task %d : %f %%\t%s[pid = %ld]", task_count - i > 1 ? "├" : "└", i, 100 * tasks[i].stored_cpu_ticks / (float)TASK_SWITCHES_PER_SECOND, i == 0 ? "(* idle task *) " : "", tasks[i].pid);
+                LOG(TRACE, "%s── task %d : %f %%\t%s[pid = %ld]", task_count - i > 1 ? "├" : "└", i, .01 * 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND, i == 0 ? "(* idle task *) " : "", tasks[i].pid);
         }
         global_cpu_ticks = 0;
     }
