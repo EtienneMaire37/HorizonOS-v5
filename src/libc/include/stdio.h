@@ -77,7 +77,7 @@ int getchar();
 #define getc fgetc
 
 int putchar(int c);
-// int fputs(const char* s, FILE* stream);
+int fputs(const char* s, FILE* stream);
 int puts(const char* s);
 
 // int printf(const char* format, ...);

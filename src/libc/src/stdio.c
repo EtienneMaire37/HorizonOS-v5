@@ -22,6 +22,16 @@ int puts(const char* s)
     return 0;
 }
 
+int fputs(const char* s, FILE* stream)
+{
+    if (!s) 
+    {
+        errno = EINVAL; 
+        return EOF;
+    }
+    if (fwrite(s, strlen(s), 1, stream) != 1) return EOF;
+    return 0;
+}
 
 #define DOUBLE_PRINT_MAX_DIGITS         34      // 18
 #define LONG_DOUBLE_PRINT_MAX_DIGITS    308     // 18

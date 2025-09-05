@@ -4,6 +4,8 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 {
     disable_interrupts();
 
+    LOG(CRITICAL, "Kernel panic");
+
     tty_set_color(FG_WHITE, BG_BLACK);
     tty_clear_screen(' ');
 
@@ -169,7 +171,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
 
     if (registers->interrupt_number < 32)            // Fault
     {
-        LOG(ERROR, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
+        LOG(WARNING, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
 
         if (registers->interrupt_number == 6 && *((uint16_t*)registers->eip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
         {

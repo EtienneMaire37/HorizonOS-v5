@@ -123,6 +123,13 @@ const char* multiboot_block_type_text[5] =
 #include "cpu/cpuid.h"
 #include "cpu/registers.h"
 
+#include "../libc/include/stdio.h"
+#include "../libc/include/string.h"
+#include "../libc/include/stdlib.h"
+#include "../libc/src/stdio.c"
+#include "../libc/src/string.c"
+#include "../libc/src/stdlib.c"
+
 #include "io/io.h"
 #include "ps2/ps2.h"
 #include "debug/out.h"
@@ -133,12 +140,6 @@ const char* multiboot_block_type_text[5] =
 #include "acpi/tables.h"
 #include "vga/textio.h"
 #include "pci/pci.h"
-#include "../libc/include/stdio.h"
-#include "../libc/include/string.h"
-#include "../libc/include/stdlib.h"
-#include "../libc/src/stdio.c"
-#include "../libc/src/string.c"
-#include "../libc/src/stdlib.c"
 #include "gdt/gdt.h"
 #include "paging/paging.h"
 #include "pit/pit.h"
@@ -305,8 +306,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     
     current_keyboard_layout = &us_qwerty;
 
-    LOG(INFO, "CPU manufacturer string : %s", manufacturer_id_string);
-    printf("CPU manufacturer string : %s\n", manufacturer_id_string);
+    LOG(INFO, "CPU manufacturer string : \"%s\"", manufacturer_id_string);
+    printf("CPU manufacturer string : \"%s\"\n", manufacturer_id_string);
 
     LOG(INFO, "CPUID highest function parameter : 0x%x", cpuid_highest_function_parameter);
     printf("CPUID highest function parameter : 0x%x\n", cpuid_highest_function_parameter);
@@ -477,6 +478,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     // ~ Debugging
         // // ^ To test stack tracing
         // asm volatile("div ecx" :: "c" (0));
+        // volatile int a = *((int*) 0x80000000);
 
         // physical_address_t addresses[10000000 / 4096] = {0};
         // for(uint32_t i = 0; i < 10000000 / 4096; i++)
