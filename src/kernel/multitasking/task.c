@@ -1,6 +1,31 @@
 #pragma once
 
-void task_load_from_initrd(task_t* _task, char* name, uint8_t ring)
+#include "idle.h"
+
+thread_t task_create_empty()
+{
+    thread_t task;
+    task.name = NULL;
+    task.stack_phys = physical_null; // pfa_allocate_physical_page();
+    task.kernel_stack_phys = physical_null;
+    utf32_buffer_init(&task.input_buffer);
+    task.reading_stdin = task.was_reading_stdin = false;
+
+    task.cr3 = physical_null;
+    task.ring = 0;
+
+    task.pid = current_pid++;
+    task.system_task = true;
+
+    fpu_state_init(&task.fpu_state);
+
+    task.current_cpu_ticks = 0;
+    task.stored_cpu_ticks = 0;
+
+    return task;
+}
+
+void task_load_from_initrd(thread_t* _task, char* name, uint8_t ring)
 {
     abort();
 
@@ -182,7 +207,7 @@ void task_load_from_initrd(task_t* _task, char* name, uint8_t ring)
     LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
 }
 
-void task_destroy(task_t* _task)
+void task_destroy(thread_t* _task)
 {
     abort();
 
@@ -203,7 +228,7 @@ void task_destroy(task_t* _task)
     utf32_buffer_destroy(&_task->input_buffer);
 }
 
-void task_virtual_address_space_destroy(task_t* _task)
+void task_virtual_address_space_destroy(thread_t* _task)
 {
     abort();
 
@@ -227,7 +252,7 @@ void task_virtual_address_space_destroy(task_t* _task)
     pfa_free_physical_page(_task->cr3);
 }
 
-void task_virtual_address_space_create_page_table(task_t* _task, uint16_t index)
+void task_virtual_address_space_create_page_table(thread_t* _task, uint16_t index)
 {
     abort();
 
@@ -238,7 +263,7 @@ void task_virtual_address_space_create_page_table(task_t* _task, uint16_t index)
     physical_add_page_table(_task->cr3, index, pt_phys, PAGING_USER_LEVEL, true);
 }
 
-void task_virtual_address_space_remove_page_table(task_t* _task, uint16_t index)
+void task_virtual_address_space_remove_page_table(thread_t* _task, uint16_t index)
 {
     abort();
 
@@ -255,7 +280,7 @@ void task_virtual_address_space_remove_page_table(task_t* _task, uint16_t index)
     physical_remove_page_table(_task->cr3, index);
 }
 
-physical_address_t task_virtual_address_space_create_page(task_t* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
+physical_address_t task_virtual_address_space_create_page(thread_t* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write)
 {
     abort();
 
@@ -271,7 +296,7 @@ physical_address_t task_virtual_address_space_create_page(task_t* _task, uint16_
     return page;
 }
 
-void task_create_virtual_address_space(task_t* _task)
+void task_create_virtual_address_space(thread_t* _task)
 {
     abort();
 
@@ -333,7 +358,7 @@ void multitasking_start()
     abort();    // !!! Critical error if eip somehow gets there (impossible)
 }
 
-void multasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
+void multitasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
 {
     abort();
     
@@ -363,19 +388,11 @@ void multitasking_add_idle_task(char* name)
         abort();
     }
 
-    tasks[task_count].name = name;
-    tasks[task_count].stack_phys = physical_null; // pfa_allocate_physical_page();
-    tasks[task_count].kernel_stack_phys = physical_null;
-    utf32_buffer_init(&tasks[task_count].input_buffer);
-    tasks[task_count].reading_stdin = tasks[task_count].was_reading_stdin = false;
+    thread_t task = task_create_empty();
+    task.name = name;
+    task.cr3 = (uint32_t)page_directory;
 
-    tasks[task_count].cr3 = (uint32_t)&page_directory;
-    tasks[task_count].ring = 0;
-
-    tasks[task_count].pid = current_pid++;
-    tasks[task_count].system_task = true;
-
-    fpu_state_init(&tasks[task_count].fpu_state);
+    tasks[task_count] = task;
 
     task_count++;
 }
@@ -385,7 +402,7 @@ void multitasking_add_task_from_function(const char* name, void (*func)())
 
 }
 
-void task_write_at_address_1b(task_t* _task, uint32_t address, uint8_t value)
+void task_write_at_address_1b(thread_t* _task, uint32_t address, uint8_t value)
 {
     abort();
 
@@ -506,9 +523,4 @@ void task_kill(uint16_t index)
     if (current_task_index >= index)
         current_task_index--;
     task_count--;
-}
-
-void idle_main()
-{
-    while(true) hlt();
 }

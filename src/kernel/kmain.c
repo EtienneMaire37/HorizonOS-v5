@@ -251,6 +251,8 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
     return 0;
 }
 
+void kmain();
+
 void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
     multiboot_info = _multiboot_info;
@@ -307,7 +309,10 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     current_keyboard_layout = &us_qwerty;
 
     LOG(INFO, "CPU manufacturer string : \"%s\"", manufacturer_id_string);
-    printf("CPU manufacturer string : \"%s\"\n", manufacturer_id_string);
+    printf("CPU manufacturer string : ");
+    tty_set_color(FG_LIGHTRED, BG_BLACK);
+    printf("\"%s\"\n", manufacturer_id_string);
+    tty_set_color(FG_WHITE, BG_BLACK);
 
     LOG(INFO, "CPUID highest function parameter : 0x%x", cpuid_highest_function_parameter);
     printf("CPUID highest function parameter : 0x%x\n", cpuid_highest_function_parameter);
@@ -517,11 +522,25 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    // multasking_add_task_from_initrd("./kernel32.elf", 0, true);
+    multitasking_add_task_from_function("kernel32", kmain);
 
     multitasking_start();
 
     while (true);
 
     halt();
+}
+
+void kmain()
+{
+    long double res = 1;
+    for (int i = 3; true; i += 4)
+    {
+        res -= 1.L / i;
+        res += 1.L / (i + 2);
+
+        if (i % (3 + 4 * 50) == 0)
+            printf("pi ~= %lf\n", 4 * res);
+    }
+    exit(0);
 }

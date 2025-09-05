@@ -5,7 +5,7 @@ extern task_esp_offset
 extern task_esp0_offset
 extern task_cr3_offset
 
-; void __attribute__((cdecl)) context_switch(task_t* old_tcb, task_t* next_tcb)
+; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb)
 global context_switch
 context_switch:
     ; * eax, ecx and edx are caller-saved * ;
