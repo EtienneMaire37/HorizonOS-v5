@@ -6,13 +6,14 @@ thread_t task_create_empty()
 {
     thread_t task;
     task.name = NULL;
-    task.stack_phys = physical_null; // pfa_allocate_physical_page();
-    task.kernel_stack_phys = physical_null;
+
     utf32_buffer_init(&task.input_buffer);
     task.reading_stdin = task.was_reading_stdin = false;
 
     task.cr3 = physical_null;
     task.ring = 0;
+
+    task.esp = 0;
 
     task.pid = current_pid++;
     task.system_task = true;
@@ -25,207 +26,25 @@ thread_t task_create_empty()
     return task;
 }
 
-void task_load_from_initrd(thread_t* _task, char* name, uint8_t ring)
-{
-    abort();
-
-    if (ring != 3 && ring != 0)
-    {
-        LOG(CRITICAL, "Invalid ring level");
-        abort();
-    }
-
-    LOG(INFO, "Loading task \"%s\" from initrd", name);
-
-    struct initrd_file* file = initrd_find_file(name);
-    if (!file) 
-    {
-        LOG(CRITICAL, "File \"%s\" not found in initrd", name);
-        abort();
-    }
-
-    struct elf32_header* header = (struct elf32_header*)file->data;
-
-    if (memcmp(header->magic, "\x7f""ELF", 4) != 0)
-    {
-        LOG(CRITICAL, "Invalid ELF header");
-        abort();
-    }
-
-    if (header->architecture != ELF_CLASS_32)
-    {
-        LOG(CRITICAL, "Invalid ELF architecture");
-        abort();
-    }
-
-    if (header->byte_order != ELF_DATA_LITTLE_ENDIAN)
-    {
-        LOG(CRITICAL, "Invalid ELF byte order");
-        abort();
-    }
-
-    if (header->osabi != ELF_OSABI_SYSV)
-    {
-        LOG(CRITICAL, "Invalid ELF OSABI");
-        abort();
-    }
-
-    if (header->machine != ELF_INSTRUCTION_SET_x86)
-    {
-        LOG(CRITICAL, "Invalid ELF machine");
-        abort();
-    }
-
-    if (header->type != ELF_TYPE_EXECUTABLE)
-    {
-        LOG(CRITICAL, "Invalid ELF type");
-        abort();
-    }
-
-    LOG(TRACE, "ELF header : ");
-    LOG(TRACE, "   Type : %u", header->type);
-    LOG(TRACE, "   Machine : %u", header->machine);
-    LOG(TRACE, "   Entry : 0x%x", header->entry);
-    LOG(TRACE, "   Program header offset : 0x%x", header->phoff);
-    LOG(TRACE, "   Section header offset : 0x%x", header->shoff);
-    LOG(TRACE, "   Flags : 0x%x", header->flags);
-
-    utf32_buffer_init(&_task->input_buffer);
-    // _task->kernel_thread = false;
-    _task->reading_stdin = _task->was_reading_stdin = false;
-    _task->stack_phys = pfa_allocate_physical_page();
-    if (ring != 0)
-        _task->kernel_stack_phys = pfa_allocate_physical_page();
-
-    LOG(TRACE, "Stack physical addres: 0x%lx", _task->stack_phys);
-    LOG(TRACE, "Kernel stack physical addres: 0x%lx", _task->kernel_stack_phys);
-
-    task_create_virtual_address_space(_task);
-
-    struct elf32_program_header* program_headers = (struct elf32_program_header*)((uint32_t)header + header->phoff);
-    struct elf32_section_header* section_headers = (struct elf32_section_header*)((uint32_t)header + header->shoff);
-    struct elf32_section_header* string_table_header = &section_headers[header->shstrndx];
-    char* string_table = (char*)((uint32_t)header + string_table_header->sh_offset);
-    
-    for (uint16_t i = 0; i < header->phnum; i++)
-    {
-        if (program_headers[i].type == ELF_PROGRAM_TYPE_NULL) continue;
-
-        LOG(TRACE, "   Program section %u : ", i);
-        LOG(TRACE, "       Type : %u", program_headers[i].type);
-        LOG(TRACE, "       Offset : 0x%x", program_headers[i].p_offset);
-        LOG(TRACE, "       Virtual address : 0x%x", program_headers[i].p_vaddr);
-        LOG(TRACE, "       Physical address : 0x%x", program_headers[i].p_paddr);
-        LOG(TRACE, "       File size : %u", program_headers[i].p_filesz);
-        LOG(TRACE, "       Memory size : %u", program_headers[i].p_memsz);
-        LOG(TRACE, "       Flags : 0x%x", program_headers[i].flags);
-        LOG(TRACE, "       Alignment : %u", program_headers[i].align);
-    }
-
-    for (uint16_t i = 0; i < header->shnum; i++)
-    {
-        if (section_headers[i].sh_type == 0) continue;
-
-        LOG(TRACE, "   Elf section %u : ", i);
-        LOG(TRACE, "       Name : %s", &string_table[section_headers[i].sh_name]);
-        LOG(TRACE, "       Type : %u", section_headers[i].sh_type);
-        LOG(TRACE, "       Flags : 0x%x", section_headers[i].sh_flags);
-        LOG(TRACE, "       Address : 0x%x", section_headers[i].sh_addr);
-        LOG(TRACE, "       Offset : 0x%x", section_headers[i].sh_offset);
-        LOG(TRACE, "       Size : %u", section_headers[i].sh_size);
-        LOG(TRACE, "       Link : %u", section_headers[i].sh_link);
-        LOG(TRACE, "       Info : %u", section_headers[i].sh_info);
-        LOG(TRACE, "       Address alignment : %u", section_headers[i].sh_addralign);
-        LOG(TRACE, "       Entry size : %u", section_headers[i].sh_entsize);
-
-        if (section_headers[i].sh_flags & ELF_SECTION_FLAG_ALLOC)   // Allocate section
-        {
-            virtual_address_t vaddr = section_headers[i].sh_addr;
-            if (vaddr & 0xfff)
-            {
-                LOG(CRITICAL, "Section is not page aligned");
-                abort();
-            }
-            for (uint32_t j = 0; j < section_headers[i].sh_size; j += 0x1000) 
-            {
-                uint32_t address = vaddr + j;
-                struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
-            
-                task_virtual_address_space_create_page(_task, layout.page_directory_entry, layout.page_table_entry, ring == 3 ? PAGING_USER_LEVEL : PAGING_SUPERVISOR_LEVEL, 1);
-                physical_address_t pt_phys = read_physical_address_4b(_task->cr3 + 4 * layout.page_directory_entry) & 0xfffff000;
-                
-                if (section_headers[i].sh_type == ELF_SECTION_TYPE_PROGBITS)
-                {
-                    set_current_phys_mem_page(read_physical_address_4b(pt_phys + 4 * layout.page_table_entry) >> 12);
-                    memcpy((void*)PHYS_MEM_PAGE_BOTTOM, (void*)((uint32_t)header + section_headers[i].sh_offset + j), minint(0x1000, section_headers[i].sh_size - j));
-                }
-                else
-                {
-                    // ~ Assumes page aligned sections
-                    memset_page(read_physical_address_4b(pt_phys + 4 * layout.page_table_entry) & 0xfffff000, 0);
-                }
-            }
-        }
-    }
-
-    fpu_state_init(&(_task->fpu_state));
-
-    struct privilege_switch_interrupt_registers registers;
-
-    registers.cs = ring == 3 ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
-    registers.ds = ring == 3 ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
-    registers.ss = registers.ds;
-
-    registers.eflags = 0x200; // Interrupts enabled (bit 9)
-    registers.ebp = 0;
-    registers.esp = TASK_STACK_TOP_ADDRESS;
-    registers.handled_esp = registers.esp - 0x2c - 8;   // 8 for the user's ss and esp
-
-    // _task->registers_ptr = (struct privilege_switch_interrupt_registers*)(TASK_STACK_TOP_ADDRESS - sizeof(struct privilege_switch_interrupt_registers));
-    
-    registers.eax = registers.ebx = registers.ecx = registers.edx = 0;
-    registers.esi = registers.edi = 0;
-
-    registers.eip = header->entry;
-
-    // // // // // // // registers.cr3 = _task->cr3;
-
-    _task->esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    _task->esp = registers.esp;
-    _task->cr3 = registers.cr3;
-
-    // _task->registers_data = registers;
-
-    _task->name = name;
-
-    _task->ring = ring;
-
-    for (uint16_t i = 0; i < sizeof(registers); i++)
-        write_physical_address_1b((physical_address_t)_task->esp + _task->stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-            ((uint8_t*)&registers)[i]);
-
-    LOG(DEBUG, "Successfully loaded task \"%s\" from initrd", name);
-}
-
 void task_destroy(thread_t* _task)
 {
     abort();
 
-    LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
-    LOG(TRACE, "Freeing virtual address space");
-    task_virtual_address_space_destroy(_task);
-    if (_task->kernel_stack_phys)
-    {
-        LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack_phys);
-        pfa_free_physical_page(_task->kernel_stack_phys);
-    }
-    if (_task->stack_phys)
-    {
-        LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
-        pfa_free_physical_page(_task->stack_phys);
-    }
-    LOG(TRACE, "Freeing input buffer");
-    utf32_buffer_destroy(&_task->input_buffer);
+    // LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", _task->name, _task->pid, _task->ring);
+    // LOG(TRACE, "Freeing virtual address space");
+    // task_virtual_address_space_destroy(_task);
+    // if (_task->kernel_stack_phys)
+    // {
+    //     LOG(TRACE, "Freeing kernel stack at 0x%x", _task->kernel_stack_phys);
+    //     pfa_free_physical_page(_task->kernel_stack_phys);
+    // }
+    // if (_task->stack_phys)
+    // {
+    //     LOG(TRACE, "Freeing stack at 0x%x", _task->stack_phys);
+    //     pfa_free_physical_page(_task->stack_phys);
+    // }
+    // LOG(TRACE, "Freeing input buffer");
+    // utf32_buffer_destroy(&_task->input_buffer);
 }
 
 void task_virtual_address_space_destroy(thread_t* _task)
@@ -300,42 +119,42 @@ void task_create_virtual_address_space(thread_t* _task)
 {
     abort();
 
-    LOG(DEBUG, "Creating a new virtual address space...");
+    // LOG(DEBUG, "Creating a new virtual address space...");
 
-    _task->cr3 = pfa_allocate_physical_page();
+    // _task->cr3 = pfa_allocate_physical_page();
 
-    physical_init_page_directory(_task->cr3);
+    // physical_init_page_directory(_task->cr3);
 
-    physical_add_page_table(_task->cr3, 1023, _task->cr3, PAGING_SUPERVISOR_LEVEL, true);
+    // physical_add_page_table(_task->cr3, 1023, _task->cr3, PAGING_SUPERVISOR_LEVEL, true);
 
-    task_virtual_address_space_create_page_table(_task, 0);
-    physical_address_t first_mb_pt_address = read_physical_address_4b(_task->cr3) & 0xfffff000;
-    for (uint16_t i = 0; i < 256; i++)
-        physical_set_page(first_mb_pt_address, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
+    // task_virtual_address_space_create_page_table(_task, 0);
+    // physical_address_t first_mb_pt_address = read_physical_address_4b(_task->cr3) & 0xfffff000;
+    // for (uint16_t i = 0; i < 256; i++)
+    //     physical_set_page(first_mb_pt_address, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
 
-    for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING
-    {
-        task_virtual_address_space_create_page_table(_task, i + 768);
-        struct virtual_address_layout layout;
-        layout.page_directory_entry = i + 768;
-        layout.page_offset = 0;
-        physical_address_t pt_address = read_physical_address_4b(_task->cr3 + 4 * layout.page_directory_entry) & 0xfffff000;
-        for (uint16_t j = 0; j < 1024; j++)
-        {
-            layout.page_table_entry = j;
-            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
-            physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
-        }
-    }
+    // for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING
+    // {
+    //     task_virtual_address_space_create_page_table(_task, i + 768);
+    //     struct virtual_address_layout layout;
+    //     layout.page_directory_entry = i + 768;
+    //     layout.page_offset = 0;
+    //     physical_address_t pt_address = read_physical_address_4b(_task->cr3 + 4 * layout.page_directory_entry) & 0xfffff000;
+    //     for (uint16_t j = 0; j < 1024; j++)
+    //     {
+    //         layout.page_table_entry = j;
+    //         uint32_t address = *(uint32_t*)&layout - 0xc0000000;
+    //         physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
+    //     }
+    // }
 
-    task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access
+    // task_virtual_address_space_create_page_table(_task, 767);   // Stacks and physical memory access
 
-    physical_address_t pt_address = read_physical_address_4b(_task->cr3 + 4 * 767) & 0xfffff000;
-    physical_set_page(pt_address, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
-    physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
-    physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
+    // physical_address_t pt_address = read_physical_address_4b(_task->cr3 + 4 * 767) & 0xfffff000;
+    // physical_set_page(pt_address, 1021, 0, PAGING_SUPERVISOR_LEVEL, true);
+    // physical_set_page(pt_address, 1022, _task->kernel_stack_phys, PAGING_SUPERVISOR_LEVEL, true);
+    // physical_set_page(pt_address, 1023, _task->stack_phys, PAGING_USER_LEVEL, true);
 
-    LOG(DEBUG, "Done.");
+    // LOG(DEBUG, "Done.");
 }
 
 void multitasking_init()
@@ -358,22 +177,6 @@ void multitasking_start()
     abort();    // !!! Critical error if eip somehow gets there (impossible)
 }
 
-void multitasking_add_task_from_initrd(char* path, uint8_t ring, bool system)
-{
-    abort();
-    
-    if (task_count >= MAX_TASKS)
-    {
-        LOG(CRITICAL, "Too many tasks");
-        abort();
-    }
-
-    task_load_from_initrd(&tasks[task_count], path, ring);
-    tasks[task_count].pid  = current_pid++;
-    tasks[task_count].system_task = system;
-    task_count++;
-}
-
 void multitasking_add_idle_task(char* name)
 {
     if (task_count >= MAX_TASKS)
@@ -392,20 +195,85 @@ void multitasking_add_idle_task(char* name)
     task.name = name;
     task.cr3 = (uint32_t)page_directory;
 
-    tasks[task_count] = task;
-
-    task_count++;
+    tasks[task_count++] = task;
 }
 
-void multitasking_add_task_from_function(const char* name, void (*func)())
+physical_address_t vas_create_empty()
 {
+    physical_address_t cr3 = pfa_allocate_physical_page();
+    physical_init_page_directory(cr3);
+    physical_add_page_table(cr3, 1023, cr3, PAGING_SUPERVISOR_LEVEL, true); // recursive paging
 
+    physical_add_page_table(cr3, 0, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);
+
+    physical_address_t first_mb_pt_address = read_physical_address_4b(cr3) & 0xfffff000;
+    for (uint16_t i = 0; i < 256; i++)
+        physical_set_page(first_mb_pt_address, i, i * 0x1000, PAGING_SUPERVISOR_LEVEL, true);
+
+    for (uint16_t i = 0; i < 255; i++)  // !!!!! DONT OVERRIDE RECURSIVE PAGING
+    {
+        physical_add_page_table(cr3, i + 768, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);
+
+        struct virtual_address_layout layout;
+        layout.page_directory_entry = i + 768;
+        layout.page_offset = 0;
+        physical_address_t pt_address = read_physical_address_4b(cr3 + 4 * layout.page_directory_entry) & 0xfffff000;
+        for (uint16_t j = 0; j < 1024; j++)
+        {
+            layout.page_table_entry = j;
+            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
+            physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
+        }
+    }
+
+    // * Stacks and physical memory access
+    physical_add_page_table(cr3, 767, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);   
+
+    physical_address_t pt_address = read_physical_address_4b(cr3 + 4 * 767) & 0xfffff000;
+    physical_set_page(pt_address, physical_memory_page_index, 0, PAGING_SUPERVISOR_LEVEL, true);
+
+    physical_set_page(pt_address, kernel_stack_page_index, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);
+
+    for (int i = stack_page_index_start; i <= stack_page_index_end; i++)
+        physical_set_page(pt_address, i, pfa_allocate_physical_page(), PAGING_USER_LEVEL, true);
+        
+    return cr3;
+}
+
+void task_stack_push(thread_t* task, uint32_t value)
+{
+    task->esp -= 4;
+    task_write_at_address_1b(task, (physical_address_t)task->esp + 0, (value >> 0)  & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->esp + 1, (value >> 8)  & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->esp + 2, (value >> 16) & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->esp + 3, (value >> 24) & 0xff);
+}
+
+void multitasking_add_task_from_function(char* name, void (*func)())
+{
+    thread_t task = task_create_empty();
+    task.name = name;
+    task.cr3 = vas_create_empty();
+
+    task.esp = TASK_STACK_TOP_ADDRESS;
+
+    task_stack_push(&task, 0x200);
+    task_stack_push(&task, KERNEL_CODE_SEGMENT);
+    task_stack_push(&task, (uint32_t)func);
+
+
+    task_stack_push(&task, (uint32_t)iret_instruction);
+
+    task_stack_push(&task, 0);   // ebx
+    task_stack_push(&task, 0);   // esi
+    task_stack_push(&task, 0);   // edi
+    task_stack_push(&task, TASK_STACK_TOP_ADDRESS); // ebp
+
+    tasks[task_count++] = task;
 }
 
 void task_write_at_address_1b(thread_t* _task, uint32_t address, uint8_t value)
 {
-    abort();
-
     struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
     uint32_t pde = read_physical_address_4b(_task->cr3 + 4 * layout.page_directory_entry);
     if (!(pde & 1)) return;
@@ -432,14 +300,14 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
                 tasks[i].current_cpu_ticks = 0;
             }
 
-            float total = (100 - .01 * (10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND));
+            float total = 100 - (.01 * 10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
             if (total <= 0) total = +0;
-            if (total >= 1) total = 1;
+            if (total >= 100) total = 100;
 
             LOG(TRACE, "CPU usage:");
             LOG(TRACE, "total : %f %%", total);
             for (uint16_t i = 0; i < task_count; i++)
-                LOG(TRACE, "%s── task %d : %f %%\t%s[pid = %ld]", task_count - i > 1 ? "├" : "└", i, .01 * 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND, i == 0 ? "(* idle task *) " : "", tasks[i].pid);
+                LOG(TRACE, "%s── task %d : %f %%\t[pid = %ld]%s", task_count - i > 1 ? "├" : "└", i, .01 * 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND, tasks[i].pid, i == 0 ? " (* idle task *)" : "");
         }
         global_cpu_ticks = 0;
     }
@@ -450,10 +318,10 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
         abort();
     }
 
-    // abort();
-
     bool was_first_task_switch = first_task_switch;
     first_task_switch = false;
+
+    // return;
 
     uint16_t next_task_index = find_next_task_index();
     // LOG(TRACE, "Current task index : %u; Next task index : %u", current_task_index, next_task_index);
@@ -471,12 +339,12 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
 
     full_context_switch(next_task_index);
 
-    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
-        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
-        (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
-        (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
-        (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
-        (*registers)->cr3);
+    // LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
+    //     tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
+    //     (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
+    //     (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
+    //     (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
+    //     (*registers)->cr3);
 
     // *flush_tlb = true;
 

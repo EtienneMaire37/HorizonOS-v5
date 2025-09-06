@@ -8,6 +8,7 @@ INPUT
 	"bin/idt.o" 
 	"bin/paging.o"
     "bin/context_switch.o"
+    "bin/registers.o"
 )
 
 OUTPUT_FORMAT(elf32-i386)

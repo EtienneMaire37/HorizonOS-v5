@@ -3,12 +3,11 @@
 typedef struct task
 {
     char* name;
-    physical_address_t stack_phys;
-    physical_address_t kernel_stack_phys;
-    utf32_buffer_t input_buffer;
-    bool reading_stdin, was_reading_stdin;
 
     uint32_t esp, esp0, cr3;
+
+    utf32_buffer_t input_buffer;
+    bool reading_stdin, was_reading_stdin;
 
     uint8_t ring;
     pid_t pid;
@@ -21,17 +20,9 @@ typedef struct task
 
 uint8_t global_cpu_ticks = 0;
 
-int task_esp_offset = offsetof(thread_t, esp);
-int task_esp0_offset = offsetof(thread_t, esp0);
-int task_cr3_offset = offsetof(thread_t, cr3);
-
-#define TASK_STACK_PAGES 1          // 0x100  // 1MB
-#define TASK_KERNEL_STACK_PAGES 1   // 4KB
-
-#define TASK_STACK_TOP_ADDRESS              0xc0000000
-#define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
-#define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
-#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
+const int task_esp_offset = offsetof(thread_t, esp);
+const int task_esp0_offset = offsetof(thread_t, esp0);
+const int task_cr3_offset = offsetof(thread_t, cr3);
 
 #define MAX_TASKS 1024
 
@@ -50,12 +41,14 @@ uint64_t current_pid;
 
 uint16_t zombie_task_index;
 
+extern void iret_instruction();
+
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
-    context_switch(&tasks[current_task_index], &tasks[next_task_index]);
+    int last_index = current_task_index;
     current_task_index = next_task_index;
-    TSS.esp0 = tasks[current_task_index].esp0;
+    context_switch(&tasks[last_index], &tasks[current_task_index]);
 }
 
 uint16_t find_next_task_index() 

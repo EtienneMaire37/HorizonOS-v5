@@ -34,6 +34,7 @@ context_switch:
     cmp eax, ecx
     je .end
     mov cr3, eax
+
 .end:
     pop ebp
     pop edi

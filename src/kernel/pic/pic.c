@@ -18,6 +18,11 @@ void pic_disable()
     pic_set_mask(0xffff);
 }
 
+void pic_enable() 
+{
+    pic_set_mask(0x0000);
+}
+
 void pic_remap(uint8_t master_offset, uint8_t slave_offset)
 {
     // Init sequence
@@ -42,8 +47,7 @@ void pic_remap(uint8_t master_offset, uint8_t slave_offset)
     outb(PIC2_DATA, ICW4_8086 | ICW4_NORMAL);
     io_wait();
 
-    // No masking 
-    pic_set_mask(0);
+    pic_enable();
 }
 
 void pic_set_mask(uint16_t mask) 

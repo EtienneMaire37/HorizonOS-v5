@@ -81,7 +81,6 @@ interrupt_table:
     %assign i i+1 
     %endrep
 
-extern user_mode_switch
 _interrupt_handler:
     pusha
 
@@ -116,4 +115,6 @@ _interrupt_handler:
 
     popa
     add esp, 8
+global iret_instruction
+iret_instruction:
     iret

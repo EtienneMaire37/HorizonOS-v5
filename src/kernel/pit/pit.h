@@ -5,7 +5,7 @@
 #define PIT_CHANNEL_2_DATA  0x42
 #define PIT_MODE_CMD        0x43
 
-#define PIT_FREQUENCY       1000
+#define PIT_FREQUENCY       100
 #define PIT_INCREMENT       (1000 / PIT_FREQUENCY)
 
 #define PIT_MODE_CHANNEL_0  0b00000000
@@ -27,6 +27,6 @@ volatile uint32_t global_timer = 0; // in milliseconds
 
 struct privilege_switch_interrupt_registers;
 
-void handle_irq_0(struct privilege_switch_interrupt_registers** registers);
+void handle_irq_0(bool* ts);
 void pit_channel_0_set_frequency(uint32_t frequency);
 void ksleep(uint32_t milliseconds);

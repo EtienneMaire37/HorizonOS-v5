@@ -193,6 +193,8 @@ uint8_t stdin_buffer[BUFSIZ];
 uint8_t stdout_buffer[BUFSIZ];
 uint8_t stderr_buffer[BUFSIZ];
 
+#define cause_int_0() do { asm volatile("div ecx" :: "c" (0)); } while(0)
+
 void cause_halt(const char* func, const char* file, int line)
 {
     disable_interrupts();
@@ -262,6 +264,11 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     kernel_size = &_kernel_end - &_kernel_start;
 
     current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
+
+    if (physical_memory_page_index < 0 || physical_memory_page_index >= 1024)       abort();
+    if (kernel_stack_page_index < 0 || kernel_stack_page_index >= 1024)             abort();
+    if (stack_page_index_start < 0 || stack_page_index_start >= 1024)               abort();
+    if (stack_page_index_end < 0 || stack_page_index_end >= 1024)                   abort();
 
     kernel_init_std();
 
@@ -482,8 +489,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     // ~ Debugging
         // // ^ To test stack tracing
-        // asm volatile("div ecx" :: "c" (0));
-        // volatile int a = *((int*) 0x80000000);
+        // cause_int_0();
 
         // physical_address_t addresses[10000000 / 4096] = {0};
         // for(uint32_t i = 0; i < 10000000 / 4096; i++)
@@ -518,7 +524,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     if (1000 % TASK_SWITCH_DELAY != 0) abort(); // ! Task switch delay does not divide a second evenly
 
     // ~ No need to call it another time
-    // fpu_init();  
+    // fpu_init();
+
+    LOG(DEBUG, "eflags : 0x%x", get_eflags());
 
     multitasking_init();
 
@@ -533,14 +541,19 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
 void kmain()
 {
+    // cause_int_0();
     long double res = 1;
     for (int i = 3; true; i += 4)
     {
         res -= 1.L / i;
         res += 1.L / (i + 2);
 
-        if (i % (3 + 4 * 50) == 0)
+        if (((i - 3) / 4) % 100 == 0)
+        {
             printf("pi ~= %lf\n", 4 * res);
+            // printf("eflags : 0x%x\n", get_eflags());
+            // LOG(DEBUG, "eflags : 0x%x", get_eflags());
+        }
     }
     exit(0);
 }

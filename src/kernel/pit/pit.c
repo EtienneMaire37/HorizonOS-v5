@@ -1,8 +1,10 @@
 #pragma once
 
-void handle_irq_0(struct privilege_switch_interrupt_registers** registers)
+void handle_irq_0(bool* should_task_switch)
 {
     global_timer += PIT_INCREMENT;
+
+    if (should_task_switch) *should_task_switch = false;
 
     if (time_initialized)
         system_increment_time();
@@ -11,7 +13,7 @@ void handle_irq_0(struct privilege_switch_interrupt_registers** registers)
         multitasking_counter--;
         if (multitasking_counter == 0)
         {
-            switch_task(registers);
+            if (should_task_switch) *should_task_switch = true;
             multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
         }
         if (multitasking_counter == 0xff)

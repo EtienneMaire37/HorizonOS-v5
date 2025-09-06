@@ -217,10 +217,12 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             return;
         }
 
+        bool ts = false;
+
         switch (irq_number)
         {
         case 0:
-            handle_irq_0(&registers);
+            handle_irq_0(&ts);
             break;
 
         case 1:
@@ -235,6 +237,9 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         }
 
         pic_send_eoi(irq_number);
+
+        if (ts) 
+            switch_task(&registers);
         return;
     }
     if (registers->interrupt_number == 0xf0)  // System call

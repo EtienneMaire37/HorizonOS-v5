@@ -17,6 +17,7 @@ extern page_directory
 extern page_table_0
 extern page_table_767
 extern page_table_768_1023
+extern physical_memory_page_index
 global _start
 _start:
     cli
@@ -40,9 +41,10 @@ _start:
     inc ebx
     loop .loop_pt0
 
-    ; Map physical 0 through PDE 767:1021
+    ; * PDE 767:physical_memory_page_index
     mov eax, 0b1011  ; Present + Writable + Write Through
-    mov [page_table_767 - 0xc0000000 + 1021 * 4], eax
+    mov edx, [physical_memory_page_index - 0xc0000000]
+    mov [page_table_767 - 0xc0000000 + edx * 4], eax
 
     ; Map higher half
     xor edi, edi
@@ -76,7 +78,7 @@ _start:
     or eax, 0b1011
     mov [page_directory - 0xc0000000], eax
 
-    ; pde 767 (physical memory access)
+    ; pde 767
     mov eax, page_table_767 - 0xc0000000
     and eax, 0xfffff000
     or eax, 0b1011

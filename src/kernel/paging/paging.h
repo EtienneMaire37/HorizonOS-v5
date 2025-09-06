@@ -41,9 +41,23 @@ struct virtual_address_layout
 
 struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
-#define PHYS_MEM_PAGE_BOTTOM   (0xc0000000 - 3 * 0x1000)
-#define PHYS_MEM_PAGE_TOP      (PHYS_MEM_PAGE_BOTTOM + 0x1000)
+#define PHYS_MEM_PAGE_TOP      TASK_KERNEL_STACK_BOTTOM_ADDRESS
+#define PHYS_MEM_PAGE_BOTTOM   (PHYS_MEM_PAGE_TOP - 0x1000)
 uint32_t current_phys_mem_page;
+
+#define TASK_STACK_PAGES 1          // 0x100  // 1MB
+#define TASK_KERNEL_STACK_PAGES 1   // 4KB
+
+#define TASK_STACK_TOP_ADDRESS              0xc0000000
+#define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
+#define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
+
+const int physical_memory_page_index = (PHYS_MEM_PAGE_BOTTOM - (uint32_t)767 * 0x400000) / 0x1000;
+const int kernel_stack_page_index = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+
+const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000 - 1;
 
 void load_pd(void* ptr);
 void load_pd_by_physaddr(physical_address_t addr);
