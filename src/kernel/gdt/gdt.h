@@ -69,7 +69,7 @@ struct tss_entry
 	uint32_t ssp;
 } __attribute__((__packed__));
 
-int TSS_esp0_offset = offsetof(struct tss_entry, esp0);
+const int TSS_esp0_offset = offsetof(struct tss_entry, esp0);
 
 #define TSS_TYPE_16BIT_TSS_AVL  0x1
 #define TSS_TYPE_16BIT_TSS_BSY  0x3

@@ -5,6 +5,9 @@ extern task_esp_offset
 extern task_esp0_offset
 extern task_cr3_offset
 
+extern TSS
+extern TSS_esp0_offset
+
 ; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb)
 global context_switch
 context_switch:
@@ -29,13 +32,16 @@ context_switch:
     mov [edi + ebx], ecx
     mov eax, [esi + ebx]
 
-    mov cr3, eax
-
     cmp eax, ecx
     je .end
     mov cr3, eax
 
 .end:
+    mov eax, [task_esp0_offset]
+    mov ebx, [esi + eax]
+    mov eax, [TSS_esp0_offset]
+    mov [TSS + eax], ebx
+
     pop ebp
     pop edi
     pop esi
