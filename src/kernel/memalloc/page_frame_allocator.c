@@ -148,6 +148,8 @@ virtual_address_t pfa_allocate_page()
 
 void pfa_free_physical_page(physical_address_t address) 
 {
+    if (address == physical_null) return;
+
     if (address & 0xfff) 
     {
         LOG(CRITICAL, "Unaligned address (0x%lx)", address);
@@ -168,6 +170,7 @@ void pfa_free_physical_page(physical_address_t address)
 
     uint32_t byte = page_index / 8;
     uint8_t bit = page_index & 0b111;
+    if (byte >= bitmap_size) return;
     bitmap[byte] &= ~(1 << bit);
 
     memory_allocated -= 0x1000;

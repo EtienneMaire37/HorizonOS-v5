@@ -19,7 +19,13 @@ uint8_t* bitmap;
 
 uint32_t memory_allocated, allocatable_memory;
 
+// #define LOG_MEMORY
+
+#ifdef LOG_MEMORY
 #define LOG_MEM_ALLOCATED() { uint32_t percentage = 100000 * memory_allocated / allocatable_memory; LOG(TRACE, "Used memory : %u / %u bytes (%u.%u%u%u%%)", memory_allocated, allocatable_memory, percentage / 1000, (percentage / 100) % 10, (percentage / 10) % 10, percentage % 10); }
+#else
+#define LOG_MEM_ALLOCATED()
+#endif
 
 void pfa_detect_usable_memory();
 void pfa_bitmap_init();

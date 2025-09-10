@@ -15,7 +15,7 @@ run:
 	-accel kvm                       					\
 	-cpu host                                  			\
 	-debugcon file:debug/${DATE}.log					\
-	-m 4096                                        		\
+	-m 128                                        		\
 	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8
 
