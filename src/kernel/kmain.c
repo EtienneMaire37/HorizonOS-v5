@@ -27,6 +27,8 @@ multiboot_info_t* multiboot_info;
 
 #endif
 
+#include "../libc/include/assert.h"
+
 #include "../libc/include/errno.h"
 #include "../libc/include/stddef.h"
 #include "../libc/include/stdarg.h"
@@ -341,6 +343,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
                     (1 << 5) | // you shouldn't try running hos on a i386 anyways...
                     (has_fpu << 1);
     load_cr0(cr0);
+
+    fpu_init_defaults();
 
     LOG(INFO, "Memory map:");
 
