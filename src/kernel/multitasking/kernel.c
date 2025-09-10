@@ -10,6 +10,6 @@
 
 void kmain()
 {
-    // asm volatile ("int 0xf0" :: "a" (SYSCALL_WRITE), "b" (STDOUT_FILENO), "c" ("Hello World!\n"), "d" (13));
+    asm volatile ("int 0xf0" :: "a" (SYSCALL_WRITE), "b" (STDOUT_FILENO), "c" ("Hello World!\n"), "d" (13));
     asm volatile ("int 0xf0" :: "a" (SYSCALL_EXIT), "b" (0));
 }

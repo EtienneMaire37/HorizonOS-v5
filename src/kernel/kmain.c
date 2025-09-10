@@ -314,9 +314,9 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     uint32_t ebx, ecx, edx;
     cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
 
-    manufacturer_id_string[3] = ebx >> 24; manufacturer_id_string[2] = (ebx >> 16) & 0xff; manufacturer_id_string[1] = (ebx >> 8) & 0xff; manufacturer_id_string[0] = ebx & 0xff;
-    manufacturer_id_string[7] = edx >> 24; manufacturer_id_string[6] = (edx >> 16) & 0xff; manufacturer_id_string[5] = (edx >> 8) & 0xff; manufacturer_id_string[4] = edx & 0xff;
-    manufacturer_id_string[11] = ecx >> 24; manufacturer_id_string[10] = (ecx >> 16) & 0xff; manufacturer_id_string[9] = (ecx >> 8) & 0xff; manufacturer_id_string[8] = ecx & 0xff;
+    *(uint32_t*)&manufacturer_id_string[0] = ebx;
+    *(uint32_t*)&manufacturer_id_string[4] = edx;
+    *(uint32_t*)&manufacturer_id_string[8] = ecx;
     manufacturer_id_string[12] = 0;
     
     current_keyboard_layout = &us_qwerty;
