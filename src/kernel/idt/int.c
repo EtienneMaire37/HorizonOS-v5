@@ -184,7 +184,8 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             kernel_panic(registers);
         else
         {
-            if (zombie_task_index != 0 && zombie_task_index != current_task_index)
+            if (zombie_task_index == current_task_index) abort();
+            if (zombie_task_index != 0)
             {
                 task_kill(zombie_task_index);
                 zombie_task_index = 0;
@@ -258,6 +259,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                 abort();
             }
             zombie_task_index = current_task_index;
+            switch_task(&registers);
             break;
         // case SYSCALL_TIME:     // time
         //     registers->eax = ktime(NULL);

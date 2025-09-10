@@ -51,6 +51,13 @@ void full_context_switch(uint16_t next_task_index)
     context_switch(&tasks[last_index], &tasks[current_task_index]);
 }
 
+bool task_is_blocked(uint16_t index)
+{
+    if (zombie_task_index != 0 && zombie_task_index == index) return true;
+    if (tasks[index].reading_stdin) return true;
+    return false;
+}
+
 uint16_t find_next_task_index() 
 {
     uint16_t index = current_task_index;
@@ -58,7 +65,7 @@ uint16_t find_next_task_index()
     {
         index = (index + 1) % task_count;
     }
-    while (tasks[index].reading_stdin); // Skip blocked tasks
+    while (task_is_blocked(index)); // Skip blocked tasks
     return index;
 }
 

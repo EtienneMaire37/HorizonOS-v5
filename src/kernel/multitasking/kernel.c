@@ -4,9 +4,11 @@
 #include "../../libc/include/math.h"
 #include "../../libc/include/stdio.h"
 #include "../../libc/include/stdlib.h"
+#include "../../libc/include/syscall_defines.h"
 
 void kmain()
 {
+    // asm volatile ("int 0xf0" :: "a" (SYSCALL_EXIT), "b" (0));
     long double res = 1;
     for (int i = 3; true; i += 4)
     {
