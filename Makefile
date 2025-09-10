@@ -1,7 +1,8 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -fno-tree-vectorize -Werror # -fno-builtin -ffreestanding -fno-pie -fno-stack-protector -mno-sse -mno-80387 -msoft-float
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
 CROSSLD := ./i486elfgcc/bin/i486-elf-ld
+CROSSNM := ./i486elfgcc/bin/i486-elf-nm
 CROSSAR := ./i486elfgcc/bin/i486-elf-ar
 USERGCC := 
 CLOGLEVEL := 
@@ -28,15 +29,27 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kmain.o" $(CFLAGS) -Ofast -Wno-stringop-overflow $(CLOGLEVEL)
-	$(CROSSLD) -T src/kernel/link.ld "src/libc/lib/libm.a"
+	$(CROSSGCC) -c "src/kernel/multitasking/kernel.c" -o "bin/kmain.o" $(CFLAGS) -Ofast
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only $(CLOGLEVEL)
+	
+	$(CROSSGCC) -T src/kernel/link.ld \
+	-ffreestanding -nostdlib \
+	"bin/kernelentry.o" \
+ 	"bin/kernel.o" \
+	"bin/gdt.o" \
+	"bin/idt.o"  \
+	"bin/paging.o" \
+    "bin/context_switch.o" \
+    "bin/registers.o"  \
+	"bin/kmain.o" \
+	-lgcc
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
 
 	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
 	cp resources/pci.ids ./bin/initrd/pci.ids
-	nm -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
+	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
 	tar -cvf ./root/boot/initrd.tar -C ./bin/initrd/ .
 	
@@ -54,7 +67,7 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/
     "src/libc/lib/libc.a" \
     "src/libc/lib/libm.a"
 	mkdir -p ./bin/initrd
-	nm -n --defined-only -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
+	$(CROSSNM) -n --defined-only -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib

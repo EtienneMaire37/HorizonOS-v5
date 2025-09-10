@@ -117,11 +117,15 @@ const char* multiboot_block_type_text[5] =
 };
 
 // #include "klibc/arithmetic.c"
-#include "../libc/src/arithmetic.c"
+// #include "../libc/src/arithmetic.c"
+
+// // // #include "../libc/src/math.c"
 
 #include "multicore/spinlock.h"
 #include "cpu/cpuid.h"
 #include "cpu/registers.h"
+
+#include "../libc/include/math.h"
 
 #include "../libc/include/stdio.h"
 #include "../libc/include/string.h"
@@ -253,7 +257,7 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
     return 0;
 }
 
-void kmain();
+extern void kmain();
 
 void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
@@ -537,23 +541,4 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     while (true);
 
     halt();
-}
-
-void kmain()
-{
-    // cause_int_0();
-    long double res = 1;
-    for (int i = 3; true; i += 4)
-    {
-        res -= 1.L / i;
-        res += 1.L / (i + 2);
-
-        if (((i - 3) / 4) % 100 == 0)
-        {
-            printf("pi ~= %lf\n", 4 * res);
-            // printf("eflags : 0x%x\n", get_eflags());
-            // LOG(DEBUG, "eflags : 0x%x", get_eflags());
-        }
-    }
-    exit(0);
 }

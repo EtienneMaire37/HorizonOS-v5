@@ -1,16 +1,5 @@
 ENTRY(_start)
 
-INPUT
-(
-	"bin/kernelentry.o"
- 	"bin/kmain.o"
-	"bin/gdt.o"
-	"bin/idt.o" 
-	"bin/paging.o"
-    "bin/context_switch.o"
-    "bin/registers.o"
-)
-
 OUTPUT_FORMAT(elf32-i386)
 OUTPUT("bin/kernel.elf")
  

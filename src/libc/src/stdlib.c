@@ -18,7 +18,9 @@ static char decoding_table[256];
 
 void create_b64_decoding_table()
 {
-    memset(decoding_table, 0xff, 256);
+    // memset(decoding_table, 0xff, 256);
+    for (int i = 0; i < 256; i++)
+        decoding_table[i] = 0xff;
     for (int i = 0; i < 64; i++)
         decoding_table[(unsigned char)encoding_table[i]] = i;
 }

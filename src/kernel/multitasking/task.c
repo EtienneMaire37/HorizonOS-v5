@@ -300,14 +300,18 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
                 tasks[i].current_cpu_ticks = 0;
             }
 
-            float total = 100 - (.01 * 10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
+            // float total = 100 - (.01f * 10000 * (float)tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
+            uint16_t total = 10000 - (10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
             if (total <= 0) total = +0;
-            if (total >= 100) total = 100;
+            if (total >= 10000) total = 10000;
 
             LOG(TRACE, "CPU usage:");
-            LOG(TRACE, "total : %f %%", total);
+            LOG(TRACE, "total : %u.%u%u %%", total / 100, (total / 10) % 10, total % 10);
             for (uint16_t i = 0; i < task_count; i++)
-                LOG(TRACE, "%s── task %d : %f %%\t[pid = %ld]%s", task_count - i > 1 ? "├" : "└", i, .01 * 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND, tasks[i].pid, i == 0 ? " (* idle task *)" : "");
+            {
+                uint16_t this_percentage = 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND;
+                LOG(TRACE, "%s── task %d : %u.%u%u %%\t[pid = %ld]%s", task_count - i > 1 ? "├" : "└", i, this_percentage / 100, (this_percentage / 10) % 10, this_percentage % 10, tasks[i].pid, i == 0 ? " (* idle task *)" : "");
+            }
         }
         global_cpu_ticks = 0;
     }

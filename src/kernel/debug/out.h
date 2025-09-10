@@ -63,20 +63,30 @@ bool first_log = true;
 \x1b[38;2;120;120;120m\x1b[48;2;30;30;30m0000-00-00 00:00:00.000\x1b[0m\
  - %s%s\x1b[0m \t"
 
-void LOG_SET_ANSI_TEXT_COLOR(float r, float g, float b)
+// void LOG_SET_ANSI_TEXT_COLOR(float r, float g, float b)
+// {
+//     if (r <= 0) r = 0; if (r >= 1) r = 1; uint8_t _r = r * 255;
+//     if (g <= 0) g = 0; if (g >= 1) g = 1; uint8_t _g = g * 255;
+//     if (b <= 0) b = 0; if (b >= 1) b = 1; uint8_t _b = b * 255;
+//     fprintf(stderr, "\x1b[38;2;%u;%u;%um", _r, _g, _b);
+// } 
+
+void LOG_SET_ANSI_TEXT_COLOR(uint8_t r, uint8_t g, uint8_t b)
 {
-    if (r <= 0) r = 0; if (r >= 1) r = 1; uint8_t _r = r * 255;
-    if (g <= 0) g = 0; if (g >= 1) g = 1; uint8_t _g = g * 255;
-    if (b <= 0) b = 0; if (b >= 1) b = 1; uint8_t _b = b * 255;
-    fprintf(stderr, "\x1b[38;2;%u;%u;%um", _r, _g, _b);
+    fprintf(stderr, "\x1b[38;2;%u;%u;%um", r, g, b);
 } 
 
-void LOG_SET_ANSI_BACKGROUND_COLOR(float r, float g, float b)
+// void LOG_SET_ANSI_BACKGROUND_COLOR(float r, float g, float b)
+// {
+//     if (r <= 0) r = 0; if (r >= 1) r = 1; uint8_t _r = r * 255;
+//     if (g <= 0) g = 0; if (g >= 1) g = 1; uint8_t _g = g * 255;
+//     if (b <= 0) b = 0; if (b >= 1) b = 1; uint8_t _b = b * 255;
+//     fprintf(stderr, "\x1b[48;2;%u;%u;%um", _r, _g, _b);
+// } 
+
+void LOG_SET_ANSI_BACKGROUND_COLOR(uint8_t r, uint8_t g, uint8_t b)
 {
-    if (r <= 0) r = 0; if (r >= 1) r = 1; uint8_t _r = r * 255;
-    if (g <= 0) g = 0; if (g >= 1) g = 1; uint8_t _g = g * 255;
-    if (b <= 0) b = 0; if (b >= 1) b = 1; uint8_t _b = b * 255;
-    fprintf(stderr, "\x1b[48;2;%u;%u;%um", _r, _g, _b);
+    fprintf(stderr, "\x1b[48;2;%u;%u;%um", r, g, b);
 } 
 
 void LOG_ANSI_RESET_STYLING()
