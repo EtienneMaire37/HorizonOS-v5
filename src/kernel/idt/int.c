@@ -252,7 +252,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         switch (registers->eax)
         {
         case SYSCALL_EXIT:     // exit
-            LOG(INFO, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+            LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
             if (zombie_task_index != 0)
             {
                 LOG(CRITICAL, "Tried to kill several tasks at once");
@@ -261,9 +261,9 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             zombie_task_index = current_task_index;
             switch_task(&registers);
             break;
-        // case SYSCALL_TIME:     // time
-        //     registers->eax = ktime(NULL);
-        //     break;
+        case SYSCALL_TIME:     // time
+            registers->eax = ktime(NULL);
+            break;
         // case SYSCALL_READ:     // read
         //     if (registers->ebx > 2)
         //     {
@@ -302,32 +302,32 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         //         }
         //     }
         //     break;
-        // case SYSCALL_WRITE:     // write
-        //     if (registers->ebx > 2)
-        //     {
-        //         registers->eax = 0xffffffff;   // -1
-        //         registers->ebx = EBADF;
-        //     }
-        //     else
-        //     {
-        //         if (registers->ebx == STDOUT_FILENO || registers->ebx == STDERR_FILENO)
-        //         {
-        //             for (uint32_t i = 0; i < registers->edx; i++)
-        //                 tty_outc(((char*)registers->ecx)[i]);
-        //             tty_update_cursor();
-        //             registers->eax = registers->edx;
-        //         }
-        //         else
-        //         {
-        //             registers->eax = 0xffffffff;
-        //             registers->ebx = EBADF;
-        //         }
-        //     }
-        //     break;
-        // case SYSCALL_GETPID:     // getpid
-        //     registers->eax = tasks[current_task_index].pid >> 32;
-        //     registers->ebx = (uint32_t)tasks[current_task_index].pid;
-        //     break;
+        case SYSCALL_WRITE:     // write
+            if (registers->ebx > 2)
+            {
+                registers->eax = 0xffffffff;   // -1
+                registers->ebx = EBADF;
+            }
+            else
+            {
+                if (registers->ebx == STDOUT_FILENO || registers->ebx == STDERR_FILENO)
+                {
+                    for (uint32_t i = 0; i < registers->edx; i++)
+                        tty_outc(((char*)registers->ecx)[i]);
+                    tty_update_cursor();
+                    registers->eax = registers->edx;
+                }
+                else
+                {
+                    registers->eax = 0xffffffff;
+                    registers->ebx = EBADF;
+                }
+            }
+            break;
+        case SYSCALL_GETPID:     // getpid
+            registers->eax = tasks[current_task_index].pid >> 32;
+            registers->ebx = (uint32_t)tasks[current_task_index].pid;
+            break;
         // case SYSCALL_FORK:     // fork
         //     LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
@@ -488,19 +488,19 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         //     }
         //     break;
 
-        // case SYSCALL_FLUSH_INPUT_BUFFER:
-        //     utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
-        //     break;
+        case SYSCALL_FLUSH_INPUT_BUFFER:
+            utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
+            break;
 
-        // case SYSCALL_SET_KB_LAYOUT:
-        //     if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
-        //     {
-        //         current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
-        //         registers->eax = 1;
-        //     }
-        //     else
-        //         registers->eax = 0;
-        //     break;
+        case SYSCALL_SET_KB_LAYOUT:
+            if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
+            {
+                current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
+                registers->eax = 1;
+            }
+            else
+                registers->eax = 0;
+            break;
 
         default:
             LOG(ERROR, "Undefined system call (0x%x)", registers->eax);

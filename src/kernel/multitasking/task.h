@@ -71,15 +71,15 @@ uint16_t find_next_task_index()
 
 // #define task_write_register_data(task_ptr, register, data)  write_physical_address_4b((physical_address_t)((uint32_t)(task_ptr)->registers_ptr) + (task_ptr)->stack_phys - TASK_STACK_BOTTOM_ADDRESS + offsetof(struct privilege_switch_interrupt_registers, register), data);
 // ~~ Caller's responsability to check whether or not the task has the register actually pushed on the stack
-void task_write_at_address_1b(thread_t* _task, uint32_t address, uint8_t value);
+void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
 
-void task_load_from_initrd(thread_t* _task, char* path, uint8_t ring);
-void task_destroy(thread_t* _task);
-void task_virtual_address_space_destroy(thread_t* _task);
-void task_virtual_address_space_create_page_table(thread_t* _task, uint16_t index);
-void task_virtual_address_space_remove_page_table(thread_t* _task, uint16_t index);
-physical_address_t task_virtual_address_space_create_page(thread_t* _task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
-void task_create_virtual_address_space(thread_t* _task);
+void task_load_from_initrd(thread_t* task, char* path, uint8_t ring);
+void task_destroy(thread_t* task);
+void task_virtual_address_space_destroy(thread_t* task);
+void task_virtual_address_space_create_page_table(thread_t* task, uint16_t index);
+void task_virtual_address_space_remove_page_table(thread_t* task, uint16_t index);
+physical_address_t task_virtual_address_space_create_page(thread_t* task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
+void task_create_virtual_address_space(thread_t* task);
 void switch_task(struct privilege_switch_interrupt_registers** registers);
 void multitasking_init();
 void multitasking_start();

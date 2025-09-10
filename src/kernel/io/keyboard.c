@@ -10,7 +10,7 @@ void utf32_buffer_init(utf32_buffer_t* buffer)
 void utf32_buffer_destroy(utf32_buffer_t* buffer)
 {
     if (buffer->characters)
-        pfa_free_page((virtual_address_t)buffer->characters);
+        pfa_free_page((virtual_address_t)buffer->characters);   // !!! buffer must be allocated below 1GB
     buffer->characters = 0;
     buffer->size = 0;
     buffer->put_index = buffer->get_index = 0;
