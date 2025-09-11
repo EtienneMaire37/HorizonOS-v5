@@ -7,7 +7,7 @@ typedef struct task
     uint32_t esp, esp0, cr3;
 
     utf32_buffer_t input_buffer;
-    bool reading_stdin, was_reading_stdin;
+    bool reading_stdin, was_reading_stdin, is_dead;
 
     uint8_t ring;
     pid_t pid;
@@ -39,9 +39,8 @@ bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 uint64_t current_pid;
 
-uint16_t zombie_task_index;
-
 extern void iret_instruction();
+void task_kill(uint16_t index);
 
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
@@ -53,9 +52,22 @@ void full_context_switch(uint16_t next_task_index)
 
 bool task_is_blocked(uint16_t index)
 {
-    if (zombie_task_index != 0 && zombie_task_index == index) return true;
+    if (tasks[index].is_dead) return true;
     if (tasks[index].reading_stdin) return true;
     return false;
+}
+
+void cleanup_tasks()
+{
+    for (uint16_t i = 0; i < task_count; i++)
+    {
+        if (i == current_task_index) continue;
+        if (tasks[i].is_dead)
+        {
+            task_kill(i);
+            i--;
+        }
+    }
 }
 
 uint16_t find_next_task_index() 
@@ -73,17 +85,10 @@ uint16_t find_next_task_index()
 // ~~ Caller's responsability to check whether or not the task has the register actually pushed on the stack
 void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
 
-void task_load_from_initrd(thread_t* task, char* path, uint8_t ring);
 void task_destroy(thread_t* task);
-void task_virtual_address_space_destroy(thread_t* task);
-void task_virtual_address_space_create_page_table(thread_t* task, uint16_t index);
-void task_virtual_address_space_remove_page_table(thread_t* task, uint16_t index);
-physical_address_t task_virtual_address_space_create_page(thread_t* task, uint16_t pd_index, uint16_t pt_index, uint8_t user_supervisor, uint8_t read_write);
-void task_create_virtual_address_space(thread_t* task);
 void switch_task(struct privilege_switch_interrupt_registers** registers);
 void multitasking_init();
 void multitasking_start();
-void multitasking_add_task_from_initrd(char* path, uint8_t ring, bool system);  // TODO: Implement a vfs
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 

@@ -24,6 +24,8 @@ thread_t task_create_empty()
     task.current_cpu_ticks = 0;
     task.stored_cpu_ticks = 0;
 
+    task.is_dead = false;
+
     return task;
 }
 
@@ -39,7 +41,6 @@ void multitasking_init()
     task_count = 0;
     current_task_index = 0;
     current_pid = 0;
-    zombie_task_index = 0;
 
     multitasking_add_idle_task("idle");
 }
@@ -82,33 +83,6 @@ void task_stack_push(thread_t* task, uint32_t value)
     task_write_at_address_1b(task, (physical_address_t)task->esp + 1, (value >> 8)  & 0xff);
     task_write_at_address_1b(task, (physical_address_t)task->esp + 2, (value >> 16) & 0xff);
     task_write_at_address_1b(task, (physical_address_t)task->esp + 3, (value >> 24) & 0xff);
-}
-
-void multitasking_add_task_from_function(char* name, void (*func)())
-{
-    LOG(DEBUG, "Adding task \"%s\" from function", name);
-
-    thread_t task = task_create_empty();
-    task.name = name;
-    task.cr3 = vas_create_empty();
-
-    task.esp = TASK_STACK_TOP_ADDRESS;
-
-    task_stack_push(&task, 0x200);
-    task_stack_push(&task, KERNEL_CODE_SEGMENT);
-    task_stack_push(&task, (uint32_t)func);
-
-
-    task_stack_push(&task, (uint32_t)iret_instruction);
-
-    task_stack_push(&task, 0);   // ebx
-    task_stack_push(&task, 0);   // esi
-    task_stack_push(&task, 0);   // edi
-    task_stack_push(&task, TASK_STACK_TOP_ADDRESS); // ebp
-
-    tasks[task_count++] = task;
-
-    LOG(DEBUG, "Done");
 }
 
 void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
@@ -201,6 +175,8 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
     // tasks[current_task_index].was_reading_stdin = false;
 
     fpu_restore_state(&tasks[current_task_index].fpu_state);
+
+    cleanup_tasks();
 }
 
 void task_kill(uint16_t index)

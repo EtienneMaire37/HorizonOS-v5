@@ -45,7 +45,7 @@ struct elf32_header
     elf32_half_t    shentsize;
     elf32_half_t    shnum;
     elf32_half_t    shstrndx;
-};
+} __attribute__((packed));
 
 struct elf32_program_header
 {
@@ -57,7 +57,7 @@ struct elf32_program_header
     elf32_word_t    p_memsz;
     elf32_word_t    flags;
     elf32_word_t    align;
-};
+} __attribute__((packed));
 
 struct elf32_section_header
 {
@@ -71,13 +71,22 @@ struct elf32_section_header
     elf32_word_t    sh_info;
     elf32_word_t    sh_addralign;
     elf32_word_t    sh_entsize;
-};
+} __attribute__((packed));
 
 #define ELF_PROGRAM_TYPE_NULL       0
 #define ELF_PROGRAM_TYPE_LOAD       1
 #define ELF_PROGRAM_TYPE_DYNAMIC    2
 #define ELF_PROGRAM_TYPE_INTERP     3
 #define ELF_PROGRAM_TYPE_NOTE       4
+
+const char* elf_program_header_type_string[] = 
+{
+    "NULL",
+    "LOAD",
+    "DYNAMIC",
+    "INTERP",
+    "NOTE"
+};
 
 #define ELF_SECTION_TYPE_NULL       0
 #define ELF_SECTION_TYPE_PROGBITS   1

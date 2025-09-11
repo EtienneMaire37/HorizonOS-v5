@@ -13,3 +13,18 @@ void kmain()
     asm volatile ("int 0xf0" :: "a" (SYSCALL_WRITE), "b" (STDOUT_FILENO), "c" ("Hello World!\n"), "d" (13));
     asm volatile ("int 0xf0" :: "a" (SYSCALL_EXIT), "b" (0));
 }
+
+// #include <stdbool.h>
+// #include <inttypes.h>
+
+// #include <math.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+
+// #include <unistd.h>
+
+// void main()
+// {
+//     write(STDOUT_FILENO, "Hello World!\n", 13);
+//     exit(0);
+// }

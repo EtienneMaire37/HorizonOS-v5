@@ -188,6 +188,7 @@ struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4
 #include "idt/int.c"
 #include "pic/pic.c"
 #include "multitasking/task.c"
+#include "multitasking/loader.h"
 #include "ps2/ps2.c"
 #include "pci/pci.c"
 
@@ -258,8 +259,6 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
     abort();
     return 0;
 }
-
-extern void kmain();
 
 void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
@@ -538,7 +537,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    multitasking_add_task_from_function("kernel32", kmain);
+    // multitasking_add_task_from_function("kernel32", kmain);
+    multitasking_add_task_from_initrd("kernel32", "./kmain.elf");
 
     multitasking_start();
 

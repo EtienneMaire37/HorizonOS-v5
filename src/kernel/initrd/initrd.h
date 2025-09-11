@@ -2,18 +2,18 @@
 
 typedef uint8_t tar_file_type;
 
-struct initrd_file
+typedef struct initrd_file
 {
     char* name;
     uint32_t size;
     uint8_t* data;
     tar_file_type type;
     uint8_t* link;
-};
+} initrd_file_t;
 
 #define MAX_INITRD_FILES 32
 
-struct initrd_file initrd_files[MAX_INITRD_FILES];
+initrd_file_t initrd_files[MAX_INITRD_FILES];
 uint8_t initrd_files_count = 0;
 
 void initrd_parse()
@@ -98,7 +98,7 @@ void initrd_parse()
     LOG(INFO, "Done parsing initrd (%u files)", initrd_files_count);
 }
 
-struct initrd_file* initrd_find_file(char* name)
+initrd_file_t* initrd_find_file(const char* name)
 {
     LOG(INFO, "Opening file \"%s\" from initrd", name);
 

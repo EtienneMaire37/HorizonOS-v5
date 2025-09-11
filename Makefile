@@ -29,7 +29,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/multitasking/kernel.c" -o "bin/kmain.o" $(CFLAGS) -Ofast
+	$(CROSSGCC) "src/kernel/multitasking/kernel.c" -o "bin/kmain.elf" $(CFLAGS) -Ofast -lgcc -ffreestanding -nostdlib
+	 
 	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only $(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \
@@ -41,13 +42,13 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	"bin/paging.o" \
     "bin/context_switch.o" \
     "bin/registers.o"  \
-	"bin/kmain.o" \
 	-lgcc
 	
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
 
 	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
+	cp bin/kmain.elf ./bin/initrd/kmain.elf
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 

@@ -54,13 +54,13 @@ void vas_free(physical_address_t cr3)
     {
         uint32_t pde = read_physical_address_4b(cr3 + (i * 4));
         if (!(pde & 1)) continue;
-        uint32_t pt_address = pde & 0xfffff000;
+        physical_address_t pt_address = pde & 0xfffff000;
         for (uint16_t j = 0; j < 1024; j++)
         {
             if (i == 767 && j == physical_memory_page_index) continue;
             uint32_t pte = read_physical_address_4b(pt_address + (j * 4));
             if (!(pte & 1)) continue;
-            uint32_t page_address = pte & 0xfffff000;
+            physical_address_t page_address = pte & 0xfffff000;
             pfa_free_physical_page(page_address);
         }
         pfa_free_physical_page(pt_address);

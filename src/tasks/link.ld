@@ -4,9 +4,9 @@ OUTPUT_FORMAT(elf32-i386)
 
 PHDRS 
 {
-    text PT_LOAD FLAGS(5);
-    data PT_LOAD FLAGS(6);
-    bss PT_LOAD FLAGS(6);
+    text PT_LOAD    FLAGS(5); /* 101 : READABLE | EXECUTABLE */
+    data PT_LOAD    FLAGS(6); /* 110 : READABLE | WRITABLE */
+    bss PT_LOAD     FLAGS(6); /* 110 : READABLE | WRITABLE */
 }
 
 SECTIONS 

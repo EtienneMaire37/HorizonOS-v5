@@ -78,7 +78,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
 {
-    struct initrd_file* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
+    initrd_file_t* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
     if (file == NULL) return;
     
     uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
@@ -184,25 +184,11 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             kernel_panic(registers);
         else
         {
-            if (zombie_task_index == current_task_index) abort();
-            if (zombie_task_index != 0)
-            {
-                task_kill(zombie_task_index);
-                zombie_task_index = 0;
-            }
-
-            uint16_t old_index = current_task_index;
+            tasks[current_task_index].is_dead = true;
             switch_task(&registers);
-            task_kill(old_index);
         }
 
         return;
-    }
-
-    if (zombie_task_index != 0 && zombie_task_index != current_task_index) // IRQ or syscall
-    {
-        task_kill(zombie_task_index);
-        zombie_task_index = 0;
     }
 
     if (registers->interrupt_number < 32 + 16)  // IRQ
@@ -253,12 +239,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         {
         case SYSCALL_EXIT:     // exit
             LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
-            if (zombie_task_index != 0)
-            {
-                LOG(CRITICAL, "Tried to kill several tasks at once");
-                abort();
-            }
-            zombie_task_index = current_task_index;
+            tasks[current_task_index].is_dead = true;
             switch_task(&registers);
             break;
         case SYSCALL_TIME:     // time
@@ -504,9 +485,8 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
 
         default:
             LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
-            old_index = current_task_index;
+            tasks[current_task_index].is_dead = true;
             switch_task(&registers);
-            task_kill(old_index);
         }            
     }
 
