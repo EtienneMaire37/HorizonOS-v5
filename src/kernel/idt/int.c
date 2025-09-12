@@ -430,12 +430,17 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                                         true);
                     memset_page(page, 0);
 
-                    // uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
-                    // *recursive_paging_pte = (page << 12) | 0b1111;  // * Write-through caching | User level | Read write | Present
+                    #define USE_IVLPG
+                    #ifdef USE_IVLPG
+                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
+                    *recursive_paging_pte = (page & 0xfffff000) | 0b1111;  // * Write-through caching | User level | Read write | Present
 
-                    // invlpg((uint32_t)recursive_paging_pte);
-                    // invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    invlpg((uint32_t)recursive_paging_pte);
+                    invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    #else
                     load_pd_by_physaddr(tasks[current_task_index].cr3);
+                    #endif
+                    
                     registers->eax = 1;
 
                     // LOG(DEBUG, "Allocated page at address : 0x%x", registers->ebx);
