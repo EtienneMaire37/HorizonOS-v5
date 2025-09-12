@@ -100,7 +100,7 @@ physical_address_t pfa_allocate_physical_page()
     if (memory_allocated + 0x1000 > allocatable_memory) 
     {
         LOG(CRITICAL, "Out of memory!");
-        return 0;
+        return physical_null;
     }
 
     for (uint32_t i = 0; i < bitmap_size; i++) 
@@ -138,7 +138,7 @@ physical_address_t pfa_allocate_physical_page()
 
     LOG(CRITICAL, "Out of memory!");
     // abort();
-    return 0;
+    return physical_null;
 }
 
 virtual_address_t pfa_allocate_page()

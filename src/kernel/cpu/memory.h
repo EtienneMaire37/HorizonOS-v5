@@ -37,7 +37,7 @@ void set_current_phys_mem_page(uint32_t page)
 
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
-    *recursive_paging_pte = (page << 12) | 0b1011;
+    *recursive_paging_pte = (page << 12) | 0b1011; // * Write-through caching | Read write | Present
 
     // reload_page_directory();
 

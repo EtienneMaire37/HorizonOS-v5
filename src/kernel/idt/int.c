@@ -389,57 +389,61 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         //     } 
         //     break;
 
-        // // case SYSCALL_BRK_ALLOC:
-        // //     {
-        // //         if (registers->ebx & 0xfff)
-        // //         {
-        // //             registers->eax = 0;
-        // //             break;
-        // //         }
-        // //         struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
-        // //         uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
-        // //         physical_address_t pt_address;
-        // //         if (!(pde & 1))
-        // //         {
-        // //             pt_address = pfa_allocate_physical_page();
-        // //             if (pt_address == 0)
-        // //             {
-        // //                 registers->eax = 0;
-        // //                 break;
-        // //             }
-        // //             physical_init_page_table(pt_address);
-        // //             physical_add_page_table(tasks[current_task_index].cr3, 
-        // //                                     layout.page_directory_entry, 
-        // //                                     pt_address, 
-        // //                                     PAGING_USER_LEVEL, 
-        // //                                     true);
-        // //         }
-        // //         else
-        // //             pt_address = (physical_address_t)pde & 0xfffff000;
-        // //         uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
-        // //         if (!(pte & 1))
-        // //         {
-        // //             physical_address_t page = pfa_allocate_physical_page();
-        // //             if (page == 0)
-        // //             {
-        // //                 registers->eax = 0;
-        // //                 break;
-        // //             }
-        // //             physical_set_page(  pt_address, 
-        // //                                 layout.page_table_entry, 
-        // //                                 page, 
-        // //                                 PAGING_USER_LEVEL, 
-        // //                                 true);
-        // //             flush_tlb = true;
-        // //             memset_page(page, 0);
-        // //             registers->eax = 1;
+        case SYSCALL_BRK_ALLOC:
+            {
+                if (registers->ebx & 0xfff) // ! address not page aligned
+                {
+                    registers->eax = 0;
+                    break;
+                }
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
+                physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
+                if (!(pde & 1))
+                {
+                    pt_address = pfa_allocate_physical_page();
+                    if (pt_address == physical_null)
+                    {
+                        registers->eax = 0;
+                        break;
+                    }
+                    physical_init_page_table(pt_address);
+                    physical_add_page_table(tasks[current_task_index].cr3, 
+                                            layout.page_directory_entry, 
+                                            pt_address, 
+                                            PAGING_USER_LEVEL, 
+                                            true);
+                }
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                if (!(pte & 1))
+                {
+                    physical_address_t page = pfa_allocate_physical_page();
+                    if (page == physical_null)
+                    {
+                        registers->eax = 0;
+                        break;
+                    }
+                    physical_set_page(  pt_address, 
+                                        layout.page_table_entry, 
+                                        page, 
+                                        PAGING_USER_LEVEL, 
+                                        true);
+                    memset_page(page, 0);
 
-        // //             // LOG(DEBUG, "Allocated page at address : 0x%x", registers->ebx);
-        // //         }
-        // //         else
-        // //             registers->eax = 0;
-        // //     }
-        // //     break;
+                    // uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
+                    // *recursive_paging_pte = (page << 12) | 0b1111;  // * Write-through caching | User level | Read write | Present
+
+                    // invlpg((uint32_t)recursive_paging_pte);
+                    // invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    load_pd_by_physaddr(tasks[current_task_index].cr3);
+                    registers->eax = 1;
+
+                    // LOG(DEBUG, "Allocated page at address : 0x%x", registers->ebx);
+                }
+                else
+                    registers->eax = 0;
+            }
+            break;
 
         // case SYSCALL_BRK_FREE:
         //     {

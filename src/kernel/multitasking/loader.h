@@ -118,6 +118,7 @@ void multitasking_add_task_from_initrd(char* name, const char* path)
             if (!(pde & 1))
             {
                 pt_address = pfa_allocate_physical_page();
+                physical_init_page_table(pt_address);
                 physical_add_page_table(task.cr3, layout.page_directory_entry, pt_address, PAGING_SUPERVISOR_LEVEL, true);
             }
 

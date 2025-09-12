@@ -538,7 +538,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     multitasking_init();
 
     // multitasking_add_task_from_function("kernel32", kmain);
-    multitasking_add_task_from_initrd("kernel32", "./kmain.elf");
+    // multitasking_add_task_from_initrd("kernel32", "./kmain.elf");
+    multitasking_add_task_from_initrd("kernel32", "./kernel32.elf");
 
     multitasking_start();
 
