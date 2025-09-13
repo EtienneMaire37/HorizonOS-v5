@@ -13,3 +13,4 @@ void fpu_init();
 void fpu_save_state(fpu_state_t* fpu_state);
 void fpu_restore_state(fpu_state_t* fpu_state);
 void fpu_state_init(fpu_state_t* fpu_state);
+void copy_fpu_state(fpu_state_t* from, fpu_state_t* to);

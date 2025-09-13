@@ -35,3 +35,13 @@ void fpu_state_init(fpu_state_t* s)
     int32_t offset = ((uint32_t)&s) & 0xf;
     memcpy((void*)((uint32_t)s->data + offset), &default_state, 512);
 }
+
+void copy_fpu_state(fpu_state_t* from, fpu_state_t* to)
+{
+    if (!has_fpu) return;
+
+    int32_t offset_from = ((uint32_t)&from) & 0xf;
+    int32_t offset_to = ((uint32_t)&to) & 0xf;
+
+    memcpy((void*)((uint32_t)to->data + offset_to), (void*)((uint32_t)from->data + offset_from), 512);
+}

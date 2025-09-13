@@ -16,6 +16,13 @@ void utf32_buffer_destroy(utf32_buffer_t* buffer)
     buffer->put_index = buffer->get_index = 0;
 }
 
+void utf32_buffer_copy(utf32_buffer_t* from, utf32_buffer_t* to)
+{
+    utf32_buffer_init(to);
+    memcpy(to->characters, from->characters, 4096);
+    to->put_index = from->put_index;
+}
+
 void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character)
 {
     if (!buffer->characters) return;

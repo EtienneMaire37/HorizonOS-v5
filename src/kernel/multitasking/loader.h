@@ -14,13 +14,12 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     task_stack_push(&task, KERNEL_CODE_SEGMENT);
     task_stack_push(&task, (uint32_t)func);
 
-
     task_stack_push(&task, (uint32_t)iret_instruction);
 
-    task_stack_push(&task, 0);   // ebx
-    task_stack_push(&task, 0);   // esi
-    task_stack_push(&task, 0);   // edi
-    task_stack_push(&task, TASK_STACK_TOP_ADDRESS); // ebp
+    task_stack_push(&task, 0);      // ebx
+    task_stack_push(&task, 0);      // esi
+    task_stack_push(&task, 0);      // edi
+    task_stack_push(&task, 0);      // ebp
 
     tasks[task_count++] = task;
 
@@ -75,7 +74,7 @@ void multitasking_add_task_from_initrd(char* name, const char* path)
     task_stack_push(&task, 0);   // ebx
     task_stack_push(&task, 0);   // esi
     task_stack_push(&task, 0);   // edi
-    task_stack_push(&task, TASK_STACK_TOP_ADDRESS); // ebp
+    task_stack_push(&task, 0); // ebp
 
     const int n_ph = header->phnum;
 

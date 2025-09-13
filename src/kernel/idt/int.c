@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../multitasking/vas.h"
+#include "../multitasking/task.c"
+
 void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 {
     disable_interrupts();
@@ -42,6 +45,8 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
         }
     }
 
+    halt();
+
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
 
@@ -68,7 +73,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
         LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
         if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
         (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
-            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 cause it pushes the return address not the calling address
+            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 because it pushes the return address not the calling address
         putchar('\n');
         ebp = ebp->ebp;
     }
@@ -306,85 +311,75 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             registers->eax = tasks[current_task_index].pid >> 32;
             registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
-        // case SYSCALL_FORK:     // * fork
-        //     LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
+        case SYSCALL_FORK:     // * fork
+            LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
-        //     if (task_count >= MAX_TASKS)
-        //     {
-        //         registers->eax = 0xffffffff;
-        //         registers->ebx = 0xffffffff;   // -1
-        //     }
-        //     else
-        //     {
-        //         task_count++;
+            // if (task_count >= MAX_TASKS)
+            if (true)
+            {
+                registers->eax = 0xffffffff;
+                registers->ebx = 0xffffffff;   // -1
+            }
+            else
+            {
+                task_count++;
 
-        //         // tasks[current_task_index].registers_data = *registers;
-        //         // tasks[current_task_index].registers_ptr = registers;
+                const uint16_t new_task_index = task_count - 1;
 
-        //         tasks[task_count - 1].name = tasks[current_task_index].name;
-        //         tasks[task_count - 1].ring = tasks[current_task_index].ring;
-        //         tasks[task_count - 1].pid = current_pid++;
-        //         tasks[task_count - 1].system_task = tasks[current_task_index].system_task;
-        //         // tasks[task_count - 1].kernel_thread = tasks[current_task_index].kernel_thread;
-        //         tasks[task_count - 1].reading_stdin = false;    // * Can't fork if the process is blocked
-        //         utf32_buffer_init(&tasks[task_count - 1].input_buffer);
+                tasks[new_task_index].name = tasks[current_task_index].name;
+                tasks[new_task_index].ring = tasks[current_task_index].ring;
+                tasks[new_task_index].pid = current_pid++;
+                tasks[new_task_index].system_task = tasks[current_task_index].system_task;
+                tasks[new_task_index].reading_stdin = false;
+                utf32_buffer_copy(&tasks[current_task_index].input_buffer, &tasks[new_task_index].input_buffer);
 
-        //         if (tasks[current_task_index].stack_phys)
-        //             tasks[task_count - 1].stack_phys = pfa_allocate_physical_page();
-        //         if (tasks[current_task_index].kernel_stack_phys)
-        //             tasks[task_count - 1].kernel_stack_phys = pfa_allocate_physical_page();
+                tasks[new_task_index].cr3 = vas_create_empty();
+                tasks[new_task_index].esp = tasks[current_task_index].esp;
+                tasks[new_task_index].esp0 = tasks[current_task_index].esp0;
 
-        //         // tasks[task_count - 1].registers_ptr = tasks[current_task_index].registers_ptr;
-        //         // tasks[task_count - 1].registers_data = tasks[current_task_index].registers_data;
+                copy_fpu_state(&tasks[current_task_index].fpu_state, &tasks[new_task_index].fpu_state);
 
-        //         task_create_virtual_address_space(&tasks[task_count - 1]);
+                registers->eax = tasks[new_task_index].pid >> 32;
+                registers->ebx = tasks[new_task_index].pid & 0xffffffff;
 
-        //         if (tasks[task_count - 1].kernel_stack_phys)
-        //             copy_page(tasks[current_task_index].kernel_stack_phys, tasks[task_count - 1].kernel_stack_phys);
-        //         if (tasks[task_count - 1].stack_phys)
-        //             copy_page(tasks[current_task_index].stack_phys, tasks[task_count - 1].stack_phys);
+                for (uint16_t i = 0; i < 768; i++)
+                {
+                    uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * i);
+                    uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
+                    if (!(old_pde & 1)) continue;
+                    physical_address_t old_pt_address = old_pde & 0xfffff000;
+                    physical_address_t new_pt_address = new_pde & 0xfffff000;
+                    if (!(new_pde & 1))
+                    {
+                        new_pt_address = pfa_allocate_physical_page();
+                        physical_init_page_table(new_pt_address);
+                        write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
+                    }
+                    // LOG(TRACE, "%u : old_pt_address : 0x%lx", i, old_pt_address);
+                    // LOG(TRACE, "%u : new_pt_address : 0x%lx", i, new_pt_address);
+                    for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
+                    {
+                        uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
+                        physical_address_t old_page_address = old_pte & 0xfffff000;
+                        if (old_pte & 1)
+                        {
+                            uint32_t new_pte = read_physical_address_4b(new_pt_address + 4 * j);
+                            physical_address_t new_page_address = new_pte & 0xfffff000;
+                            if (!(new_pte & 1))
+                            {
+                                new_page_address = pfa_allocate_physical_page();
+                                write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
+                            }
+                            // LOG(TRACE, "%u.%u : old_page_address : 0x%lx", i, j, old_page_address);
+                            // LOG(TRACE, "%u.%u : new_page_address : 0x%lx", i, j, new_page_address);
+                            copy_page(old_page_address, new_page_address);
+                        }
+                    }
+                }
 
-        //         // tasks[task_count - 1].registers_data.eax = tasks[task_count - 1].registers_data.ebx = 0;
-        //         // tasks[current_task_index].registers_data.eax = tasks[task_count - 1].pid >> 32;
-        //         // tasks[current_task_index].registers_data.ebx = tasks[task_count - 1].pid;
-
-        //         for (uint16_t i = 0; i < 768; i++)
-        //         {
-        //             uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * i);
-        //             for (uint16_t j = (i == 0 ? 256 : 0); j < ((i == 767) ? 1021 : 1024); j++)
-        //             {
-        //                 if (old_pde & 1)
-        //                 {
-        //                     physical_address_t pt_old_phys = old_pde & 0xfffff000;
-        //                     uint32_t old_pte = read_physical_address_4b(pt_old_phys + 4 * j);
-        //                     physical_address_t mapping_phys = old_pte & 0xfffff000;
-        //                     if (old_pte & 1)
-        //                     {
-        //                         // LOG(TRACE, "Copying 0x%x-0x%x", 4096 * (j + i * 1024), 4095 + 4096 * (j + i * 1024));
-
-        //                         physical_address_t page_address = task_virtual_address_space_create_page(&tasks[task_count - 1], i, j, PAGING_USER_LEVEL, true);
-
-        //                         copy_page(mapping_phys, page_address);
-        //                     }
-        //                 }
-        //             }
-        //         }
-
-        //         // for (uint16_t i = 0; i < (tasks[task_count - 1].ring != 0 ? sizeof(struct privilege_switch_interrupt_registers) : sizeof(struct interrupt_registers)); i++)
-        //         //     write_physical_address_1b((physical_address_t)((uint32_t)tasks[task_count - 1].registers_ptr) + tasks[task_count - 1].stack_phys - TASK_STACK_BOTTOM_ADDRESS + i,
-        //         //         ((uint8_t*)&tasks[task_count - 1].registers_data)[i]);
-
-        //         // if (tasks[current_task_index].ring != 0)
-        //         // {
-        //         //     registers->esp = tasks[current_task_index].registers_data.esp;
-        //         //     registers->ss = tasks[current_task_index].registers_data.ss;
-        //         // }
-
-        //         // *(struct interrupt_registers*)registers = *(struct interrupt_registers*)&tasks[current_task_index].registers_data;
-
-        //         switch_task(&registers);
-        //     } 
-        //     break;
+                // TODO: Add correct tasks[new_task_index] strack frame setup
+            } 
+            break;
 
         case SYSCALL_BRK_ALLOC: // * brk_alloc | address = $ebx | $eax = num_pages_allocated
             {

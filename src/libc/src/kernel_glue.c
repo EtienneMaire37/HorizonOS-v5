@@ -2,7 +2,7 @@
 
 ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
-    ssize_t bytes_written;
+    volatile ssize_t bytes_written;
     asm volatile("int 0xf0" : "=a" (bytes_written), "=b" (errno)
         : "a" (SYSCALL_WRITE), "b" (fildes), "c" (buf), "d" (nbyte));
     return bytes_written;

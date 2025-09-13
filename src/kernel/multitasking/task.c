@@ -132,12 +132,15 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
 
     full_context_switch(next_task_index);
 
-    // LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
-    //     tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
-    //     (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
-    //     (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
-    //     (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
-    //     (*registers)->cr3);
+    // #define LOG_TASK_SWITCHES
+    #ifdef LOG_TASK_SWITCHES
+    LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
+        tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 
+        (*registers)->handled_esp, tasks[current_task_index].esp, (*registers)->ebp,
+        (*registers)->eip, (*registers)->cs, (*registers)->eflags, (*registers)->ds,
+        (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
+        (*registers)->cr3);
+    #endif
 
     fpu_restore_state(&tasks[current_task_index].fpu_state);
 

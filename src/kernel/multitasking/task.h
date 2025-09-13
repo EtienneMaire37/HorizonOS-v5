@@ -56,6 +56,7 @@ extern void iret_instruction();
 void task_kill(uint16_t index);
 
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb);
+extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
@@ -104,5 +105,7 @@ void multitasking_init();
 void multitasking_start();
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
+
+void task_stack_push(thread_t*, uint32_t);
 
 void idle_main();
