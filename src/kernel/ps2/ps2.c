@@ -28,7 +28,7 @@ bool ps2_wait_for_input()
         if ((reg & PS2_STATUS_OUTPUT_FULL) == PS2_STATUS_OUTPUT_FULL)
             return false;
     }
-    LOG(TRACE, "PS/2 wait to input timeout");
+    // LOG(TRACE, "PS/2 wait to input timeout");
     return true;
 }
 
@@ -45,7 +45,7 @@ uint8_t ps2_send_command(uint8_t command)
     if (!ps2_controller_connected)
         return 0xff;
 
-    LOG(TRACE, "Sending command 0x%x to PS/2 controller", command);
+    // LOG(TRACE, "Sending command 0x%x to PS/2 controller", command);
 
     uint8_t tries = 0;
     uint8_t return_val;
@@ -68,7 +68,7 @@ void ps2_send_command_no_response(uint8_t command)
 {
     if (!ps2_controller_connected)
         return;
-    LOG(TRACE, "Sending command 0x%x to PS/2 controller", command);
+    // LOG(TRACE, "Sending command 0x%x to PS/2 controller", command);
     if (ps2_wait_for_output())
         return;
     outb(PS2_COMMAND_REGISTER, command);
@@ -79,7 +79,7 @@ uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data)
     if (!ps2_controller_connected)
         return 0xff;
 
-    LOG(TRACE, "Sending command 0x%x, 0x%x to PS/2 controller", command, data);
+    // LOG(TRACE, "Sending command 0x%x, 0x%x to PS/2 controller", command, data);
 
     uint8_t tries = 0;
     uint8_t return_val;
@@ -106,7 +106,7 @@ void ps2_send_command_with_data_no_response(uint8_t command, uint8_t data)
     if (!ps2_controller_connected)
         return;
 
-    LOG(TRACE, "Sending command 0x%x, 0x%x to PS/2 controller", command, data);
+    // LOG(TRACE, "Sending command 0x%x, 0x%x to PS/2 controller", command, data);
 
     if (ps2_wait_for_output()) 
         return;
@@ -121,7 +121,7 @@ bool ps2_send_device_command(uint8_t device, uint8_t command)
     if (!ps2_controller_connected)
         return false;
 
-    LOG(TRACE, "Sending command 0x%x to PS/2 device %u", command, device);
+    // LOG(TRACE, "Sending command 0x%x to PS/2 device %u", command, device);
 
     for (int tries = 0; tries < PS2_MAX_RESEND; tries++) 
     {

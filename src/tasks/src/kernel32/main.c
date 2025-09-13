@@ -15,6 +15,15 @@ int main()
 {
     printf("--- Start of HorizonOS configuration ---\n\n");
 
+    uint8_t* data = (uint8_t*)malloc(500000);
+    for (int i = 0; i < 500000; i++)
+        data[i] = rand() & 0xff;
+
+    for (int i = 0; i < 10; i++)
+        printf("0x%x\n", data[i + 200000]);
+
+    free(data);
+
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)
         printf("%u: %s    ", i + 1, kb_layouts[i]);
