@@ -46,7 +46,7 @@ int main()
         fflush(stdout);
         char kb_layout_choice_str[2] = { 0 };
         read(STDIN_FILENO, &kb_layout_choice_str[0], 2);
-        if (kb_layout_choice_str[1] != EOF && kb_layout_choice_str[1] != '\n')
+        if (kb_layout_choice_str[1] != '\n')
             kb_layout_choice = 0;
         else
         {
@@ -68,9 +68,33 @@ int main()
         // printf("%s\n", &data[0]);
         printf("$ ");
         fflush(stdout);
-        char ch = 0;
-        read(STDIN_FILENO, &ch, 1);
+        char data[4096] = {0};
+        int ret = read(STDIN_FILENO, &data, 4096);
         flush_stdin();
+
+        if (ret > 0)
+        {
+            data[ret - 1] = 0;
+            for (int i = 0; i < 4095; i++)
+            {
+                if (data[i] == ' ') data[i] = 0;
+            }
+            int bytes_left = ret - 1;
+            int first_arg_offset = 0;
+            while (bytes_left > 0 && !data[first_arg_offset])
+            {
+                bytes_left--;
+                first_arg_offset++;
+            }
+            if (strcmp(&data[first_arg_offset], "exit") == 0)
+            {
+                exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                printf("%s: command not found\n", &data[first_arg_offset]);
+            }
+        }
     }
     return 0;
 }
