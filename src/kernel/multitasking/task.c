@@ -87,13 +87,20 @@ void task_stack_push(thread_t* task, uint32_t value)
 
 void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
 {
+    if (task->cr3 == physical_null)
+    {
+        LOG(WARNING, "Kernel tried to write into a null vas");
+        return;
+    }
+
     struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
+    
     uint32_t pde = read_physical_address_4b(task->cr3 + 4 * layout.page_directory_entry);
     if (!(pde & 1)) return;
-    physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
+    physical_address_t pt_address = pde & 0xfffff000;
     uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
     if (!(pte & 1)) return;
-    physical_address_t page_address = (physical_address_t)pte & 0xfffff000;
+    physical_address_t page_address = pte & 0xfffff000;
     physical_address_t byte_address = page_address | layout.page_offset;
     write_physical_address_1b(byte_address, value);
 }

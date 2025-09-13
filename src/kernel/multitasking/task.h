@@ -24,6 +24,19 @@ const int task_esp_offset = offsetof(thread_t, esp);
 const int task_esp0_offset = offsetof(thread_t, esp0);
 const int task_cr3_offset = offsetof(thread_t, cr3);
 
+#define TASK_STACK_PAGES        0x100  // 1MB
+#define TASK_KERNEL_STACK_PAGES 1   // 4KB
+
+#define TASK_STACK_TOP_ADDRESS              0xc0000000
+#define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
+#define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
+
+const int kernel_stack_page_index = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+
+const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000 - 1;
+
 #define MAX_TASKS 1024
 
 thread_t tasks[MAX_TASKS];    // TODO : Implement a dynamic array

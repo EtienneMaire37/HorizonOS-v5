@@ -41,19 +41,6 @@ struct virtual_address_layout
 
 struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
-#define TASK_STACK_PAGES 1          // 0x100  // 1MB
-#define TASK_KERNEL_STACK_PAGES 1   // 4KB
-
-#define TASK_STACK_TOP_ADDRESS              0xc0000000
-#define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
-#define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
-#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
-
-const int kernel_stack_page_index = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
-
-const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
-const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000 - 1;
-
 void init_page_directory(struct page_directory_entry_4kb* pd);
 void init_page_table(struct page_table_entry* pt);
 void add_page_table(struct page_directory_entry_4kb* pd, uint16_t index, physical_address_t pt_address, uint8_t user_supervisor, uint8_t read_write);

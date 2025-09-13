@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <time.h>
 
 #include <horizonos.h>
 
@@ -15,14 +16,22 @@ int main()
 {
     printf("--- Start of HorizonOS configuration ---\n\n");
 
-    uint8_t* data = (uint8_t*)malloc(500000);
-    for (int i = 0; i < 500000; i++)
-        data[i] = rand() & 0xff;
+    // uint8_t* data = (uint8_t*)malloc(5000000);
+    // srand(time(NULL));
+    // for (int i = 0; i < 5000000; i++)
+    //     data[i] = rand() & 0xff;
 
-    for (int i = 0; i < 10; i++)
-        printf("0x%x\n", data[i + 200000]);
+    // for (int i = 0; i < 10; i++)
+    //     printf("0x%x\n", data[i + 200000]);
 
-    free(data);
+    // free(data);
+
+    // uint8_t data[50000];
+    // for (int i = 0; i < 50000; i++)
+    //     data[i] = rand() & 0xff;
+
+    // for (int i = 0; i < 10; i++)
+    //     printf("0x%x\n", data[i + 20000]);
 
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)
