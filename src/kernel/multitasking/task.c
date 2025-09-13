@@ -100,35 +100,6 @@ void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
 
 void switch_task(struct privilege_switch_interrupt_registers** registers)
 {
-    tasks[current_task_index].current_cpu_ticks++;
-
-    global_cpu_ticks++;
-    if (global_cpu_ticks >= TASK_SWITCHES_PER_SECOND)
-    {
-        if (task_count != 0)
-        {
-            for (uint16_t i = 0; i < task_count; i++)
-            {
-                tasks[i].stored_cpu_ticks = tasks[i].current_cpu_ticks;
-                tasks[i].current_cpu_ticks = 0;
-            }
-
-            // float total = 100 - (.01f * 10000 * (float)tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
-            uint16_t total = 10000 - (10000 * tasks[0].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND);
-            if (total <= 0) total = +0;
-            if (total >= 10000) total = 10000;
-
-            LOG(TRACE, "CPU usage:");
-            LOG(TRACE, "total : %u.%u%u %%", total / 100, (total / 10) % 10, total % 10);
-            for (uint16_t i = 0; i < task_count; i++)
-            {
-                uint16_t this_percentage = 10000 * tasks[i].stored_cpu_ticks / TASK_SWITCHES_PER_SECOND;
-                LOG(TRACE, "%s── task %d : %u.%u%u %%\t[pid = %ld]%s", task_count - i > 1 ? "├" : "└", i, this_percentage / 100, (this_percentage / 10) % 10, this_percentage % 10, tasks[i].pid, i == 0 ? " (* idle task *)" : "");
-            }
-        }
-        global_cpu_ticks = 0;
-    }
-
     if (task_count == 0)
     {
         LOG(CRITICAL, "No task to switch to");

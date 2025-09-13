@@ -15,7 +15,7 @@ typedef struct task
 
     fpu_state_t fpu_state;
 
-    uint8_t stored_cpu_ticks, current_cpu_ticks;
+    uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
 } thread_t;
 
 uint8_t global_cpu_ticks = 0;

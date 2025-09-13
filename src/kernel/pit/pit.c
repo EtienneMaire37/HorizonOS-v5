@@ -1,5 +1,7 @@
 #pragma once
 
+static uint32_t multitasking_second_counter = 0;
+
 void handle_irq_0(bool* should_task_switch)
 {
     global_timer += PIT_INCREMENT;
@@ -18,6 +20,42 @@ void handle_irq_0(bool* should_task_switch)
         }
         if (multitasking_counter == 0xff)
             multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
+
+        tasks[current_task_index].current_cpu_ticks += PIT_INCREMENT;
+        multitasking_second_counter += PIT_INCREMENT;
+
+        if (multitasking_second_counter >= 1000) 
+        {
+            multitasking_second_counter = 0;
+
+            if (task_count != 0)
+            {
+                for (uint16_t i = 0; i < task_count; i++)
+                {
+                    tasks[i].stored_cpu_ticks = tasks[i].current_cpu_ticks;
+                    tasks[i].current_cpu_ticks = 0;
+                }
+
+                int32_t total = 1000 - tasks[0].stored_cpu_ticks;
+                #define CLAMP_CPU_USAGE
+                #ifdef CLAMP_CPU_USAGE
+                if (total <= 0) total = 0;
+                if (total >= 1000) total = 1000;
+                #endif
+
+                LOG(TRACE, "CPU usage:");
+                LOG(TRACE, "total : %d.%d %%", total / 10, total % 10);
+                for (uint16_t i = 0; i < task_count; i++)
+                {
+                    int32_t this_percentage = tasks[i].stored_cpu_ticks;
+                    #ifdef CLAMP_CPU_USAGE
+                    if (this_percentage <= 0) this_percentage = 0;
+                    if (this_percentage >= 1000) this_percentage = 1000;
+                    #endif
+                    LOG(TRACE, "%s── task %d : %d.%d %%\t[pid = %ld]%s%s", task_count - i > 1 ? "├" : "└", i, this_percentage / 10, this_percentage % 10, tasks[i].pid, i == 0 ? " (* idle task *)" : "", tasks[i].is_dead ? " [waiting for deletion...]" : "");
+                }
+            }
+        }
     }
 }
 
