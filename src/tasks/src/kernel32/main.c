@@ -67,6 +67,7 @@ int main()
                 bytes_left--;
                 first_arg_offset++;
             }
+            if (data[first_arg_offset] == 0) continue;
             if (strcmp(&data[first_arg_offset], "exit") == 0)
             {
                 exit(EXIT_SUCCESS);

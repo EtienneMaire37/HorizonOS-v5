@@ -55,12 +55,7 @@ const char* text_logo =
 
 int imod(int a, int b)
 {
-    if(b < 0)
-        return -imod(-a, -b);   
-    int ret = a % b;
-    if (ret < 0)
-        ret += b;
-    return ret;
+    return a - (a / b) * b;
 }
 
 typedef uint64_t physical_address_t;

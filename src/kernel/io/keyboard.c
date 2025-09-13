@@ -32,6 +32,14 @@ void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character)
     buffer->put_index = (buffer->put_index + 1) % buffer->size;
 }
 
+void utf32_buffer_unputchar(utf32_buffer_t* buffer)
+{
+    if (!buffer->characters) return;
+    if (no_buffered_characters(*buffer)) return;
+
+    buffer->put_index = imod(buffer->put_index - 1, buffer->size);
+}
+
 utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer)
 {
     if (!buffer->characters) return 0;
@@ -66,7 +74,7 @@ void keyboard_handle_character(utf32_char_t character)
                 if (!no_buffered_characters(tasks[i].input_buffer))
                 {
                     putchar('\b');
-                    utf32_buffer_getchar(&tasks[i].input_buffer);
+                    utf32_buffer_unputchar(&tasks[i].input_buffer);
                 }
             }
             else
