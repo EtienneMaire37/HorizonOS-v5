@@ -161,19 +161,6 @@ void switch_task(struct privilege_switch_interrupt_registers** registers)
     //     (*registers)->eax, (*registers)->ebx, (*registers)->ecx, (*registers)->edx, (*registers)->esi, (*registers)->edi,
     //     (*registers)->cr3);
 
-    // // if (tasks[current_task_index].was_reading_stdin)
-    // // {
-    // //     uint32_t _eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), tasks[current_task_index].registers_data.edx);
-    // //     task_write_register_data(&tasks[current_task_index], eax, _eax);
-    // //     for (uint32_t i = 0; i < _eax; i++)
-    // //     {
-    // //         // *** Only ASCII for now ***
-    // //         task_write_at_address_1b(&tasks[current_task_index], tasks[current_task_index].registers_data.ecx + i, utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer)));
-    // //     }
-    // // }
-
-    // tasks[current_task_index].was_reading_stdin = false;
-
     fpu_restore_state(&tasks[current_task_index].fpu_state);
 
     cleanup_tasks();

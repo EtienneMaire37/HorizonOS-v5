@@ -237,52 +237,49 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         uint16_t old_index;
         switch (registers->eax)
         {
-        case SYSCALL_EXIT:     // exit
+        case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
             LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
             break;
-        case SYSCALL_TIME:     // time
-            registers->eax = ktime(NULL);
+        case SYSCALL_TIME:     // * time || $eax = time
+            registers->eax = time(NULL);
             break;
-        // case SYSCALL_READ:     // read
-        //     if (registers->ebx > 2)
-        //     {
-        //         registers->eax = 0xffffffff;   // -1
-        //         registers->ebx = EBADF;
-        //     } 
-        //     else
-        //     {
-        //         if (registers->ebx == STDIN_FILENO)
-        //         {
-        //             registers->ebx = 0;
-        //             if (registers->edx == 0)
-        //             {
-        //                 registers->eax = 0;
-        //                 break;
-        //             }
-        //             if (no_buffered_characters(tasks[current_task_index].input_buffer))
-        //             {
-        //                 tasks[current_task_index].reading_stdin = true;
-        //                 switch_task(&registers);
-        //             }
-        //             else
-        //             {
-        //                 registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
-        //                 for (uint32_t i = 0; i < registers->eax; i++)
-        //                 {
-        //                     // *** Only ASCII for now ***
-        //                     ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer));
-        //                 }
-        //             }
-        //         }
-        //         else
-        //         {
-        //             registers->eax = 0xffffffff;   // -1
-        //             registers->ebx = EBADF;
-        //         }
-        //     }
-        //     break;
+        case SYSCALL_READ:     // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
+            if (registers->ebx > 2) // ! Only default fds are supported for now
+            {
+                registers->eax = 0xffffffff;   // -1
+                registers->ebx = EBADF;
+            } 
+            else
+            {
+                if (registers->ebx == STDIN_FILENO)
+                {
+                    registers->ebx = 0;
+                    if (registers->edx == 0)
+                    {
+                        registers->eax = 0;
+                        break;
+                    }
+                    if (no_buffered_characters(tasks[current_task_index].input_buffer))
+                    {
+                        tasks[current_task_index].reading_stdin = true;
+                        switch_task(&registers);
+                    }
+                    registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
+                    for (uint32_t i = 0; i < registers->eax; i++)
+                    {
+                        // *** Only ASCII for now ***
+                        ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer));
+                    }
+                }
+                else
+                {
+                    registers->eax = 0xffffffff;   // -1
+                    registers->ebx = EBADF;
+                }
+            }
+            break;
         case SYSCALL_WRITE:     // write
             if (registers->ebx > 2)
             {

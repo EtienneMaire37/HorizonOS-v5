@@ -97,6 +97,7 @@ void LOG_ANSI_RESET_STYLING()
 #ifndef LOG_LEVEL 
 #define _LOG(level_text, ...)
 #define LOG(level, ...)
+#define CONTINUE_LOG(level, ...)
 #else
 #define _LOG(level, ...) { \
     if (!first_log) fputc('\n', stderr); \

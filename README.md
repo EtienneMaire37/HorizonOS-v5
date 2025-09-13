@@ -48,7 +48,7 @@ sudo apt install nasm xorriso mtools
 
 Simply run: 
 ```bash
-make all CLOGLEVEL=-DLOGLEVEL=DEBUG
+make all CLOGLEVEL=-DLOGLEVEL=TRACE
 ```
 To have e9 port logs. Or:
 ```bash
