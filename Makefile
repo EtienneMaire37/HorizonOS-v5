@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -fno-tree-vectorize -Werror # -fno-builtin -ffreestanding -fno-pie -fno-stack-protector -mno-sse -mno-80387 -msoft-float
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -fno-tree-vectorize # -fno-builtin -ffreestanding -fno-pie -fno-stack-protector -mno-sse -mno-80387 -msoft-float
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
 CROSSLD := ./i486elfgcc/bin/i486-elf-ld
@@ -29,7 +29,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only $(CLOGLEVEL)
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only -Werror $(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \
 	-ffreestanding -nostdlib \
@@ -58,7 +58,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O3
+	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -Ofast
 	$(CROSSLD) -T src/tasks/link.ld -m elf_i386 \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \

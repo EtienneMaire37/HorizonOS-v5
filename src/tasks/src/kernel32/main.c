@@ -16,6 +16,8 @@ int main()
 {
     printf("--- Start of HorizonOS configuration ---\n\n");
 
+    // volatile int a = 1 / 0;
+
     // uint8_t* data = (uint8_t*)malloc(5000000);
     // srand(time(NULL));
     // for (int i = 0; i < 5000000; i++)
