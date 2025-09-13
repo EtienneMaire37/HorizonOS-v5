@@ -328,6 +328,10 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 else
                     printf_x(va_arg(args, uint32_t), 1);
                 break;
+            case 'p':
+                func_s("0x");
+                printf_x((uint32_t)va_arg(args, void*), 1);
+                break;
             case 'X':
                 if (next_arg_64)
                     printf_X(va_arg(args, uint64_t), 1);
@@ -709,4 +713,9 @@ int fputc(int c, FILE* stream)
 int getchar()
 {
     return getc(stdin);
+}
+
+void perror(const char* prefix)
+{
+    fprintf(stderr, prefix);
 }

@@ -16,25 +16,6 @@ int main()
 {
     printf("--- Start of HorizonOS configuration ---\n\n");
 
-    // volatile int a = 1 / 0;
-
-    // uint8_t* data = (uint8_t*)malloc(5000000);
-    // srand(time(NULL));
-    // for (int i = 0; i < 5000000; i++)
-    //     data[i] = rand() & 0xff;
-
-    // for (int i = 0; i < 10; i++)
-    //     printf("0x%x\n", data[i + 200000]);
-
-    // free(data);
-
-    // uint8_t data[50000];
-    // for (int i = 0; i < 50000; i++)
-    //     data[i] = rand() & 0xff;
-
-    // for (int i = 0; i < 10; i++)
-    //     printf("0x%x\n", data[i + 20000]);
-
     printf("Please enter your preferred keyboard layout:\n");
     for (uint8_t i = 0; i < sizeof(kb_layouts) / sizeof(char*); i++)
         printf("%u: %s    ", i + 1, kb_layouts[i]);

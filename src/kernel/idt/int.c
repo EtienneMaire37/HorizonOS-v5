@@ -280,7 +280,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                 }
             }
             break;
-        case SYSCALL_WRITE:     // write
+        case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
             if (registers->ebx > 2)
             {
                 registers->eax = 0xffffffff;   // -1
@@ -302,11 +302,11 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                 }
             }
             break;
-        case SYSCALL_GETPID:     // getpid
+        case SYSCALL_GETPID:     // * getpid || $eax = pid_hi, $ebx = pid_lo
             registers->eax = tasks[current_task_index].pid >> 32;
             registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
-        // case SYSCALL_FORK:     // fork
+        // case SYSCALL_FORK:     // * fork
         //     LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
 
         //     if (task_count >= MAX_TASKS)
@@ -386,7 +386,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         //     } 
         //     break;
 
-        case SYSCALL_BRK_ALLOC:
+        case SYSCALL_BRK_ALLOC: // * brk_alloc | address = $ebx | $eax = num_pages_allocated
             {
                 if (registers->ebx & 0xfff) // ! address not page aligned
                 {
@@ -447,33 +447,44 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             }
             break;
 
-        // case SYSCALL_BRK_FREE:
-        //     {
-        //         if (registers->ebx & 0xfff)
-        //         {
-        //             registers->eax = 0;
-        //             break;
-        //         }
-        //         struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
-        //         uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
-        //         if (!(pde & 1))
-        //         {
-        //             registers->eax = 0;
-        //             break;
-        //         }                
-        //         physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
-        //         uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
-        //         if (!(pte & 1))
-        //             registers->eax = 0;
-        //         else
-        //         {
-        //             pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
-        //             physical_remove_page(pt_address, layout.page_table_entry);
-        //             flush_tlb = true;
-        //             registers->eax = 1;
-        //         }
-        //     }
-        //     break;
+        case SYSCALL_BRK_FREE: // * brk_free | address = $ebx | $eax = num_pages_freed
+            {
+                if (registers->ebx & 0xfff)
+                {
+                    registers->eax = 0;
+                    break;
+                }
+                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
+                if (!(pde & 1))
+                {
+                    registers->eax = 0;
+                    break;
+                }                
+                physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                if (!(pte & 1))
+                    registers->eax = 0;
+                else
+                {
+                    pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
+                    physical_remove_page(pt_address, layout.page_table_entry);
+
+                    #define USE_IVLPG
+                    #ifdef USE_IVLPG
+                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
+                    *recursive_paging_pte = 0b1000;  // * Write-through caching | Not present
+
+                    invlpg((uint32_t)recursive_paging_pte);
+                    invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    #else
+                    load_pd_by_physaddr(tasks[current_task_index].cr3);
+                    #endif
+
+                    registers->eax = 1;
+                }
+            }
+            break;
 
         case SYSCALL_FLUSH_INPUT_BUFFER:
             utf32_buffer_clear(&(tasks[current_task_index].input_buffer));

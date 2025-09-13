@@ -73,6 +73,8 @@ int fgetc(FILE* stream);
 int fputc(int c, FILE* stream);
 int getchar();
 
+void perror(const char* prefix);
+
 #define putc fputc
 #define getc fgetc
 
