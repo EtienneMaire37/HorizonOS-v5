@@ -53,7 +53,6 @@ FILE* FILE_create()
 #include "stdlib.c"
 #include "time.c"
 #include "string.c"
-#include "arithmetic.c"
 
 #include "liballoc.h"
 #include "liballoc_hooks.c"

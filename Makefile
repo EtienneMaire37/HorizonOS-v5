@@ -71,7 +71,7 @@ src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	nasm -f elf32 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
 	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O0 $(CFLAGS)
-	$(CROSSLD) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -m elf_i386 -o "src/libc/lib/libc.o" -r
+	$(CROSSGCC) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -o "src/libc/lib/libc.o" -lgcc -r
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib

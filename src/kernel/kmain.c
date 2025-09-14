@@ -1,5 +1,3 @@
-// #include <stddef.h>
-// #include <stdint.h>
 #include <stdbool.h>
 #include <limits.h>
 #include <stdatomic.h>
@@ -53,11 +51,6 @@ const char* text_logo =
  | |  | | (_) | |  | |/ / (_) | | | | |__| |____) |      \\ V / ___) | \n\
  |_|  |_|\\___/|_|  |_/___\\___/|_| |_|\\____/|_____/        \\_/ |____/";
 
-int imod(int a, int b)
-{
-    return a - (a / b) * b;
-}
-
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
 
@@ -81,8 +74,8 @@ void simple_cause_halt();
 
 #define hlt()                   asm volatile ("hlt")
 
-#define enable_interrupts()     asm volatile("sti")
-#define disable_interrupts()    asm volatile("cli")
+#define enable_interrupts()     asm volatile ("sti")
+#define disable_interrupts()    asm volatile ("cli")
 
 #define halt() (fflush(stdout), cause_halt(__CURRENT_FUNC__, __FILE__, __LINE__))
 
@@ -112,9 +105,6 @@ const char* multiboot_block_type_text[5] =
     "MULTIBOOT_MEMORY_NVS",
     "MULTIBOOT_MEMORY_BADRAM"
 };
-
-// #include "klibc/arithmetic.c"
-// #include "../libc/src/arithmetic.c"
 
 // // // #include "../libc/src/math.c"
 
@@ -163,6 +153,18 @@ const char* multiboot_block_type_text[5] =
 struct page_table_entry page_table_0[1024] __attribute__((aligned(4096)));
 struct page_table_entry page_table_767[1024] __attribute__((aligned(4096)));
 struct page_table_entry page_table_768_1023[256 * 1024] __attribute__((aligned(4096)));
+
+int imod(int a, int b)
+{
+    if (b <= 0) 
+    {
+        LOG(WARNING, "Kernel tried to compute %d %% %d", a, b);
+        return 0;
+    }
+    int ret = a - (a / b) * b;
+    if (ret < 0) ret += b;
+    return ret;
+}
 
 // ---------------------------------------------------------------
 
