@@ -109,15 +109,22 @@ found_rsdp:
         abort();
     }
 
-    // if (acpi_10)
+    if (acpi_10)
     {
         rsdt_address = (physical_address_t)rsdp->rsdt_address;
         // xsdt_address = 0;
 
         LOG(INFO, "RSDT address : 0x%lx", rsdt_address);
 
-        // sdt_count = (rsdt->header.length - sizeof(struct sdt_header)) / 4;
-        sdt_count = (table_read_member(struct rsdt_table, rsdt_address, header.length, true) - sizeof(struct sdt_header)) / 4;
+        uint32_t header_length = table_read_member(struct rsdt_table, rsdt_address, header.length, true);
+        printf("Header length : %u\n", header_length); // ? 4026597203 on VBox
+
+        sdt_count = header_length <= sizeof(struct sdt_header) ? 0 : (header_length - sizeof(struct sdt_header)) / 4;
+    }
+    else
+    {
+        rsdt_address = physical_null;
+        sdt_count = 0;
     }
 
     LOG(INFO, "%u SDT tables detected", sdt_count);
@@ -165,6 +172,8 @@ found_rsdp:
         }
     }
 
+    putchar('\n');
+
     fadt_extract_data();
 }
 
@@ -187,7 +196,7 @@ void fadt_extract_data()
 {
     preferred_power_management_profile = 0;
 
-    if (fadt_address == 0)
+    if (fadt_address == physical_null)
     {
         LOG(DEBUG, "No FADT found");
         ps2_controller_connected = true;

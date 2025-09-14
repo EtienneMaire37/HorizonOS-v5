@@ -117,14 +117,14 @@ struct fadt_table
     struct generic_address_structure x_GPE1_block;
 } __attribute__((packed));
   
-struct rsdp_table* rsdp;
+volatile struct rsdp_table* rsdp;
 // struct rsdt_table* rsdt;
 // struct xsdt_table* xsdt;
 
-physical_address_t rsdt_address;
+volatile physical_address_t rsdt_address;
 // physical_address_t xsdt_address;
 
-physical_address_t fadt_address, madt_address, ssdt_address, dsdt_address;
+volatile physical_address_t fadt_address, madt_address, ssdt_address, dsdt_address;
 
 uint8_t preferred_power_management_profile;
 
