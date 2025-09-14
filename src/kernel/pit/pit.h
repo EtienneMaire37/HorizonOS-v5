@@ -1,12 +1,14 @@
 #pragma once
 
+#include "../time/time.h"
+
 #define PIT_CHANNEL_0_DATA  0x40
 #define PIT_CHANNEL_1_DATA  0x41
 #define PIT_CHANNEL_2_DATA  0x42
 #define PIT_MODE_CMD        0x43
 
-#define PIT_FREQUENCY       200
-#define PIT_INCREMENT       (1000 / PIT_FREQUENCY)
+#define PIT_FREQUENCY       200 // 20
+#define PIT_INCREMENT       (precise_time_ticks_per_second / PIT_FREQUENCY)
 
 #define PIT_MODE_CHANNEL_0  0b00000000
 #define PIT_MODE_CHANNEL_1  0b01000000
@@ -23,10 +25,8 @@
 
 #define PIT_BINARY_MODE             0b00000000
 
-volatile uint32_t global_timer = 0; // in milliseconds
-
-struct privilege_switch_interrupt_registers;
+volatile precise_time_t global_timer = 0;
 
 void handle_irq_0(bool* ts);
 void pit_channel_0_set_frequency(uint32_t frequency);
-void ksleep(uint32_t milliseconds);
+void ksleep(precise_time_t time);

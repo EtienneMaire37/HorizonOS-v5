@@ -1,6 +1,7 @@
 #pragma once
 
 static uint32_t multitasking_second_counter = 0;
+static int16_t multitasking_counter = 0;
 
 void handle_irq_0(bool* should_task_switch)
 {
@@ -13,16 +14,16 @@ void handle_irq_0(bool* should_task_switch)
     if (multitasking_enabled)
     {
         multitasking_counter--;
-        if (multitasking_counter == 0)
+        if (multitasking_counter <= 0)
         {
             if (should_task_switch) *should_task_switch = true;
-            multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
+            multitasking_counter = TASK_SWITCH_DELAY / precise_time_to_milliseconds(PIT_INCREMENT);
         }
         if (multitasking_counter == 0xff)
-            multitasking_counter = TASK_SWITCH_DELAY / PIT_INCREMENT;
+            multitasking_counter = TASK_SWITCH_DELAY / precise_time_to_milliseconds(PIT_INCREMENT);
 
-        tasks[current_task_index].current_cpu_ticks += PIT_INCREMENT;
-        multitasking_second_counter += PIT_INCREMENT;
+        tasks[current_task_index].current_cpu_ticks += precise_time_to_milliseconds(PIT_INCREMENT);
+        multitasking_second_counter += precise_time_to_milliseconds(PIT_INCREMENT);
 
         if (multitasking_second_counter >= 1000) 
         {
@@ -70,8 +71,8 @@ void pit_channel_0_set_frequency(uint32_t frequency)
     io_wait(); 
 }
 
-void ksleep(uint32_t milliseconds)
+void ksleep(precise_time_t time)
 {
-    uint32_t target_timer = global_timer + milliseconds;
+    precise_time_t target_timer = global_timer + time;
     while(target_timer > global_timer);
 }

@@ -4,8 +4,8 @@ bool ps2_wait_for_output()
 {
     if (!ps2_controller_connected)
         return true;
-    uint32_t start = global_timer;
-    while (global_timer - start < PS2_WAIT_TIME)
+    uint64_t start = precise_time_to_milliseconds(global_timer);
+    while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
     { 
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         // LOG(DEBUG, "Status reg : 0x%x", reg); 
@@ -20,8 +20,8 @@ bool ps2_wait_for_input()
 {
     if (!ps2_controller_connected)
         return true;
-    uint32_t start = global_timer;
-    while (global_timer - start < PS2_WAIT_TIME)
+    uint64_t start = precise_time_to_milliseconds(global_timer);
+    while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
     { 
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         // LOG(DEBUG, "Status reg : 0x%x", reg); 
@@ -137,7 +137,7 @@ bool ps2_send_device_command(uint8_t device, uint8_t command)
 
         outb(PS2_DATA, command);
 
-        // ksleep(100);
+        // ksleep(100 * PRECISE_MILLISECONDS);
 
         return true;
     }
@@ -403,7 +403,7 @@ void ps2_enable_interrupts()
     if (ps2_device_2_interrupt) config |= 0b00000010;
     ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
-    ksleep(10);
+    ksleep(10 * PRECISE_MILLISECONDS);
 
     enable_ps2_kb_input = true;
 }

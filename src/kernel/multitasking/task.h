@@ -45,8 +45,6 @@ uint16_t task_count;
 #define TASK_SWITCH_DELAY 40 // ms
 #define TASK_SWITCHES_PER_SECOND (1000 / TASK_SWITCH_DELAY)
 
-uint8_t multitasking_counter = 0;
-
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;

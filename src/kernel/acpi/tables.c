@@ -185,7 +185,7 @@ uint64_t read_rsdt_ptr(uint32_t index)
         abort();
     }
 
-    // if (acpi_10)    // ACPI 1.0
+    if (acpi_10)    // ACPI 1.0
     {
         physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
         return table_read_bytes(sdt_ptr_start, 4 * index, 4, true);

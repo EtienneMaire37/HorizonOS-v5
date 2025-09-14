@@ -60,7 +60,7 @@ void rtc_get_time()
 
 void system_increment_time()
 {
-    system_thousands += PIT_INCREMENT;
+    system_thousands += precise_time_to_milliseconds(PIT_INCREMENT);
     while (system_thousands >= 1000)
     {
         system_thousands -= 1000;
