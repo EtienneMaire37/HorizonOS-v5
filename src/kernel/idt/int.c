@@ -3,7 +3,7 @@
 #include "../multitasking/vas.h"
 #include "../multitasking/task.c"
 
-void kernel_panic(struct privilege_switch_interrupt_registers* registers)
+void kernel_panic(volatile struct interrupt_registers* registers)
 {
     disable_interrupts();
 
@@ -26,8 +26,13 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
 
     tty_set_color(FG_WHITE, BG_BLACK);
 
+    const char* error_message = get_error_message(registers->interrupt_number, registers->error_code);
+
     printf("Exception number: %u\n", registers->interrupt_number);
-    printf("Error:       %s\n", get_error_message(registers->interrupt_number, registers->error_code));
+    printf("Error:       ");
+    tty_set_color(FG_YELLOW, BG_BLACK);
+    puts(error_message);
+    tty_set_color(FG_WHITE, BG_BLACK);
     printf("Error code:  0x%x\n\n", registers->error_code);
 
     if (registers->interrupt_number == 14)
@@ -35,7 +40,7 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
         printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
         printf("cr3:  0x%x\n\n", registers->cr3);
 
-        uint32_t pde = read_physical_address_4b(current_cr3 + 4 * (registers->cr2 >> 22));
+        uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
         
         LOG(DEBUG, "Page directory entry : 0x%x", pde);
 
@@ -44,8 +49,6 @@ void kernel_panic(struct privilege_switch_interrupt_registers* registers)
             LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         }
     }
-
-    halt();
 
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
@@ -168,9 +171,10 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
     }
 }
 
-void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_registers* registers)
+#define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
+
+void interrupt_handler(volatile struct interrupt_registers* registers)
 {
-    current_cr3 = registers->cr3; 
     uint32_t old_phys_mem_page = current_phys_mem_page;
     current_phys_mem_page = 0xffffffff;
 
@@ -181,7 +185,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         if (registers->interrupt_number == 6 && *((uint16_t*)registers->eip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
         {
             has_cpuid = false;
-            return;
+            return_from_isr();
         }
         
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
@@ -193,7 +197,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             switch_task(&registers);
         }
 
-        return;
+        return_from_isr();
     }
 
     if (registers->interrupt_number < 32 + 16)  // IRQ
@@ -201,12 +205,12 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
         uint8_t irq_number = registers->interrupt_number - 32;
 
         if (irq_number == 7 && !(pic_get_isr() >> 7))
-            return;
+            return_from_isr();
         if (irq_number == 15 && !(pic_get_isr() >> 15))
         {
             outb(PIC1_CMD, PIC_EOI);
 	        io_wait();
-            return;
+            return_from_isr();
         }
 
         bool ts = false;
@@ -232,18 +236,18 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
 
         if (ts) 
             switch_task(&registers);
-        return;
+        return_from_isr();
     }
     if (registers->interrupt_number == 0xf0)  // System call
     {
         // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
-        if (!multitasking_enabled) return;
+        if (!multitasking_enabled) return_from_isr();
 
         uint16_t old_index;
         switch (registers->eax)
         {
         case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
-            LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+            LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return_from_isr() code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
             break;
@@ -312,8 +316,6 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case SYSCALL_FORK:     // * fork
-            LOG(DEBUG, "Forking task \"%s\" (pid = %lu)", tasks[current_task_index].name, tasks[current_task_index].pid);
-
             // if (task_count >= MAX_TASKS)
             if (true)
             {
@@ -342,6 +344,7 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                 registers->eax = tasks[new_task_index].pid >> 32;
                 registers->ebx = tasks[new_task_index].pid & 0xffffffff;
 
+                
                 for (uint16_t i = 0; i < 768; i++)
                 {
                     uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * i);
@@ -377,7 +380,23 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
                     }
                 }
 
-                // TODO: Add correct tasks[new_task_index] strack frame setup
+                disable_interrupts();
+
+                asm volatile ("mov eax, esp" : "=a" (tasks[new_task_index].esp));
+
+                task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
+
+                task_stack_push(&tasks[new_task_index], registers->ebx);
+                task_stack_push(&tasks[new_task_index], registers->esi);
+                task_stack_push(&tasks[new_task_index], registers->edi);
+                task_stack_push(&tasks[new_task_index], registers->ebp);
+
+                full_context_switch(new_task_index);
+                goto old_task_ret;
+            ret:
+                registers->eax = registers->ebx = 0;
+            old_task_ret:
+                enable_interrupts();
             } 
             break;
 
@@ -499,8 +518,8 @@ void __attribute__((cdecl)) interrupt_handler(struct privilege_switch_interrupt_
             LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
-        }            
+        }        
     }
 
-    return;
+    return_from_isr();
 }

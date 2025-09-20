@@ -24,15 +24,13 @@ struct privilege_switch_interrupt_registers
 
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
-uint32_t current_cr3;
-
 // ^ Changed to local variables
 // uint32_t iret_cr3;
 // bool flush_tlb;  
 
 char* error_str[32] = 
 {
-    "DIVISION_OVERFLOW_ERROR",
+    "DIVISION_OVERFLOW_EXCEPTION",
     "DEBUG",
     "NON-MASKABLE_INTERRUPT",
     "BREAKPOINT",
@@ -89,6 +87,6 @@ char* get_error_message(uint32_t fault, uint32_t error_code)
 initrd_file_t* kernel_symbols_file = NULL;
 initrd_file_t* kernel_task_symbols_file = NULL;
 
-void kernel_panic(struct privilege_switch_interrupt_registers* registers);
+void kernel_panic(volatile struct interrupt_registers* registers);
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
-void interrupt_handler(struct privilege_switch_interrupt_registers* registers);
+void interrupt_handler(volatile struct interrupt_registers* registers);

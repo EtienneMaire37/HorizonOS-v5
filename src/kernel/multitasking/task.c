@@ -105,7 +105,7 @@ void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
     write_physical_address_1b(byte_address, value);
 }
 
-void switch_task(struct privilege_switch_interrupt_registers** registers)
+void switch_task(volatile struct interrupt_registers** registers)
 {
     if (task_count == 0)
     {

@@ -51,7 +51,8 @@ pid_t fork()
     asm volatile("int 0xf0" : "=a" (hi), "=b" (lo)
         : "a" (SYSCALL_FORK));
     uint64_t combined = ((uint64_t)hi << 32) | lo;
-    return *(pid_t*)&combined;
+    pid_t ret = (pid_t)combined;
+    return ret;
 }
 
 int brk(void* addr)

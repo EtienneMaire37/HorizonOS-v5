@@ -4,7 +4,7 @@ typedef struct task
 {
     char* name;
 
-    uint32_t esp, esp0, cr3;
+    volatile uint32_t esp, esp0, cr3;
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
@@ -98,7 +98,7 @@ uint16_t find_next_task_index()
 void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
 
 void task_destroy(thread_t* task);
-void switch_task(struct privilege_switch_interrupt_registers** registers);
+void switch_task(volatile struct interrupt_registers** registers);
 void multitasking_init();
 void multitasking_start();
 void task_kill(uint16_t index);

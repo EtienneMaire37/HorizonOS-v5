@@ -265,8 +265,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     current_phys_mem_page = 0xffffffff;
     kernel_size = &_kernel_end - &_kernel_start;
 
-    current_cr3 = virtual_address_to_physical((virtual_address_t)page_directory);
-
     if (physical_memory_page_index < 0 || physical_memory_page_index >= 1024)       abort();
     if (kernel_stack_page_index < 0 || kernel_stack_page_index >= 1024)             abort();
     if (stack_page_index_start < 0 || stack_page_index_start >= 1024)               abort();
@@ -283,6 +281,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
     LOG(INFO, "Stack : 0x%x-0x%x", &stack_bottom, &stack_top);
+    LOG(INFO, "cr3 : 0x%x", virtual_address_to_physical((virtual_address_t)&page_directory));
 
     uint32_t max_kernel_size = (uint32_t)(((uint32_t)4096 * 1023 * 1024) - (uint32_t)&_kernel_start);
     if (kernel_size >= max_kernel_size)
@@ -495,17 +494,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         // // ^ To test stack tracing
         // cause_int_0();
 
-        // physical_address_t addresses[10000000 / 4096] = {0};
-        // for(uint32_t i = 0; i < 10000000 / 4096; i++)
-        // {
-        //     addresses[i] = pfa_allocate_physical_page();
-        //     volatile uint8_t a = read_physical_address_1b(addresses[i]);
-        // }
-        // for(uint32_t i = 0; i < 10000000 / 4096; i++)
-        //     pfa_free_physical_page(addresses[10000000 / 4096 - i - 1]);
-
-        // LOG(DEBUG, "0x%x", offsetof(struct local_apic_registers, divide_configuration_register));
-
     printf("VGA color codes:\n");
     for (uint8_t i = 0; i < 16; i++)
     {
@@ -527,15 +515,10 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     if (1000 % TASK_SWITCH_DELAY != 0) abort(); // ! Task switch delay does not divide a second evenly
 
-    // ~ No need to call it another time
-    // fpu_init();
-
     LOG(DEBUG, "eflags : 0x%x", get_eflags());
 
     multitasking_init();
 
-    // multitasking_add_task_from_function("kernel32", kmain);
-    // multitasking_add_task_from_initrd("kernel32", "./kmain.elf");
     multitasking_add_task_from_initrd("kernel32", "./kernel32.elf");
 
     multitasking_start();

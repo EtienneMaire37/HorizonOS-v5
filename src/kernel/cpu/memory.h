@@ -18,10 +18,8 @@ void load_pd_by_physaddr(physical_address_t addr)
         LOG(CRITICAL, "Tried to load a page directory above 4GB");
         abort();
     }
-
-    current_cr3 = (uint32_t)addr;
     
-    asm volatile("mov cr3, eax" : : "a" (current_cr3));
+    asm volatile("mov cr3, eax" : : "a" ((uint32_t)addr));
     
     current_phys_mem_page = 0xffffffff;
 }
@@ -33,7 +31,10 @@ void load_pd(void* ptr)
 
 void set_current_phys_mem_page(uint32_t page)
 {
-    // if (page == current_phys_mem_page) return;
+#define DONT_RELOAD_PHYS
+#ifdef DONT_RELOAD_PHYS
+    if (page == current_phys_mem_page) return;
+#endif
 
     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (767 * 1024 + 1021)));
     // *recursive_paging_pte = (page << 12) | ((*recursive_paging_pte) & 0xfff);
@@ -71,7 +72,7 @@ uint8_t read_physical_address_1b(physical_address_t address)
         return 0xff;
     }
 
-    uint8_t* ptr = get_physical_address_ptr(address);
+    volatile uint8_t* ptr = get_physical_address_ptr(address);
 
     if (ptr == NULL)
         return 0xff;
@@ -87,7 +88,7 @@ void write_physical_address_1b(physical_address_t address, uint8_t value)
         return;
     }
 
-    uint8_t* ptr = get_physical_address_ptr(address);
+    volatile uint8_t* ptr = get_physical_address_ptr(address);
 
     if (ptr == NULL)
         return;
