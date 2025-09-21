@@ -2,13 +2,9 @@ section .text
 bits 32
 
 extern task_esp_offset
-extern task_esp0_offset
 extern task_cr3_offset
 
-extern TSS
-extern TSS_esp0_offset
-
-; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb)
+; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds)
 global context_switch
 context_switch:
     ; * eax, ecx and edx are caller-saved * ;
@@ -24,6 +20,8 @@ context_switch:
 
     mov esi, [esp + (4 + 2) * 4]        ; $esi = (uint32_t)next_tcb
 
+    mov edx, [esp + (4 + 3) * 4]
+
     mov esp, [esi + ebx]                ; $esp = esi->esp
 
     mov ebx, [task_cr3_offset]
@@ -37,10 +35,10 @@ context_switch:
     mov cr3, eax
 
 .end:
-    mov eax, [task_esp0_offset]
-    mov ebx, [esi + eax]
-    mov eax, [TSS_esp0_offset]
-    mov [TSS + eax], ebx
+    mov ds, dx
+    mov es, dx
+    mov fs, dx
+    mov gs, dx
 
     pop ebp
     pop edi

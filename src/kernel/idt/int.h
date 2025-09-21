@@ -19,10 +19,8 @@ struct privilege_switch_interrupt_registers
     uint32_t interrupt_number, error_code;
     uint32_t eip, cs, eflags;
 
-    uint32_t esp, ss;   // Read Intel Manuals ->> Vol. 3A 7-13
+    uint32_t esp, ss;   // * Read Intel Manuals ->> Vol. 3A 7-13
 } __attribute__((packed));
-
-#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
 // ^ Changed to local variables
 // uint32_t iret_cr3;
@@ -87,6 +85,6 @@ char* get_error_message(uint32_t fault, uint32_t error_code)
 initrd_file_t* kernel_symbols_file = NULL;
 initrd_file_t* kernel_task_symbols_file = NULL;
 
-void kernel_panic(volatile struct interrupt_registers* registers);
+void kernel_panic(struct interrupt_registers* registers);
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
 void interrupt_handler(volatile struct interrupt_registers* registers);

@@ -5,6 +5,7 @@ extern _main
 global _start
 _start:
     push dword 0  ; stack frame
+    push dword 0
     call _main
 .halt:
     hlt

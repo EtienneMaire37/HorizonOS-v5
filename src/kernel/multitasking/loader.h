@@ -26,9 +26,15 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-void multitasking_add_task_from_initrd(char* name, const char* path)
+void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system)
 {
     LOG(INFO, "Loading ELF file \"initrd:%s\"", path);
+
+    if (ring != 0 && ring != 3)
+    {
+        LOG(ERROR, "Invalid privilege level");
+        abort();
+    }
 
     initrd_file_t* file;
     if (!(file = initrd_find_file(path))) 
@@ -63,18 +69,34 @@ void multitasking_add_task_from_initrd(char* name, const char* path)
     task.cr3 = vas_create_empty();
 
     task.esp = TASK_STACK_TOP_ADDRESS;
+    task.esp0 = TASK_STACK_TOP_ADDRESS;
+
+    task.ring = ring;
+
+    task.system_task = system;
+
+    LOG(DEBUG, "Entry point : 0x%x", header->entry);
+
+    uint8_t code_segment = ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT;
+
+    if (ring != 0)
+    {
+        uint32_t esp = task.esp;
+        task_stack_push(&task, USER_DATA_SEGMENT);  // ss
+        task_stack_push(&task, esp);                // esp
+    }
 
     task_stack_push(&task, 0x200);
-    task_stack_push(&task, KERNEL_CODE_SEGMENT);
+    task_stack_push(&task, code_segment);
     task_stack_push(&task, header->entry);
 
 
     task_stack_push(&task, (uint32_t)iret_instruction);
 
-    task_stack_push(&task, 0);   // ebx
-    task_stack_push(&task, 0);   // esi
-    task_stack_push(&task, 0);   // edi
-    task_stack_push(&task, 0); // ebp
+    task_stack_push(&task, 0);      // ebx
+    task_stack_push(&task, 0);      // esi
+    task_stack_push(&task, 0);      // edi
+    task_stack_push(&task, 0);      // ebp
 
     const int n_ph = header->phnum;
 
@@ -118,7 +140,7 @@ void multitasking_add_task_from_initrd(char* name, const char* path)
             {
                 pt_address = pfa_allocate_physical_page();
                 physical_init_page_table(pt_address);
-                physical_add_page_table(task.cr3, layout.page_directory_entry, pt_address, PAGING_SUPERVISOR_LEVEL, true);
+                physical_add_page_table(task.cr3, layout.page_directory_entry, pt_address, PAGING_USER_LEVEL, true);
             }
 
             uint32_t pte = read_physical_address_4b(pt_address + (layout.page_table_entry * 4));
@@ -126,7 +148,7 @@ void multitasking_add_task_from_initrd(char* name, const char* path)
             if (!(pte & 1))
             {
                 page_address = pfa_allocate_physical_page();
-                physical_set_page(pt_address, layout.page_table_entry, page_address, PAGING_SUPERVISOR_LEVEL, true);
+                physical_set_page(pt_address, layout.page_table_entry, page_address, PAGING_USER_LEVEL, true);
             }
 
             for (uint16_t k = 0; k < 4096; k++)

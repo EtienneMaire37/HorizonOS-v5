@@ -3,6 +3,12 @@ extern void* _break_address;
 
 void _main()
 {
+    // dprintf(STDERR_FILENO, "_main\n");
+    // while(true);
+
+    memset(atexit_stack, 0, 32);
+    atexit_stack_length = 0;
+
     errno = 0;
     heap_size = 0;
     break_address = (uint32_t)&_break_address;
@@ -10,7 +16,8 @@ void _main()
     heap_address = break_address;
     alloc_break_address = break_address;
     malloc_bitmap_init();
-    // // printf("Break address : 0x%x\n\n", break_address);
+
+    // dprintf(STDERR_FILENO, "Initializing buffered streams...\n");
 
     stdin = FILE_create();
     if (stdin == NULL) exit(EXIT_FAILURE);
@@ -29,9 +36,8 @@ void _main()
 
     create_b64_decoding_table();
 
-    memset(atexit_stack, 0, 32);
-    atexit_stack_length = 0;
+    // dprintf(STDERR_FILENO, "Calling main...\n");
 
     exit(main());
-    while(true); // ^ It would GPF <<- { asm volatile ("hlt"); };
+    while(true);
 }

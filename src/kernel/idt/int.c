@@ -3,86 +3,9 @@
 #include "../multitasking/vas.h"
 #include "../multitasking/task.c"
 
-void kernel_panic(volatile struct interrupt_registers* registers)
-{
-    disable_interrupts();
+#include "kernel_panic.h"
 
-    LOG(CRITICAL, "Kernel panic");
-
-    tty_set_color(FG_WHITE, BG_BLACK);
-    tty_clear_screen(' ');
-
-    tty_cursor = 0;
-    tty_update_cursor();
-    // tty_hide_cursor();
-
-    tty_set_color(FG_LIGHTRED, BG_BLACK);
-    printf("Kernel panic\n\n");
-
-    tty_set_color(FG_LIGHTGREEN, BG_BLACK);
-
-    if (multitasking_enabled)
-        printf("Task : \"%s\" (pid = %lu) | ring = %u\n\n", tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring);
-
-    tty_set_color(FG_WHITE, BG_BLACK);
-
-    const char* error_message = get_error_message(registers->interrupt_number, registers->error_code);
-
-    printf("Exception number: %u\n", registers->interrupt_number);
-    printf("Error:       ");
-    tty_set_color(FG_YELLOW, BG_BLACK);
-    puts(error_message);
-    tty_set_color(FG_WHITE, BG_BLACK);
-    printf("Error code:  0x%x\n\n", registers->error_code);
-
-    if (registers->interrupt_number == 14)
-    {
-        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
-        printf("cr3:  0x%x\n\n", registers->cr3);
-
-        uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
-        
-        LOG(DEBUG, "Page directory entry : 0x%x", pde);
-
-        if (pde & 1)
-        {
-            LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
-        }
-    }
-
-    printf("Stack trace : \n");
-    LOG(DEBUG, "Stack trace : ");
-
-    typedef struct call_frame
-    {
-        struct call_frame* ebp;
-        uint32_t eip;
-    } call_frame_t;
-
-    call_frame_t* ebp = (call_frame_t*)registers->ebp;
-    // asm volatile ("mov eax, ebp" : "=a"(ebp));
-
-    // ~ Log the last function (the one the exception happened in)
-    printf("eip : 0x%x ", registers->eip);
-    LOG(DEBUG, "eip : 0x%x ", registers->eip);
-    if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
-    (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
-        print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
-    putchar('\n');
-
-    while ((uint32_t)ebp != 0 && ((uint32_t)ebp != (uint32_t)&stack_top) && ((uint32_t)ebp != TASK_STACK_TOP_ADDRESS))
-    {
-        printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-        LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-        if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
-        (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
-            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 because it pushes the return address not the calling address
-        putchar('\n');
-        ebp = ebp->ebp;
-    }
-
-    halt();
-}
+#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
 {
@@ -99,10 +22,10 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
         char ch = file->data[file_offset];
         if (ch == '\n')
         {
-            if (last_symbol_address <= eip && symbol_address > eip)
+            if (last_symbol_address <= eip && symbol_address > eip && is_a_valid_function(found_symbol_type))
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
-                fputc(file == kernel_symbols_file ? '[' : '(', stderr);
+                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "[" : "(");
                 
                 if (found_symbol_type == 'T' || found_symbol_type == 't')
                     tty_set_color(FG_LIGHTCYAN, BG_BLACK);
@@ -122,7 +45,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                         subfunction = true;
                     }
                     putchar(last_symbol_buffer[i]);
-                    fputc(last_symbol_buffer[i], stderr);
+                    CONTINUE_LOG(DEBUG, "%c", last_symbol_buffer[i]);
                     if (subfunction)
                     {
                         tty_set_color(light_tty_color & 0x07, light_tty_color & 0x70);
@@ -131,7 +54,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                 }
                 tty_set_color(FG_WHITE, BG_BLACK);
                 putchar(file == kernel_symbols_file ? ']' : ')');
-                fputc(file == kernel_symbols_file ? ']' : ')', stderr);
+                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "]" : ")");
                 return;
             }
             else if (is_a_valid_function(current_symbol_type))
@@ -151,13 +74,13 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
             if (line_offset == 9)
             {
                 current_symbol_type = ch;
-                if (is_a_valid_function(current_symbol_type) && current_symbol_address != 0)
+                if (current_symbol_address != 0)    // && is_a_valid_function(current_symbol_type)
                 {
                     last_symbol_address = symbol_address;
                     symbol_address = current_symbol_address;
                 }
             }
-            if (line_offset >= 11 && line_offset < 64 + 11 && is_a_valid_function(current_symbol_type))
+            if (line_offset >= 11 && line_offset < 64 + 11) // && is_a_valid_function(current_symbol_type)
             {
                 if (!(last_symbol_address <= eip && symbol_address > eip))
                 {
@@ -190,7 +113,10 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
         
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
-            kernel_panic(registers);
+        {
+            disable_interrupts();
+            kernel_panic((struct interrupt_registers*)registers);
+        }
         else
         {
             tasks[current_task_index].is_dead = true;
@@ -240,14 +166,18 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
     }
     if (registers->interrupt_number == 0xf0)  // System call
     {
-        // LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
-        if (!multitasking_enabled) return_from_isr();
+        if (!multitasking_enabled || first_task_switch) return_from_isr();
+
+        // #define LOG_SYSCALLS
+        #ifdef LOG_SYSCALLS
+        LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
+        #endif
 
         uint16_t old_index;
         switch (registers->eax)
         {
         case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
-            LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return_from_isr() code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+            LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
             break;
@@ -380,23 +310,25 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     }
                 }
 
-                disable_interrupts();
+                // disable_interrupts();
 
-                asm volatile ("mov eax, esp" : "=a" (tasks[new_task_index].esp));
+                abort();
 
-                task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
+            // //     asm volatile ("mov eax, esp" : "=a" (tasks[new_task_index].esp));
 
-                task_stack_push(&tasks[new_task_index], registers->ebx);
-                task_stack_push(&tasks[new_task_index], registers->esi);
-                task_stack_push(&tasks[new_task_index], registers->edi);
-                task_stack_push(&tasks[new_task_index], registers->ebp);
+            // //     task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
 
-                full_context_switch(new_task_index);
-                goto old_task_ret;
-            ret:
-                registers->eax = registers->ebx = 0;
-            old_task_ret:
-                enable_interrupts();
+            // //     task_stack_push(&tasks[new_task_index], registers->ebx);
+            // //     task_stack_push(&tasks[new_task_index], registers->esi);
+            // //     task_stack_push(&tasks[new_task_index], registers->edi);
+            // //     task_stack_push(&tasks[new_task_index], registers->ebp);
+
+            // //     full_context_switch(new_task_index);
+            // //     goto old_task_ret;
+            // // ret:
+            // //     registers->eax = registers->ebx = 0;
+            // // old_task_ret:
+                // enable_interrupts();
             } 
             break;
 
@@ -441,7 +373,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                                         true);
                     memset_page(page, 0);
 
-                    #define USE_IVLPG
+                    // #define USE_IVLPG
                     #ifdef USE_IVLPG
                     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
                     *recursive_paging_pte = (page & 0xfffff000) | 0b1111;  // * Write-through caching | User level | Read write | Present
@@ -484,7 +416,6 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
                     physical_remove_page(pt_address, layout.page_table_entry);
 
-                    #define USE_IVLPG
                     #ifdef USE_IVLPG
                     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
                     *recursive_paging_pte = 0b1000;  // * Write-through caching | Not present
@@ -519,6 +450,9 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
         }        
+        #ifdef LOG_SYSCALLS
+        LOG(TRACE, "Successfully handled syscall");
+        #endif
     }
 
     return_from_isr();

@@ -75,6 +75,8 @@ int liballoc_unlock()
 
 void* liballoc_alloc(int pages)
 {
+    // write(STDERR_FILENO, "liballoc_alloc call\n", 20);
+
 	uint32_t page_number = 0;
     int continuous_pages = 0;
 
@@ -93,10 +95,13 @@ void* liballoc_alloc(int pages)
             uint32_t page_address = heap_address + 4096 * page_number;
             if (break_address <= page_address + 4096 * pages)
                 if (brk((void*)page_address + 4096 * pages) == -1)
+                {
+                    // write(STDERR_FILENO, "liballoc_alloc failed\n", 22);
                     return NULL;
+                }
             for (uint32_t i = page_number; i < page_number + pages; i++)
                 malloc_bitmap_set_page(i, true);
-            // printf("Successfully allocated pages 0x%x-0x%x\n", page_number, page_number + pages);
+            // write(STDERR_FILENO, "liballoc_alloc successfull\n", 27);
             return (void*)page_address;
         }
     }
@@ -104,11 +109,12 @@ void* liballoc_alloc(int pages)
 
 int liballoc_free(void* ptr, int pages)
 {
-    // fprintf(stderr, "Freeing pages!!!\n");
+    // write(STDERR_FILENO, "liballoc_free call\n", 19);
     if (ptr == NULL) return 1;
     uint32_t page_number = ((uint32_t)ptr - heap_address) / 4096;
 	for (uint32_t i = page_number; i < page_number + pages; i++)
         malloc_bitmap_set_page(i, false);
-    brk((void*)heap_address + 4096 * malloc_last_allocated_page_index);     // * Shouldn't cause an error
+    // brk((void*)heap_address + 4096 * malloc_last_allocated_page_index);     // * Shouldn't cause an error
+    brk((void*)heap_address + 4096 * (malloc_last_allocated_page_index + 1));
     return 0;
 }

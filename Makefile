@@ -59,19 +59,21 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -Ofast
-	$(CROSSLD) -T src/tasks/link.ld -m elf_i386 \
+	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \
     "src/libc/lib/libc.a" \
-    "src/libc/lib/libm.a"
+    "src/libc/lib/libm.a" \
+	-ffreestanding -nostdlib \
+	-lgcc
 	mkdir -p ./bin/initrd
-	$(CROSSNM) -n --defined-only -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
+	$(CROSSNM) -n -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	nasm -f elf32 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
 	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O3 $(CFLAGS)
-	$(CROSSGCC) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -o "src/libc/lib/libc.o" -lgcc -r
+	$(CROSSGCC) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -o "src/libc/lib/libc.o" -r
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib

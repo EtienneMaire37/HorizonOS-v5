@@ -53,13 +53,14 @@ uint64_t current_pid;
 extern void iret_instruction();
 void task_kill(uint16_t index);
 
-extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb);
+extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds);
 extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
     current_task_index = next_task_index;
-    context_switch(&tasks[last_index], &tasks[current_task_index]);
+    TSS.esp0 = tasks[current_task_index].esp0;
+    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
 }
 
 bool task_is_blocked(uint16_t index)
