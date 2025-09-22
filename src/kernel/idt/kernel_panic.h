@@ -50,7 +50,7 @@ void kernel_panic(struct interrupt_registers* registers)
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
 
-    // #define TRACE_FUNCTIONS
+    #define TRACE_FUNCTIONS
     #ifndef TRACE_FUNCTIONS
     for (int i = 0; i < 8; i++)
     {
