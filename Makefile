@@ -17,7 +17,8 @@ run:
 	-debugcon file:debug/${DATE}.log					\
 	-m 128                                        		\
 	-drive file=horizonos.iso,index=0,media=disk,format=raw \
-	-smp 8
+	-smp 8 \
+	-d cpu
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	mkdir bin -p
@@ -29,7 +30,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only -Werror $(CLOGLEVEL)
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -O3 -Wno-stringop-overflow -mgeneral-regs-only -Werror $(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \
 	-ffreestanding -nostdlib \
@@ -58,7 +59,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 
 src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -Ofast
+	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -O2
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/kernel32.elf" \
     "src/tasks/bin/kernel32.o" \

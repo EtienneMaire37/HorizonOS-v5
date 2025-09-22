@@ -4,7 +4,7 @@ typedef struct task
 {
     char* name;
 
-    volatile uint32_t esp, esp0, cr3;
+    volatile uint32_t esp, cr3;
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
@@ -21,7 +21,7 @@ typedef struct task
 uint8_t global_cpu_ticks = 0;
 
 const int task_esp_offset = offsetof(thread_t, esp);
-const int task_esp0_offset = offsetof(thread_t, esp0);
+// const int task_esp0_offset = offsetof(thread_t, esp0);
 const int task_cr3_offset = offsetof(thread_t, cr3);
 
 #define TASK_STACK_PAGES        0x100  // 1MB
@@ -59,7 +59,7 @@ void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
     current_task_index = next_task_index;
-    TSS.esp0 = tasks[current_task_index].esp0;
+    TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
     context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
 }
 

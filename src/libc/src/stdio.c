@@ -345,6 +345,14 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 else
                     printf_f(va_arg(args, double));
                 #else
+                if (next_arg_64)
+                {
+                    volatile long double x = va_arg(args, long double);
+                }
+                else
+                {
+                    volatile double x = va_arg(args, double);
+                }
                 func_s("(floating point value)");
                 #endif
                 break;

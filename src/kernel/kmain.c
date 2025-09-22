@@ -510,6 +510,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     tty_set_color(FG_WHITE, BG_BLACK);
     putchar('\n');
 
+    // while(true);
+
     LOG(DEBUG, "Initializing multitasking");
     LOG(DEBUG, "memory allocated to TCBs : %u bytes", sizeof(tasks));
 

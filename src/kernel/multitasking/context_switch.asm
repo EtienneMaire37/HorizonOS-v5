@@ -20,7 +20,7 @@ context_switch:
 
     mov esi, [esp + (4 + 2) * 4]        ; $esi = (uint32_t)next_tcb
 
-    mov edx, [esp + (4 + 3) * 4]
+    mov edx, [esp + (4 + 3) * 4]        ; $edx = ds
 
     mov esp, [esi + ebx]                ; $esp = esi->esp
 
@@ -35,14 +35,14 @@ context_switch:
     mov cr3, eax
 
 .end:
-    mov ds, dx
-    mov es, dx
-    mov fs, dx
-    mov gs, dx
-
     pop ebp
     pop edi
     pop esi
     pop ebx
+
+    mov ds, dx
+    mov es, dx
+    mov fs, dx
+    mov gs, dx
 
     ret

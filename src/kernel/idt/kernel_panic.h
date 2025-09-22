@@ -50,9 +50,20 @@ void kernel_panic(struct interrupt_registers* registers)
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
 
-    typedef struct call_frame
+    // #define TRACE_FUNCTIONS
+    #ifndef TRACE_FUNCTIONS
+    for (int i = 0; i < 8; i++)
     {
-        struct call_frame* ebp;
+        uint32_t* ptr = !(tasks[current_task_index].ring != 0 && multitasking_enabled && !first_task_switch) ? 
+            &((uint32_t*)&registers[1])[i] : 
+            &((uint32_t*)((struct privilege_switch_interrupt_registers*)registers)->esp)[i];
+
+        printf("esp + %u (0x%x) : 0x%x\n", i * 4, ptr, *ptr);
+    }
+    #else
+    typedef struct __attribute__((packed)) call_frame
+    {
+        uint32_t ebp;
         uint32_t eip;
     } call_frame_t;
 
@@ -60,23 +71,42 @@ void kernel_panic(struct interrupt_registers* registers)
     // asm volatile ("mov eax, ebp" : "=a"(ebp));
 
     // ~ Log the last function (the one the exception happened in)
-    printf("eip : 0x%x ", registers->eip);
+    printf("eip : 0x");
+    tty_set_color(FG_YELLOW, BG_BLACK);
+    printf("%x", registers->eip);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    putchar(' ');
+
     LOG(DEBUG, "eip : 0x%x ", registers->eip);
-    if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
-    (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
-        print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
+    print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
     putchar('\n');
 
-    while ((uint32_t)ebp != 0 && (!multitasking_enabled || (multitasking_enabled && first_task_switch) || ((uint32_t)ebp < 0xc0000000) && ((uint32_t)ebp >= 767U * 1024 * 4096)))
+    int i = 0;
+    const int max_stack_frames = 12;
+
+    while (i <= max_stack_frames && (uint32_t)ebp != 0 && (uint32_t)ebp->eip != 0 && 
+    (((!multitasking_enabled || (multitasking_enabled && first_task_switch)) &&
+            (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))) || 
+        (((uint32_t)ebp < TASK_STACK_TOP_ADDRESS) && ((uint32_t)ebp >= TASK_STACK_BOTTOM_ADDRESS))))
     {
-        printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-        LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-        if ((((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top)) || 
-        (((uint32_t)ebp > TASK_STACK_BOTTOM_ADDRESS) && ((uint32_t)ebp <= TASK_STACK_TOP_ADDRESS)))
-            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp); // ^ -1 because it pushes the return address not the calling address
-        putchar('\n');
-        ebp = ebp->ebp;
+        if (i == max_stack_frames)
+        {
+            tty_set_color(FG_RED, BG_BLACK);
+            printf("...");
+            tty_set_color(FG_WHITE, BG_BLACK);
+            LOG(DEBUG, "...");
+        }
+        else
+        {
+            printf("eip : 0x%x | ebp : 0x%x ", ebp->eip - 4, ebp);
+            LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip - 4, ebp);
+            print_kernel_symbol_name(ebp->eip - 4, (uint32_t)ebp); // ^ -4 because it pushes the return address not the calling address
+            putchar('\n');
+            ebp = (call_frame_t*)ebp->ebp;
+        }
+        i++;
     }
+    #endif
 
     halt();
 }

@@ -69,7 +69,6 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
     task.cr3 = vas_create_empty();
 
     task.esp = TASK_STACK_TOP_ADDRESS;
-    task.esp0 = TASK_STACK_TOP_ADDRESS;
 
     task.ring = ring;
 
@@ -86,9 +85,9 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
         task_stack_push(&task, esp);                // esp
     }
 
-    task_stack_push(&task, 0x200);
-    task_stack_push(&task, code_segment);
-    task_stack_push(&task, header->entry);
+    task_stack_push(&task, 0x200);          // eflags
+    task_stack_push(&task, code_segment);   // cs
+    task_stack_push(&task, header->entry);  // eip
 
 
     task_stack_push(&task, (uint32_t)iret_instruction);

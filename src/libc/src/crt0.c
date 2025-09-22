@@ -4,7 +4,6 @@ extern void* _break_address;
 void _main()
 {
     // dprintf(STDERR_FILENO, "_main\n");
-    // while(true);
 
     memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;

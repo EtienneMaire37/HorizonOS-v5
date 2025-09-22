@@ -267,7 +267,6 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
 
                 tasks[new_task_index].cr3 = vas_create_empty();
                 tasks[new_task_index].esp = tasks[current_task_index].esp;
-                tasks[new_task_index].esp0 = tasks[current_task_index].esp0;
 
                 copy_fpu_state(&tasks[current_task_index].fpu_state, &tasks[new_task_index].fpu_state);
 
