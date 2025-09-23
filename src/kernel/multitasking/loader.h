@@ -131,23 +131,21 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
         uint32_t address = start_address;
         for (uint32_t j = 0; j < num_pages; j++)
         {
-            struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
-
-            uint32_t pde = read_physical_address_4b(task.cr3 + (layout.page_directory_entry * 4));
+            uint32_t pde = read_physical_address_4b(task.cr3 + ((address >> 22) * 4));
             physical_address_t pt_address = pde & 0xfffff000;
             if (!(pde & 1))
             {
                 pt_address = pfa_allocate_physical_page();
                 physical_init_page_table(pt_address);
-                physical_add_page_table(task.cr3, layout.page_directory_entry, pt_address, PAGING_USER_LEVEL, true);
+                physical_add_page_table(task.cr3, (address >> 22), pt_address, PAGING_USER_LEVEL, true);
             }
 
-            uint32_t pte = read_physical_address_4b(pt_address + (layout.page_table_entry * 4));
+            uint32_t pte = read_physical_address_4b(pt_address + (((address >> 12) & 0x3ff) * 4));
             physical_address_t page_address = pte & 0xfffff000;
             if (!(pte & 1))
             {
                 page_address = pfa_allocate_physical_page();
-                physical_set_page(pt_address, layout.page_table_entry, page_address, PAGING_USER_LEVEL, true);
+                physical_set_page(pt_address, ((address >> 12) & 0x3ff), page_address, PAGING_USER_LEVEL, true);
             }
 
             for (uint16_t k = 0; k < 4096; k++)

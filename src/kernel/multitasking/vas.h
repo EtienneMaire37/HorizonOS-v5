@@ -20,14 +20,10 @@ physical_address_t vas_create_empty()
         physical_init_page_table(pt_address);
         physical_add_page_table(cr3, i + 768, pt_address, PAGING_SUPERVISOR_LEVEL, true);
 
-        struct virtual_address_layout layout;
-        layout.page_directory_entry = i + 768;
-        layout.page_offset = 0;
         for (uint16_t j = 0; j < 1024; j++)
         {
-            layout.page_table_entry = j;
-            uint32_t address = *(uint32_t*)&layout - 0xc0000000;
-            physical_set_page(pt_address, layout.page_table_entry, address, PAGING_SUPERVISOR_LEVEL, true);
+            uint32_t address = ((((uint32_t)i + 768) << 22) | ((uint32_t)j << 12)) - 0xc0000000;
+            physical_set_page(pt_address, j, address, PAGING_SUPERVISOR_LEVEL, true);
         }
     }
 

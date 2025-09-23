@@ -76,7 +76,7 @@ void multitasking_add_idle_task(char* name)
     tasks[task_count++] = task;
 }
 
-void task_stack_push(thread_t* task, uint32_t value)
+void task_stack_push(volatile thread_t* task, uint32_t value)
 {
     task->esp -= 4;
     task_write_at_address_1b(task, (physical_address_t)task->esp + 0, (value >> 0)  & 0xff);
@@ -85,23 +85,21 @@ void task_stack_push(thread_t* task, uint32_t value)
     task_write_at_address_1b(task, (physical_address_t)task->esp + 3, (value >> 24) & 0xff);
 }
 
-void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
+void task_write_at_address_1b(volatile thread_t* task, uint32_t address, uint8_t value)
 {
     if (task->cr3 == physical_null)
     {
         LOG(WARNING, "Kernel tried to write into a null vas");
         return;
     }
-
-    struct virtual_address_layout layout = *(struct virtual_address_layout*)&address;
     
-    uint32_t pde = read_physical_address_4b(task->cr3 + 4 * layout.page_directory_entry);
+    uint32_t pde = read_physical_address_4b(task->cr3 + 4 * (address >> 22));
     if (!(pde & 1)) return;
     physical_address_t pt_address = pde & 0xfffff000;
-    uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+    uint32_t pte = read_physical_address_4b(pt_address + 4 * ((address >> 12) & 0x3ff));
     if (!(pte & 1)) return;
     physical_address_t page_address = pte & 0xfffff000;
-    physical_address_t byte_address = page_address | layout.page_offset;
+    physical_address_t byte_address = page_address | (address & 0xfff);
     write_physical_address_1b(byte_address, value);
 }
 
@@ -132,7 +130,7 @@ void switch_task(volatile struct interrupt_registers** registers)
 
     full_context_switch(next_task_index);
 
-    #define LOG_TASK_SWITCHES
+    // #define LOG_TASK_SWITCHES
     #ifdef LOG_TASK_SWITCHES
     LOG(TRACE, "Switched to task \"%s\" (pid = %lu, ring = %u) | registers : esp : 0x%x : end esp : 0x%x | ebp : 0x%x | eip : 0x%x, cs : 0x%x, eflags : 0x%x, ds : 0x%x, eax : 0x%x, ebx : 0x%x, ecx : 0x%x, edx : 0x%x, esi : 0x%x, edi : 0x%x, cr3 : 0x%x", 
         tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring, 

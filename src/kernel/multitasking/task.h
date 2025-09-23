@@ -53,6 +53,18 @@ uint64_t current_pid;
 extern void iret_instruction();
 void task_kill(uint16_t index);
 
+// atomic_flag task_switch_lock = ATOMIC_FLAG_INIT;
+
+// void lock_task_queue()
+// {
+//     acquire_spinlock(&task_switch_lock);
+// }
+
+// void unlock_task_queue()
+// {
+//     release_spinlock(&task_switch_lock);
+// }
+
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds);
 extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
@@ -94,9 +106,7 @@ uint16_t find_next_task_index()
     return index;
 }
 
-// #define task_write_register_data(task_ptr, register, data)  write_physical_address_4b((physical_address_t)((uint32_t)(task_ptr)->registers_ptr) + (task_ptr)->stack_phys - TASK_STACK_BOTTOM_ADDRESS + offsetof(struct privilege_switch_interrupt_registers, register), data);
-// ~~ Caller's responsability to check whether or not the task has the register actually pushed on the stack
-void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
+void task_write_at_address_1b(volatile thread_t* task, uint32_t address, uint8_t value);
 
 void task_destroy(thread_t* task);
 void switch_task(volatile struct interrupt_registers** registers);
@@ -105,6 +115,6 @@ void multitasking_start();
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 
-void task_stack_push(thread_t*, uint32_t);
+void task_stack_push(volatile thread_t*, uint32_t);
 
 void idle_main();

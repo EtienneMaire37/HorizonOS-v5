@@ -6,8 +6,8 @@ extern _gdtr
 ; void LoadGDT()
 load_gdt:
     lgdt  [_gdtr]
-    jmp 0x08:.reloadSeg
-.reloadSeg:
+    jmp 0x08:.reload_seg
+.reload_seg:
     mov   ax, 0x10
     mov   ds, ax
     mov   es, ax

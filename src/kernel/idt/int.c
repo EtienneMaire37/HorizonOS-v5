@@ -5,95 +5,6 @@
 
 #include "kernel_panic.h"
 
-#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
-
-void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
-{
-    initrd_file_t* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
-    if (file == NULL) return;
-    
-    uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
-    uint32_t file_offset = 0, line_offset = 0;
-    char last_symbol_buffer[64] = {0};
-    uint16_t last_symbol_buffer_length = 0;
-    char current_symbol_type = ' ', found_symbol_type = ' ';
-    while (file_offset < file->size)
-    {
-        char ch = file->data[file_offset];
-        if (ch == '\n')
-        {
-            if (last_symbol_address <= eip && symbol_address > eip && is_a_valid_function(found_symbol_type))
-            {
-                putchar(file == kernel_symbols_file ? '[' : '(');
-                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "[" : "(");
-                
-                if (found_symbol_type == 'T' || found_symbol_type == 't')
-                    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-                else if (found_symbol_type == 'R' || found_symbol_type == 'r')
-                    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
-                else
-                    tty_set_color(FG_LIGHTGRAY, BG_BLACK);
-
-                uint8_t light_tty_color = tty_color;
-                bool subfunction = false;
-
-                for (uint8_t i = 0; i < minint(64, last_symbol_buffer_length); i++)
-                {
-                    if (last_symbol_buffer[i] == '.')
-                    {
-                        tty_set_color(FG_LIGHTGRAY, BG_BLACK);
-                        subfunction = true;
-                    }
-                    putchar(last_symbol_buffer[i]);
-                    CONTINUE_LOG(DEBUG, "%c", last_symbol_buffer[i]);
-                    if (subfunction)
-                    {
-                        tty_set_color(light_tty_color & 0x07, light_tty_color & 0x70);
-                        subfunction = false;
-                    }
-                }
-                tty_set_color(FG_WHITE, BG_BLACK);
-                putchar(file == kernel_symbols_file ? ']' : ')');
-                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "]" : ")");
-                return;
-            }
-            else if (is_a_valid_function(current_symbol_type))
-            {
-                last_symbol_buffer_length = line_offset - 11;
-            }
-            line_offset = 0;
-        }
-        else
-        {
-            if (line_offset < 8)
-            {
-                uint32_t val = hex_char_to_int(ch);
-                current_symbol_address &= ~((uint32_t)0xf << ((7 - line_offset) * 4));
-                current_symbol_address |= val << ((7 - line_offset) * 4);
-            }
-            if (line_offset == 9)
-            {
-                current_symbol_type = ch;
-                if (current_symbol_address != 0)    // && is_a_valid_function(current_symbol_type)
-                {
-                    last_symbol_address = symbol_address;
-                    symbol_address = current_symbol_address;
-                }
-            }
-            if (line_offset >= 11 && line_offset < 64 + 11) // && is_a_valid_function(current_symbol_type)
-            {
-                if (!(last_symbol_address <= eip && symbol_address > eip))
-                {
-                    last_symbol_buffer[line_offset - 11] = ch;
-                    found_symbol_type = current_symbol_type;
-                }
-            }
-            line_offset++;
-        }
-        file_offset++;
-    }
-}
-
 #define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
 
 void interrupt_handler(volatile struct interrupt_registers* registers)
@@ -272,7 +183,6 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
 
                 registers->eax = tasks[new_task_index].pid >> 32;
                 registers->ebx = tasks[new_task_index].pid & 0xffffffff;
-
                 
                 for (uint16_t i = 0; i < 768; i++)
                 {
@@ -311,22 +221,24 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
 
                 // disable_interrupts();
 
-                abort();
+                // abort();
 
-            // //     asm volatile ("mov eax, esp" : "=a" (tasks[new_task_index].esp));
+                asm volatile ("mov %0, esp" : "=r" (tasks[new_task_index].esp));
 
-            // //     task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
+                // LOG(TRACE, "esp : 0x%x", tasks[new_task_index].esp);
 
-            // //     task_stack_push(&tasks[new_task_index], registers->ebx);
-            // //     task_stack_push(&tasks[new_task_index], registers->esi);
-            // //     task_stack_push(&tasks[new_task_index], registers->edi);
-            // //     task_stack_push(&tasks[new_task_index], registers->ebp);
+                task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
 
-            // //     full_context_switch(new_task_index);
-            // //     goto old_task_ret;
-            // // ret:
-            // //     registers->eax = registers->ebx = 0;
-            // // old_task_ret:
+                task_stack_push(&tasks[new_task_index], registers->ebx);
+                task_stack_push(&tasks[new_task_index], registers->esi);
+                task_stack_push(&tasks[new_task_index], registers->edi);
+                task_stack_push(&tasks[new_task_index], registers->ebp);
+
+                full_context_switch(new_task_index);
+                goto old_task_ret;
+            ret:
+                registers->eax = registers->ebx = 0;
+            old_task_ret:
                 // enable_interrupts();
             } 
             break;
@@ -338,8 +250,8 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     registers->eax = 0;
                     break;
                 }
-                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
-                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
+                
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * (registers->ebx >> 22));
                 physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
                 if (!(pde & 1))
                 {
@@ -351,12 +263,12 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     }
                     physical_init_page_table(pt_address);
                     physical_add_page_table(tasks[current_task_index].cr3, 
-                                            layout.page_directory_entry, 
+                                            registers->ebx >> 22, 
                                             pt_address, 
                                             PAGING_USER_LEVEL, 
                                             true);
                 }
-                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * ((registers->ebx >> 12) & 0x3ff));
                 if (!(pte & 1))
                 {
                     physical_address_t page = pfa_allocate_physical_page();
@@ -366,7 +278,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                         break;
                     }
                     physical_set_page(  pt_address, 
-                                        layout.page_table_entry, 
+                                        ((registers->ebx >> 12) & 0x3ff), 
                                         page, 
                                         PAGING_USER_LEVEL, 
                                         true);
@@ -399,21 +311,20 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     registers->eax = 0;
                     break;
                 }
-                struct virtual_address_layout layout = *(struct virtual_address_layout*)&(registers->ebx);
-                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * layout.page_directory_entry);
+                uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * (registers->ebx >> 22));
                 if (!(pde & 1))
                 {
                     registers->eax = 0;
                     break;
                 }                
                 physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
-                uint32_t pte = read_physical_address_4b(pt_address + 4 * layout.page_table_entry);
+                uint32_t pte = read_physical_address_4b(pt_address + 4 * (registers->ebx >> 22));
                 if (!(pte & 1))
                     registers->eax = 0;
                 else
                 {
                     pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
-                    physical_remove_page(pt_address, layout.page_table_entry);
+                    physical_remove_page(pt_address, (registers->ebx >> 22));
 
                     #ifdef USE_IVLPG
                     uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));

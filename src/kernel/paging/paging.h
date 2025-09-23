@@ -32,13 +32,6 @@ struct page_table_entry
     uint32_t address : 20;  // High bits
 } __attribute__((packed));
 
-struct virtual_address_layout
-{
-    uint16_t page_offset : 12;
-    uint16_t page_table_entry : 10;
-    uint16_t page_directory_entry : 10;
-} __attribute__((packed));
-
 struct page_directory_entry_4kb page_directory[1024] __attribute__((aligned(4096)));
 
 void init_page_directory(struct page_directory_entry_4kb* pd);

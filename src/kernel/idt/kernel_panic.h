@@ -1,5 +1,95 @@
 #pragma once
 
+#define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
+
+void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
+{
+    // initrd_file_t* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
+    initrd_file_t* file = eip >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
+    if (file == NULL) return;
+    
+    uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
+    uint32_t file_offset = 0, line_offset = 0;
+    char last_symbol_buffer[64] = {0};
+    uint16_t last_symbol_buffer_length = 0;
+    char current_symbol_type = ' ', found_symbol_type = ' ';
+    while (file_offset < file->size)
+    {
+        char ch = file->data[file_offset];
+        if (ch == '\n')
+        {
+            if (last_symbol_address <= eip && symbol_address > eip && is_a_valid_function(found_symbol_type))
+            {
+                putchar(file == kernel_symbols_file ? '[' : '(');
+                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "[" : "(");
+                
+                if (found_symbol_type == 'T' || found_symbol_type == 't')
+                    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+                else if (found_symbol_type == 'R' || found_symbol_type == 'r')
+                    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+                else
+                    tty_set_color(FG_LIGHTGRAY, BG_BLACK);
+
+                uint8_t light_tty_color = tty_color;
+                bool subfunction = false;
+
+                for (uint8_t i = 0; i < minint(64, last_symbol_buffer_length); i++)
+                {
+                    if (last_symbol_buffer[i] == '.')
+                    {
+                        tty_set_color(FG_LIGHTGRAY, BG_BLACK);
+                        subfunction = true;
+                    }
+                    putchar(last_symbol_buffer[i]);
+                    CONTINUE_LOG(DEBUG, "%c", last_symbol_buffer[i]);
+                    if (subfunction)
+                    {
+                        tty_set_color(light_tty_color & 0x07, light_tty_color & 0x70);
+                        subfunction = false;
+                    }
+                }
+                tty_set_color(FG_WHITE, BG_BLACK);
+                putchar(file == kernel_symbols_file ? ']' : ')');
+                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "]" : ")");
+                return;
+            }
+            else if (is_a_valid_function(current_symbol_type))
+            {
+                last_symbol_buffer_length = line_offset - 11;
+            }
+            line_offset = 0;
+        }
+        else
+        {
+            if (line_offset < 8)
+            {
+                uint32_t val = hex_char_to_int(ch);
+                current_symbol_address &= ~((uint32_t)0xf << ((7 - line_offset) * 4));
+                current_symbol_address |= val << ((7 - line_offset) * 4);
+            }
+            if (line_offset == 9)
+            {
+                current_symbol_type = ch;
+                if (current_symbol_address != 0)    // && is_a_valid_function(current_symbol_type)
+                {
+                    last_symbol_address = symbol_address;
+                    symbol_address = current_symbol_address;
+                }
+            }
+            if (line_offset >= 11 && line_offset < 64 + 11) // && is_a_valid_function(current_symbol_type)
+            {
+                if (!(last_symbol_address <= eip && symbol_address > eip))
+                {
+                    last_symbol_buffer[line_offset - 11] = ch;
+                    found_symbol_type = current_symbol_type;
+                }
+            }
+            line_offset++;
+        }
+        file_offset++;
+    }
+}
+
 void kernel_panic(struct interrupt_registers* registers)
 {
     disable_interrupts();
@@ -98,9 +188,9 @@ void kernel_panic(struct interrupt_registers* registers)
         }
         else
         {
-            printf("eip : 0x%x | ebp : 0x%x ", ebp->eip - 4, ebp);
-            LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip - 4, ebp);
-            print_kernel_symbol_name(ebp->eip - 4, (uint32_t)ebp); // ^ -4 because it pushes the return address not the calling address
+            printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
+            LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
+            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp);
             putchar('\n');
             ebp = (call_frame_t*)ebp->ebp;
         }
