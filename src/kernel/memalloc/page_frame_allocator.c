@@ -148,7 +148,11 @@ virtual_address_t pfa_allocate_page()
 
 void pfa_free_physical_page(physical_address_t address) 
 {
-    if (address == physical_null) return;
+    if (address == physical_null) 
+    {
+        LOG(WARNING, "Kernel tried to free NULL");
+        return;
+    }
 
     if (address & 0xfff) 
     {
