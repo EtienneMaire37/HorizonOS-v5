@@ -124,7 +124,15 @@ void kernel_panic(struct interrupt_registers* registers)
 
     if (registers->interrupt_number == 14)
     {
-        printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
+        if (registers->cr2)
+            printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
+        else
+        {
+            printf("cr2 : ");
+            tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+            printf("NULL\n");
+            tty_set_color(FG_WHITE, BG_BLACK);
+        }
         printf("cr3:  0x%x\n\n", registers->cr3);
 
         uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));

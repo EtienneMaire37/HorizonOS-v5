@@ -9,6 +9,8 @@ typedef struct task
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
 
+    pid_t forked_pid;
+
     uint8_t ring;
     pid_t pid;
     bool system_task;    // system_task: cause kernel panics
@@ -53,17 +55,15 @@ uint64_t current_pid;
 extern void iret_instruction();
 void task_kill(uint16_t index);
 
-// atomic_flag task_switch_lock = ATOMIC_FLAG_INIT;
+void lock_task_queue()
+{
+    disable_interrupts();
+}
 
-// void lock_task_queue()
-// {
-//     acquire_spinlock(&task_switch_lock);
-// }
-
-// void unlock_task_queue()
-// {
-//     release_spinlock(&task_switch_lock);
-// }
+void unlock_task_queue()
+{
+    enable_interrupts();
+}
 
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds);
 extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
@@ -79,20 +79,8 @@ bool task_is_blocked(uint16_t index)
 {
     if (tasks[index].is_dead) return true;
     if (tasks[index].reading_stdin) return true;
+    if (tasks[index].forked_pid) return true;
     return false;
-}
-
-void cleanup_tasks()
-{
-    for (uint16_t i = 0; i < task_count; i++)
-    {
-        if (i == current_task_index) continue;
-        if (tasks[i].is_dead)
-        {
-            task_kill(i);
-            i--;
-        }
-    }
 }
 
 uint16_t find_next_task_index() 
@@ -116,5 +104,7 @@ void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 
 void task_stack_push(volatile thread_t*, uint32_t);
+
+void cleanup_tasks();
 
 void idle_main();

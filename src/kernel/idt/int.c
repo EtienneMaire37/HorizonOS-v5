@@ -7,6 +7,8 @@
 
 #define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
 
+#define USE_IVLPG
+
 void interrupt_handler(volatile struct interrupt_registers* registers)
 {
     uint32_t old_phys_mem_page = current_phys_mem_page;
@@ -32,6 +34,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
         {
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
+            current_phys_mem_page = 0xffffffff;
         }
 
         return_from_isr();
@@ -72,7 +75,10 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
         pic_send_eoi(irq_number);
 
         if (ts) 
+        {
             switch_task(&registers);
+            current_phys_mem_page = 0xffffffff;
+        }
         return_from_isr();
     }
     if (registers->interrupt_number == 0xf0)  // System call
@@ -91,6 +97,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
             LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
+            current_phys_mem_page = 0xffffffff;
             break;
         case SYSCALL_TIME:     // * time || $eax = time
             registers->eax = time(NULL);
@@ -115,6 +122,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     {
                         tasks[current_task_index].reading_stdin = true;
                         switch_task(&registers);
+                        current_phys_mem_page = 0xffffffff;
                     }
                     registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
                     for (uint32_t i = 0; i < registers->eax; i++)
@@ -157,89 +165,24 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
             registers->ebx = (uint32_t)tasks[current_task_index].pid;
             break;
         case SYSCALL_FORK:     // * fork
-            // if (task_count >= MAX_TASKS)
-            if (true)
+            if (task_count >= MAX_TASKS)
             {
                 registers->eax = 0xffffffff;
                 registers->ebx = 0xffffffff;   // -1
             }
             else
             {
-                task_count++;
-
-                const uint16_t new_task_index = task_count - 1;
-
-                tasks[new_task_index].name = tasks[current_task_index].name;
-                tasks[new_task_index].ring = tasks[current_task_index].ring;
-                tasks[new_task_index].pid = current_pid++;
-                tasks[new_task_index].system_task = tasks[current_task_index].system_task;
-                tasks[new_task_index].reading_stdin = false;
-                utf32_buffer_copy(&tasks[current_task_index].input_buffer, &tasks[new_task_index].input_buffer);
-
-                tasks[new_task_index].cr3 = vas_create_empty();
-                tasks[new_task_index].esp = tasks[current_task_index].esp;
-
-                copy_fpu_state(&tasks[current_task_index].fpu_state, &tasks[new_task_index].fpu_state);
-
-                registers->eax = tasks[new_task_index].pid >> 32;
-                registers->ebx = tasks[new_task_index].pid & 0xffffffff;
-                
-                for (uint16_t i = 0; i < 768; i++)
+                tasks[current_task_index].forked_pid = current_pid++;
+                pid_t forked_pid = tasks[current_task_index].forked_pid;
+                switch_task(&registers);
+                current_phys_mem_page = 0xffffffff;
+                if (tasks[current_task_index].pid == forked_pid)
+                    registers->eax = registers->ebx = 0;
+                else
                 {
-                    uint32_t old_pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * i);
-                    uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
-                    if (!(old_pde & 1)) continue;
-                    physical_address_t old_pt_address = old_pde & 0xfffff000;
-                    physical_address_t new_pt_address = new_pde & 0xfffff000;
-                    if (!(new_pde & 1))
-                    {
-                        new_pt_address = pfa_allocate_physical_page();
-                        physical_init_page_table(new_pt_address);
-                        write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
-                    }
-                    // LOG(TRACE, "%u : old_pt_address : 0x%lx", i, old_pt_address);
-                    // LOG(TRACE, "%u : new_pt_address : 0x%lx", i, new_pt_address);
-                    for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
-                    {
-                        uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
-                        physical_address_t old_page_address = old_pte & 0xfffff000;
-                        if (old_pte & 1)
-                        {
-                            uint32_t new_pte = read_physical_address_4b(new_pt_address + 4 * j);
-                            physical_address_t new_page_address = new_pte & 0xfffff000;
-                            if (!(new_pte & 1))
-                            {
-                                new_page_address = pfa_allocate_physical_page();
-                                write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
-                            }
-                            // LOG(TRACE, "%u.%u : old_page_address : 0x%lx", i, j, old_page_address);
-                            // LOG(TRACE, "%u.%u : new_page_address : 0x%lx", i, j, new_page_address);
-                            copy_page(old_page_address, new_page_address);
-                        }
-                    }
+                    registers->eax = forked_pid >> 32;
+                    registers->ebx = forked_pid & 0xffffffff;
                 }
-
-                // disable_interrupts();
-
-                // abort();
-
-                asm volatile ("mov %0, esp" : "=r" (tasks[new_task_index].esp));
-
-                // LOG(TRACE, "esp : 0x%x", tasks[new_task_index].esp);
-
-                task_stack_push(&tasks[new_task_index], (uint32_t)&&ret);
-
-                task_stack_push(&tasks[new_task_index], registers->ebx);
-                task_stack_push(&tasks[new_task_index], registers->esi);
-                task_stack_push(&tasks[new_task_index], registers->edi);
-                task_stack_push(&tasks[new_task_index], registers->ebp);
-
-                full_context_switch(new_task_index);
-                goto old_task_ret;
-            ret:
-                registers->eax = registers->ebx = 0;
-            old_task_ret:
-                // enable_interrupts();
             } 
             break;
 
@@ -284,13 +227,12 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                                         true);
                     memset_page(page, 0);
 
-                    // #define USE_IVLPG
                     #ifdef USE_IVLPG
-                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
+                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * ((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff))));
                     *recursive_paging_pte = (page & 0xfffff000) | 0b1111;  // * Write-through caching | User level | Read write | Present
 
                     invlpg((uint32_t)recursive_paging_pte);
-                    invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    invlpg(4096 * (uint32_t)((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff)));
                     #else
                     load_pd_by_physaddr(tasks[current_task_index].cr3);
                     #endif
@@ -327,11 +269,11 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
                     physical_remove_page(pt_address, (registers->ebx >> 22));
 
                     #ifdef USE_IVLPG
-                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * (layout.page_directory_entry * 1024 + layout.page_table_entry)));
+                    uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * ((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff))));
                     *recursive_paging_pte = 0b1000;  // * Write-through caching | Not present
 
                     invlpg((uint32_t)recursive_paging_pte);
-                    invlpg(4096 * (uint32_t)(layout.page_directory_entry * 1024 + layout.page_table_entry));
+                    invlpg(4096 * (uint32_t)((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff)));
                     #else
                     load_pd_by_physaddr(tasks[current_task_index].cr3);
                     #endif
@@ -359,6 +301,7 @@ void interrupt_handler(volatile struct interrupt_registers* registers)
             LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
             tasks[current_task_index].is_dead = true;
             switch_task(&registers);
+            current_phys_mem_page = 0xffffffff;
         }        
         #ifdef LOG_SYSCALLS
         LOG(TRACE, "Successfully handled syscall");
