@@ -13,6 +13,23 @@
 
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
+char* find_next_contiguous_string(char* str, int* bytes_left)
+{
+    if (!bytes_left) return NULL;
+    while (*str && (*bytes_left) > 0)
+    {
+        str++;
+        (*bytes_left)--;
+    }
+    while (!(*str) && (*bytes_left) > 0)
+    {
+        str++;
+        (*bytes_left)--;
+    }
+    if ((*bytes_left) <= 0) return NULL;
+    return str;
+}
+
 int main()
 {
     printf("--- Start of HorizonOS configuration ---\n\n");
@@ -57,25 +74,37 @@ int main()
         if (ret > 0)
         {
             data[ret - 1] = 0;
+            bool string = false;
             for (int i = 0; i < 4095; i++)
             {
-                if (data[i] == ' ') data[i] = 0;
+                if (data[i] == ' ' && !string) data[i] = 0;
+                if (data[i] == '\"') 
+                {
+                    string ^= true;
+                    data[i] = 0;
+                }
             }
             int bytes_left = ret - 1;
-            int first_arg_offset = 0;
-            while (bytes_left > 0 && !data[first_arg_offset])
-            {
-                bytes_left--;
-                first_arg_offset++;
-            }
-            if (data[first_arg_offset] == 0) continue;
-            if (strcmp(&data[first_arg_offset], "exit") == 0)
+            char* first_arg = data[0] ? data : find_next_contiguous_string(data, &bytes_left);
+            if (!first_arg) continue;
+            if (*first_arg == 0) continue;
+            if (strcmp(first_arg, "exit") == 0)
             {
                 exit(EXIT_SUCCESS);
             }
+            else if (strcmp(first_arg, "echo") == 0)
+            {
+                char* arg = find_next_contiguous_string(first_arg, &bytes_left);
+                while (arg) 
+                {
+                    printf("%s ", arg);
+                    arg = find_next_contiguous_string(arg, &bytes_left);
+                }
+                putchar('\n');
+            }
             else
             {
-                printf("%s: command not found\n", &data[first_arg_offset]);
+                printf("%s: command not found\n", first_arg);
             }
         }
     }
