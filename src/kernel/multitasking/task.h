@@ -37,7 +37,7 @@ const int task_cr3_offset = offsetof(thread_t, cr3);
 const int kernel_stack_page_index = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
 
 const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
-const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000 - 1;
+const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
 
 #define MAX_TASKS 1024
 

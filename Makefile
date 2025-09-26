@@ -14,11 +14,12 @@ run:
 	qemu-system-x86_64                           		\
 	-accel kvm                       					\
 	-cpu host                                  			\
-	-debugcon file:debug/${DATE}.log					\
+	-debugcon file:debug/latest.log						\
 	-m 128                                        		\
 	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8 \
 	-d cpu
+# 	-debugcon file:debug/${DATE}.log					\
 
 horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	mkdir bin -p
