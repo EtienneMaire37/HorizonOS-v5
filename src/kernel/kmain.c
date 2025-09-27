@@ -419,8 +419,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     initrd_parse();
 
-    kernel_symbols_file = initrd_find_file("./symbols.txt");
-    kernel_task_symbols_file = initrd_find_file("./kernel32_symbols.txt");
+    kernel_symbols_file = initrd_find_file("symbols.txt");
+    kernel_task_symbols_file = initrd_find_file("kernel32_symbols.txt");
 
     LOG(DEBUG, "Setting up memory allocation");
 
@@ -524,7 +524,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    multitasking_add_task_from_initrd("kernel32", "./kernel32.elf", 0, true);
+    // multitasking_add_task_from_initrd("kernel32", "kernel32.elf", 0, true);
+    multitasking_add_task_from_vfs("kernel32", "initrd:/kernel32.elf", 0, true);
 
     multitasking_start();
 

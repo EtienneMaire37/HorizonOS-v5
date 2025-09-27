@@ -51,7 +51,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
-	tar -cvf ./root/boot/initrd.tar -C ./bin/initrd/ .
+	tar --transform 's|^\./||' -cvf ./root/boot/initrd.tar -C ./bin/initrd .
 	
 	cp ./bin/kernel.elf ./root/boot/kernel.elf
 	cp ./src/kernel/grub.cfg ./root/boot/grub/grub.cfg

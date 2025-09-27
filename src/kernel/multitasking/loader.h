@@ -165,3 +165,20 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
 
     LOG(INFO, "Loading successful");
 }
+
+static const char* initrd_prefix = "initrd:/";
+
+void multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system)
+{
+    int i = 0;
+    while (path[i] != 0 && initrd_prefix[i] != 0 && path[i] == initrd_prefix[i])
+        i++;
+    const size_t len = strlen(initrd_prefix);
+    if (i == len)   // !! Should definitely simplify the path too but it makes a limited amount of sense for initrd files
+    {
+        multitasking_add_task_from_initrd(name, &path[len], ring, system);
+        return;
+    }
+    LOG(ERROR, "Invalid path");
+    abort();
+}

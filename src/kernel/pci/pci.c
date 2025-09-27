@@ -29,7 +29,7 @@ uint8_t pci_configuration_address_space_read_byte(uint8_t bus, uint8_t device, u
 
 void pci_scan_buses()
 {
-    pci_ids = initrd_find_file("./pci.ids");
+    pci_ids = initrd_find_file("pci.ids");
 
     for (uint16_t i = 0; i < 256; i++)
     {
@@ -55,115 +55,126 @@ void pci_scan_buses()
                     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                     putchar('\"');
 
-                    uint32_t line = 0;
-                    int32_t line_offset = 0;
-                    uint16_t current_vendor_id = 0x0000, current_line_vendor_id = 0x0000, current_line_device_id = 0x0000;
-                    bool vendor_id_line = true, device_id_line = true, comment_line = false, found_vendor = false, found_device = false, printed_vendor = false;
-                    for (uint32_t file_offset = 0; file_offset < pci_ids->size; file_offset++, line_offset++)
+                    if (pci_ids)
                     {
-                        uint8_t byte = pci_ids->data[file_offset];
-                        if (byte == '\n')
+                        uint32_t line = 0;
+                        int32_t line_offset = 0;
+                        uint16_t current_vendor_id = 0x0000, current_line_vendor_id = 0x0000, current_line_device_id = 0x0000;
+                        bool vendor_id_line = true, device_id_line = true, comment_line = false, found_vendor = false, found_device = false, printed_vendor = false;
+                        for (uint32_t file_offset = 0; file_offset < pci_ids->size; file_offset++, line_offset++)
                         {
-                            line++;
-                            line_offset = -1;
-                            current_line_vendor_id = current_line_device_id = 0;
-                            comment_line = false;
-                            vendor_id_line = device_id_line = true;
-                            if (found_vendor && !printed_vendor)
+                            uint8_t byte = pci_ids->data[file_offset];
+                            if (byte == '\n')
                             {
-                                putchar('\"');
-                                tty_set_color(FG_WHITE, BG_BLACK);
-                                printf("\n    Device : ");
-                                tty_set_color(FG_LIGHTGREEN, BG_BLACK);
-                                putchar('\"');
-                                // fputc('\"', stderr);
-                                CONTINUE_LOG(DEBUG, "\"");
-                                LOG(DEBUG, "    Device : \"");
-                                printed_vendor = true;
-                            }
-                            if (found_device)
-                            {
-                                printf("\"\n");
-                                // fputc('\"', stderr);
-                                CONTINUE_LOG(DEBUG, "\"");
-                                tty_set_color(FG_WHITE, BG_BLACK);
-                                break;
-                            }
-                            continue;
-                        }
-
-                        if (!found_vendor && pci_ids->data[file_offset - line_offset] == '\t')
-                        {
-                            while (pci_ids->data[file_offset++] != '\n');
-                            file_offset -= 2;
-                            continue;
-                        }
-
-                        if (comment_line)
-                        {
-                            while (pci_ids->data[file_offset++] != '\n');
-                            file_offset -= 2;
-                            continue;
-                        }
-
-                        if (byte == '#')
-                        {
-                            comment_line = true;
-                            continue;
-                        }
-
-                        if (!vendor_id_line && line_offset < 1)
-                            continue;
-
-                        if (!device_id_line && line_offset < 2)
-                            continue;
-
-                        if (line_offset < 4 && vendor_id_line)
-                        {
-                            if (byte == '\t')
-                            {
-                                vendor_id_line = false;
+                                line++;
+                                line_offset = -1;
+                                current_line_vendor_id = current_line_device_id = 0;
+                                comment_line = false;
+                                vendor_id_line = device_id_line = true;
+                                if (found_vendor && !printed_vendor)
+                                {
+                                    putchar('\"');
+                                    tty_set_color(FG_WHITE, BG_BLACK);
+                                    printf("\n    Device : ");
+                                    tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+                                    putchar('\"');
+                                    // fputc('\"', stderr);
+                                    CONTINUE_LOG(DEBUG, "\"");
+                                    LOG(DEBUG, "    Device : \"");
+                                    printed_vendor = true;
+                                }
+                                if (found_device)
+                                {
+                                    printf("\"\n");
+                                    // fputc('\"', stderr);
+                                    CONTINUE_LOG(DEBUG, "\"");
+                                    tty_set_color(FG_WHITE, BG_BLACK);
+                                    break;
+                                }
                                 continue;
                             }
-                            else
-                                current_line_vendor_id |= ((uint32_t)hex_char_to_int(byte)) << (4 * (3 - line_offset));
-                        }
 
-                        if (line_offset >= 1 && line_offset < 5 && !vendor_id_line)
-                        {
-                            if (byte == '\t')
+                            if (!found_vendor && pci_ids->data[file_offset - line_offset] == '\t')
                             {
-                                device_id_line = false;
+                                while (pci_ids->data[file_offset++] != '\n');
+                                file_offset -= 2;
                                 continue;
                             }
-                            else
-                                current_line_device_id |= ((uint32_t)hex_char_to_int(byte)) << (4 * (4 - line_offset));
+
+                            if (comment_line)
+                            {
+                                while (pci_ids->data[file_offset++] != '\n');
+                                file_offset -= 2;
+                                continue;
+                            }
+
+                            if (byte == '#')
+                            {
+                                comment_line = true;
+                                continue;
+                            }
+
+                            if (!vendor_id_line && line_offset < 1)
+                                continue;
+
+                            if (!device_id_line && line_offset < 2)
+                                continue;
+
+                            if (line_offset < 4 && vendor_id_line)
+                            {
+                                if (byte == '\t')
+                                {
+                                    vendor_id_line = false;
+                                    continue;
+                                }
+                                else
+                                    current_line_vendor_id |= ((uint32_t)hex_char_to_int(byte)) << (4 * (3 - line_offset));
+                            }
+
+                            if (line_offset >= 1 && line_offset < 5 && !vendor_id_line)
+                            {
+                                if (byte == '\t')
+                                {
+                                    device_id_line = false;
+                                    continue;
+                                }
+                                else
+                                    current_line_device_id |= ((uint32_t)hex_char_to_int(byte)) << (4 * (4 - line_offset));
+                            }
+
+                            if (line_offset == 4 && vendor_id_line)
+                                current_vendor_id = current_line_vendor_id;
+
+                            if (vendor_id_line && current_vendor_id == vendor_id && line_offset >= 6)
+                            {
+                                putchar(byte);
+                                // fputc(byte, stderr);
+                                CONTINUE_LOG(DEBUG, "%c", byte);
+                                found_vendor = true;
+                            }
+
+                            if (device_id_line && current_line_device_id == device_id && current_vendor_id == vendor_id && line_offset >= 7)
+                            {
+                                putchar(byte);
+                                // fputc(byte, stderr);
+                                CONTINUE_LOG(DEBUG, "%c", byte);
+                                found_device = true;
+                            }
                         }
-
-                        if (line_offset == 4 && vendor_id_line)
-                            current_vendor_id = current_line_vendor_id;
-
-                        if (vendor_id_line && current_vendor_id == vendor_id && line_offset >= 6)
+                        if (!found_device)
                         {
-                            putchar(byte);
-                            // fputc(byte, stderr);
-                            CONTINUE_LOG(DEBUG, "%c", byte);
-                            found_vendor = true;
-                        }
-
-                        if (device_id_line && current_line_device_id == device_id && current_vendor_id == vendor_id && line_offset >= 7)
-                        {
-                            putchar(byte);
-                            // fputc(byte, stderr);
-                            CONTINUE_LOG(DEBUG, "%c", byte);
-                            found_device = true;
+                            tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+                            putchar('\"');
+                            // fputc('\"', stderr);
+                            CONTINUE_LOG(DEBUG, "\"");
+                            putchar('\n');
+                            tty_set_color(FG_WHITE, BG_BLACK);
                         }
                     }
-                    if (!found_device)
+                    else
                     {
                         tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                         putchar('\"');
-                        // fputc('\"', stderr);
                         CONTINUE_LOG(DEBUG, "\"");
                         putchar('\n');
                         tty_set_color(FG_WHITE, BG_BLACK);
