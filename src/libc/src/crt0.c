@@ -1,14 +1,13 @@
 int main();
 extern void* _break_address;
 
+extern uint32_t kernel_data;
+
+char* default_environ[] = {NULL};
+
 void _main()
 {
     // dprintf(STDERR_FILENO, "_main\n");
-
-    const int default_environ = 1;
-    environ = malloc((default_environ + 1) * sizeof(char*));
-    environ[0] = "PATH=";
-    environ[default_environ] = NULL;
 
     memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
@@ -20,6 +19,15 @@ void _main()
     heap_address = break_address;
     alloc_break_address = break_address;
     malloc_bitmap_init();
+
+    const int num_environ = 1;
+    environ = malloc((num_environ + 1) * sizeof(char*));
+    if (!environ) environ = &default_environ[0];
+    else
+    {
+        environ[0] = "PATH=";
+        environ[num_environ] = NULL;
+    }
 
     // dprintf(STDERR_FILENO, "Initializing buffered streams...\n");
 
@@ -41,6 +49,8 @@ void _main()
     create_b64_decoding_table();
 
     // dprintf(STDERR_FILENO, "Calling main...\n");
+    
+    // printf("%s\n\n", (char*)kernel_data);
 
     exit(main());
     while(true);

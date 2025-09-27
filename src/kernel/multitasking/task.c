@@ -86,6 +86,14 @@ void task_stack_push(volatile thread_t* task, uint32_t value)
     task_write_at_address_1b(task, (physical_address_t)task->esp + 3, (value >> 24) & 0xff);
 }
 
+void task_stack_push_string(volatile thread_t* task, const char* str)
+{
+    const int bytes = strlen(str) + 1;
+    task->esp -= bytes;
+    for (int i = 0; i < bytes; i++)
+        task_write_at_address_1b(task, (physical_address_t)task->esp + i, str[i]);
+}
+
 void task_write_at_address_1b(volatile thread_t* task, uint32_t address, uint8_t value)
 {
     if (task->cr3 == physical_null)

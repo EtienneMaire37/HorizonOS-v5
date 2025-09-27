@@ -78,6 +78,8 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
 
     uint8_t code_segment = ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT;
 
+    task_stack_push_string(&task, "test string");
+
     if (ring != 0)
     {
         uint32_t esp = task.esp;
