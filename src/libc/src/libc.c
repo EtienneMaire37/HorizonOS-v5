@@ -1,5 +1,7 @@
 #define BUILDING_C_LIB
 
+char** environ;
+
 #include <stdbool.h>
 // #include <stdint.h>
 #include <stdatomic.h>

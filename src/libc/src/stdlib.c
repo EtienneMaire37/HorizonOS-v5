@@ -243,3 +243,27 @@ void abort()
 void malloc_bitmap_init();
 bool malloc_bitmap_get_page(uint32_t page);
 void malloc_bitmap_set_page(uint32_t page, bool state);
+
+char* getenv(const char* name)
+{
+    if (name == NULL) return NULL;
+
+    int i = 0;
+    while (environ[i])
+    {
+        int j = 0;
+        while (environ[i][j] == name[j] && name[j] != 0 && environ[i][j] != 0 && environ[i][j] != '=')
+            j++;
+        if (environ[i][j] == '=')
+            return &environ[i][j + 1];
+        i++;
+    }
+
+    return NULL;
+}
+
+int system(const char* command)
+{
+    fprintf(stderr, "%s: command not found\n", command);
+    return 1;
+}

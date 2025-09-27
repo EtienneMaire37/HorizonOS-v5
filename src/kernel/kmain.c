@@ -51,6 +51,9 @@ const char* text_logo =
  | |  | | (_) | |  | |/ / (_) | | | | |__| |____) |      \\ V / ___) | \n\
  |_|  |_|\\___/|_|  |_/___\\___/|_| |_|\\____/|_____/        \\_/ |____/";
 
+char* environ_data[1] = {NULL};
+char** environ = &environ_data[0];
+
 typedef uint64_t physical_address_t;
 typedef uint32_t virtual_address_t;
 

@@ -5,6 +5,11 @@ void _main()
 {
     // dprintf(STDERR_FILENO, "_main\n");
 
+    const int default_environ = 1;
+    environ = malloc((default_environ + 1) * sizeof(char*));
+    environ[0] = "PATH=";
+    environ[default_environ] = NULL;
+
     memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
 

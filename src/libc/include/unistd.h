@@ -16,3 +16,6 @@ ssize_t read(int fildes, void *buf, size_t nbyte);
 int close(int fildes);
 void *sbrk(intptr_t incr);
 off_t lseek(int fildes, off_t offset, int whence);
+int gethostname(char* name, size_t namelen);
+int chdir(const char* path);
+char* getcwd(char* buffer, size_t size);

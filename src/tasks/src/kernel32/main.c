@@ -1,3 +1,5 @@
+// #define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -8,6 +10,8 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
+// #include <signal.h>
+#include <limits.h>
 
 #include <horizonos.h>
 
@@ -15,6 +19,7 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 char* find_next_contiguous_string(char* str, int* bytes_left)
 {
+    if (!str) return NULL;
     if (!bytes_left) return NULL;
     while (*str && (*bytes_left) > 0)
     {
@@ -30,8 +35,19 @@ char* find_next_contiguous_string(char* str, int* bytes_left)
     return str;
 }
 
+// void int_handler()
+// {
+//     putchar('\n');
+// }
+
 int main()
 {
+    // struct sigaction sa;
+    // sa.sa_handler = int_handler;
+    // sigemptyset(&(sa.sa_mask));
+    // sigaddset(&(sa.sa_mask), SIGINT);
+    // sigaction(SIGINT, &sa, NULL);
+
     printf("--- Start of HorizonOS configuration ---\n\n");
 
     printf("Please enter your preferred keyboard layout:\n");
@@ -59,13 +75,15 @@ int main()
         printf("Successfully set keyboard layout to : %s\n", kb_layouts[kb_layout_choice - 1]);
     else
         printf("Error : Defaulting to the us_qwerty keyboard layout\n");
+        
+    putchar('\n');
 
-    // volatile uint8_t data[0x8000] = { 0 };
+    char cwd[PATH_MAX];
 
     while (true)
     {
-        // printf("%s\n", &data[0]);
-        printf("$ ");
+        getcwd(cwd, sizeof(cwd));
+        printf("%s$ ", cwd);
         fflush(stdout);
         char data[4096] = {0};
         int ret = read(STDIN_FILENO, &data, 4096);
@@ -74,39 +92,72 @@ int main()
         if (ret > 0)
         {
             data[ret - 1] = 0;
+            char data_processed[4096] = {0};
+            memcpy(data_processed, data, 4096);
             bool string = false;
             for (int i = 0; i < 4095; i++)
             {
-                if (data[i] == ' ' && !string) data[i] = 0;
-                if (data[i] == '\"') 
+                if (data_processed[i] == ' ' && !string) data_processed[i] = 0;
+                if (data_processed[i] == '\"') 
                 {
                     string ^= true;
-                    data[i] = 0;
+                    data_processed[i] = 0;
                 }
             }
             int bytes_left = ret - 1;
-            char* first_arg = data[0] ? data : find_next_contiguous_string(data, &bytes_left);
-            if (!first_arg) continue;
-            if (*first_arg == 0) continue;
+            char* first_arg = data_processed[0] ? data_processed : find_next_contiguous_string(data_processed, &bytes_left);
+            if (!first_arg) goto cmd;
+            if (*first_arg == 0) goto cmd;
             if (strcmp(first_arg, "exit") == 0)
             {
                 exit(EXIT_SUCCESS);
             }
-            else if (strcmp(first_arg, "echo") == 0)
+            else if (strcmp(first_arg, "cd") == 0)
             {
+                first_arg = find_next_contiguous_string(first_arg, &bytes_left);
                 char* arg = find_next_contiguous_string(first_arg, &bytes_left);
-                while (arg) 
+                if (first_arg == NULL)
                 {
-                    printf("%s ", arg);
-                    arg = find_next_contiguous_string(arg, &bytes_left);
+                    fprintf(stderr, "cd: not enough arguments\n");
+                    continue;
                 }
-                putchar('\n');
+                if (arg != NULL)
+                {
+                    fprintf(stderr, "cd: too many arguments\n");
+                    continue;
+                }
+                if (chdir(first_arg) != 0)
+                {
+                    switch(errno)
+                    {
+                    case ENOENT:
+                        fprintf(stderr, "cd: no such file or directory\n");
+                        break;
+                    case ENOTDIR:
+                        fprintf(stderr, "cd: not a directory\n");
+                        break;
+                    default:
+                        fprintf(stderr, "cd: couldn't access directory\n");
+                    }
+                }
             }
-            else
+            else 
             {
-                printf("%s: command not found\n", first_arg);
+            cmd:
+                system(data);
             }
         }
     }
     return 0;
 }
+
+// #include <stdio.h>
+// #include <limits.h>
+// #include <unistd.h>
+// #include <stdlib.h>
+
+// int main()
+// {
+//     printf("ABCDEF: %s\n", getenv("ABCDEF"));
+//     printf("PATH: %s\n", getenv("PATH"));
+// }
