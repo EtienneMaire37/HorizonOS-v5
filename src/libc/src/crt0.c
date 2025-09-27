@@ -101,6 +101,8 @@ void _main()
     while (arg = find_next_contiguous_string(arg, &bytes_left))
         argv[i++] = arg;
 
+    memcpy(cwd, data->pwd, PATH_MAX);
+
     call_main_exit(argc, argv);
     while(true);
 }

@@ -19,6 +19,10 @@ int64_t maxint(int64_t a, int64_t b)
 
 #include "../../kernel/multicore/spinlock.h"
 
+#include "../include/limits.h"
+
+char cwd[PATH_MAX] = {0};
+
 #include "../include/errno.h"
 #include "../include/unistd.h"
 #include "../include/stdio.h"
@@ -29,7 +33,7 @@ int64_t maxint(int64_t a, int64_t b)
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
 
-#include "../include/startup_data.h"
+#include "startup_data.h"
 
 #include "kernel_glue.h"
 

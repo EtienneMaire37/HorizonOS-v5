@@ -1,5 +1,4 @@
 #include <stdbool.h>
-#include <limits.h>
 #include <stdatomic.h>
 
 #include "multiboot.h"
@@ -26,6 +25,7 @@ multiboot_info_t* multiboot_info;
 #endif
 
 #include "../libc/include/inttypes.h"
+#include "../libc/include/limits.h"
 
 int64_t minint(int64_t a, int64_t b)
 {
@@ -45,7 +45,7 @@ int64_t maxint(int64_t a, int64_t b)
 #include "../libc/include/sys/types.h"
 #include "../libc/include/string.h"
 #include "../libc/include/time.h"
-#include "../libc/include/startup_data.h"
+#include "../libc/src/startup_data.h"
 
 #include "../libc/src/kernel_glue.h"
 
@@ -526,7 +526,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    startup_data_struct_t data = startup_data_init("initrd:/kernel32.elf");
+    startup_data_struct_t data = startup_data_init("initrd:/kernel32.elf", "initrd:/");
     multitasking_add_task_from_vfs("kernel32", "initrd:/kernel32.elf", 0, true, &data);
 
     multitasking_start();

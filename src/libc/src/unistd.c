@@ -38,11 +38,10 @@ int chdir(const char* path) // !!! unstub this asap
     return -1;
 }
 
-char* getcwd(char* buffer, size_t size) // !! same here
+char* getcwd(char* buffer, size_t size)
 {
-    const char* path = "initrd:/";
     if (!buffer || size <= 0) return NULL;
-    memcpy(buffer, path, size - 1);
+    memcpy(buffer, &cwd[0], minint(size, PATH_MAX) - 1);
     buffer[size - 1] = 0;
     return buffer;
 }

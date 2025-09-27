@@ -9,4 +9,4 @@ time_t time(time_t* t);
 pid_t getpid();
 int brk(void *addr);
 
-#include "../include/syscall_defines.h"
+#include "syscall_defines.h"
