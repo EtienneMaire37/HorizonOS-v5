@@ -40,13 +40,18 @@ char* find_next_contiguous_string(char* str, int* bytes_left)
 //     putchar('\n');
 // }
 
-int main()
+int main(int argc, char** argv)
 {
     // struct sigaction sa;
     // sa.sa_handler = int_handler;
     // sigemptyset(&(sa.sa_mask));
     // sigaddset(&(sa.sa_mask), SIGINT);
     // sigaction(SIGINT, &sa, NULL);
+
+    // printf("argc: %d\n", argc);
+    // for (int i = 0; i < argc; i++)
+    //     printf("argv[%d]: %s\n", i, argv[i]);
+    // putchar('\n');
 
     printf("--- Start of HorizonOS configuration ---\n\n");
 
@@ -75,7 +80,7 @@ int main()
         printf("Successfully set keyboard layout to : %s\n", kb_layouts[kb_layout_choice - 1]);
     else
         printf("Error : Defaulting to the us_qwerty keyboard layout\n");
-        
+
     putchar('\n');
 
     char cwd[PATH_MAX];

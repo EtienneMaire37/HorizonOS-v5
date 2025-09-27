@@ -22,3 +22,24 @@ _start:
 .halt:
     hlt
     jmp .halt
+
+extern main
+extern exit
+
+global call_main_exit
+call_main_exit:
+    push ebp
+    mov ebp, esp
+
+    push dword [esp + 12]   ; argv
+    push dword [esp + 12]   ; argc
+    call main
+    add esp, 8
+
+    push eax        ; main return code
+    call exit
+    add esp, 4
+
+    pop ebp
+    mov esp, ebp
+    ret

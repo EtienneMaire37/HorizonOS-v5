@@ -1,9 +1,27 @@
-int main();
 extern void* _break_address;
+extern void call_main_exit(int argc, char** argv);
 
 extern uint32_t kernel_data;
 
 char* default_environ[] = {NULL};
+
+static char* find_next_contiguous_string(char* str, int* bytes_left)
+{
+    if (!str) return NULL;
+    if (!bytes_left) return NULL;
+    while (*str && (*bytes_left) > 0)
+    {
+        str++;
+        (*bytes_left)--;
+    }
+    while (!(*str) && (*bytes_left) > 0)
+    {
+        str++;
+        (*bytes_left)--;
+    }
+    if ((*bytes_left) <= 0) return NULL;
+    return str;
+}
 
 void _main()
 {
@@ -49,9 +67,40 @@ void _main()
     create_b64_decoding_table();
 
     // dprintf(STDERR_FILENO, "Calling main...\n");
-    
-    // printf("%s\n\n", (char*)kernel_data);
 
-    exit(main());
+    startup_data_struct_t* data = (startup_data_struct_t*)kernel_data;
+    
+    // printf("%s\n\n", data->cmd_line);
+
+    bool string = false;
+    for (int i = 0; i < 4096; i++)
+    {
+        if (data->cmd_line[i] == ' ' && !string) data->cmd_line[i] = 0;
+        if (data->cmd_line[i] == '\"') 
+        {
+            string ^= true;
+            data->cmd_line[i] = 0;
+        }
+    }
+
+    int argc = 0;
+    char** argv = NULL;
+    int bytes_left = sizeof(data->cmd_line) - 1;
+    char* arg = data->cmd_line;
+    if (*arg)
+        argc++;
+    while (arg = find_next_contiguous_string(arg, &bytes_left))
+        argc++;
+
+    int i = 0;
+    argv = malloc(argc * sizeof(char*));
+    bytes_left = sizeof(data->cmd_line) - 1;
+    arg = data->cmd_line;
+    if (*arg)
+        argv[i++] = arg;
+    while (arg = find_next_contiguous_string(arg, &bytes_left))
+        argv[i++] = arg;
+
+    call_main_exit(argc, argv);
     while(true);
 }

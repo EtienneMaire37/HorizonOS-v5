@@ -25,6 +25,17 @@ multiboot_info_t* multiboot_info;
 
 #endif
 
+#include "../libc/include/inttypes.h"
+
+int64_t minint(int64_t a, int64_t b)
+{
+    return a < b ? a : b;
+}
+int64_t maxint(int64_t a, int64_t b)
+{
+    return a > b ? a : b;
+}
+
 #include "../libc/include/assert.h"
 
 #include "../libc/include/errno.h"
@@ -32,9 +43,9 @@ multiboot_info_t* multiboot_info;
 #include "../libc/include/stdarg.h"
 #include "../libc/include/unistd.h"
 #include "../libc/include/sys/types.h"
-#include "../libc/include/inttypes.h"
 #include "../libc/include/string.h"
 #include "../libc/include/time.h"
+#include "../libc/include/startup_data.h"
 
 #include "../libc/src/kernel_glue.h"
 
@@ -83,15 +94,6 @@ void simple_cause_halt();
 #define halt() (fflush(stdout), cause_halt(__CURRENT_FUNC__, __FILE__, __LINE__))
 
 #define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
-
-int64_t minint(int64_t a, int64_t b)
-{
-    return a < b ? a : b;
-}
-int64_t maxint(int64_t a, int64_t b)
-{
-    return a > b ? a : b;
-}
 
 #define bcd_to_binary(bcd) (((bcd) & 0x0f) + ((bcd) >> 4) * 10)
 
@@ -524,7 +526,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    multitasking_add_task_from_vfs("kernel32", "initrd:/kernel32.elf", 0, true);
+    startup_data_struct_t data = startup_data_init("initrd:/kernel32.elf");
+    multitasking_add_task_from_vfs("kernel32", "initrd:/kernel32.elf", 0, true, &data);
 
     multitasking_start();
 

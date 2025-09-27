@@ -26,7 +26,7 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system)
+void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
     LOG(INFO, "Loading ELF file \"initrd:%s\"", path);
 
@@ -78,7 +78,7 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
 
     uint8_t code_segment = ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT;
 
-    task_stack_push_string(&task, "test string");
+    task_stack_push_data(&task, (void*)data, sizeof(startup_data_struct_t));
 
     if (ring != 0)
     {
@@ -170,15 +170,16 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
 
 static const char* initrd_prefix = "initrd:/";
 
-void multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system)
+void multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
+    if (!data) abort();
     int i = 0;
     while (path[i] != 0 && initrd_prefix[i] != 0 && path[i] == initrd_prefix[i])
         i++;
     const size_t len = strlen(initrd_prefix);
     if (i == len)   // !! Should definitely simplify the path too but it makes a limited amount of sense for initrd files
     {
-        multitasking_add_task_from_initrd(name, &path[len], ring, system);
+        multitasking_add_task_from_initrd(name, &path[len], ring, system, data);
         return;
     }
     LOG(ERROR, "Invalid path");

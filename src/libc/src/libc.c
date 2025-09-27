@@ -6,18 +6,7 @@ char** environ;
 // #include <stdint.h>
 #include <stdatomic.h>
 
-#include "../../kernel/multicore/spinlock.h"
-
-#include "../include/errno.h"
 #include "../include/inttypes.h"
-#include "../include/unistd.h"
-#include "../include/stdio.h"
-#include "../include/stdlib.h"
-#include "../include/time.h"
-#include "../include/stdarg.h"
-#include "../include/string.h"
-#include "../include/sys/types.h"
-#include "../include/horizonos.h"
 
 int64_t minint(int64_t a, int64_t b)
 {
@@ -27,6 +16,20 @@ int64_t maxint(int64_t a, int64_t b)
 {
     return a > b ? a : b;
 }
+
+#include "../../kernel/multicore/spinlock.h"
+
+#include "../include/errno.h"
+#include "../include/unistd.h"
+#include "../include/stdio.h"
+#include "../include/stdlib.h"
+#include "../include/time.h"
+#include "../include/stdarg.h"
+#include "../include/string.h"
+#include "../include/sys/types.h"
+#include "../include/horizonos.h"
+
+#include "../include/startup_data.h"
 
 #include "kernel_glue.h"
 
