@@ -1,10 +1,12 @@
 #pragma once
 
-typedef struct task
-{
-    char* name;
+#define THREAD_NAME_MAX 64
 
-    volatile uint32_t esp, cr3;
+typedef struct thread
+{
+    char name[THREAD_NAME_MAX];
+
+    uint32_t esp, cr3;
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
@@ -40,7 +42,7 @@ const int kernel_stack_page_index_end = (TASK_KERNEL_STACK_TOP_ADDRESS - 1 - (ui
 const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
 const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
 
-#define MAX_TASKS 1024
+#define MAX_TASKS 256
 
 thread_t tasks[MAX_TASKS];    // TODO : Implement a dynamic array
 uint16_t task_count;

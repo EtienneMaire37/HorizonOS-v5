@@ -6,7 +6,8 @@
 thread_t task_create_empty()
 {
     thread_t task;
-    task.name = NULL;
+    // task.name = NULL;
+    memset(task.name, 0, THREAD_NAME_MAX);
 
     utf32_buffer_init(&task.input_buffer);
     task.reading_stdin = task.was_reading_stdin = false;
@@ -71,7 +72,9 @@ void multitasking_add_idle_task(char* name)
     }
 
     thread_t task = task_create_empty();
-    task.name = name;
+    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
+    memcpy(task.name, name, name_bytes);
+    task.name[name_bytes] = 0;
     task.cr3 = (uint32_t)page_directory;
 
     tasks[task_count++] = task;
@@ -186,7 +189,8 @@ void copy_task(uint16_t index)
 
     const uint16_t new_task_index = task_count - 1;
 
-    tasks[new_task_index].name = tasks[index].name;
+    // tasks[new_task_index].name = tasks[index].name;
+    memcpy(tasks[new_task_index].name, tasks[index].name, THREAD_NAME_MAX);
     tasks[new_task_index].ring = tasks[index].ring;
     tasks[new_task_index].pid = tasks[index].forked_pid;
     tasks[new_task_index].system_task = tasks[index].system_task;

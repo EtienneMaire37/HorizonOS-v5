@@ -5,7 +5,10 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     LOG(DEBUG, "Adding task \"%s\" from function", name);
 
     thread_t task = task_create_empty();
-    task.name = name;
+    // task.name = name;
+    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
+    memcpy(task.name, name, name_bytes);
+    task.name[name_bytes] = 0;
     task.cr3 = vas_create_empty();
 
     task.esp = TASK_STACK_TOP_ADDRESS;
@@ -63,7 +66,10 @@ bool multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
     }
 
     thread_t task = task_create_empty();
-    task.name = name;
+    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
+    memcpy(task.name, name, name_bytes);
+    task.name[name_bytes] = 0;
+    
     task.cr3 = vas_create_empty();
 
     task.esp = TASK_STACK_TOP_ADDRESS;

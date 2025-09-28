@@ -207,7 +207,7 @@ void handle_syscall(interrupt_registers_t* registers)
     // !!! not compliant (only absolute paths + doesn't copy environ) 
         startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char*)registers->esi);
         lock_task_queue();
-        if (!multitasking_add_task_from_vfs("execve'd task", (char*)registers->ebx, 3, false, &data))
+        if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
             unlock_task_queue();
             registers->eax = EACCES;
