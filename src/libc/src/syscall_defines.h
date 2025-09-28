@@ -8,6 +8,7 @@
 #define SYSCALL_FORK        5
 #define SYSCALL_BRK_FREE    6
 #define SYSCALL_BRK_ALLOC   7
+#define SYSCALL_EXECVE      8
 
 #define SYSCALL_FLUSH_INPUT_BUFFER  0x40
 #define SYSCALL_SET_KB_LAYOUT       0x8000

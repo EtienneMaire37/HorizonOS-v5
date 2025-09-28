@@ -526,8 +526,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    startup_data_struct_t data = startup_data_init("initrd:/kernel32.elf", "initrd:/");
-    multitasking_add_task_from_vfs("kernel32", "initrd:/kernel32.elf", 0, true, &data);
+    startup_data_struct_t data = startup_data_init("initrd:/bin/kernel32.elf", "initrd:/bin/");
+    multitasking_add_task_from_vfs("kernel32", "initrd:/bin/kernel32.elf", 0, true, &data);
 
     multitasking_start();
 

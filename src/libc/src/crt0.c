@@ -93,13 +93,18 @@ void _main()
         argc++;
 
     int i = 0;
-    argv = malloc(argc * sizeof(char*));
-    bytes_left = sizeof(data->cmd_line) - 1;
-    arg = data->cmd_line;
-    if (*arg)
-        argv[i++] = arg;
-    while (arg = find_next_contiguous_string(arg, &bytes_left))
-        argv[i++] = arg;
+    argv = malloc((1 + argc) * sizeof(char*));
+    if (argv)
+    {
+        bytes_left = sizeof(data->cmd_line) - 1;
+        arg = data->cmd_line;
+        if (*arg)
+            argv[i++] = arg;
+        while (arg = find_next_contiguous_string(arg, &bytes_left))
+            argv[i++] = arg;
+
+        argv[i] = 0;
+    }
 
     memcpy(cwd, data->pwd, PATH_MAX);
 

@@ -247,6 +247,7 @@ void malloc_bitmap_set_page(uint32_t page, bool state);
 char* getenv(const char* name)
 {
     if (name == NULL) return NULL;
+    if (environ == NULL) return NULL;
 
     int i = 0;
     while (environ[i])

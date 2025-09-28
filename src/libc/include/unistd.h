@@ -19,3 +19,4 @@ off_t lseek(int fildes, off_t offset, int whence);
 int gethostname(char* name, size_t namelen);
 int chdir(const char* path);
 char* getcwd(char* buffer, size_t size);
+int execve(const char* path, char* const argv[], char* const envp[]);

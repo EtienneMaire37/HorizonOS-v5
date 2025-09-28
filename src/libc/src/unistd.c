@@ -29,6 +29,9 @@ int gethostname(char* name, size_t namelen)
 
 int chdir(const char* path) // !!! unstub this asap
 {
+    // char old_cwd[PATH_MAX];
+    // getcwd(old_cwd, PATH_MAX);
+    // path_add(cwd, cwd, path);
     if (path == NULL)
     {
         errno = EFAULT;
@@ -44,4 +47,10 @@ char* getcwd(char* buffer, size_t size)
     memcpy(buffer, &cwd[0], minint(size, PATH_MAX) - 1);
     buffer[size - 1] = 0;
     return buffer;
+}
+
+int execve(const char* path, char* const argv[], char* const envp[])
+{
+    errno = EACCES;
+    return -1;
 }

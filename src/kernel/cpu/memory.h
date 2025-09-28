@@ -72,7 +72,7 @@ uint8_t read_physical_address_1b(physical_address_t address)
         return 0xff;
     }
 
-    volatile uint8_t* ptr = get_physical_address_ptr(address);
+    uint8_t* ptr = get_physical_address_ptr(address);
 
     if (ptr == NULL)
         return 0xff;
@@ -88,7 +88,7 @@ void write_physical_address_1b(physical_address_t address, uint8_t value)
         return;
     }
 
-    volatile uint8_t* ptr = get_physical_address_ptr(address);
+    uint8_t* ptr = get_physical_address_ptr(address);
 
     if (ptr == NULL)
         return;

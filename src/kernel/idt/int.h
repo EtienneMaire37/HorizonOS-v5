@@ -1,6 +1,6 @@
 #pragma once
 
-struct interrupt_registers
+typedef struct __attribute__((packed)) interrupt_registers
 {
     uint32_t cr3, cr2;
     uint32_t ds;
@@ -8,9 +8,9 @@ struct interrupt_registers
     uint32_t handled_esp, ebx, edx, ecx, eax;
     uint32_t interrupt_number, error_code;
     uint32_t eip, cs, eflags;
-} __attribute__((packed));
+} interrupt_registers_t;
 
-struct privilege_switch_interrupt_registers
+typedef struct __attribute__((packed)) privilege_switch_interrupt_registers
 {
     uint32_t cr3, cr2;
     uint32_t ds;
@@ -20,7 +20,7 @@ struct privilege_switch_interrupt_registers
     uint32_t eip, cs, eflags;
 
     uint32_t esp, ss;   // * Read Intel Manuals ->> Vol. 3A 7-13
-} __attribute__((packed));
+} privilege_switch_interrupt_registers_t;
 
 // ^ Changed to local variables
 // uint32_t iret_cr3;
@@ -86,4 +86,4 @@ initrd_file_t* kernel_symbols_file = NULL;
 initrd_file_t* kernel_task_symbols_file = NULL;
 
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
-void interrupt_handler(volatile struct interrupt_registers* registers);
+void interrupt_handler(interrupt_registers_t* registers);

@@ -18,6 +18,8 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
 
 void exit(int r)
 {
+    fflush(stdout);
+    
     for (uint8_t i = 0; i < atexit_stack_length; i++)
         if (atexit_stack[atexit_stack_length - i - 1] != NULL)
             atexit_stack[atexit_stack_length - i - 1]();

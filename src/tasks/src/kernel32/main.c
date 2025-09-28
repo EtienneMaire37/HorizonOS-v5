@@ -1,3 +1,6 @@
+// #define TEST
+
+#ifndef TEST
 // #define _POSIX_C_SOURCE 200809L
 
 #include <stdio.h>
@@ -155,14 +158,28 @@ int main(int argc, char** argv)
     }
     return 0;
 }
-
+#else
 // #include <stdio.h>
-// #include <limits.h>
 // #include <unistd.h>
-// #include <stdlib.h>
 
-// int main()
+// extern char** environ;
+
+// int main(int argc, char** argv)
 // {
-//     printf("ABCDEF: %s\n", getenv("ABCDEF"));
-//     printf("PATH: %s\n", getenv("PATH"));
+//     execve("./echo.elf", (char*[]){"./echo.elf", "aa    bbb abcde5f", "xyz", NULL}, environ);
+//     fprintf(stderr, "Error: Couldn't run echo\n");
+//     return 0;
 // }
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+    fork();
+    fork();
+    fork();
+    printf("Hello from pid %ld\n", getpid());
+    return 0;
+}
+#endif

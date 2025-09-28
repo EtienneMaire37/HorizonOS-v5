@@ -90,7 +90,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
     }
 }
 
-void kernel_panic(struct interrupt_registers* registers)
+void kernel_panic(interrupt_registers_t* registers)
 {
     disable_interrupts();
 
@@ -154,7 +154,7 @@ void kernel_panic(struct interrupt_registers* registers)
     {
         uint32_t* ptr = !(tasks[current_task_index].ring != 0 && multitasking_enabled && !first_task_switch) ? 
             &((uint32_t*)&registers[1])[i] : 
-            &((uint32_t*)((struct privilege_switch_interrupt_registers*)registers)->esp)[i];
+            &((uint32_t*)((privilege_switch_interrupt_registers_t*)registers)->esp)[i];
 
         printf("esp + %u (0x%x) : 0x%x\n", i * 4, ptr, *ptr);
     }

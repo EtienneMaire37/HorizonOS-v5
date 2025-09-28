@@ -47,7 +47,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
 
-	cp src/tasks/bin/kernel32.elf ./bin/initrd/kernel32.elf
+	cp src/tasks/bin/ ./bin/initrd/ -r
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
@@ -70,6 +70,16 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/link.ld src/libc/
 	-lgcc
 	mkdir -p ./bin/initrd
 	$(CROSSNM) -n -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
+
+src/tasks/bin/echo.elf: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+	mkdir -p ./src/tasks/bin
+	$(CROSSGCC) -c "src/tasks/src/echo/main.c" -o "src/tasks/bin/echo.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -T src/tasks/link.ld \
+    -o "src/tasks/bin/echo.elf" \
+    "src/tasks/bin/echo.o" \
+    "src/libc/lib/libc.a" \
+	-ffreestanding -nostdlib \
+	-lgcc
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
