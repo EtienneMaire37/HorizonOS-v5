@@ -1,6 +1,9 @@
 #pragma once
 
 // #define LOG_SYSCALLS
+#define USE_IVLPG
+
+bool multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data);
 
 void handle_syscall(interrupt_registers_t* registers)
 {
@@ -13,7 +16,7 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
         LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
         tasks[current_task_index].is_dead = true;
-        switch_task(&registers);
+        switch_task();
         current_phys_mem_page = 0xffffffff;
         break;
     case SYSCALL_TIME:     // * time || $eax = time
@@ -38,7 +41,7 @@ void handle_syscall(interrupt_registers_t* registers)
                 if (no_buffered_characters(tasks[current_task_index].input_buffer))
                 {
                     tasks[current_task_index].reading_stdin = true;
-                    switch_task(&registers);
+                    switch_task();
                     current_phys_mem_page = 0xffffffff;
                 }
                 registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
@@ -55,7 +58,7 @@ void handle_syscall(interrupt_registers_t* registers)
             }
         }
         break;
-    case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
+    case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_written, $ebx = errno
         if (registers->ebx > 2)
         {
             registers->eax = 0xffffffff;   // -1
@@ -91,7 +94,7 @@ void handle_syscall(interrupt_registers_t* registers)
         {
             tasks[current_task_index].forked_pid = current_pid++;
             pid_t forked_pid = tasks[current_task_index].forked_pid;
-            switch_task(&registers);
+            switch_task();
             current_phys_mem_page = 0xffffffff;
             if (tasks[current_task_index].pid == forked_pid)
                 registers->eax = registers->ebx = 0;
@@ -200,8 +203,26 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         break;
 
-    case SYSCALL_EXECVE:
-        break;
+    case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
+    // !!! not compliant (only absolute paths + doesn't copy environ) 
+        startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char*)registers->esi);
+        lock_task_queue();
+        if (!multitasking_add_task_from_vfs("execve'd task", (char*)registers->ebx, 3, false, &data))
+        {
+            unlock_task_queue();
+            registers->eax = EACCES;
+            break;
+        }
+        else
+        {
+            pid_t old_pid = tasks[current_task_index].pid;
+            tasks[current_task_index].is_dead = true;
+            tasks[current_task_index].pid = tasks[task_count - 1].pid;
+            tasks[task_count - 1].pid = old_pid;
+            unlock_task_queue();
+            switch_task();
+            break;
+        }
 
     case SYSCALL_FLUSH_INPUT_BUFFER:
         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
@@ -220,7 +241,7 @@ void handle_syscall(interrupt_registers_t* registers)
     default:
         LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
         tasks[current_task_index].is_dead = true;
-        switch_task(&registers);
+        switch_task();
         current_phys_mem_page = 0xffffffff;
     }        
     #ifdef LOG_SYSCALLS

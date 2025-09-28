@@ -109,3 +109,9 @@ void free(void* ptr)
 {
     ;
 }
+
+int execve(const char* path, char* const argv[], char* const envp[])
+{
+    errno = EACCES;
+    return -1;
+}

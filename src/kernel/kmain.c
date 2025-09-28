@@ -271,7 +271,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     kernel_size = &_kernel_end - &_kernel_start;
 
     if (physical_memory_page_index < 0 || physical_memory_page_index >= 1024)       abort();
-    if (kernel_stack_page_index < 0 || kernel_stack_page_index >= 1024)             abort();
+    if (kernel_stack_page_index_start < 0 || kernel_stack_page_index_start >= 1024) abort();
+    if (kernel_stack_page_index_end < 0 || kernel_stack_page_index_end >= 1024)     abort();
     if (stack_page_index_start < 0 || stack_page_index_start >= 1024)               abort();
     if (stack_page_index_end < 0 || stack_page_index_end >= 1024)                   abort();
 
@@ -526,8 +527,12 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    startup_data_struct_t data = startup_data_init("initrd:/bin/kernel32.elf", "initrd:/bin/");
-    multitasking_add_task_from_vfs("kernel32", "initrd:/bin/kernel32.elf", 0, true, &data);
+    startup_data_struct_t data = startup_data_init_from_command("initrd:/bin/kernel32.elf", "initrd:/bin/");
+    if (!multitasking_add_task_from_vfs("kernel32", "initrd:/bin/kernel32.elf", 0, true, &data))
+    {
+        LOG(ERROR, "Kernel task couldn't start");
+        abort();
+    }
 
     multitasking_start();
 

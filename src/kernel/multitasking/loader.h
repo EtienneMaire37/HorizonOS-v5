@@ -26,43 +26,41 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
+bool multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
     LOG(INFO, "Loading ELF file \"initrd:%s\"", path);
 
     if (ring != 0 && ring != 3)
     {
         LOG(ERROR, "Invalid privilege level");
-        abort();
+        return false;
     }
 
     initrd_file_t* file;
     if (!(file = initrd_find_file(path))) 
     {
         LOG(ERROR, "Coudln't load file");
-        abort();
+        return false;
     }
 
     struct elf32_header* header = (struct elf32_header*)file->data;
     if (memcmp("\x7f""ELF", header->magic, 4) != 0) 
     {
         LOG(ERROR, "Invalid ELF signature");
-        abort();
+        return false;
     }
 
     if (header->architecture != ELF_CLASS_32 || header->byte_order != ELF_DATA_LITTLE_ENDIAN || header->machine != ELF_INSTRUCTION_SET_x86)
     {
         LOG(ERROR, "Non x86 ELF file");
-        abort();
+        return false;
     }
 
     if (header->type != ELF_TYPE_EXECUTABLE) 
     {
         LOG(ERROR, "Non executable ELF file");
-        abort();
+        return false;
     }
-
-    // * struct elf32_section_header* shstr = (struct elf32_section_header*)&file->data[header->shoff + header->shstrndx * header->shentsize];
 
     thread_t task = task_create_empty();
     task.name = name;
@@ -122,11 +120,11 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
         virtual_address_t end_address = ph->p_vaddr + ph->p_memsz;
         uint32_t num_pages = (end_address - start_address + 0xfff) >> 12;
 
-        if (ph->p_memsz < ph->p_filesz)
-        {
-            LOG(ERROR, "File size can never be larger than memory size");
-            abort();
-        }
+        // if (ph->p_memsz < ph->p_filesz)
+        // {
+        //     LOG(ERROR, "File size can never be larger than memory size");
+        //     abort();
+        // }
 
         // LOG(DEBUG, "0x%x : %u pages", start_address, num_pages);
 
@@ -166,11 +164,13 @@ void multitasking_add_task_from_initrd(char* name, const char* path, uint8_t rin
     tasks[task_count++] = task;
 
     LOG(INFO, "Loading successful");
+
+    return true;
 }
 
 static const char* initrd_prefix = "initrd:/";
 
-void multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
+bool multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
     if (!data) abort();
     int i = 0;
@@ -179,9 +179,8 @@ void multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, 
     const size_t len = strlen(initrd_prefix);
     if (i == len)   // !! Should definitely simplify the path too but it makes a limited amount of sense for initrd files
     {
-        multitasking_add_task_from_initrd(name, &path[len], ring, system, data);
-        return;
+        return multitasking_add_task_from_initrd(name, &path[len], ring, system, data);
     }
     LOG(ERROR, "Invalid path");
-    abort();
+    return false;
 }

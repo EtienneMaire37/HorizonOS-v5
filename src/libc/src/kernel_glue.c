@@ -2,7 +2,7 @@
 
 ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
-    volatile ssize_t bytes_written;
+    ssize_t bytes_written;
     asm volatile("int 0xf0" : "=a" (bytes_written), "=b" (errno)
         : "a" (SYSCALL_WRITE), "b" (fildes), "c" (buf), "d" (nbyte));
     return bytes_written;
@@ -12,14 +12,14 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
 {
     ssize_t bytes_read;
     asm volatile("int 0xf0" : "=a" (bytes_read), "=b" (errno)
-        : "a" (SYSCALL_READ), "b" (fildes), "c" (buf), "d" (nbyte));
+        : "a" (SYSCALL_READ), "b" (fildes), "c" (buf), "d" (nbyte) : "memory");
     return bytes_read;
 }
 
 void exit(int r)
 {
     fflush(stdout);
-    
+
     for (uint8_t i = 0; i < atexit_stack_length; i++)
         if (atexit_stack[atexit_stack_length - i - 1] != NULL)
             atexit_stack[atexit_stack_length - i - 1]();
@@ -115,5 +115,11 @@ int open(const char* path, int oflag, ...)
 int close(int fildes)
 {
     errno = EBADF;
+    return -1;
+}
+
+int execve(const char* path, char* const argv[], char* const envp[])
+{
+    asm volatile ("int 0xf0" : "=a"(errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp), "S"(cwd));
     return -1;
 }

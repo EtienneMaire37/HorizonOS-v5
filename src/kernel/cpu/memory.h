@@ -19,7 +19,7 @@ void load_pd_by_physaddr(physical_address_t addr)
         abort();
     }
     
-    asm volatile("mov cr3, eax" : : "a" ((uint32_t)addr));
+    asm volatile("mov cr3, eax" :: "a" ((uint32_t)addr) : "memory");
     
     current_phys_mem_page = 0xffffffff;
 }

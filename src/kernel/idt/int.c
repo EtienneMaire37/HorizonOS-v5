@@ -8,8 +8,6 @@
 
 #define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
 
-#define USE_IVLPG
-
 void interrupt_handler(interrupt_registers_t* registers)
 {
     uint32_t old_phys_mem_page = current_phys_mem_page;
@@ -34,7 +32,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         else
         {
             tasks[current_task_index].is_dead = true;
-            switch_task(&registers);
+            switch_task();
             current_phys_mem_page = 0xffffffff;
         }
 
@@ -77,7 +75,7 @@ void interrupt_handler(interrupt_registers_t* registers)
 
         if (ts) 
         {
-            switch_task(&registers);
+            switch_task();
             current_phys_mem_page = 0xffffffff;
         }
         return_from_isr();

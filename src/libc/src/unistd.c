@@ -48,9 +48,3 @@ char* getcwd(char* buffer, size_t size)
     buffer[size - 1] = 0;
     return buffer;
 }
-
-int execve(const char* path, char* const argv[], char* const envp[])
-{
-    errno = EACCES;
-    return -1;
-}

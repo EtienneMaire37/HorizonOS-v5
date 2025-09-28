@@ -159,27 +159,15 @@ int main(int argc, char** argv)
     return 0;
 }
 #else
-// #include <stdio.h>
-// #include <unistd.h>
-
-// extern char** environ;
-
-// int main(int argc, char** argv)
-// {
-//     execve("./echo.elf", (char*[]){"./echo.elf", "aa    bbb abcde5f", "xyz", NULL}, environ);
-//     fprintf(stderr, "Error: Couldn't run echo\n");
-//     return 0;
-// }
-
 #include <stdio.h>
 #include <unistd.h>
 
+extern char** environ;
+
 int main(int argc, char** argv)
 {
-    fork();
-    fork();
-    fork();
-    printf("Hello from pid %ld\n", getpid());
+    execve("initrd:/bin/echo.elf", (char*[]){"./echo.elf", "aa    bbb abcde5f", "xyz", NULL}, environ);
+    fprintf(stderr, "Error: Couldn't run echo\n");
     return 0;
 }
 #endif

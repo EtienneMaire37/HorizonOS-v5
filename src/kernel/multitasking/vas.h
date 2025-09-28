@@ -36,7 +36,10 @@ physical_address_t vas_create_empty()
 
     physical_set_page(pt_address, physical_memory_page_index, 0, PAGING_SUPERVISOR_LEVEL, true);
 
-    physical_set_page(pt_address, kernel_stack_page_index, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);
+    // physical_set_page(pt_address, kernel_stack_page_index, pfa_allocate_physical_page(), PAGING_SUPERVISOR_LEVEL, true);
+
+    for (int i = kernel_stack_page_index_start; i <= kernel_stack_page_index_end; i++)
+        physical_set_page(pt_address, i, pfa_allocate_physical_page(), PAGING_USER_LEVEL, true);
 
     for (int i = stack_page_index_start; i <= stack_page_index_end; i++)
         physical_set_page(pt_address, i, pfa_allocate_physical_page(), PAGING_USER_LEVEL, true);

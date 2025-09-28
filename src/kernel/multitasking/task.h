@@ -26,15 +26,16 @@ const int task_esp_offset = offsetof(thread_t, esp);
 // const int task_esp0_offset = offsetof(thread_t, esp0);
 const int task_cr3_offset = offsetof(thread_t, cr3);
 
-#define TASK_STACK_PAGES        0x100  // 1MB
-#define TASK_KERNEL_STACK_PAGES 1   // 4KB
+#define TASK_STACK_PAGES        0x100       // 1MB
+#define TASK_KERNEL_STACK_PAGES 32          // 128KB
 
 #define TASK_STACK_TOP_ADDRESS              0xc0000000
 #define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
 #define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
-#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000)
+#define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000 * TASK_KERNEL_STACK_PAGES)
 
-const int kernel_stack_page_index = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+const int kernel_stack_page_index_start = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
+const int kernel_stack_page_index_end = (TASK_KERNEL_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
 
 const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
 const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
@@ -97,7 +98,7 @@ uint16_t find_next_task_index()
 void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
 
 void task_destroy(thread_t* task);
-void switch_task(interrupt_registers_t** registers);
+void switch_task();
 void multitasking_init();
 void multitasking_start();
 void task_kill(uint16_t index);
