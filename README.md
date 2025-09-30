@@ -27,7 +27,6 @@ HorizonOS currently supports the following features:
     * More than 4GB memory with PAE
     * Full APIC and ACPI support 
     * Multicore support with SMP
-    * Custom VFS
     * Better scheduler
     * ATA and USB drivers
     * Network stack support and Ethernet drivers
