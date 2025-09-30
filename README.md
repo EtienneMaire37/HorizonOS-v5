@@ -2,7 +2,7 @@
 
 <div align="center">
    
-   ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg) 
+   ![GPL License](https://img.shields.io/badge/license-GPL-yellow.svg) 
    ![x86](https://img.shields.io/badge/arch-x86-informational) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
