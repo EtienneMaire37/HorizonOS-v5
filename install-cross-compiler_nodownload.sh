@@ -6,8 +6,8 @@ set -x -e
 
 mkdir -p "$PREFIX"
 
-mkdir -p /tmp/src
-cd /tmp/src
+mkdir -p ./tmp
+cd ./tmp
 
 mkdir -p binutils-build
 cd binutils-build
@@ -15,7 +15,7 @@ cd binutils-build
 make
 make install
 
-cd /tmp/src
+cd ..
 
 mkdir -p gcc-build
 cd gcc-build

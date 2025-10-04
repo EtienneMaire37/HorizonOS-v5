@@ -18,7 +18,7 @@ HorizonOS currently supports the following features:
 * **Features:**
     * Single-core multitasking with basic round robin scheduling
     * Memory management limited to 4GB
-    * Basic POSIX-like C library implementation
+    * Simple (non standard compliant) C library implementation
     * Extremely basic ACPI parsing 
     * GRUB bootloader integration
     * PS/2 keyboard driver (8042)

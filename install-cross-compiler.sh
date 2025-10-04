@@ -6,10 +6,11 @@ set -x -e
 
 mkdir -p "$PREFIX"
 
-mkdir -p /tmp/src
-cd /tmp/src
+mkdir -p ./tmp
+cd ./tmp
+rm -rf ./*
 
-curl -O http://ftp.gnu.org/gnu/binutils/binutils-2.44.tar.gz
+wget https://ftpmirror.gnu.org/gnu/binutils/binutils-2.44.tar.gz
 tar xf binutils-2.44.tar.gz
 
 mkdir -p binutils-build
@@ -18,9 +19,10 @@ cd binutils-build
 make
 make install
 
-cd /tmp/src
+cd ..
 
-curl -O https://ftp.gnu.org/gnu/gcc/gcc-15.1.0/gcc-15.1.0.tar.gz
+wget https://ftpmirror.gnu.org/gcc/gcc-15.1.0/gcc-15.1.0.tar.gz
+
 tar xf gcc-15.1.0.tar.gz
 
 mkdir -p gcc-build
