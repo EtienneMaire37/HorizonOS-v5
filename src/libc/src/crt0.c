@@ -3,30 +3,9 @@ extern void call_main_exit(int argc, char** argv);
 
 extern uint32_t kernel_data;
 
-char* default_environ[] = {NULL};
-
-static char* find_next_contiguous_string(char* str, int* bytes_left)
-{
-    if (!str) return NULL;
-    if (!bytes_left) return NULL;
-    while (*str && (*bytes_left) > 0)
-    {
-        str++;
-        (*bytes_left)--;
-    }
-    while (!(*str) && (*bytes_left) > 0)
-    {
-        str++;
-        (*bytes_left)--;
-    }
-    if ((*bytes_left) <= 0) return NULL;
-    return str;
-}
-
 void _main()
 {
-    // dprintf(STDERR_FILENO, "_main\n");
-
+#include "misc.h"
     memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
 
@@ -38,16 +17,9 @@ void _main()
     alloc_break_address = break_address;
     malloc_bitmap_init();
 
-    const int num_environ = 1;
-    environ = malloc((num_environ + 1) * sizeof(char*));
-    if (!environ) environ = &default_environ[0];
-    else
-    {
-        environ[0] = "PATH=";
-        environ[num_environ] = NULL;
-    }
+    startup_data_struct_t* data = (startup_data_struct_t*)kernel_data;
 
-    // dprintf(STDERR_FILENO, "Initializing buffered streams...\n");
+    environ = data->environ;
 
     stdin = FILE_create();
     if (stdin == NULL) exit(EXIT_FAILURE);
@@ -65,12 +37,6 @@ void _main()
     stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
 
     create_b64_decoding_table();
-
-    // dprintf(STDERR_FILENO, "Calling main...\n");
-
-    startup_data_struct_t* data = (startup_data_struct_t*)kernel_data;
-    
-    // printf("%s\n\n", data->cmd_line);
 
     bool string = false;
     for (int i = 0; i < 4096; i++)

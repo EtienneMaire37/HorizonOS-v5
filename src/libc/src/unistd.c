@@ -48,3 +48,10 @@ char* getcwd(char* buffer, size_t size)
     buffer[size - 1] = 0;
     return buffer;
 }
+
+int execvp(const char* file, char* const argv[])
+{
+    fprintf(stderr, "%s: command not found\n", file);
+    errno = EACCES;
+    return -1;
+}

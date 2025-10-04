@@ -62,6 +62,24 @@ char* strcpy(char* destination, const char* source)
         destination++;
         source++;
     }
+    (*destination) = 0;
+    return _dest;
+}
+
+char* strncpy(char* destination, const char* source, size_t n)
+{
+    char* _dest = destination;
+    size_t i = 0;
+
+    while(i < n && source[i] != '\0')
+    {
+        destination[i] = source[i];
+        i++;
+    }
+
+    while(i < n)
+        destination[i++] = '\0';
+
     return _dest;
 }
 

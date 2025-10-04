@@ -12,4 +12,5 @@ int memcmp(const void* str1, const void* str2, size_t n);
 int strcmp(const char* str1, const char* str2);
 size_t strlen(const char* str);
 char* strcpy(char* destination, const char* source);
+char* strncpy(char* destination, const char* source, size_t n);
 char* strerror(int errnum);

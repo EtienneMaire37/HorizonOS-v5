@@ -18,25 +18,9 @@
 
 #include <horizonos.h>
 
-const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
+#include "../../libc/src/misc.h"
 
-char* find_next_contiguous_string(char* str, int* bytes_left)
-{
-    if (!str) return NULL;
-    if (!bytes_left) return NULL;
-    while (*str && (*bytes_left) > 0)
-    {
-        str++;
-        (*bytes_left)--;
-    }
-    while (!(*str) && (*bytes_left) > 0)
-    {
-        str++;
-        (*bytes_left)--;
-    }
-    if ((*bytes_left) <= 0) return NULL;
-    return str;
-}
+const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 // void int_handler()
 // {
@@ -113,7 +97,7 @@ int main(int argc, char** argv)
                 }
             }
             int bytes_left = ret - 1;
-            char* first_arg = data_processed[0] ? data_processed : find_next_contiguous_string(data_processed, &bytes_left);
+            char* first_arg = find_first_arg(data_processed, &bytes_left);
             if (!first_arg) goto cmd;
             if (*first_arg == 0) goto cmd;
             if (strcmp(first_arg, "exit") == 0)
@@ -159,6 +143,18 @@ int main(int argc, char** argv)
     return 0;
 }
 #else
+// #include <stdio.h>
+// #include <unistd.h>
+
+// extern char** environ;
+
+// int main(int argc, char** argv)
+// {
+//     execve("/initrd/bin/echo.elf", (char*[]){"./echo.elf", "aa    bbb abcde5f", "xyz", NULL}, environ);
+//     fprintf(stderr, "Error: Couldn't run echo\n");
+//     return 0;
+// }
+
 #include <stdio.h>
 #include <unistd.h>
 
@@ -166,8 +162,15 @@ extern char** environ;
 
 int main(int argc, char** argv)
 {
-    execve("initrd:/bin/echo.elf", (char*[]){"./echo.elf", "aa    bbb abcde5f", "xyz", NULL}, environ);
-    fprintf(stderr, "Error: Couldn't run echo\n");
+    int i = 0;
+    while (environ[i])
+        printf("\"%s\"\n", environ[i++]);
+    if (getpid() == 1)
+    {
+        printf("---\n");
+        if (fork() == 0)
+            execve("/initrd/bin/kernel32.elf", (char*[]){"/initrd/bin/kernel32.elf", NULL}, (char*[]){"PATH=/abc/:/initrd/bin/:/def/bin/", NULL});
+    }
     return 0;
 }
 #endif

@@ -265,6 +265,51 @@ char* getenv(const char* name)
 
 int system(const char* command)
 {
-    fprintf(stderr, "%s: command not found\n", command);
-    return 1;
+#include "misc.h"
+    if (!command) return 1;
+
+    size_t bytes = strlen(command) + 1;
+    char* cmd_data = malloc(bytes);
+    if (!cmd_data) 
+    {
+        errno = EAGAIN;
+        return -1;
+    }
+    int return_value = 0;
+    strncpy(cmd_data, command, bytes);
+
+    if (bytes <= 1)
+    {
+        return_value = 1;
+        goto error;
+    }
+
+    size_t characters = bytes - 1;
+    bool string = false;
+    for (int i = 0; i < characters; i++)
+    {
+        if (cmd_data[i] == ' ' && !string) cmd_data[i] = 0;
+        if (cmd_data[i] == '\"') 
+        {
+            string ^= true;
+            cmd_data[i] = 0;
+        }
+    }
+    int bytes_left = characters;
+    
+    char* first_arg = find_first_arg(cmd_data, &bytes_left);
+    if (!first_arg)
+    {
+        return_value = 127;
+        goto error;
+    }
+
+    execvp(first_arg, NULL);
+
+    return_value = 127;
+    goto error;
+
+error:
+    free(cmd_data);
+    return return_value;
 }

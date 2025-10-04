@@ -152,6 +152,7 @@ const char* multiboot_block_type_text[5] =
 #include "initrd/initrd.h"
 #include "time/gdn.h"
 #include "time/ktime.h"
+#include "multitasking/loader.h"
 
 // ---------------------------------------------------------------
 
@@ -190,7 +191,7 @@ int imod(int a, int b)
 #include "idt/int.c"
 #include "pic/pic.c"
 #include "multitasking/task.c"
-#include "multitasking/loader.h"
+#include "multitasking/loader.c"
 #include "ps2/ps2.c"
 #include "pci/pci.c"
 
@@ -527,8 +528,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    startup_data_struct_t data = startup_data_init_from_command("initrd:/bin/kernel32.elf", "initrd:/bin/");
-    if (!multitasking_add_task_from_vfs("kernel32", "initrd:/bin/kernel32.elf", 0, true, &data))
+    startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/kernel32.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/initrd/bin/");
+    if (!multitasking_add_task_from_vfs("kernel32", "/initrd/bin/kernel32.elf", 0, true, &data))
     {
         LOG(ERROR, "Kernel task couldn't start");
         abort();

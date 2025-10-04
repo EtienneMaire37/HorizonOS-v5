@@ -3,8 +3,6 @@
 // #define LOG_SYSCALLS
 #define USE_IVLPG
 
-bool multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data);
-
 void handle_syscall(interrupt_registers_t* registers)
 {
     #ifdef LOG_SYSCALLS
@@ -204,8 +202,8 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
 
     case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
-    // !!! not compliant (only absolute paths + doesn't copy environ) 
-        startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char*)registers->esi);
+    // !!! not compliant (absolute paths are handled in libc) 
+        startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
         lock_task_queue();
         if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
