@@ -281,7 +281,7 @@ int system(const char* command)
     if (bytes <= 1)
     {
         return_value = 1;
-        goto error;
+        goto do_return;
     }
 
     size_t characters = bytes - 1;
@@ -301,15 +301,60 @@ int system(const char* command)
     if (!first_arg)
     {
         return_value = 127;
-        goto error;
+        goto do_return;
     }
 
-    execvp(first_arg, NULL);
+    char* arg = first_arg;
+    int bytes_left_backup = bytes_left;
+    int argc = 1;
+    while (arg = find_next_contiguous_string(arg, &bytes_left))
+        argc++;
+    bytes_left = bytes_left_backup;
+
+    char** argv = malloc(argc * sizeof(char*));
+    
+    if (!argv) 
+    {
+        return_value = 1;
+        goto do_return;
+    }
+
+    arg = first_arg;
+    argv[0] = arg;
+    int i = 1;
+    while (arg = find_next_contiguous_string(arg, &bytes_left))
+        argv[i++] = arg;
+
+    pid_t ret = fork();
+    if (ret == -1)
+    {
+        return_value = 127;
+        goto do_return;
+    }
+
+    if (ret == 0)
+    {
+        execvp(first_arg, argv);
+        exit(127);
+    }
+    else
+    {
+        int wstatus;
+        waitpid(ret, &wstatus, 0);
+        return_value = WEXITSTATUS(wstatus);
+
+        free(argv);
+        goto do_return;
+    }
+
+    free(argv);
+
+    fprintf(stderr, "%s: command not found\n", first_arg);
 
     return_value = 127;
-    goto error;
+    goto do_return;
 
-error:
+do_return:
     free(cmd_data);
     return return_value;
 }

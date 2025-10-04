@@ -72,6 +72,8 @@ void _main()
         argv[i] = 0;
     }
 
+    // printf("argc : %d\n", argc);
+
     memcpy(cwd, data->pwd, PATH_MAX);
 
     call_main_exit(argc, argv);

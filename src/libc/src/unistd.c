@@ -49,9 +49,7 @@ char* getcwd(char* buffer, size_t size)
     return buffer;
 }
 
-int execvp(const char* file, char* const argv[])
+int execvp(const char* file, char* const argv[])    // TODO: Actually implement relative/environ based paths
 {
-    fprintf(stderr, "%s: command not found\n", file);
-    errno = EACCES;
-    return -1;
+    return execve(file, argv, environ);
 }

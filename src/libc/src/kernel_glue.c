@@ -123,3 +123,8 @@ int execve(const char* path, char* const argv[], char* const envp[])
     asm volatile ("int 0xf0" : "=a"(errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp), "S"(cwd));
     return -1;
 }
+
+pid_t waitpid(pid_t pid, int* wstatus, int options)
+{
+    while(true);
+}

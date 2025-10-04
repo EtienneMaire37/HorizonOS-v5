@@ -115,3 +115,8 @@ int execve(const char* path, char* const argv[], char* const envp[])
     errno = EACCES;
     return -1;
 }
+
+pid_t waitpid(pid_t pid, int* wstatus, int options)
+{
+    while(true);
+}

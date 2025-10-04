@@ -26,6 +26,7 @@ char cwd[PATH_MAX] = {0};
 #include "../include/errno.h"
 #include "../include/unistd.h"
 #include "../include/stdio.h"
+#include "../include/sys/wait.h"
 #include "../include/stdlib.h"
 #include "../include/time.h"
 #include "../include/stdarg.h"

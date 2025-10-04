@@ -48,6 +48,7 @@ int64_t maxint(int64_t a, int64_t b)
 #include "../libc/src/startup_data.h"
 
 #include "../libc/src/kernel_glue.h"
+#include "../libc/include/sys/wait.h"
 
 const char* text_logo = 
 // "    __  __           _                  ____  _____            ______ \n\
@@ -196,6 +197,7 @@ int imod(int a, int b)
 #include "pci/pci.c"
 
 #include "../libc/src/kernel.c"
+#include "../libc/src/startup_data.c"
 
 FILE _stdin, _stdout, _stderr;
 
