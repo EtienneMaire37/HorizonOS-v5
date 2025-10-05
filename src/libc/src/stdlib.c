@@ -336,6 +336,10 @@ int system(const char* command)
     if (ret == 0)
     {
         execvp(first_arg, argv);
+        if (errno == ENOENT)
+            fprintf(stderr, "%s: command not found\n", first_arg);
+        else
+            fprintf(stderr, "%s: couldn't run command\n", first_arg);
         exit(127);
     }
     else

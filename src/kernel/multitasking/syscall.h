@@ -213,7 +213,7 @@ void handle_syscall(interrupt_registers_t* registers)
         if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
             unlock_task_queue();
-            registers->eax = EACCES;
+            registers->eax = ENOENT;
             break;
         }
         else
