@@ -28,6 +28,11 @@ thread_t task_create_empty()
     task.is_dead = false;
     task.forked_pid = 0;    // is_being_forked = false
 
+    task.parent = -1;
+    task.wait_pid = -1;
+
+    task.to_reap = false;
+
     return task;
 }
 
@@ -148,6 +153,14 @@ void switch_task()
     unlock_task_queue();
 }
 
+thread_t* find_task_by_pid(pid_t pid)
+{
+    for (uint16_t i = 0; i < task_count; i++)
+        if (tasks[i].pid == pid)
+            return &tasks[i];
+    return NULL;
+}
+
 void task_kill(uint16_t index)
 {
     if (index == current_task_index)
@@ -189,6 +202,8 @@ void copy_task(uint16_t index)
 
     const uint16_t new_task_index = task_count - 1;
 
+    tasks[new_task_index] = tasks[index];
+
     // tasks[new_task_index].name = tasks[index].name;
     memcpy(tasks[new_task_index].name, tasks[index].name, THREAD_NAME_MAX);
     tasks[new_task_index].ring = tasks[index].ring;
@@ -204,6 +219,9 @@ void copy_task(uint16_t index)
 
     tasks[new_task_index].forked_pid = 0;
     tasks[new_task_index].is_dead = false;
+
+    tasks[new_task_index].parent = tasks[index].pid;
+    tasks[new_task_index].wait_pid = -1;
     
     for (uint16_t i = 0; i < 768; i++)
     {
@@ -255,8 +273,25 @@ void cleanup_tasks()
 
     for (uint16_t i = 0; i < task_count; i++)
     {
+        if (!tasks[i].is_dead) continue;
+        thread_t* parent = find_task_by_pid(tasks[i].parent);
+        if (parent)
+        {
+            if (parent->wait_pid != -1)
+            {
+                if (parent->wait_pid == 0 || absint(parent->wait_pid) == tasks[i].pid)
+                {
+                    tasks[i].to_reap = true;
+                    parent->wait_pid = -1;
+                }
+            }
+        }
+    }
+
+    for (uint16_t i = 0; i < task_count; i++)
+    {
         if (i == current_task_index) continue;
-        if (tasks[i].is_dead)
+        if (tasks[i].to_reap)
         {
             task_kill(i);
             i--;

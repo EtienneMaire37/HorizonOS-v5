@@ -13,9 +13,10 @@ void handle_syscall(interrupt_registers_t* registers)
     {
     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
         LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+        lock_task_queue();
         tasks[current_task_index].is_dead = true;
+        unlock_task_queue();
         switch_task();
-        current_phys_mem_page = 0xffffffff;
         break;
     case SYSCALL_TIME:     // * time || $eax = time
         registers->eax = time(NULL);
@@ -79,8 +80,10 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         break;
     case SYSCALL_GETPID:     // * getpid || $eax = pid_hi, $ebx = pid_lo
+        lock_task_queue();
         registers->eax = tasks[current_task_index].pid >> 32;
         registers->ebx = (uint32_t)tasks[current_task_index].pid;
+        unlock_task_queue();
         break;
     case SYSCALL_FORK:     // * fork
         if (task_count >= MAX_TASKS)
@@ -90,8 +93,10 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         else
         {
+            lock_task_queue();
             tasks[current_task_index].forked_pid = current_pid++;
             pid_t forked_pid = tasks[current_task_index].forked_pid;
+            unlock_task_queue();
             switch_task();
             current_phys_mem_page = 0xffffffff;
             if (tasks[current_task_index].pid == forked_pid)
@@ -214,13 +219,23 @@ void handle_syscall(interrupt_registers_t* registers)
         else
         {
             pid_t old_pid = tasks[current_task_index].pid;
-            tasks[current_task_index].is_dead = true;
+            tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
+            tasks[task_count - 1].parent = tasks[current_task_index].parent;
+            tasks[current_task_index].parent = -1;
             tasks[current_task_index].pid = tasks[task_count - 1].pid;
             tasks[task_count - 1].pid = old_pid;
             unlock_task_queue();
             switch_task();
             break;
         }
+
+    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
+        uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
+        lock_task_queue();
+        tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+        unlock_task_queue();
+        switch_task();
+        break;
 
     case SYSCALL_FLUSH_INPUT_BUFFER:
         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));

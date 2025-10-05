@@ -126,5 +126,9 @@ int execve(const char* path, char* const argv[], char* const envp[])
 
 pid_t waitpid(pid_t pid, int* wstatus, int options)
 {
-    while(true);
+    uint32_t ret_lo, ret_hi;
+    uint32_t pid_lo = pid & 0xffffffff, pid_hi = pid >> 32;
+    asm volatile ("int 0xf0" : "=a"(errno), "=b"(*wstatus), "=c"(ret_lo), "=d"(ret_hi) : "a"(SYSCALL_WAITPID), "b"(pid_lo), "c"(pid_hi), "d"(options) : "memory");
+    uint64_t ret = ((uint64_t)ret_hi << 32) | ret_lo;
+    return *(pid_t*)&ret;
 }

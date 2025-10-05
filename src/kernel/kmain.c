@@ -35,6 +35,10 @@ int64_t maxint(int64_t a, int64_t b)
 {
     return a > b ? a : b;
 }
+int64_t absint(int64_t x)
+{
+    return x < 0 ? -x : x;
+}
 
 #include "../libc/include/assert.h"
 

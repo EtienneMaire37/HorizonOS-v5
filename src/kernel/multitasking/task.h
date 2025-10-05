@@ -10,6 +10,11 @@ typedef struct thread
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
+    pid_t wait_pid;
+
+    bool to_reap;
+
+    pid_t parent;
 
     pid_t forked_pid;
 
@@ -83,6 +88,7 @@ bool task_is_blocked(uint16_t index)
     if (tasks[index].is_dead) return true;
     if (tasks[index].reading_stdin) return true;
     if (tasks[index].forked_pid) return true;
+    if (tasks[index].wait_pid != -1) return true;
     return false;
 }
 
