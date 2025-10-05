@@ -75,6 +75,7 @@ void _main()
     // printf("argc : %d\n", argc);
 
     memcpy(cwd, data->pwd, PATH_MAX);
+    realpath(cwd, cwd);
 
     call_main_exit(argc, argv);
     while(true);

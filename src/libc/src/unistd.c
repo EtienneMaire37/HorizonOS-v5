@@ -49,7 +49,7 @@ char* getcwd(char* buffer, size_t size)
     return buffer;
 }
 
-int execvp(const char* file, char* const argv[])    // TODO: Actually implement relative/environ based paths
+int execvp(const char* file, char* const argv[])    // TODO: Actually implement environ based paths
 {
     return execve(file, argv, environ);
 }

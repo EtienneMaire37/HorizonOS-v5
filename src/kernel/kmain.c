@@ -40,6 +40,8 @@ int64_t absint(int64_t x)
     return x < 0 ? -x : x;
 }
 
+char cwd[PATH_MAX] = {0};
+
 #include "../libc/include/assert.h"
 
 #include "../libc/include/errno.h"
@@ -130,6 +132,7 @@ const char* multiboot_block_type_text[5] =
 #include "../libc/src/stdio.c"
 #include "../libc/src/string.c"
 #include "../libc/src/stdlib.c"
+#include "../libc/src/unistd.c"
 
 #include "io/io.h"
 #include "ps2/ps2.h"

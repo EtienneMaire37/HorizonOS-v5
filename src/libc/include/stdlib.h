@@ -38,3 +38,5 @@ void      free(void *);				//< The standard function
 
 char* getenv(const char* name);
 int system(const char* command);
+
+char* realpath(const char* path, char* resolved_path);

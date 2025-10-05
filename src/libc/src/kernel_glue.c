@@ -120,7 +120,9 @@ int close(int fildes)
 
 int execve(const char* path, char* const argv[], char* const envp[])
 {
-    asm volatile ("int 0xf0" : "=a"(errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp), "S"(cwd));
+    char resolved_path[PATH_MAX] = {0};
+    realpath(path, resolved_path);
+    asm volatile ("int 0xf0" : "=a"(errno) : "a"(SYSCALL_EXECVE), "b"(resolved_path), "c"(argv), "d"(envp), "S"(cwd));
     return -1;
 }
 

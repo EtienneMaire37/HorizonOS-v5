@@ -311,7 +311,7 @@ int system(const char* command)
         argc++;
     bytes_left = bytes_left_backup;
 
-    char** argv = malloc(argc * sizeof(char*));
+    char** argv = malloc((argc + 1) * sizeof(char*));
     
     if (!argv) 
     {
@@ -324,6 +324,7 @@ int system(const char* command)
     int i = 1;
     while (arg = find_next_contiguous_string(arg, &bytes_left))
         argv[i++] = arg;
+    argv[i] = NULL;
 
     pid_t ret = fork();
     if (ret == -1)
@@ -357,4 +358,99 @@ int system(const char* command)
 do_return:
     free(cmd_data);
     return return_value;
+}
+
+char* realpath(const char* path, char* resolved_path)
+{
+    if (!path) {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!resolved_path)
+        resolved_path = malloc(PATH_MAX);
+    if (!resolved_path)
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    int i = 0, j = 0;
+    if (path[0] != '/') 
+    {
+        if (!getcwd(resolved_path, PATH_MAX)) 
+        {
+            free(resolved_path);
+            return NULL;
+        }
+        j = strlen(resolved_path);
+    } 
+    else 
+    {
+        resolved_path[0] = '/';
+        j = 1;
+        i = 1;
+    }
+
+    while (path[i]) 
+    {
+        while (path[i] == '/') i++;
+        if (!path[i]) break;
+
+        int start = i;
+        while (path[i] && path[i] != '/') i++;
+        int len = i - start;
+
+        if (len == 1 && path[start] == '.')
+            continue;
+
+        if (len == 2 && path[start] == '.' && path[start+1] == '.') 
+        {
+            if (j > 1) 
+            {
+                if (resolved_path[j-1] == '/') 
+                    j--;
+                while (j > 0 && resolved_path[j-1] != '/') 
+                    j--;
+
+                if (j == 0)
+                    resolved_path[j++] = '/';
+            } 
+            continue;
+        }
+
+        if (j == 0 || resolved_path[j-1] != '/') 
+        {
+            if (j >= PATH_MAX - 1) 
+            { 
+                errno = ENAMETOOLONG; 
+                free(resolved_path); 
+                return NULL; 
+            }
+            resolved_path[j++] = '/';
+        }
+
+        if (j + len >= PATH_MAX) 
+        { 
+            errno = ENAMETOOLONG; 
+            free(resolved_path); 
+            return NULL; 
+        }
+
+        memcpy(resolved_path + j, path + start, len);
+        j += len;
+    }
+
+    if (j == 0) 
+    {
+        if (PATH_MAX < 2) { errno = ENAMETOOLONG; free(resolved_path); return NULL; }
+        resolved_path[0] = '/';
+        resolved_path[1] = '\0';
+        return resolved_path;
+    }
+
+    if (j > 1 && resolved_path[j-1] == '/') 
+        j--;
+    resolved_path[j] = '\0';
+    return resolved_path;
 }
