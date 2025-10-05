@@ -286,6 +286,8 @@ void cleanup_tasks()
                 }
             }
         }
+        else
+            tasks[i].to_reap = true;
     }
 
     for (uint16_t i = 0; i < task_count; i++)
