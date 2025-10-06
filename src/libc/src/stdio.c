@@ -725,5 +725,5 @@ int getchar()
 
 void perror(const char* prefix)
 {
-    fprintf(stderr, prefix);
+    fprintf(stderr, "%s\n", prefix);
 }

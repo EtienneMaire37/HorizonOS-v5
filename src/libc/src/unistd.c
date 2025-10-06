@@ -49,7 +49,50 @@ char* getcwd(char* buffer, size_t size)
     return buffer;
 }
 
-int execvp(const char* file, char* const argv[])    // TODO: Actually implement environ based paths
+int execv(const char* path, char* const argv[])
 {
-    return execve(file, argv, environ);
+    return execve(path, argv, environ);
+}
+
+int execvpe(const char* file, char* const argv[], char* const envp[])
+{
+#include "misc.h"
+    execve(file, argv, envp);
+
+    const char* PATH = getenv("PATH");
+    if (!PATH) 
+    {
+        errno = ENOENT;
+        return -1;
+    }
+    int bytes = strlen(PATH) + 1;
+    char* path_data = malloc(bytes);
+    strncpy(path_data, PATH, bytes);
+    for (int i = 0; i < bytes; i++)
+    {
+        if (path_data[i] == ':')
+            path_data[i] = 0;
+    }
+    char* path = path_data;
+    do
+    {
+        int path_len = strlen(path);
+        char* combined = malloc(path_len + strlen(file) + 2);
+        strcpy(combined, path);
+        combined[path_len] = '/';
+        strcpy(((void*)combined + path_len + 1), file);
+        char* realpath_combined = realpath(combined, NULL);
+        execve(realpath_combined, argv, envp);
+        free(realpath_combined);
+        free(combined);
+    }
+    while (path = find_next_contiguous_string(path, &bytes));
+    free(path_data);
+    errno = ENOENT;
+    return -1;
+}
+
+int execvp(const char* file, char* const argv[])
+{
+    return execvpe(file, argv, environ);
 }

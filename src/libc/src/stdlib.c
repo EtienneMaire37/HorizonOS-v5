@@ -366,7 +366,8 @@ do_return:
 
 char* realpath(const char* path, char* resolved_path)
 {
-    if (!path) {
+    if (!path) 
+    {
         errno = EINVAL;
         return NULL;
     }
@@ -398,23 +399,25 @@ char* realpath(const char* path, char* resolved_path)
 
     while (path[i]) 
     {
-        while (path[i] == '/') i++;
+        while (path[i] == '/') 
+            i++;
         if (!path[i]) break;
 
         int start = i;
-        while (path[i] && path[i] != '/') i++;
+        while (path[i] && path[i] != '/') 
+            i++;
         int len = i - start;
 
         if (len == 1 && path[start] == '.')
             continue;
 
-        if (len == 2 && path[start] == '.' && path[start+1] == '.') 
+        if (len == 2 && path[start] == '.' && path[start + 1] == '.') 
         {
             if (j > 1) 
             {
-                if (resolved_path[j-1] == '/') 
+                if (resolved_path[j - 1] == '/') 
                     j--;
-                while (j > 0 && resolved_path[j-1] != '/') 
+                while (j > 0 && resolved_path[j - 1] != '/') 
                     j--;
 
                 if (j == 0)
@@ -423,7 +426,7 @@ char* realpath(const char* path, char* resolved_path)
             continue;
         }
 
-        if (j == 0 || resolved_path[j-1] != '/') 
+        if (j == 0 || resolved_path[j - 1] != '/') 
         {
             if (j >= PATH_MAX - 1) 
             { 
@@ -447,13 +450,18 @@ char* realpath(const char* path, char* resolved_path)
 
     if (j == 0) 
     {
-        if (PATH_MAX < 2) { errno = ENAMETOOLONG; free(resolved_path); return NULL; }
+        if (PATH_MAX < 2) 
+        { 
+            errno = ENAMETOOLONG; 
+            free(resolved_path); 
+            return NULL; 
+        }
         resolved_path[0] = '/';
         resolved_path[1] = '\0';
         return resolved_path;
     }
 
-    if (j > 1 && resolved_path[j-1] == '/') 
+    if (j > 1 && resolved_path[j - 1] == '/') 
         j--;
     resolved_path[j] = '\0';
     return resolved_path;
