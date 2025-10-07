@@ -59,6 +59,15 @@ int execvpe(const char* file, char* const argv[], char* const envp[])
 #include "misc.h"
     execve(file, argv, envp);
 
+    for (int i = 0; i < strlen(file); i++)
+    {
+        if (file[i] == '/') 
+        {
+            errno = ENOENT;
+            return -1;
+        }
+    }
+
     const char* PATH = getenv("PATH");
     if (!PATH) 
     {
@@ -81,9 +90,7 @@ int execvpe(const char* file, char* const argv[], char* const envp[])
         strcpy(combined, path);
         combined[path_len] = '/';
         strcpy(((void*)combined + path_len + 1), file);
-        char* realpath_combined = realpath(combined, NULL);
-        execve(realpath_combined, argv, envp);
-        free(realpath_combined);
+        execve(combined, argv, envp);
         free(combined);
     }
     while (path = find_next_contiguous_string(path, &bytes));
