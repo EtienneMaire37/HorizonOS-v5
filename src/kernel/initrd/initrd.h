@@ -48,6 +48,12 @@ void initrd_parse()
         //     continue;
 
         initrd_files[initrd_files_count].name = &header->name[0];
+        int str_len = strlen(initrd_files[initrd_files_count].name);
+        for (int i = 0; i < str_len; i++)
+        {
+            if (initrd_files[initrd_files_count].name[i] == '/' && !initrd_files[initrd_files_count].name[i + 1])
+                initrd_files[initrd_files_count].name[i] = 0;
+        }
         initrd_files[initrd_files_count].size = file_size;
         initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
         if (header->type == 0) header->type = '0';
@@ -99,6 +105,21 @@ void initrd_parse()
 }
 
 initrd_file_t* initrd_find_file(const char* name)
+{
+    LOG(INFO, "Opening file \"%s\" from initrd", name);
+
+    for (uint8_t i = 0; i < initrd_files_count; i++)
+    {
+        if (strcmp(initrd_files[i].name, name) == 0 && initrd_files[i].type == USTAR_TYPE_FILE_1)
+            return &initrd_files[i];
+    }
+
+    LOG(INFO, "Error opening file \"%s\"", name);
+
+    return NULL;
+}
+
+initrd_file_t* initrd_find_file_entry(const char* name)
 {
     LOG(INFO, "Opening file \"%s\" from initrd", name);
 

@@ -26,7 +26,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 
 	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
 	nasm -f elf32 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
-	nasm -f elf32 -o "bin/idt.o" "src/kernel/idt/idt.asm"
+	nasm -f elf32 -o "bin/idt.o" "src/kernel/int/idt.asm"
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"

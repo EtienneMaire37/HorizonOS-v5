@@ -29,11 +29,11 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-static const char* initrd_prefix = "/initrd/";
+const char* loader_initrd_prefix = "/initrd/";
 
 bool multitasking_add_task_from_initrd(char* name, const char* path, uint8_t ring, bool system, startup_data_struct_t* data)
 {
-    LOG(INFO, "Loading ELF file \"%s%s\"", initrd_prefix, path);
+    LOG(INFO, "Loading ELF file \"%s%s\"", loader_initrd_prefix, path);
 
     if (ring != 0 && ring != 3)
     {
@@ -201,10 +201,10 @@ bool multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, 
 
     LOG(DEBUG, "Loading file \"%s\"", name);
     int i = 0;
-    while (path[i] != 0 && initrd_prefix[i] != 0 && path[i] == initrd_prefix[i])
+    while (path[i] != 0 && loader_initrd_prefix[i] != 0 && path[i] == loader_initrd_prefix[i])
         i++;
-    const size_t len = strlen(initrd_prefix);
-    if (i == len)   // !! Should definitely simplify the path too but it makes a limited amount of sense for initrd files
+    const size_t len = strlen(loader_initrd_prefix);
+    if (i == len)
     {
         return multitasking_add_task_from_initrd(name, &path[len], ring, system, data);
     }

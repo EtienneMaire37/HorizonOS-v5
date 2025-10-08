@@ -33,6 +33,7 @@ char cwd[PATH_MAX] = {0};
 #include "../include/string.h"
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
+#include "../include/sys/stat.h"
 
 #include "startup_data.h"
 

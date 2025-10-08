@@ -9,7 +9,7 @@ void handle_syscall(interrupt_registers_t* registers)
     LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
     #endif
 
-    switch (registers->eax)
+    switch (registers->eax) // !! for some of these path resolution is handled in libc
     {
     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
         LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
@@ -207,34 +207,52 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
 
     case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
-    // !!! not compliant (absolute paths are handled in libc) 
-        startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
-        lock_task_queue();
-        if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
-            unlock_task_queue();
-            registers->eax = ENOENT;
-            break;
-        }
-        else
-        {
-            pid_t old_pid = tasks[current_task_index].pid;
-            tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
-            tasks[task_count - 1].parent = tasks[current_task_index].parent;
-            tasks[current_task_index].parent = -1;
-            tasks[current_task_index].pid = tasks[task_count - 1].pid;
-            tasks[task_count - 1].pid = old_pid;
-            unlock_task_queue();
-            switch_task();
-            break;
+            startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
+            lock_task_queue();
+            if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
+            {
+                unlock_task_queue();
+                registers->eax = ENOENT;
+                break;
+            }
+            else
+            {
+                pid_t old_pid = tasks[current_task_index].pid;
+                tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
+                tasks[task_count - 1].parent = tasks[current_task_index].parent;
+                tasks[current_task_index].parent = -1;
+                tasks[current_task_index].pid = tasks[task_count - 1].pid;
+                tasks[task_count - 1].pid = old_pid;
+                unlock_task_queue();
+                switch_task();
+                break;
+            }
         }
 
     case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
-        uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
-        lock_task_queue();
-        tasks[current_task_index].wait_pid = *(pid_t*)&pid;
-        unlock_task_queue();
-        switch_task();
+        {
+            uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
+            lock_task_queue();
+            tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+            unlock_task_queue();
+            switch_task();
+        }
+        break;
+
+    case SYSCALL_STAT:  // * stat | path = $ebx, stat_buf = $ecx | $eax = ret   
+        {
+            struct stat* st = (struct stat*)registers->ecx;
+            const char* path = (const char*)registers->ebx;
+            registers->eax = vfs_stat(path, st);
+        }
+        break;
+
+    case SYSCALL_ACCESS:  // * access | path = $ebx, mode = $ecx | $eax = ret
+        {
+            const char* path = (const char*)registers->ebx;
+            registers->eax = vfs_access(path, registers->ecx);
+        }
         break;
 
     case SYSCALL_FLUSH_INPUT_BUFFER:
@@ -253,9 +271,13 @@ void handle_syscall(interrupt_registers_t* registers)
 
     default:
         LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
+    #define DEBUG_SYSCALLS
+    #ifndef DEBUG_SYSCALLS
         tasks[current_task_index].is_dead = true;
         switch_task();
-        current_phys_mem_page = 0xffffffff;
+    #else
+        abort();
+    #endif
     }        
     #ifdef LOG_SYSCALLS
     LOG(TRACE, "Successfully handled syscall");

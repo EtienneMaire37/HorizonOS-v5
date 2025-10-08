@@ -27,19 +27,41 @@ int gethostname(char* name, size_t namelen)
     return 0;
 }
 
-int chdir(const char* path) // !!! unstub this asap
+int chdir(const char* path)
 {
-    // char old_cwd[PATH_MAX];
-    // getcwd(old_cwd, PATH_MAX);
-    // path_add(cwd, cwd, path);
-    if (path == NULL)
+    if (!path) 
     {
         errno = EFAULT;
         return -1;
     }
-    errno = EACCES;
+
+    char* new_cwd = realpath(path, NULL);
+    if (!new_cwd)
+        return -1;
+
+    struct stat st;
+    if (stat(new_cwd, &st) == 0) 
+    {
+        if (S_ISDIR(st.st_mode))
+        {
+            if (access(new_cwd, F_OK | X_OK) == 0) 
+            {
+                strncpy(cwd, new_cwd, PATH_MAX - 1);
+                cwd[PATH_MAX - 1] = '\0';
+                free(new_cwd);
+                return 0;
+            }
+        }
+        else
+            errno = ENOTDIR;
+    }
+
+    int err = errno;
+    free(new_cwd);
+    errno = err;
     return -1;
 }
+
 
 char* getcwd(char* buffer, size_t size)
 {

@@ -55,6 +55,7 @@ char cwd[PATH_MAX] = {0};
 
 #include "../libc/src/kernel_glue.h"
 #include "../libc/include/sys/wait.h"
+#include "../libc/include/sys/stat.h"
 
 const char* text_logo = 
 // "    __  __           _                  ____  _____            ______ \n\
@@ -147,8 +148,8 @@ const char* multiboot_block_type_text[5] =
 #include "gdt/gdt.h"
 #include "paging/paging.h"
 #include "pit/pit.h"
-#include "idt/idt.h"
-#include "idt/int.h"
+#include "int/idt.h"
+#include "int/int.h"
 #include "pic/pic.h"
 #include "pic/apic.h"
 #include "multitasking/task.h"
@@ -158,6 +159,9 @@ const char* multiboot_block_type_text[5] =
 #include "files/ustar.h"
 #include "files/elf.h"
 #include "initrd/initrd.h"
+#include "initrd/vfs.c"
+#include "vfs/vfs.h"
+#include "vfs/vfs.c"
 #include "time/gdn.h"
 #include "time/ktime.h"
 #include "multitasking/loader.h"
@@ -195,8 +199,8 @@ int imod(int a, int b)
 #include "gdt/gdt.c"
 #include "paging/paging.c"
 #include "pit/pit.c"
-#include "idt/idt.c"
-#include "idt/int.c"
+#include "int/idt.c"
+#include "int/int.c"
 #include "pic/pic.c"
 #include "multitasking/task.c"
 #include "multitasking/loader.c"

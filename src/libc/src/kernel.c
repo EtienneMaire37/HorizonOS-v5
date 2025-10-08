@@ -120,3 +120,15 @@ pid_t waitpid(pid_t pid, int* wstatus, int options)
 {
     while(true);
 }
+
+int access(const char* path, int mode)
+{
+    // if (!mode) return 0;
+    // return vfs_path_exists(path);
+    abort();
+}
+
+int stat(const char* path, struct stat* statbuf)
+{
+    abort();
+}
