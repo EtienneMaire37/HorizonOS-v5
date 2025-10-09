@@ -39,6 +39,68 @@ void tty_clear_screen(char c)
 	}
 }
 
+static int tty_ansi_sequence_state = 0, tty_ansi_sequence_first_nb = 0;
+
+uint8_t tty_ansi_to_vga(uint8_t ansi_code) 
+{
+    switch (ansi_code) 
+	{
+        case 30: return FG_BLACK;
+        case 31: return FG_RED;
+        case 32: return FG_GREEN;
+        case 33: return FG_BROWN;
+        case 34: return FG_BLUE;
+        case 35: return FG_MAGENTA;
+        case 36: return FG_CYAN;
+        case 37: return FG_LIGHTGRAY;
+
+        case 40: return BG_BLACK;
+        case 41: return BG_RED;
+        case 42: return BG_GREEN;
+        case 43: return BG_BROWN;
+        case 44: return BG_BLUE;
+        case 45: return BG_MAGENTA;
+        case 46: return BG_CYAN;
+        case 47: return BG_LIGHTGRAY;
+
+        case 90: return FG_DARKGRAY;
+        case 91: return FG_LIGHTRED;
+        case 92: return FG_LIGHTGREEN;
+        case 93: return FG_YELLOW;
+        case 94: return FG_LIGHTBLUE;
+        case 95: return FG_LIGHTMAGENTA;
+        case 96: return FG_LIGHTCYAN;
+        case 97: return FG_WHITE;
+
+        case 100: return BG_DARKGRAY;
+        case 101: return BG_LIGHTRED;
+        case 102: return BG_LIGHTGREEN;
+        case 103: return BG_YELLOW;
+        case 104: return BG_LIGHTBLUE;
+        case 105: return BG_LIGHTMAGENTA;
+        case 106: return BG_LIGHTCYAN;
+        case 107: return BG_WHITE;
+    }
+
+	return FG_WHITE | BG_BLACK;
+}
+
+uint8_t tty_ansi_to_vga_mask(uint8_t ansi_code) 
+{
+	if ((ansi_code >= 30 && ansi_code <= 37) || (ansi_code >= 90 && ansi_code <= 97))
+		return 0x0f;
+	if ((ansi_code >= 40 && ansi_code <= 47) || (ansi_code >= 100 && ansi_code <= 107))
+		return 0xf0;
+    return 0xff;
+}
+
+void tty_ansi_reset_state()
+{
+	tty_ansi_sequence_state = 0;
+	tty_ansi_sequence_first_nb = 0;
+	tty_set_color(FG_WHITE, BG_BLACK);
+}
+
 void tty_outc(char c)
 {
 	if (c == 0) return;
@@ -69,7 +131,56 @@ void tty_outc(char c)
 		break;
 	}
 
+	case '\x1b': // * ANSI escape sequence
+		tty_ansi_sequence_state = 1;
+		tty_ansi_sequence_first_nb = 0;
+		break;
+
+	case '[':
+		if (tty_ansi_sequence_state == 1)
+			tty_ansi_sequence_state++;
+		else
+		{
+			tty_ansi_sequence_state = 0;
+			tty_ansi_sequence_first_nb = 0;
+			goto default_character;
+		}
+		break;
+
+	case ';':
+		goto default_character;
+		break;
+
+	case 'm':
+		if (tty_ansi_sequence_state != 0)
+		{
+			if (tty_ansi_sequence_first_nb == 0)
+				tty_ansi_reset_state();
+			else
+			{
+				uint8_t code = tty_ansi_to_vga(tty_ansi_sequence_first_nb & 0xff);
+				uint8_t mask = tty_ansi_to_vga_mask(tty_ansi_sequence_first_nb & 0xff);
+				tty_color = (tty_color & (~mask)) | (code & mask);
+				tty_ansi_sequence_state = 0;
+			}
+			break;
+		}
+		else
+			goto default_character;
+
 	default:
+	default_character:
+		if (tty_ansi_sequence_state == 2)
+		{
+			if (c >= '0' && c <= '9')
+			{
+				tty_ansi_sequence_first_nb *= 10;
+				tty_ansi_sequence_first_nb += c - '0';
+			}
+			else
+				tty_ansi_sequence_state++;
+			break;
+		}
 		tty_vram[tty_cursor]._char = c;
 		tty_vram[tty_cursor].color = tty_color;
 

@@ -42,7 +42,7 @@ int main(int argc, char** argv)
     while (true)
     {
         getcwd(cwd, sizeof(cwd));
-        printf("%s$ ", cwd);
+        printf("\x1b[36m%s\x1b[0m$ ", cwd);
         fflush(stdout);
         char data[4096] = {0};
         int ret = read(STDIN_FILENO, &data, 4096);

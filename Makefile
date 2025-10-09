@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -fno-tree-vectorize # -fno-builtin -ffreestanding -fno-pie -fno-stack-protector -mno-sse -mno-80387 -msoft-float
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
 CROSSLD := ./i486elfgcc/bin/i486-elf-ld
@@ -73,7 +73,7 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/echo src/task
 
 src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/echo/main.c" -o "src/tasks/bin/echo.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/echo/main.c" -o "src/tasks/bin/echo.o" $(CFLAGS) -I"src/libc/include" -Ofast
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/echo" \
     "src/tasks/bin/echo.o" \
@@ -83,7 +83,7 @@ src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a s
 
 src/tasks/bin/shell: src/tasks/src/shell/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/shell/main.c" -o "src/tasks/bin/shell.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/shell/main.c" -o "src/tasks/bin/shell.o" $(CFLAGS) -I"src/libc/include" -Ofast
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/shell" \
     "src/tasks/bin/shell.o" \

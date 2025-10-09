@@ -26,7 +26,7 @@
 #define BG_BROWN         0x60
 #define BG_LIGHTGRAY     0x70
 
-// ^ Those have the blink attribute on (or high intensity if 3c0.10.3 (normal mode) = 1)
+// * Those have the blink attribute on (or high intensity if 3c0.10.3 (normal mode) = 1)
 #define BG_DARKGRAY      0x80
 #define BG_LIGHTBLUE     0x90
 #define BG_LIGHTGREEN    0xa0
