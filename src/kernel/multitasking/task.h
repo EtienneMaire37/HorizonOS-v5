@@ -63,14 +63,19 @@ uint64_t current_pid;
 extern void iret_instruction();
 void task_kill(uint16_t index);
 
+void pic_enable();
+void pic_disable();
+
 void lock_task_queue()
 {
-    disable_interrupts();
+    // disable_interrupts();
+    pic_disable();
 }
 
 void unlock_task_queue()
 {
-    enable_interrupts();
+    // enable_interrupts();
+    pic_enable();
 }
 
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds);

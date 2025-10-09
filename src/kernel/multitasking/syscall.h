@@ -183,13 +183,14 @@ void handle_syscall(interrupt_registers_t* registers)
                 break;
             }                
             physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
-            uint32_t pte = read_physical_address_4b(pt_address + 4 * (registers->ebx >> 22));
+            uint32_t pte = read_physical_address_4b(pt_address + 4 * ((registers->ebx >> 12) & 0x3ff));
             if (!(pte & 1))
                 registers->eax = 0;
             else
             {
+                // LOG(DEBUG, "0x%x : 0x%lx", registers->ebx, (physical_address_t)pte & 0xfffff000);
                 pfa_free_physical_page((physical_address_t)pte & 0xfffff000);
-                physical_remove_page(pt_address, (registers->ebx >> 22));
+                physical_remove_page(pt_address, ((registers->ebx >> 12) & 0x3ff));
 
                 #ifdef USE_IVLPG
                 uint32_t* recursive_paging_pte = (uint32_t*)(((uint32_t)4 * 1024 * 1024 * 1023) | (4 * ((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff))));
@@ -208,7 +209,9 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
         {
+            // LOG(DEBUG, "execve");
             startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
+            // LOG(DEBUG, "execve.");
             lock_task_queue();
             if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
             {

@@ -94,11 +94,13 @@ void* liballoc_alloc(int pages)
         {
             uint32_t page_address = heap_address + 4096 * page_number;
             if (break_address <= page_address + 4096 * pages)
+            {
                 if (brk((void*)page_address + 4096 * pages) == -1)
                 {
                     // write(STDERR_FILENO, "liballoc_alloc failed\n", 22);
                     return NULL;
                 }
+            }
             for (uint32_t i = page_number; i < page_number + pages; i++)
                 malloc_bitmap_set_page(i, true);
             // write(STDERR_FILENO, "liballoc_alloc successfull\n", 27);
