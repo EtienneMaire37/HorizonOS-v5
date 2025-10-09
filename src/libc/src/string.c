@@ -83,97 +83,46 @@ char* strncpy(char* destination, const char* source, size_t n)
     return _dest;
 }
 
-char internal_error_message[64];
-
-char* errno_messages[] = 
-{
-    [0]  = "Success",
-    [1]  = "Argument list too long",
-    [2]  = "Permission denied",
-    [3]  = "Address already in use",
-    [4]  = "Address not available",
-    [5]  = "Address family not supported",
-    [6]  = "Resource temporarily unavailable",
-    [7]  = "Operation already in progress",
-    [8]  = "Bad file descriptor",
-    [9]  = "Bad message",
-    [10] = "Device or resource busy",
-    [11] = "Operation canceled",
-    [12] = "No child processes",
-    [13] = "Connection aborted",
-    [14] = "Connection refused",
-    [15] = "Connection reset by peer",
-    [16] = "Resource deadlock avoided",
-    [17] = "Destination address required",
-    [18] = "Numerical argument out of domain",
-    [19] = "Disk quota exceeded",
-    [20] = "File exists",
-    [21] = "Bad address",
-    [22] = "File too large",
-    [23] = "Host is unreachable",
-    [24] = "Identifier removed",
-    [25] = "Illegal byte sequence",
-    [26] = "Operation in progress",
-    [27] = "Interrupted system call",
-    [28] = "Invalid argument",
-    [29] = "Input/output error",
-    [30] = "Socket is already connected",
-    [31] = "Is a directory",
-    [32] = "Too many levels of symbolic links",
-    [33] = "Too many open files",
-    [34] = "Too many links",
-    [35] = "Message too long",
-    [36] = "Multihop attempted",
-    [37] = "File name too long",
-    [38] = "Network is down",
-    [39] = "Connection aborted by network",
-    [40] = "Network unreachable",
-    [41] = "Too many open files in system",
-    [42] = "No buffer space available",
-    [43] = "No data available",
-    [44] = "No such device",
-    [45] = "No such file or directory",
-    [46] = "Exec format error",
-    [47] = "No locks available",
-    [48] = "Link has been severed",
-    [49] = "Out of memory",
-    [50] = "No message of desired type",
-    [51] = "Protocol not available",
-    [52] = "No space left on device",
-    [53] = "Out of streams resources",
-    [54] = "Not a stream",
-    [55] = "Function not implemented",
-    [56] = "The socket is not connected",
-    [57] = "Not a directory",
-    [58] = "Directory not empty",
-    [59] = "State not recoverable",
-    [60] = "Not a socket",
-    [61] = "Operation not supported",
-    [62] = "Inappropriate ioctl for device",
-    [63] = "No such device or address",
-    [64] = "Operation not supported on socket",
-    [65] = "Value too large for defined data type",
-    [66] = "Owner dead",
-    [67] = "Operation not permitted",
-    [68] = "Broken pipe",
-    [69] = "Protocol error",
-    [70] = "Protocol not supported",
-    [71] = "Protocol wrong type for socket",
-    [72] = "Numerical result out of range",
-    [73] = "Read-only file system",
-    [74] = "Illegal seek",
-    [75] = "No such process",
-    [76] = "Stale file handle",
-    [77] = "Timer expired",
-    [78] = "Connection timed out",
-    [79] = "Text file busy",
-    [80] = "Operation would block",
-    [81] = "Invalid cross-device link"
-};
-
 char* strerror(int errnum)
 {
-    if (errnum < 0 || errnum > 81) return NULL;
-    strcpy(&internal_error_message[0], errno_messages[errnum]);
-    return &internal_error_message[0];
+    switch (errnum) 
+    {
+        case E2BIG: return "Argument list too long";
+        case EACCES: return "Permission denied";
+        case EADDRINUSE: return "Address already in use";
+        case EADDRNOTAVAIL: return "Address not available";
+        case EAFNOSUPPORT: return "Address family not supported";
+        case EAGAIN: return "Resource temporarily unavailable";
+        case EALREADY: return "Connection already in progress";
+        case EBADF: return "Bad file descriptor";
+        case EBUSY: return "Device or resource busy";
+        case ECHILD: return "No child processes";
+        case ECONNABORTED: return "Connection aborted";
+        case ECONNREFUSED: return "Connection refused";
+        case ECONNRESET: return "Connection reset";
+        case EDEADLK: return "Resource deadlock avoided";
+        case EDOM: return "Math argument out of domain";
+        case EEXIST: return "File exists";
+        case EFAULT: return "Bad address";
+        case EFBIG: return "File too large";
+        case EINTR: return "Interrupted system call";
+        case EINVAL: return "Invalid argument";
+        case EIO: return "I/O error";
+        case EISDIR: return "Is a directory";
+        case EMFILE: return "Too many open files";
+        case ENOENT: return "No such file or directory";
+        case ENOMEM: return "Out of memory";
+        case ENOSPC: return "No space left on device";
+        case ENOTDIR: return "Not a directory";
+        case ENOTEMPTY: return "Directory not empty";
+        case ENOTSUP: return "Operation not supported";
+        case EPERM: return "Operation not permitted";
+        case EPIPE: return "Broken pipe";
+        case ERANGE: return "Result too large";
+        case EROFS: return "Read-only file system";
+        case ESPIPE: return "Illegal seek";
+        case ETIMEDOUT: return "Connection timed out";
+        case EXDEV: return "Cross-device link";
+        default: return "Unknown error";
+    }
 }
