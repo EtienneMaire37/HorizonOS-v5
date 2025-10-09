@@ -86,19 +86,7 @@ int main(int argc, char** argv)
                     continue;
                 }
                 if (chdir(first_arg) != 0)
-                {
-                    switch(errno)
-                    {
-                    case ENOENT:
-                        fprintf(stderr, "cd: no such file or directory\n");
-                        break;
-                    case ENOTDIR:
-                        fprintf(stderr, "cd: not a directory\n");
-                        break;
-                    default:
-                        fprintf(stderr, "cd: couldn't access directory\n");
-                    }
-                }
+                    perror("cd");
             }
             else 
             {
