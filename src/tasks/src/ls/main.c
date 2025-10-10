@@ -12,13 +12,32 @@ extern int errno;
 
 int main(int argc, char** argv)
 {
-    if (argc != 1)
-    {
-        fprintf(stderr, "ls: invalid number of arguments\n");
-        exit(1);
-    }
+    bool l = false, a = false;
 
-    bool l = true, a = false;
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i][0] != '-')
+        {
+            fprintf(stderr, "ls: invalid argument \"%s\"\n", argv[i]);
+            exit(1);
+        }
+
+        for (char* c = argv[i] + 1; *c; c++)
+        {
+            switch(*c)
+            {
+            case 'l':
+                l = true;
+                break;
+            case 'a':
+                a = true;
+                break;
+            default:
+                fprintf(stderr, "ls: invalid argument \'%c\'\n", *c);
+                exit(2);
+            }
+        }
+    }
 
     DIR* dp;
     struct dirent* ep;     
