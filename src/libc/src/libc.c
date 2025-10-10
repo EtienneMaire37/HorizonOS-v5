@@ -34,6 +34,7 @@ char cwd[PATH_MAX] = {0};
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
 #include "../include/sys/stat.h"
+#include "../include/dirent.h"
 
 #include "startup_data.h"
 
@@ -64,6 +65,7 @@ FILE* FILE_create()
 #include "stdlib.c"
 #include "time.c"
 #include "string.c"
+#include "dirent.c"
 
 #include "liballoc.h"
 #include "liballoc_hooks.c"
