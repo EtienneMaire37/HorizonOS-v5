@@ -166,3 +166,45 @@ int stat(const char* path, struct stat* statbuf)
     free(_path);
     return 0;
 }
+
+static struct dirent dirent_entry;      // * "This structure may be statically allocated"
+
+struct dirent* readdir(DIR* dirp)
+{
+    if (dirp->current_path[0])
+    {
+        char current_path[PATH_MAX];
+        memcpy(current_path, dirp->current_path, PATH_MAX);
+        int i = 0, j = 0;
+        bool slash = 1;
+        while (current_path[j - 1 + slash])
+        {
+            if (dirp->path[i])
+            {
+                dirp->current_path[i + j] = dirp->path[i];
+                i++;
+            }
+            else
+            {
+                if (slash)
+                {
+                    dirp->current_path[i + j] = '/';
+                    slash = 0;
+                    j++;
+                }
+                else
+                {
+                    dirp->current_path[i + j] = current_path[j - 1];
+                    j++;
+                }
+            }
+        }
+        // realpath(dirp->current_path, dirp->current_path);
+    }
+    uint32_t return_address;
+    int _errno;
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint32_t)&dirent_entry), "c"((uint32_t)dirp));
+    if (_errno != 0)
+        errno = _errno;
+    return (struct dirent*)return_address;
+}

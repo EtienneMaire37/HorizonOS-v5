@@ -10,6 +10,7 @@ typedef struct
 {
     char path[PATH_MAX];
     char current_path[PATH_MAX];
+    char current_entry[PATH_MAX];
 } DIR;
 
 DIR* opendir(const char* name);

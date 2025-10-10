@@ -12,6 +12,7 @@
 #define SYSCALL_WAITPID     9
 #define SYSCALL_ACCESS      10
 #define SYSCALL_STAT        11
+#define SYSCALL_READDIR     12
 
 #define SYSCALL_FLUSH_INPUT_BUFFER  0x40
 #define SYSCALL_SET_KB_LAYOUT       0x8000

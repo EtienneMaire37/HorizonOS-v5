@@ -53,7 +53,7 @@ void vas_free(physical_address_t cr3)
 
     if (cr3 == physical_null) return;
 
-    LOG(TRACE, "Freeing VAS");
+    // LOG(TRACE, "Freeing VAS");
 
     for (uint16_t i = 0; i < 1024; i++)
     {
@@ -78,5 +78,5 @@ void vas_free(physical_address_t cr3)
 
     pfa_free_physical_page(cr3);
 
-    LOG(TRACE, "Done");
+    // LOG(TRACE, "Done");
 }

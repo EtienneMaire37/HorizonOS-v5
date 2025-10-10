@@ -45,3 +45,108 @@ int vfs_initrd_root_stat(struct stat* st)
     st->st_ctime = 0;
     return 0;
 }
+
+bool vfs_initrd_file_in_directory(char* fname, const char* direc) 
+{
+    if (!fname || !direc) return false;
+
+    // LOG(DEBUG, "\"%s\" | \"%s\"", fname, direc);
+
+    if (*direc == 0) 
+    {
+        for (char* f = fname; *f; f++) 
+            if (*f == '/')
+                return false;
+        return true;
+    }
+
+    const char* f = fname;
+    const char* d = direc;
+
+    while (*d && *f && (*f == *d)) 
+    {
+        f++;
+        d++;
+    }
+
+    if (*d) 
+        return false;
+
+    if (*f != '/') 
+        return false;
+
+    f++;
+
+    while (*f) 
+    {
+        if (*f == '/') return false;
+        f++;
+    }
+
+    return true;
+}
+
+struct dirent* vfs_initrd_readdir(struct dirent* dirent, DIR* dirp)
+{
+    if (dirp->current_entry[0] == 0)
+    {
+        dirent->d_ino = -1;
+        dirent->d_name[0] = '.';
+        dirent->d_name[1] = 0;
+        dirp->current_path[0] = '.';
+        dirp->current_path[1] = 0;
+        dirp->current_entry[0] = '.';
+        dirp->current_entry[1] = 0;
+        return dirent;
+    }
+    if (strcmp(dirp->current_entry, ".") == 0)
+    {
+        dirent->d_ino = -1;
+        dirent->d_name[0] = '.';
+        dirent->d_name[1] = '.';
+        dirent->d_name[2] = 0;
+        dirp->current_path[0] = '.';
+        dirp->current_path[1] = '.';
+        dirp->current_path[2] = 0;
+        dirp->current_entry[0] = '.';
+        dirp->current_entry[1] = '.';
+        dirp->current_entry[2] = 0;
+        return dirent;
+    }
+    bool found_last_entry = strcmp(dirp->current_entry, "..") == 0 ? true : false;
+    int initrd_len = strlen("/initrd"), path_len = strlen(dirp->path);
+    if (path_len < initrd_len)
+        return NULL;
+    int offset = path_len == initrd_len ? 0 : 1;
+    for (int i = 0; i < initrd_files_count; i++)
+    {
+        initrd_file_t* file = &initrd_files[i];
+
+        char* entry = file->name;
+        char* n = file->name;
+        while (*n)
+        {
+            if (*n == '/')
+                entry = n + 1;
+            n++;
+        }
+
+        // printf("%s\n", entry);
+
+        if (vfs_initrd_file_in_directory(file->name, dirp->path + initrd_len + offset))
+        {
+            if (found_last_entry)
+            {
+                dirent->d_ino = -1;
+                strncpy(dirent->d_name, entry, PATH_MAX);
+                strncpy(dirp->current_path, dirent->d_name, PATH_MAX);
+                strncpy(dirp->current_entry, dirent->d_name, PATH_MAX);
+                return dirent;
+            }
+
+            if (strcmp(dirp->current_entry, entry) == 0)
+                found_last_entry = true;
+        }
+    }
+    return NULL;
+}

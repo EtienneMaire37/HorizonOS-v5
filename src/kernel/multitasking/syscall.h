@@ -258,6 +258,15 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         break;
 
+    case SYSCALL_READDIR:   // * readdir | &dirent_entry = $ebx, dirp = $ecx | $eax = errno, $ebx = return_address
+        {
+            struct dirent* dirent_entry = (struct dirent*)registers->ebx;
+            DIR* dirp = (DIR*)registers->ecx;
+            registers->ebx = (uint32_t)vfs_readdir(dirent_entry, dirp);
+            registers->eax = errno;
+        }
+        break;
+
     case SYSCALL_FLUSH_INPUT_BUFFER:
         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
         break;
@@ -274,7 +283,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
     default:
         LOG(ERROR, "Undefined system call (0x%x)", registers->eax);
-    #define DEBUG_SYSCALLS
+    // #define DEBUG_SYSCALLS
     #ifndef DEBUG_SYSCALLS
         tasks[current_task_index].is_dead = true;
         switch_task();

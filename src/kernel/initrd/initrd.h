@@ -54,13 +54,15 @@ void initrd_parse()
             if (initrd_files[initrd_files_count].name[i] == '/' && !initrd_files[initrd_files_count].name[i + 1])
                 initrd_files[initrd_files_count].name[i] = 0;
         }
-        initrd_files[initrd_files_count].size = file_size;
-        initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
-        if (header->type == 0) header->type = '0';
-        initrd_files[initrd_files_count].type = header->type;
-        initrd_files[initrd_files_count].link = &header->linked_file[0];
-        initrd_files_count++;
-
+        if (strcmp(initrd_files[initrd_files_count].name, ".") != 0)
+        {
+            initrd_files[initrd_files_count].size = file_size;
+            initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
+            if (header->type == 0) header->type = '0';
+            initrd_files[initrd_files_count].type = header->type;
+            initrd_files[initrd_files_count].link = &header->linked_file[0];
+            initrd_files_count++;
+        }
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;
     }
 

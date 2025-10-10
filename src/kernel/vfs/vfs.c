@@ -59,3 +59,79 @@ int vfs_access(const char* path, mode_t mode)
         return EACCES;
     return 0;
 }
+
+struct dirent* vfs_root_readdir(struct dirent* dirent, DIR* dirp)
+{
+    const char* directories[] = 
+    {
+        ".",
+        "initrd",
+        NULL
+    };
+    if (strcmp(dirp->current_entry, "") == 0)
+    {
+        strncpy(dirp->current_entry, directories[0], PATH_MAX);
+        strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
+        strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
+        dirent->d_ino = -1;
+        return dirent;
+    }
+    if (strcmp(dirp->current_entry, ".") == 0)
+    {
+        strncpy(dirp->current_entry, directories[1], PATH_MAX);
+        strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
+        strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
+        dirent->d_ino = -1;
+        return dirent;
+    }
+    int i = 0;
+    while (directories[i] != NULL && strcmp(dirp->current_entry, directories[i]) != 0)
+        i++;
+    if (directories[i] == NULL)
+    {
+        memset(dirp->current_path, 0, PATH_MAX);
+        memset(dirp->current_entry, 0, PATH_MAX);
+        return NULL;
+    }
+
+    if (directories[i + 1] == NULL)
+    {
+        memset(dirp->current_path, 0, PATH_MAX);
+        memset(dirp->current_entry, 0, PATH_MAX);
+        return NULL;
+    }
+
+    strncpy(dirp->current_entry, directories[i + 1], PATH_MAX);
+    strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
+    strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
+    dirent->d_ino = -1;
+    return dirent;
+}
+
+struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
+{
+    errno = 0;
+    if (!dirent)
+        return NULL;
+    if (!dirp)
+    {
+        errno = EBADF;
+        return NULL;
+    }
+
+    // LOG(DEBUG, "\"%s\" - \"%s\" : \"%s\"", dirp->path, dirp->current_path, dirp->current_entry);
+
+    if (strcmp(dirp->path, "/") == 0)
+        return vfs_root_readdir(dirent, dirp);
+
+    const char* initrd_prefix = "/initrd";
+
+    int i = 0;
+    while (dirp->path[i] != 0 && initrd_prefix[i] != 0 && dirp->path[i] == initrd_prefix[i])
+        i++;
+    const size_t len = strlen(initrd_prefix);
+    if (i == len)
+        return vfs_initrd_readdir(dirent, dirp);
+        
+    return NULL;
+}

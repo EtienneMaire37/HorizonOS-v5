@@ -51,6 +51,7 @@ char cwd[PATH_MAX] = {0};
 #include "../libc/include/sys/types.h"
 #include "../libc/include/string.h"
 #include "../libc/include/time.h"
+#include "../libc/include/dirent.h"
 #include "../libc/src/startup_data.h"
 
 #include "../libc/src/kernel_glue.h"
@@ -188,6 +189,7 @@ int imod(int a, int b)
 
 
 #include "../libc/src/time.c"
+#include "../libc/src/dirent.c"
 
 #include "fpu/fpu.c"
 #include "io/keyboard.c"

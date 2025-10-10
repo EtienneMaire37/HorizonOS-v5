@@ -21,6 +21,7 @@ DIR* opendir(const char* name)
     DIR* d = malloc(sizeof(DIR));
     strncpy(d->path, rp, PATH_MAX);
     memset(d->current_path, 0, PATH_MAX);
+    memset(d->current_entry, 0, PATH_MAX);
     return d;
 }
 
@@ -28,9 +29,4 @@ int closedir(DIR* dirp)
 {
     free(dirp);
     return 0;
-}
-
-struct dirent* readdir(DIR* dirp)
-{
-    return NULL;
 }

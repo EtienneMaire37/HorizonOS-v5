@@ -380,6 +380,12 @@ char* realpath(const char* path, char* resolved_path)
         return NULL;
     }
 
+    if (path[0] == 0)
+    {
+        resolved_path[0] = 0;
+        return resolved_path;
+    }
+
     int i = 0, j = 0;
     if (path[0] != '/') 
     {
