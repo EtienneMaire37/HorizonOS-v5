@@ -1,7 +1,7 @@
 #pragma once
 
 #define GDN_EPOCH 719162
-typedef uint32_t time_t;
+// typedef uint32_t time_t;
 
 uint32_t year_to_gdn(uint16_t year, bool* leap) 
 {

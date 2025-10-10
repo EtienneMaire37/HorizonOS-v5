@@ -20,3 +20,5 @@ typedef INT32 uid_t;
 
 typedef INT32 blksize_t;
 typedef INT32 blkcnt_t;
+
+typedef UINT32 time_t;

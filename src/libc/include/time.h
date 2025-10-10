@@ -1,6 +1,5 @@
 #pragma once
 
-typedef uint32_t time_t;
-typedef unsigned int size_t;
+#include "sys/types.h"
 
 time_t time(time_t* t);
