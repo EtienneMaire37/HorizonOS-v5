@@ -42,7 +42,7 @@ _start:
     loop .loop_pt0
 
     ; * PDE 767:physical_memory_page_index
-    mov eax, 0b1011  ; Present + Writable + Write Through
+    mov eax, 0b0011  ; Present + Writable + Write Back
     mov edx, [physical_memory_page_index - 0xc0000000]
     mov [page_table_767 - 0xc0000000 + edx * 4], eax
 
@@ -56,7 +56,7 @@ _start:
     mov edx, ebx
     shl edx, 12
     add eax, edx
-    or eax, 0b1011
+    or eax, 0b0011
 
     mov edx, edi
     imul edx, 1024
@@ -75,13 +75,13 @@ _start:
 
     mov eax, page_table_0 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b1011
+    or eax, 0b0011
     mov [page_directory - 0xc0000000], eax
 
     ; pde 767
     mov eax, page_table_767 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b1011
+    or eax, 0b0011
     mov [page_directory - 0xc0000000 + 767*4], eax
 
     ; pde 768-1023 (higher half)
@@ -93,7 +93,7 @@ _start:
     shl eax, 12
     add eax, page_table_768_1023 - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b1011
+    or eax, 0b0011
     mov edx, page_directory - 0xc0000000
     mov [edx + edi*4], eax
     inc edi
@@ -102,7 +102,7 @@ _start:
     ; Recursive paging
     mov eax, page_directory - 0xc0000000
     and eax, 0xfffff000
-    or eax, 0b1011
+    or eax, 0b0011
     mov [page_directory - 0xc0000000 + 4092], eax
 
     ; Set up paging

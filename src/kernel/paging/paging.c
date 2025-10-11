@@ -25,7 +25,7 @@ void physical_add_page_table(physical_address_t pd, uint16_t index, physical_add
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pd + 4 * index, 0b1001 | (read_write << 1) | (user_supervisor << 2) | pt_address);  // Present x Write Through
+    write_physical_address_4b(pd + 4 * index, 0b0001 | (read_write << 1) | (user_supervisor << 2) | pt_address);  // Present x Write Back
 }
 
 void physical_remove_page_table(physical_address_t pd, uint16_t index)
@@ -49,5 +49,5 @@ void physical_set_page(physical_address_t pt, uint16_t index, physical_address_t
     user_supervisor = user_supervisor != 0;
     read_write = read_write != 0;
     
-    write_physical_address_4b(pt + 4 * index, 0b1001 | (read_write << 1) | (user_supervisor << 2) | address);   // Present x Write Through
+    write_physical_address_4b(pt + 4 * index, 0b0001 | (read_write << 1) | (user_supervisor << 2) | address);   // Present x Write Back
 }

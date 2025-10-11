@@ -29,7 +29,7 @@ void load_pd(void* ptr)
     load_pd_by_physaddr(virtual_address_to_physical((virtual_address_t)ptr));
 }
 
-void set_current_phys_mem_page(uint32_t page)
+inline void set_current_phys_mem_page(uint32_t page)
 {
 #define DONT_RELOAD_PHYS
 #ifdef DONT_RELOAD_PHYS
@@ -49,13 +49,13 @@ void set_current_phys_mem_page(uint32_t page)
     current_phys_mem_page = page;
 }
 
-uint8_t* get_physical_address_ptr(physical_address_t address)
+inline uint8_t* get_physical_address_ptr(physical_address_t address)
 {
     if (address >> 32) return NULL;
 
     uint32_t addr = (uint32_t)address;
     if (addr < 0x100000) return (uint8_t*)addr;
-    if (addr < (uint32_t)4 * 1024 * 1024 * 1023 - 0xc0000000) return (uint8_t*)(addr + 0xc0000000);
+    if (addr < (uint32_t)4096 * 1024 * 1023 - 0xc0000000) return (uint8_t*)(addr + 0xc0000000);
     uint32_t page = addr >> 12;
     uint16_t offset = addr & 0xfff;
     
@@ -64,55 +64,47 @@ uint8_t* get_physical_address_ptr(physical_address_t address)
     return (uint8_t*)(PHYS_MEM_PAGE_BOTTOM + offset);
 }
 
-uint8_t read_physical_address_1b(physical_address_t address)
+inline uint8_t read_physical_address_1b(physical_address_t address)
 {
     if (address >> 32)
     {
         LOG(WARNING, "Tried to read from an address over the 4GB limit (0x%lx)", address);
-        return 0xff;
+        abort();
+        return 0;   // !! Unreachable but allows for some optimizations
     }
-
-    uint8_t* ptr = get_physical_address_ptr(address);
-
-    if (ptr == NULL)
-        return 0xff;
     
-    return *ptr;
+    return *get_physical_address_ptr(address);
 }
 
-void write_physical_address_1b(physical_address_t address, uint8_t value)
+inline void write_physical_address_1b(physical_address_t address, uint8_t value)
 {
     if (address >> 32)
     {
         LOG(WARNING, "Tried to write to an address over the 4GB limit (0x%lx)", address);
-        return;
+        abort();
+        return;     // !! same
     }
 
-    uint8_t* ptr = get_physical_address_ptr(address);
-
-    if (ptr == NULL)
-        return;
-    
-    *ptr = value;
+    *get_physical_address_ptr(address) = value;
 }
 
-uint16_t read_physical_address_2b(physical_address_t address)
+inline uint16_t read_physical_address_2b(physical_address_t address)
 {
     return read_physical_address_1b(address) | ((uint16_t)read_physical_address_1b(address + 1) << 8);
 }
 
-uint32_t read_physical_address_4b(physical_address_t address)
+inline uint32_t read_physical_address_4b(physical_address_t address)
 {
     return read_physical_address_1b(address) | ((uint32_t)read_physical_address_1b(address + 1) << 8) | ((uint16_t)read_physical_address_1b(address + 2) << 16) | ((uint16_t)read_physical_address_1b(address + 3) << 24);
 }
 
-void write_physical_address_2b(physical_address_t address, uint16_t value)
+inline void write_physical_address_2b(physical_address_t address, uint16_t value)
 {
     write_physical_address_1b(address, value);
     write_physical_address_1b(address + 1, value >> 8);
 }
 
-void write_physical_address_4b(physical_address_t address, uint32_t value)
+inline void write_physical_address_4b(physical_address_t address, uint32_t value)
 {
     write_physical_address_1b(address, value);
     write_physical_address_1b(address + 1, value >> 8);
@@ -120,18 +112,24 @@ void write_physical_address_4b(physical_address_t address, uint32_t value)
     write_physical_address_1b(address + 3, value >> 24);
 }
 
-static uint8_t page_tmp[4096] = {0};
-
-void copy_page(physical_address_t from, physical_address_t to)
+inline void copy_page(physical_address_t from, physical_address_t to)
 {
     if ((from & 0xfff) || (to & 0xfff))
     {
         LOG(ERROR, "Tried to copy non page aligned pages : 0x%lx to 0x%lx", from, to);
         abort();
+        return;
     }
+
+    uint8_t page_tmp[4096];
+
+    set_current_phys_mem_page(from >> 12);
 
     for (uint16_t i = 0; i < 4096; i++)
         page_tmp[i] = read_physical_address_1b(from + i);
+
+    set_current_phys_mem_page(to >> 12);
+    
     for (uint16_t i = 0; i < 4096; i++)
         write_physical_address_1b(to + i, page_tmp[i]);
 }
@@ -142,6 +140,7 @@ void memset_page(physical_address_t page, uint8_t value)
     {
         LOG(ERROR, "Tried to memset a non page aligned page : 0x%lx", page);
         abort();
+        return;
     }
 
     for (uint16_t i = 0; i < 4096; i++)

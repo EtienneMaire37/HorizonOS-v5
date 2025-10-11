@@ -196,6 +196,7 @@ void copy_task(uint16_t index)
     {
         LOG(CRITICAL, "Invalid task index %u", index);
         abort();
+        return;
     }
 
     task_count++;
@@ -226,8 +227,8 @@ void copy_task(uint16_t index)
     for (uint16_t i = 0; i < 768; i++)
     {
         uint32_t old_pde = read_physical_address_4b(tasks[index].cr3 + 4 * i);
-        uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
         if (!(old_pde & 1)) continue;
+        uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
         physical_address_t old_pt_address = old_pde & 0xfffff000;
         physical_address_t new_pt_address = new_pde & 0xfffff000;
         if (!(new_pde & 1))
