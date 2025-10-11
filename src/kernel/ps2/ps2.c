@@ -59,6 +59,7 @@ uint8_t ps2_send_command(uint8_t command)
         if (ps2_wait_for_input()) 
             return 0xff;
         return_val = inb(PS2_DATA);
+        tries++;
     }
     while (return_val == PS2_RESEND && tries < PS2_MAX_RESEND);
     return return_val;
@@ -96,6 +97,7 @@ uint8_t ps2_send_command_with_data(uint8_t command, uint8_t data)
         if (ps2_wait_for_input()) 
             return 0xff;
         return_val = inb(PS2_DATA);
+        tries++;
     }
     while (return_val == PS2_RESEND && tries < PS2_MAX_RESEND);
     return return_val;
@@ -349,6 +351,7 @@ void ps2_detect_keyboards()
                 {
                     ps2_device_1_type = PS2_DEVICE_KEYBOARD;
                     LOG(INFO, "Keyboard detected on port 1");
+                    printf("Keyboard detected on port 1\n");
                 }
             }
             ps2_send_device_full_command(1, PS2_ENABLE_SCANNING, 1);
@@ -372,8 +375,9 @@ detect_port_2:
                 
                 if (ps2_data_bytes_received >= 3 && ps2_data_buffer[1] == 0xab) // Any PS/2 keyboard
                 {
-                    ps2_device_1_type = PS2_DEVICE_KEYBOARD;
+                    ps2_device_2_type = PS2_DEVICE_KEYBOARD;
                     LOG(INFO, "Keyboard detected on port 2");
+                    printf("Keyboard detected on port 2\n");
                 }
             }
             ps2_send_device_full_command(2, PS2_ENABLE_SCANNING, 1);
