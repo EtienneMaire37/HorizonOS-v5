@@ -67,7 +67,9 @@ int brk(void* addr)
     }
     if ((uint32_t)addr < break_address)
     {
-        uint32_t pages_to_free = (alloc_break_address - (uint32_t)addr) / 4096;
+        uint32_t aligned_target = ((uint32_t)addr + 4095) & ~0xfff;
+        uint32_t pages_to_free = (alloc_break_address - aligned_target) / 4096;
+
         for (uint32_t i = 0; i < pages_to_free; i++)
         {
             uint32_t ret;
@@ -81,13 +83,16 @@ int brk(void* addr)
         }
         break_address = (uint32_t)addr;
         alloc_break_address -= 4096 * (uint32_t)pages_to_free;
-        alloc_break_address = break_address;
+        // alloc_break_address = break_address;
         return 0;
     }
 
     // ~ (uint32_t)addr > break_address
 
-    uint32_t pages_to_allocate = ((uint32_t)addr - alloc_break_address + 4095) / 4096;
+    uint32_t aligned_alloc_break = (alloc_break_address + 4095) & ~4095;
+    uint32_t aligned_target = ((uint32_t)addr + 4095) & ~4095;
+    uint32_t pages_to_allocate = (aligned_target - aligned_alloc_break) / 4096;
+
     for (uint32_t i = 0; i < pages_to_allocate; i++)
     {
         uint32_t ret;
@@ -97,7 +102,7 @@ int brk(void* addr)
         {
             errno = ENOMEM;
             break_address = (uint32_t)alloc_break_address + 4096 * (uint32_t)i;
-            alloc_break_address = break_address;
+            // alloc_break_address = break_address;
             return -1;
         }
     }
@@ -156,7 +161,7 @@ int stat(const char* path, struct stat* statbuf)
 {
     char* _path = realpath(path, NULL);
     int ret;
-    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(_path), "c"((uint32_t)statbuf));
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(_path), "c"((uint32_t)statbuf) : "memory");
     if (ret != 0)
     {
         free(_path);
@@ -203,7 +208,7 @@ struct dirent* readdir(DIR* dirp)
     }
     uint32_t return_address;
     int _errno;
-    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint32_t)&dirent_entry), "c"((uint32_t)dirp));
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint32_t)&dirent_entry), "c"((uint32_t)dirp) : "memory");
     if (_errno != 0)
         errno = _errno;
     return (struct dirent*)return_address;

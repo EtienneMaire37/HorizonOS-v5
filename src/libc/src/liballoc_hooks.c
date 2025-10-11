@@ -21,7 +21,7 @@ bool malloc_bitmap_get_page(uint32_t page)
 {
     uint32_t byte = page / 8;
     if (byte >= MALLOC_BITMAP_SIZE) return 1;
-    if (malloc_allocated_pages == 0 || page >= (uint32_t)malloc_last_allocated_page_index) return 0;
+    if (malloc_allocated_pages == 0 || page > (uint32_t)malloc_last_allocated_page_index) return 0;
 
     uint8_t bit = page & 0b111;
     return (malloc_pages_bitmap[byte] >> bit) & 1;
@@ -116,7 +116,6 @@ int liballoc_free(void* ptr, int pages)
     uint32_t page_number = ((uint32_t)ptr - heap_address) / 4096;
 	for (uint32_t i = page_number; i < page_number + pages; i++)
         malloc_bitmap_set_page(i, false);
-    // brk((void*)heap_address + 4096 * malloc_last_allocated_page_index);     // * Shouldn't cause an error
     brk((void*)heap_address + 4096 * (malloc_last_allocated_page_index + 1));
     return 0;
 }

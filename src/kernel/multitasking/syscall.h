@@ -112,6 +112,8 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_BRK_ALLOC: // * brk_alloc | address = $ebx | $eax = num_pages_allocated
         {
+            // LOG(DEBUG, "alloc 0x%x", registers->ebx);
+
             if (registers->ebx & 0xfff) // ! address not page aligned
             {
                 registers->eax = 0;
@@ -172,6 +174,8 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_BRK_FREE: // * brk_free | address = $ebx | $eax = num_pages_freed
         {
+            // LOG(DEBUG, "free 0x%x", registers->ebx);
+
             if (registers->ebx & 0xfff)
             {
                 registers->eax = 0;
