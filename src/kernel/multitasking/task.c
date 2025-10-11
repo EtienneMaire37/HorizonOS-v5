@@ -283,6 +283,7 @@ void cleanup_tasks()
                 {
                     tasks[i].to_reap = true;
                     parent->wait_pid = -1;
+                    parent->wstatus = tasks[i].return_value;
                 }
             }
         }

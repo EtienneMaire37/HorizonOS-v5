@@ -12,6 +12,7 @@
 #include <time.h>
 // #include <signal.h>
 #include <limits.h>
+#include <sys/wait.h>
 
 #include <horizonos.h>
 
@@ -24,6 +25,8 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 //     putchar('\n');
 // }
 
+extern char** environ;
+
 int main(int argc, char** argv)
 {
     // struct sigaction sa;
@@ -32,10 +35,7 @@ int main(int argc, char** argv)
     // sigaddset(&(sa.sa_mask), SIGINT);
     // sigaction(SIGINT, &sa, NULL);
 
-    // printf("argc: %d\n", argc);
-    // for (int i = 0; i < argc; i++)
-    //     printf("argv[%d]: %s\n", i, argv[i]);
-    // putchar('\n');
+    setenv("?", "0", true);
 
     char cwd[PATH_MAX];
 
@@ -46,7 +46,6 @@ int main(int argc, char** argv)
         fflush(stdout);
         char data[4096] = {0};
         int ret = read(STDIN_FILENO, &data, 4096);
-        flush_stdin();
 
         if (ret > 0)
         {
@@ -91,7 +90,19 @@ int main(int argc, char** argv)
             else 
             {
             cmd:
-                system(data);
+                int status = system(data);
+                int exit_code = -1;
+                if (status != -1) 
+                {
+                    if (WIFEXITED(status))
+                        exit_code = WEXITSTATUS(status);
+                    // else
+                    //     exit_code = 128 + WTERMSIG(status);
+                }
+                char buf[16];
+                snprintf(buf, sizeof(buf), "%d", exit_code);
+                setenv("?", buf, true);
+                // printf("%d\n", exit_code);
             }
         }
     }

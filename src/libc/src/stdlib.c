@@ -263,6 +263,133 @@ char* getenv(const char* name)
     return NULL;
 }
 
+int setenv(const char* name, const char* value, int overwrite)
+{
+    if (name == NULL || value == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (environ == NULL)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+    char* old_var = getenv(name);
+    if ((!overwrite && old_var))
+        return 0;
+    int name_len = strlen(name), val_len = strlen(value);
+    int i = 0;
+    if (old_var)
+    {
+        if (strcmp(old_var, value) == 0)
+            return 0;
+        while (environ[i])
+        {
+            int j = 0;
+            while (environ[i][j] == name[j] && name[j] != 0 && environ[i][j] != 0 && environ[i][j] != '=')
+            {
+                if (name[j] == '=')
+                {
+                    errno = EINVAL;
+                    return -1;
+                }
+                j++;
+            }
+            if (environ[i][j] == '=')
+            {
+                goto allocate_new_var;
+            }
+            i++;
+        }
+        errno = EINVAL;
+        return -1;
+    }
+
+    i = num_environ;
+    goto allocate_new_var;
+
+allocate_new_var:
+    char* new_var = malloc(name_len + 1 + val_len);
+    if (!new_var)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+    char** new_environ = malloc((num_environ + 2) * sizeof(char*));   // num_environ + 1 + 1
+    if (!new_environ)
+    {
+        errno = ENOMEM;
+        return -1;
+    }
+    for (int k = 0; k < num_environ + 2; k++)
+    {
+        if (k == i)
+            continue;
+        if (k < i)
+            new_environ[k] = environ[k];
+        else
+            new_environ[k] = environ[k - 1];
+    }
+    free(environ);
+    memcpy(new_var, name, name_len);
+    new_var[name_len] = '=';
+    memcpy(new_var + name_len + 1, value, val_len);
+    new_var[name_len + 1 + val_len] = 0;
+    new_environ[i] = new_var;
+    environ = new_environ;
+    num_environ++;
+    return 0;
+}
+
+int unsetenv(const char* name)
+{
+    if (name == NULL)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+    if (environ == NULL)
+        return 0;
+    int i = 0;
+    while (environ[i])
+    {
+        int j = 0;
+        while (environ[i][j] == name[j] && name[j] != 0 && environ[i][j] != 0 && environ[i][j] != '=')
+        {
+            if (name[j] == '=')
+            {
+                errno = EINVAL;
+                return -1;
+            }
+            j++;
+        }
+        if (environ[i][j] == '=')
+        {
+            char** new_environ = malloc(num_environ * sizeof(char*));   // num_environ - 1 + 1
+            if (!new_environ)
+            {
+                errno = ENOMEM;
+                return -1;
+            }
+            for (int k = 0; k < num_environ; k++)
+            {
+                if (k < i)
+                    new_environ[k] = environ[k];
+                else
+                    new_environ[k] = environ[k + 1];
+            }
+            free(environ[i]);
+            free(environ);
+            environ = new_environ;
+            num_environ--;
+            return 0;
+        }
+        i++;
+    }
+    return 0;
+}
+
 int system(const char* command)
 {
 #include "misc.h"
@@ -346,7 +473,8 @@ int system(const char* command)
     {
         int wstatus;
         waitpid(ret, &wstatus, 0);
-        return_value = WEXITSTATUS(wstatus);
+        // return_value = WEXITSTATUS(wstatus);
+        return_value = wstatus;
 
         free(argv);
         goto do_return;

@@ -20,6 +20,27 @@ void _main()
     startup_data_struct_t* data = (startup_data_struct_t*)kernel_data;
 
     environ = data->environ;
+    int environ_num = 0;
+    while (environ[environ_num])
+        environ_num++;
+    char** _environ = malloc((environ_num + 1) * sizeof(char*));
+    if (_environ)
+    {
+        for (int i = 0; i < environ_num; i++)
+        {
+            _environ[i] = malloc((strlen(environ[i]) + 1));
+            if (!_environ[i])
+                abort();
+            strcpy(_environ[i], environ[i]);
+        }
+        num_environ = environ_num;
+        environ = _environ;
+    }
+    else
+    {
+        environ = NULL; // abort();
+        num_environ = 0;
+    }
 
     stdin = FILE_create();
     if (stdin == NULL) exit(EXIT_FAILURE);

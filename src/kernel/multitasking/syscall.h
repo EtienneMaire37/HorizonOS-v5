@@ -15,6 +15,7 @@ void handle_syscall(interrupt_registers_t* registers)
         LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
         lock_task_queue();
         tasks[current_task_index].is_dead = true;
+        tasks[current_task_index].return_value = registers->ebx & 0xff;
         unlock_task_queue();
         switch_task();
         break;
@@ -240,6 +241,9 @@ void handle_syscall(interrupt_registers_t* registers)
             tasks[current_task_index].wait_pid = *(pid_t*)&pid;
             unlock_task_queue();
             switch_task();
+            registers->ecx = pid & 0xffffffff;
+            registers->edx = pid >> 32;
+            registers->ebx = tasks[current_task_index].wstatus;
         }
         break;
 
@@ -286,6 +290,7 @@ void handle_syscall(interrupt_registers_t* registers)
     // #define DEBUG_SYSCALLS
     #ifndef DEBUG_SYSCALLS
         tasks[current_task_index].is_dead = true;
+        tasks[current_task_index].return_value = 0x80000000;
         switch_task();
     #else
         abort();

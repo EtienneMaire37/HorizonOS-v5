@@ -32,6 +32,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         else
         {
             tasks[current_task_index].is_dead = true;
+            tasks[current_task_index].return_value = 0x80000000;
             switch_task();
             current_phys_mem_page = 0xffffffff;
         }

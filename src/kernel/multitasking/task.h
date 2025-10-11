@@ -10,7 +10,11 @@ typedef struct thread
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, was_reading_stdin, is_dead;
+
+    uint32_t return_value;
+
     pid_t wait_pid;
+    int wstatus;
 
     bool to_reap;
 
