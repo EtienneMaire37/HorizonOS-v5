@@ -83,7 +83,6 @@ char* get_error_message(uint32_t fault, uint32_t error_code)
 
 
 initrd_file_t* kernel_symbols_file = NULL;
-initrd_file_t* kernel_task_symbols_file = NULL;
 
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
 void interrupt_handler(interrupt_registers_t* registers);

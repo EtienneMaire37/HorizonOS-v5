@@ -69,7 +69,6 @@ src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/echo src/task
 	-ffreestanding -nostdlib \
 	-lgcc
 	mkdir -p ./bin/initrd
-	$(CROSSNM) -n -C src/tasks/bin/kernel32.elf > ./bin/initrd/kernel32_symbols.txt
 
 src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin

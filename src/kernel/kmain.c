@@ -439,7 +439,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     initrd_parse();
 
     kernel_symbols_file = initrd_find_file("symbols.txt");
-    kernel_task_symbols_file = initrd_find_file("kernel32_symbols.txt");
 
     LOG(DEBUG, "Setting up memory allocation");
 
@@ -512,8 +511,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     putchar('\n');
 
-    // ~ Debugging
-        // // ^ To test stack tracing
+    // ? Debugging
+        // // * To test stack tracing
         // cause_int_0();
 
     printf("VGA color codes:\n");

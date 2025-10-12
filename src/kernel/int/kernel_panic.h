@@ -4,8 +4,8 @@
 
 void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
 {
-    // initrd_file_t* file = ebp >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
-    initrd_file_t* file = eip >= 0xc0000000 ? kernel_symbols_file : kernel_task_symbols_file;
+    if (ebp <= 0xc0000000 && ebp != 0) return;
+    initrd_file_t* file = kernel_symbols_file;
     if (file == NULL) return;
     
     uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
@@ -180,7 +180,7 @@ void kernel_panic(interrupt_registers_t* registers)
     putchar('\n');
 
     int i = 0;
-    const int max_stack_frames = 12;
+    const int max_stack_frames = 10;
 
     while (i <= max_stack_frames && (uint32_t)ebp != 0 && (uint32_t)ebp->eip != 0 && 
     (((!multitasking_enabled || (multitasking_enabled && first_task_switch)) &&

@@ -8,7 +8,7 @@ extern _main
 global _start
 _start:
     mov [kernel_data], esp
-    mov ebp, esp
+    mov ebp, 0
     call .start ; stack frame
     jmp .halt
 .start:
