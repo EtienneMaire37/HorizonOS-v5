@@ -103,6 +103,8 @@ physical_address_t pfa_allocate_physical_page()
         return physical_null;
     }
 
+    acquire_spinlock(&pfa_spinlock);
+
     for (uint32_t i = 0; i < bitmap_size; i++) 
     {
         uint8_t byte = bitmap[i];
@@ -125,6 +127,7 @@ physical_address_t pfa_allocate_physical_page()
                     {
                         physical_address_t addr = usable_memory_map[j].address + remaining * 0x1000;
                         LOG_MEM_ALLOCATED();
+                        release_spinlock(&pfa_spinlock);
                         return addr;
                     }
                     remaining -= block_pages;
@@ -132,18 +135,14 @@ physical_address_t pfa_allocate_physical_page()
 
                 LOG(CRITICAL, "Invalid page index");
                 abort();
+                return physical_null;
             }
         }
     }
 
     LOG(CRITICAL, "Out of memory!");
-    // abort();
+    release_spinlock(&pfa_spinlock);
     return physical_null;
-}
-
-virtual_address_t pfa_allocate_page()
-{
-    return physical_address_to_virtual(pfa_allocate_physical_page());
 }
 
 void pfa_free_physical_page(physical_address_t address) 
@@ -175,13 +174,10 @@ void pfa_free_physical_page(physical_address_t address)
     uint32_t byte = page_index / 8;
     uint8_t bit = page_index & 0b111;
     if (byte >= bitmap_size) return;
+    acquire_spinlock(&pfa_spinlock);
     bitmap[byte] &= ~(1 << bit);
 
     memory_allocated -= 0x1000;
+    release_spinlock(&pfa_spinlock);
     LOG_MEM_ALLOCATED();
-}
-
-void pfa_free_page(virtual_address_t address)
-{
-    pfa_free_physical_page(virtual_address_to_physical(address));
 }

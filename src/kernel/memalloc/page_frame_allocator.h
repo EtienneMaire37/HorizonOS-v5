@@ -19,6 +19,8 @@ uint8_t* bitmap;
 
 uint32_t memory_allocated, allocatable_memory;
 
+atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
+
 // #define LOG_MEMORY
 
 #ifdef LOG_MEMORY
@@ -29,5 +31,5 @@ uint32_t memory_allocated, allocatable_memory;
 
 void pfa_detect_usable_memory();
 void pfa_bitmap_init();
-virtual_address_t pfa_allocate_page();
-void pfa_free_page(virtual_address_t address);
+physical_address_t pfa_allocate_physical_page();
+void pfa_free_physical_page(physical_address_t address);

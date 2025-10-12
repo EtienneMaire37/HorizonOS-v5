@@ -2,7 +2,7 @@
 
 void utf32_buffer_init(utf32_buffer_t* buffer)
 {
-    buffer->characters = (utf32_char_t*)pfa_allocate_page();
+    buffer->characters = (utf32_char_t*)physical_address_to_virtual(pfa_allocate_physical_page());
     buffer->size = 1024; // 4096 / sizeof(utf32_char_t)
     buffer->put_index = buffer->get_index = 0;
 }
@@ -10,7 +10,7 @@ void utf32_buffer_init(utf32_buffer_t* buffer)
 void utf32_buffer_destroy(utf32_buffer_t* buffer)
 {
     if (buffer->characters)
-        pfa_free_page((virtual_address_t)buffer->characters);   // !!! buffer must be allocated below 1GB
+        pfa_free_physical_page(virtual_address_to_physical((virtual_address_t)buffer->characters));   // !!! buffer must be allocated below 1GB
     buffer->characters = 0;
     buffer->size = 0;
     buffer->put_index = buffer->get_index = 0;
