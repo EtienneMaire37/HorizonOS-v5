@@ -20,7 +20,7 @@ void handle_syscall(interrupt_registers_t* registers)
         switch_task();
         break;
     case SYSCALL_TIME:     // * time || $eax = time
-        registers->eax = time(NULL);
+        registers->eax = ktime(NULL);
         break;
     case SYSCALL_READ:     // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
         if (registers->ebx > 2) // ! Only default fds are supported for now
