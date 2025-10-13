@@ -141,11 +141,11 @@ void switch_task()
     uint16_t next_task_index = find_next_task_index();
     if (tasks[current_task_index].pid != tasks[next_task_index].pid)
     {
-        fpu_save_state(&tasks[current_task_index].fpu_state);
+        // fpu_save_state(&tasks[current_task_index].fpu_state);
 
         full_context_switch(next_task_index);
 
-        fpu_restore_state(&tasks[current_task_index].fpu_state);
+        // fpu_restore_state(&tasks[current_task_index].fpu_state);
     }
 
     cleanup_tasks();
@@ -262,6 +262,8 @@ void copy_task(uint16_t index)
 
 void cleanup_tasks()
 {
+    if (current_task_index != 0) return;
+
     for (uint16_t i = 0; i < task_count; i++)
     {
         if (i == current_task_index) continue;

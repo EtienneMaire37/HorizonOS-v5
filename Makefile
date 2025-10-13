@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=i486 -fno-builtin
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
 CROSSLD := ./i486elfgcc/bin/i486-elf-ld
@@ -31,7 +31,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
-	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -mgeneral-regs-only -Werror $(CLOGLEVEL)
+	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) -Ofast -Wno-stringop-overflow -Werror $(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \
 	-ffreestanding -nostdlib \

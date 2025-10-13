@@ -67,6 +67,7 @@ void exit(int r)
     printf(".");
     fflush(stdout);
     halt();
+    while (true);
 }
 
 time_t time(time_t* t)

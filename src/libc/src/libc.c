@@ -24,6 +24,7 @@ int64_t maxint(int64_t a, int64_t b)
 
 static char cwd[PATH_MAX] = {0};
 
+#include "../include/string.h"
 #include "../include/errno.h"
 #include "../include/unistd.h"
 #include "../include/stdio.h"
@@ -31,7 +32,6 @@ static char cwd[PATH_MAX] = {0};
 #include "../include/stdlib.h"
 #include "../include/time.h"
 #include "../include/stdarg.h"
-#include "../include/string.h"
 #include "../include/sys/types.h"
 #include "../include/horizonos.h"
 #include "../include/sys/stat.h"

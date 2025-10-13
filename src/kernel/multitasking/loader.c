@@ -199,7 +199,7 @@ bool multitasking_add_task_from_vfs(char* name, const char* path, uint8_t ring, 
     if (!name) return false;
     if (!data) abort();
 
-    LOG(DEBUG, "Loading file \"%s\"", name);
+    LOG(DEBUG, "Loading file \"%s\"", path);
     int i = 0;
     while (path[i] != 0 && loader_initrd_prefix[i] != 0 && path[i] == loader_initrd_prefix[i])
         i++;

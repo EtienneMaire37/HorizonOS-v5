@@ -4,7 +4,7 @@ bits 32
 extern task_esp_offset
 extern task_cr3_offset
 
-; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds)
+; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state)
 global context_switch
 context_switch:
     ; * eax, ecx and edx are caller-saved * ;
@@ -13,6 +13,12 @@ context_switch:
     push esi
     push edi
     push ebp
+
+    mov ebx, [esp + (4 + 4) * 4]    ; $ebx = old_fpu_state
+    fxsave [ebx]
+
+    mov ebx, [esp + (4 + 5) * 4]    ; $ebx = next_fpu_state
+    fxrstor [ebx]
 
     mov ebx, [task_esp_offset]
     mov edi, [esp + (4 + 1) * 4]        ; $edi = (uint32_t)old_tcb

@@ -82,14 +82,17 @@ void unlock_task_queue()
     pic_enable();
 }
 
-extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds);
+extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
 extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
     current_task_index = next_task_index;
     TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
+    uint8_t* old_fpu_state = (uint8_t*)(((uint32_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    uint8_t* new_fpu_state = (uint8_t*)(((uint32_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
+    old_fpu_state, new_fpu_state);
 }
 
 bool task_is_blocked(uint16_t index)

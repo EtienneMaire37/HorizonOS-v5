@@ -122,6 +122,8 @@ void kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("Error code:  0x%x\n\n", registers->error_code);
 
+    LOG(DEBUG, "cr0 : 0x%x", get_cr0());
+
     if (registers->interrupt_number == 14)
     {
         if (registers->cr2)
@@ -133,7 +135,7 @@ void kernel_panic(interrupt_registers_t* registers)
             printf("NULL\n");
             tty_set_color(FG_WHITE, BG_BLACK);
         }
-        printf("cr3:  0x%x\n\n", registers->cr3);
+        printf("cr3: 0x%x\n\n", registers->cr3);
 
         uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
         
@@ -205,6 +207,25 @@ void kernel_panic(interrupt_registers_t* registers)
         i++;
     }
     #endif
+
+    LOG(DEBUG, "VAS:");
+    LOG(DEBUG, "...");
+    for (int i = 0; i < 768; i++)
+    {
+        uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * i);
+        if (!(pde & 1)) 
+            continue;
+        for (int j = (i == 0 ? 256 : 0); j < 1024; j++)
+        {
+            uint32_t pte = read_physical_address_4b((pde & 0xfffff000) + 4 * j);
+            if (pte & 1)
+            {
+                uint32_t address = pte & 0xfffff000;
+                LOG(DEBUG, "0x%x - 0x%x", address, address + 0x1000);
+            }
+        }
+    }
+    LOG(DEBUG, "...");
 
     halt();
 }

@@ -355,11 +355,14 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         printf("FPU found\n");
     }
 
-    uint32_t cr0 =  get_cr0() | 
-                    // ((!has_fpu) << 2) |  // emulate fpu only if there is none // ~ Actually never emulate it
+    uint32_t cr0 =  (get_cr0() | 
+                    // ((!has_fpu) << 2) |  // emulate fpu only if there is none // * Actually never emulate it
                     (1 << 5) | // you shouldn't try running hos on a i386 anyways...
-                    (has_fpu << 1);
+                    (has_fpu << 1)) & ~(1 << 3);
     load_cr0(cr0);
+
+    uint32_t cr4 = (get_cr4() | (1 << 9) | (1 << 10)) & ~(1 << 11); // OSFXSR | OSXMMEXCPT & !UMIP 
+    load_cr4(cr4);
 
     fpu_init_defaults();
 
