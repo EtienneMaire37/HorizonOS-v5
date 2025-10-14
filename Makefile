@@ -47,6 +47,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	mkdir -p ./root/boot/grub
 	mkdir -p ./bin/initrd
 
+	rm src/tasks/bin/*.o
 	cp src/tasks/bin/ ./bin/initrd/ -r
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
@@ -58,7 +59,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/echo src/tasks/bin/shell src/tasks/bin/ls src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -Ofast
 	$(CROSSGCC) -T src/tasks/link.ld \
@@ -86,6 +87,16 @@ src/tasks/bin/ls: src/tasks/src/ls/* src/tasks/link.ld src/libc/lib/libc.a src/l
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/ls" \
     "src/tasks/bin/ls.o" \
+    "src/libc/lib/libc.a" \
+	-ffreestanding -nostdlib \
+	-lgcc
+
+src/tasks/bin/cat: src/tasks/src/cat/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+	mkdir -p ./src/tasks/bin
+	$(CROSSGCC) -c "src/tasks/src/cat/main.c" -o "src/tasks/bin/cat.o" $(CFLAGS) -I"src/libc/include" -Ofast
+	$(CROSSGCC) -T src/tasks/link.ld \
+    -o "src/tasks/bin/cat" \
+    "src/tasks/bin/cat.o" \
     "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc

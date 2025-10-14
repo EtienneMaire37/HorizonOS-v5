@@ -204,7 +204,6 @@ struct dirent* readdir(DIR* dirp)
                 }
             }
         }
-        // realpath(dirp->current_path, dirp->current_path);
     }
     uint32_t return_address;
     int _errno;
@@ -212,4 +211,12 @@ struct dirent* readdir(DIR* dirp)
     if (_errno != 0)
         errno = _errno;
     return (struct dirent*)return_address;
+}
+
+int isatty(int fd)
+{
+    return fd < 3;
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(errno), "=b"(ret) : "a"(SYSCALL_ISATTY), "b"(fd));
+    return ret;
 }

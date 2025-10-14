@@ -3,7 +3,7 @@
 #include "math_float_util.h"
 #include "math_fmod.c"
 #endif
-// #include "../src/math.c"
+#include "../include/fcntl.h"
 
 int putchar(int c)
 {
@@ -537,13 +537,141 @@ int vfprintf(FILE* stream, const char *format, va_list args)
 
 FILE* fopen(const char* path, const char* mode)
 {
-    errno = EACCES;
-    return NULL;    // * Currently the open syscall is not supported
-    // int fd = open(path);
-    // if (fd < 0) return NULL;
-    // FILE* f = FILE_create();
-    // if (!f) return NULL;
-    // f->fd = fd;
+    if (!path || !mode) 
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    int plus = 0;
+    int excl = 0;
+    int cloexec = 0;
+    char base = '\0';
+
+    for (const char* p = mode; *p; p++) 
+    {
+        char c = *p;
+        switch (c) 
+        {
+        case 'r': 
+        case 'w': 
+        case 'a':
+            if (base != '\0') 
+            {
+                errno = EINVAL;
+                return NULL;
+            }
+            base = c;
+            break;
+        case '+':
+            plus = 1;
+            break;
+        case 'x':
+            excl = 1;
+            break;
+        case 'e':
+            cloexec = 1;
+            break;
+        case 'b':
+        case 't':
+            break;
+        default:
+            errno = EINVAL;
+            return NULL;
+        }
+    }
+
+    if (base == '\0') 
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    int oflags = 0;
+    mode_t cmode = 0666;
+
+    if (base == 'r')
+        oflags = plus ? O_RDWR : O_RDONLY;
+    else if (base == 'w') 
+    {
+        oflags = plus ? O_RDWR : O_WRONLY;
+        oflags |= O_CREAT | O_TRUNC;
+    } 
+    else 
+    {
+        oflags = plus ? O_RDWR : O_WRONLY;
+        oflags |= O_CREAT | O_APPEND;
+    }
+
+    if (cloexec) oflags |= O_CLOEXEC;
+
+    if (excl && (oflags & O_CREAT)) oflags |= O_EXCL;
+    else if (excl && !(oflags & O_CREAT)) 
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    int fd;
+    if (oflags & O_CREAT)
+        fd = open(path, oflags, cmode);
+    else
+        fd = open(path, oflags);
+
+    if (fd == -1) 
+        return NULL;
+
+    FILE* stream = malloc(sizeof(FILE));
+    if (!stream) 
+    {
+        int saved = errno;
+        close(fd);
+        errno = saved ? saved : ENOMEM;
+        return NULL;
+    }
+
+    memset(stream, 0, sizeof(FILE));
+
+    unsigned char* buf = malloc(BUFSIZ);
+    if (!buf) 
+    {
+        int saved = errno;
+        close(fd);
+        free(stream);
+        errno = saved ? saved : ENOMEM;
+        return NULL;
+    }
+
+    stream->fd = fd;
+    stream->buffer = buf;
+    stream->buffer_size = BUFSIZ;
+    stream->buffer_index = 0;
+    stream->buffer_end_index = 0;
+    stream->buffer_mode = FILE_BFMD_READ;
+
+    stream->flags = 0;
+    stream->current_flags = 0;
+
+    if (plus)
+        stream->flags |= (FILE_FLAGS_READ | FILE_FLAGS_WRITE);
+    else 
+    {
+        if (base == 'r') 
+            stream->flags |= FILE_FLAGS_READ;
+        else stream->flags |= FILE_FLAGS_WRITE;
+    }
+
+    stream->flags |= FILE_FLAGS_FBF;
+
+    if ((stream->flags & FILE_FLAGS_WRITE) && isatty(fd)) 
+    {
+        stream->flags &= ~FILE_FLAGS_FBF;
+        stream->flags |= FILE_FLAGS_LBF;
+    }
+
+    stream->flags |= FILE_FLAGS_BF_ALLOC;
+
+    return stream;
 }
 
 int fclose(FILE* stream)
