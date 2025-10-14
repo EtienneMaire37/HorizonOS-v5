@@ -33,7 +33,7 @@ int vfs_stat(const char* path, struct stat* st)
     if (strcmp(initrd_prefix, path) == 0)
         return vfs_initrd_root_stat(st);
 
-    int i = 0;
+    size_t i = 0;
     while (path[i] != 0 && initrd_prefix[i] != 0 && path[i] == initrd_prefix[i])
         i++;
     const size_t len = strlen(initrd_prefix);
@@ -126,7 +126,7 @@ struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
 
     const char* initrd_prefix = "/initrd";
 
-    int i = 0;
+    size_t i = 0;
     while (dirp->path[i] != 0 && initrd_prefix[i] != 0 && dirp->path[i] == initrd_prefix[i])
         i++;
     const size_t len = strlen(initrd_prefix);

@@ -21,6 +21,9 @@ startup_data_struct_t startup_data_init_from_command(const char* cmd, char** env
 
 startup_data_struct_t startup_data_init_from_argv(const char** argv, char** envp, const char* pwd)
 {
+    // LOG(DEBUG, "<startup_data_init_from_argv>");
+    // for (int i = 0; argv[i] != 0; i++)
+    //     LOG(DEBUG, "\"%s\"", argv[i]);
     char cmd_line[4096];
     char* cmd = cmd_line;
     if (!argv) cmd = NULL;
@@ -29,7 +32,6 @@ startup_data_struct_t startup_data_init_from_argv(const char** argv, char** envp
         int i = 0, j = 0, k = 0;
         while (argv[i] && j < 4095)
         {
-            if (j >= 4095) continue;
             cmd_line[j++] = '\"';
             k = 0;
             while (j < 4095 && argv[i][k] != 0)
@@ -37,7 +39,7 @@ startup_data_struct_t startup_data_init_from_argv(const char** argv, char** envp
                 cmd_line[j++] = argv[i][k];
                 k++;
             }
-            if (j >= 4095) continue;
+            if (j >= 4095) break;
             cmd_line[j++] = '\"';
             i++;
         }

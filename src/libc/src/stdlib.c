@@ -413,7 +413,7 @@ int system(const char* command)
 
     size_t characters = bytes - 1;
     bool string = false;
-    for (int i = 0; i < characters; i++)
+    for (size_t i = 0; i < characters; i++)
     {
         if (cmd_data[i] == ' ' && !string) cmd_data[i] = 0;
         if (cmd_data[i] == '\"') 
@@ -434,7 +434,7 @@ int system(const char* command)
     char* arg = first_arg;
     int bytes_left_backup = bytes_left;
     int argc = 1;
-    while (arg = find_next_contiguous_string(arg, &bytes_left))
+    while ((arg = find_next_contiguous_string(arg, &bytes_left)))
         argc++;
     bytes_left = bytes_left_backup;
 
@@ -449,7 +449,7 @@ int system(const char* command)
     arg = first_arg;
     argv[0] = arg;
     int i = 1;
-    while (arg = find_next_contiguous_string(arg, &bytes_left))
+    while ((arg = find_next_contiguous_string(arg, &bytes_left)))
         argv[i++] = arg;
     argv[i] = NULL;
 

@@ -22,14 +22,15 @@ typedef struct file_entry
     {
         initrd_file_entry_data_t initrd_data;
     } data;
-    
 } file_entry_t;
 
-file_entry_t file_table[256];
+#define MAX_FILE_TABLE_ENTRIES  256
+
+file_entry_t file_table[MAX_FILE_TABLE_ENTRIES];
 
 void vfs_init_file_table()
 {
-    for (int i = 0; i < 256; i++)
+    for (int i = 0; i < MAX_FILE_TABLE_ENTRIES; i++)
     {
         if (i < 3)  file_table[i].used = 1; // * Will "always" be positive
         else        file_table[i].used = 0;

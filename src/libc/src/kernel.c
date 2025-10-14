@@ -140,9 +140,17 @@ int access(const char* path, int mode)
     // if (!mode) return 0;
     // return vfs_path_exists(path);
     abort();
+    return 0;
 }
 
 int stat(const char* path, struct stat* statbuf)
 {
     abort();
+    return 0;
+}
+
+int isatty(int fd)
+{
+    abort();
+    return 0;
 }

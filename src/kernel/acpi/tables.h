@@ -152,5 +152,5 @@ char* preferred_power_management_profile_text[8] =
 
 void acpi_find_tables();
 bool acpi_table_valid();
-uint64_t read_rsdt_ptr(uint32_t index);
+physical_address_t read_rsdt_ptr(uint32_t index);
 void fadt_extract_data();

@@ -132,7 +132,7 @@ found_rsdp:
 
     for (uint32_t i = 0; i < sdt_count; i++)
     {
-        uint64_t address = read_rsdt_ptr(i);
+        physical_address_t address = read_rsdt_ptr(i);
         LOG(INFO, "\tFound table at address 0x%lx", address);
         if (!(address >> 32))
         {
@@ -177,12 +177,13 @@ found_rsdp:
     fadt_extract_data();
 }
 
-uint64_t read_rsdt_ptr(uint32_t index)
+physical_address_t read_rsdt_ptr(uint32_t index)
 {
     if (index >= sdt_count)
     {
         LOG(CRITICAL, "Kernel tried to read an invalid SDT (%u / %u)", index + 1, sdt_count);
         abort();
+        return physical_null;
     }
 
     if (acpi_10)    // ACPI 1.0
@@ -190,6 +191,8 @@ uint64_t read_rsdt_ptr(uint32_t index)
         physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
         return table_read_bytes(sdt_ptr_start, 4 * index, 4, true);
     }
+
+    return physical_null;
 }
 
 void fadt_extract_data()

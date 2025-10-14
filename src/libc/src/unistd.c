@@ -81,7 +81,8 @@ int execvpe(const char* file, char* const argv[], char* const envp[])
 #include "misc.h"
     execve(file, argv, envp);
 
-    for (int i = 0; i < strlen(file); i++)
+    const size_t file_len = strlen(file);
+    for (size_t i = 0; i < file_len; i++)
     {
         if (file[i] == '/') 
         {
@@ -108,14 +109,14 @@ int execvpe(const char* file, char* const argv[], char* const envp[])
     do
     {
         int path_len = strlen(path);
-        char* combined = malloc(path_len + strlen(file) + 2);
+        char* combined = malloc(path_len + file_len + 2);
         strcpy(combined, path);
         combined[path_len] = '/';
         strcpy(((void*)combined + path_len + 1), file);
         execve(combined, argv, envp);
         free(combined);
     }
-    while (path = find_next_contiguous_string(path, &bytes));
+    while ((path = find_next_contiguous_string(path, &bytes)));
     free(path_data);
     errno = ENOENT;
     return -1;

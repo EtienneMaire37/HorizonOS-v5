@@ -72,7 +72,7 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
 
     if (!scancode.extended) 
     {
-        for (int i = 0; i < sizeof(keypad_scancodes); i++) 
+        for (unsigned int i = 0; i < sizeof(keypad_scancodes); i++) 
         {
             if (scancode.scancode == keypad_scancodes[i]) 
             {

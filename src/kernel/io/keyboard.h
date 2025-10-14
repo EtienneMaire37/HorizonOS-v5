@@ -177,10 +177,7 @@ keyboard_layout_t us_qwerty =
             [0x2E] = U'%',        [0x36] = U'^',        [0x3D] = U'&',
             [0x3E] = U'*',        [0x46] = U'(',        [0x45] = U')',
             [0x4E] = U'_',        [0x55] = U'+',        [0x5D] = U'|',
-            [0x5D] = U'|',        [0x7C] = U'*',
-            [0x29] = U' ',
-
-            [0x61] = U'|',
+            [0x7C] = U'*',        [0x29] = U' ',        [0x61] = U'|',
         },
         .char_table_altgr = 
         { 0 },
@@ -297,7 +294,7 @@ keyboard_layout_t* keyboard_layouts[NUM_KB_LAYOUTS] =
     &fr_azerty
 };
 
-#define get_buffered_characters(buffer) imod(((int)(buffer).put_index - (buffer).get_index), (buffer).size)
+#define get_buffered_characters(buffer) ((size_t)imod(((int)(buffer).put_index - (buffer).get_index), (buffer).size))
 #define no_buffered_characters(buffer)  ((buffer).put_index == (buffer).get_index)
 
 // // #define utf32_to_bios_oem(utf32_char)   ((utf32_char) < 128 ? (char)(utf32_char) : (char)0) // Note: Other characters are code page dependent

@@ -109,7 +109,6 @@ void tty_outc(char c)
 	{
 	case '\n':
 		tty_cursor += 80;
-
 	case '\r':
 		tty_cursor = (int)(tty_cursor / 80) * 80;
 		break;
@@ -189,7 +188,7 @@ void tty_outc(char c)
 
 	while ((tty_cursor / 80) >= 25)	// Last line
 	{
-		memcpy(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
+		memmove(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
 		
 		for(uint8_t i = 0; i < 80; i++)
 		{

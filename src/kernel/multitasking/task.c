@@ -15,7 +15,7 @@ void task_init_file_table(thread_t* task)
 thread_t task_create_empty()
 {
     thread_t task;
-    
+
     memset(task.name, 0, THREAD_NAME_MAX);
 
     utf32_buffer_init(&task.input_buffer);
@@ -110,7 +110,7 @@ void task_stack_push(thread_t* task, uint32_t value)
 void task_stack_push_data(thread_t* task, void* data, size_t bytes)
 {
     task->esp -= bytes;
-    for (int i = 0; i < bytes; i++)
+    for (size_t i = 0; i < bytes; i++)
         task_write_at_address_1b(task, (physical_address_t)task->esp + i, ((uint8_t*)data)[i]);
 }
 

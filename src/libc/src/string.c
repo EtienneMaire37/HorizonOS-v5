@@ -24,17 +24,21 @@
 
 void* memset(void* ptr, int value, size_t num)
 {
-    __builtin_memset(ptr, value, num);
+    return __builtin_memset(ptr, value, num);
 }
 
 void* memcpy(void* destination, const void* source, size_t num)
 {
-    __builtin_memcpy(destination, source, num);
+    return __builtin_memcpy(destination, source, num);
 }
 
 void* memmove(void* destination, const void* source, size_t num)
 {
-    __builtin_memmove(destination, source, num);
+    // return __builtin_memmove(destination, source, num);
+    unsigned char buf[num];
+    memcpy(buf, source, num);
+    memcpy(destination, buf, num);
+    return destination;
 }
 
 int memcmp(const void* str1, const void* str2, size_t n)

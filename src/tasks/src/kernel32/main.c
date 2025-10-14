@@ -48,5 +48,5 @@ int main(int argc, char** argv)
 
     putchar('\n');
 
-    execvp("shell", (char*[]){"shell"});
+    execvp("shell", (char*[]){"shell", (char*)NULL});
 }

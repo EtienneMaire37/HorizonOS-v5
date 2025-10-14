@@ -43,8 +43,9 @@ int fputs(const char* s, FILE* stream)
 
 int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_list args)
 {
-    char hex[16] = "0123456789abcdef";
-    char HEX[16] = "0123456789ABCDEF";
+    // 17 just so the compiler doesnt complain about the missing NUL terminator
+    char hex[17] = "0123456789abcdef";
+    char HEX[17] = "0123456789ABCDEF";
 
     uint32_t length = 0;
 
@@ -465,8 +466,7 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args)
         }
     }
 
-    int length = _printf(_putc, _puts, format, args);
-    // if (bufsz != 0)
+    _printf(_putc, _puts, format, args);
     buffer[index] = 0;
     return index;
 }
