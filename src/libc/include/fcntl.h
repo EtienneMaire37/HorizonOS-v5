@@ -25,4 +25,6 @@
 #define O_SEARCH    0x20000
 #define O_WRONLY    0x40000
 
+#define O_TMPFILE   0x80000
+
 int open(const char* path, int oflag, ...);

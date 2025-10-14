@@ -10,11 +10,14 @@ void _main()
     atexit_stack_length = 0;
 
     errno = 0;
+    fd_creation_mask = S_IWGRP | S_IWOTH;
+
     heap_size = 0;
     break_address = (uint32_t)&_break_address;
     break_address = ((break_address + 4095) / 4096) * 4096;
     heap_address = break_address;
     alloc_break_address = break_address;
+
     malloc_bitmap_init();
 
     startup_data_struct_t* data = (startup_data_struct_t*)kernel_data;

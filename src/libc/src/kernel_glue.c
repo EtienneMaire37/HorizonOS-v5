@@ -113,6 +113,14 @@ int brk(void* addr)
 
 int open(const char* path, int oflag, ...)
 {
+    mode_t mode = 0;
+    if ((oflag & O_CREAT) || (oflag & O_TMPFILE))
+    {
+        va_list args;
+        va_start(args, oflag);
+        mode = va_arg(args, mode_t) & ~fd_creation_mask;
+        va_end(args);
+    }
     errno = ENOENT;
     return -1;
 }
@@ -215,7 +223,6 @@ struct dirent* readdir(DIR* dirp)
 
 int isatty(int fd)
 {
-    return fd < 3;
     int ret;
     asm volatile ("int 0xf0" : "=a"(errno), "=b"(ret) : "a"(SYSCALL_ISATTY), "b"(fd));
     return ret;

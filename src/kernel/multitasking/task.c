@@ -49,6 +49,8 @@ void multitasking_init()
     current_task_index = 0;
     current_pid = 0;
 
+    vfs_init_file_table();
+
     multitasking_add_idle_task("idle");
 }
 

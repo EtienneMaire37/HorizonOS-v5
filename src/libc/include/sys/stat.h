@@ -64,6 +64,8 @@ struct stat
 #define S_ISGID  02000
 #define S_ISVTX  01000
 
+static mode_t fd_creation_mask;
+
 int stat(const char* path, struct stat* buf);
 int fstat(int fd, struct stat* buf);
 int lstat(const char* path, struct stat* buf);

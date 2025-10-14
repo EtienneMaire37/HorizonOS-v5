@@ -267,13 +267,28 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
 
     case SYSCALL_READDIR:   // * readdir | &dirent_entry = $ebx, dirp = $ecx | $eax = errno, $ebx = return_address
-        {
-            struct dirent* dirent_entry = (struct dirent*)registers->ebx;
-            DIR* dirp = (DIR*)registers->ecx;
-            registers->ebx = (uint32_t)vfs_readdir(dirent_entry, dirp);
-            registers->eax = errno;
-        }
+    {
+        struct dirent* dirent_entry = (struct dirent*)registers->ebx;
+        DIR* dirp = (DIR*)registers->ecx;
+        registers->ebx = (uint32_t)vfs_readdir(dirent_entry, dirp);
+        registers->eax = errno;
         break;
+    }
+
+    case SYSCALL_ISATTY:    // * isatty | fd = $ebx | $eax = errno, $ebx = ret
+    {
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = EBADF;
+            registers->ebx = 0;
+            break;
+        }
+        registers->ebx = tasks[current_task_index].file_table[fd] < 3;
+        if (!registers->ebx)
+            registers->eax = ENOTTY;
+        break;
+    }
 
     case SYSCALL_FLUSH_INPUT_BUFFER:
         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));

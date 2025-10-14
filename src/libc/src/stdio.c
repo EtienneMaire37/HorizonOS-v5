@@ -563,6 +563,7 @@ FILE* fopen(const char* path, const char* mode)
             }
             base = c;
             break;
+            
         case '+':
             plus = 1;
             break;
@@ -572,6 +573,7 @@ FILE* fopen(const char* path, const char* mode)
         case 'e':
             cloexec = 1;
             break;
+
         case 'b':
         case 't':
             break;
@@ -690,6 +692,18 @@ int fclose(FILE* stream)
 
 size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
 {
+    if (!stream)
+    {
+        errno = EBADF;
+        return 0;
+    }
+
+    if (!ptr)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
     if (!(stream->flags & FILE_FLAGS_READ)) 
     {
         stream->current_flags |= FILE_CFLAGS_ERR;
@@ -745,6 +759,18 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
 
 size_t fwrite(const void* ptr, size_t size, size_t nitems, FILE* stream)
 {
+    if (!stream)
+    {
+        errno = EBADF;
+        return 0;
+    }
+
+    if (!ptr)
+    {
+        errno = EINVAL;
+        return 0;
+    }
+
     if (!(stream->flags & FILE_FLAGS_WRITE)) 
     {
         stream->current_flags |= FILE_CFLAGS_ERR;

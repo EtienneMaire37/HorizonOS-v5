@@ -29,6 +29,8 @@ typedef struct thread
     fpu_state_t fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
+
+    file_table_index_t file_table[OPEN_MAX];
 } thread_t;
 
 uint8_t global_cpu_ticks = 0;
