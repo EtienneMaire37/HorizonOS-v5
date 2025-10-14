@@ -16,9 +16,10 @@ int main(int argc, char** argv)
             snprintf(buf, PATH_MAX + 5, "cat: %s", argv[i]);
             errno = _errno;
             perror(buf);
-            return 1;
+            continue;
         }
         while (fread(data, BUFSIZ, 1, f) == 1)
             printf("%s", data);
+        fclose(f);
     }
 }

@@ -857,5 +857,5 @@ void perror(const char* prefix)
     fprintf(stderr, "%s", prefix);
     if (_errno != 0)
         fprintf(stderr, ": %s", strerror(_errno));
-    putchar('\n');
+    fputc('\n', stderr);
 }
