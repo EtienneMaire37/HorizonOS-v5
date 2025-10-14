@@ -19,7 +19,7 @@ int64_t maxint(int64_t a, int64_t b)
 }
 
 #include "../../kernel/multicore/spinlock.h"
-
+#include "syscall_defines.h"
 #include "../include/limits.h"
 
 static char cwd[PATH_MAX] = {0};
@@ -39,8 +39,6 @@ static char cwd[PATH_MAX] = {0};
 #include "../include/dirent.h"
 
 #include "startup_data.h"
-
-#include "kernel_glue.h"
 
 FILE* FILE_create()
 {

@@ -54,7 +54,7 @@ char cwd[PATH_MAX] = {0};
 #include "../libc/include/dirent.h"
 #include "../libc/src/startup_data.h"
 
-#include "../libc/src/kernel_glue.h"
+#include "../libc/src/syscall_defines.h"
 #include "../libc/include/sys/wait.h"
 #include "../libc/include/sys/stat.h"
 
