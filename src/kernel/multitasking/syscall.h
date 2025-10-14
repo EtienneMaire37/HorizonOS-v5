@@ -23,7 +23,21 @@ void handle_syscall(interrupt_registers_t* registers)
         registers->eax = ktime(NULL);
         break;
     case SYSCALL_READ:     // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
-        if (registers->ebx > 2) // ! Only default fds are supported for now
+    {
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = 0;
+            registers->ebx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->eax = 0;
+            registers->ebx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] > 2) // ! Only default fds are supported for now
         {
             registers->eax = 0xffffffff;   // -1
             registers->ebx = EBADF;
@@ -58,8 +72,23 @@ void handle_syscall(interrupt_registers_t* registers)
             }
         }
         break;
+    }
     case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_written, $ebx = errno
-        if (registers->ebx > 2)
+    {
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = 0;
+            registers->ebx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->eax = 0;
+            registers->ebx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] > 2)   // ! Only default fds are supported for now
         {
             registers->eax = 0xffffffff;   // -1
             registers->ebx = EBADF;
@@ -71,15 +100,16 @@ void handle_syscall(interrupt_registers_t* registers)
                 for (uint32_t i = 0; i < registers->edx; i++)
                     tty_outc(((char*)registers->ecx)[i]);
                 tty_update_cursor();
-                registers->eax = registers->edx;
+                registers->eax = registers->edx;    // bytes_written
             }
-            else
+            else    // ! cant write to STDIN_FILENO
             {
                 registers->eax = 0xffffffff;
                 registers->ebx = EBADF;
             }
         }
         break;
+    }
     case SYSCALL_GETPID:     // * getpid || $eax = pid_hi, $ebx = pid_lo
         lock_task_queue();
         registers->eax = tasks[current_task_index].pid >> 32;
@@ -108,6 +138,104 @@ void handle_syscall(interrupt_registers_t* registers)
                 registers->ebx = forked_pid & 0xffffffff;
             }
         } 
+        break;
+
+    case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
+        {
+            // LOG(DEBUG, "execve");
+            startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
+            // LOG(DEBUG, "execve.");
+            lock_task_queue();
+            if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
+            {
+                unlock_task_queue();
+                registers->eax = ENOENT;
+                break;
+            }
+            else
+            {
+                pid_t old_pid = tasks[current_task_index].pid;
+                tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
+                tasks[task_count - 1].parent = tasks[current_task_index].parent;
+                tasks[current_task_index].parent = -1;
+                tasks[current_task_index].pid = tasks[task_count - 1].pid;
+                tasks[task_count - 1].pid = old_pid;
+                unlock_task_queue();
+                switch_task();
+                break;
+            }
+        }
+
+    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
+        {
+            uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
+            lock_task_queue();
+            tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+            unlock_task_queue();
+            switch_task();
+            registers->ecx = pid & 0xffffffff;
+            registers->edx = pid >> 32;
+            registers->ebx = tasks[current_task_index].wstatus;
+        }
+        break;
+
+    case SYSCALL_STAT:  // * stat | path = $ebx, stat_buf = $ecx | $eax = ret   
+        {
+            struct stat* st = (struct stat*)registers->ecx;
+            const char* path = (const char*)registers->ebx;
+            registers->eax = vfs_stat(path, st);
+        }
+        break;
+
+    case SYSCALL_ACCESS:  // * access | path = $ebx, mode = $ecx | $eax = ret
+        {
+            const char* path = (const char*)registers->ebx;
+            registers->eax = vfs_access(path, registers->ecx);
+        }
+        break;
+
+    case SYSCALL_READDIR:   // * readdir | &dirent_entry = $ebx, dirp = $ecx | $eax = errno, $ebx = return_address
+    {
+        struct dirent* dirent_entry = (struct dirent*)registers->ebx;
+        DIR* dirp = (DIR*)registers->ecx;
+        registers->ebx = (uint32_t)vfs_readdir(dirent_entry, dirp);
+        registers->eax = errno;
+        break;
+    }
+
+    case SYSCALL_ISATTY:    // * isatty | fd = $ebx | $eax = errno, $ebx = ret
+    {
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = EBADF;
+            registers->ebx = 0;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->eax = EBADF;
+            registers->ebx = 0;
+            break;
+        }
+        registers->ebx = tasks[current_task_index].file_table[fd] < 3;
+        if (!registers->ebx)
+            registers->eax = ENOTTY;
+        break;
+    }
+
+    case SYSCALL_FLUSH_INPUT_BUFFER:
+        utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
+        break;
+
+    case SYSCALL_SET_KB_LAYOUT:
+        if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
+        {
+            current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
+            registers->eax = 1;
+        }
+        else
+            registers->eax = 0;
         break;
 
     case SYSCALL_BRK_ALLOC: // * brk_alloc | address = $ebx | $eax = num_pages_allocated
@@ -210,98 +338,6 @@ void handle_syscall(interrupt_registers_t* registers)
                 registers->eax = 1;
             }
         }
-        break;
-
-    case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
-        {
-            // LOG(DEBUG, "execve");
-            startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
-            // LOG(DEBUG, "execve.");
-            lock_task_queue();
-            if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
-            {
-                unlock_task_queue();
-                registers->eax = ENOENT;
-                break;
-            }
-            else
-            {
-                pid_t old_pid = tasks[current_task_index].pid;
-                tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
-                tasks[task_count - 1].parent = tasks[current_task_index].parent;
-                tasks[current_task_index].parent = -1;
-                tasks[current_task_index].pid = tasks[task_count - 1].pid;
-                tasks[task_count - 1].pid = old_pid;
-                unlock_task_queue();
-                switch_task();
-                break;
-            }
-        }
-
-    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
-        {
-            uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
-            lock_task_queue();
-            tasks[current_task_index].wait_pid = *(pid_t*)&pid;
-            unlock_task_queue();
-            switch_task();
-            registers->ecx = pid & 0xffffffff;
-            registers->edx = pid >> 32;
-            registers->ebx = tasks[current_task_index].wstatus;
-        }
-        break;
-
-    case SYSCALL_STAT:  // * stat | path = $ebx, stat_buf = $ecx | $eax = ret   
-        {
-            struct stat* st = (struct stat*)registers->ecx;
-            const char* path = (const char*)registers->ebx;
-            registers->eax = vfs_stat(path, st);
-        }
-        break;
-
-    case SYSCALL_ACCESS:  // * access | path = $ebx, mode = $ecx | $eax = ret
-        {
-            const char* path = (const char*)registers->ebx;
-            registers->eax = vfs_access(path, registers->ecx);
-        }
-        break;
-
-    case SYSCALL_READDIR:   // * readdir | &dirent_entry = $ebx, dirp = $ecx | $eax = errno, $ebx = return_address
-    {
-        struct dirent* dirent_entry = (struct dirent*)registers->ebx;
-        DIR* dirp = (DIR*)registers->ecx;
-        registers->ebx = (uint32_t)vfs_readdir(dirent_entry, dirp);
-        registers->eax = errno;
-        break;
-    }
-
-    case SYSCALL_ISATTY:    // * isatty | fd = $ebx | $eax = errno, $ebx = ret
-    {
-        int fd = *(int*)&registers->ebx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->eax = EBADF;
-            registers->ebx = 0;
-            break;
-        }
-        registers->ebx = tasks[current_task_index].file_table[fd] < 3;
-        if (!registers->ebx)
-            registers->eax = ENOTTY;
-        break;
-    }
-
-    case SYSCALL_FLUSH_INPUT_BUFFER:
-        utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
-        break;
-
-    case SYSCALL_SET_KB_LAYOUT:
-        if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
-        {
-            current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
-            registers->eax = 1;
-        }
-        else
-            registers->eax = 0;
         break;
 
     default:

@@ -3,10 +3,19 @@
 #include "idle.h"
 #include "vas.h"
 
+void task_init_file_table(thread_t* task)
+{
+    for (int i = 0; i < OPEN_MAX; i++)
+        task->file_table[i] = invalid_fd;
+    task->file_table[0] = 0;    // * STDIN_FILENO
+    task->file_table[1] = 1;    // * STDOUT_FILENO
+    task->file_table[2] = 2;    // * STDERR_FILENO
+}
+
 thread_t task_create_empty()
 {
     thread_t task;
-    // task.name = NULL;
+    
     memset(task.name, 0, THREAD_NAME_MAX);
 
     utf32_buffer_init(&task.input_buffer);
@@ -32,6 +41,8 @@ thread_t task_create_empty()
     task.wait_pid = -1;
 
     task.to_reap = false;
+
+    task_init_file_table(&task);
 
     return task;
 }

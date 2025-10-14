@@ -1,6 +1,7 @@
 #pragma once
 
-typedef uint8_t file_table_index_t;
+typedef int16_t file_table_index_t;
+const file_table_index_t invalid_fd = -1;
 
 typedef enum drive_type
 {
@@ -10,12 +11,12 @@ typedef enum drive_type
 
 typedef struct initrd_file_entry_data
 {
-    ;
+    initrd_file_t* file;
 } initrd_file_entry_data_t;
 
 typedef struct file_entry
 {
-    bool used;
+    int used;
     drive_type_t type;
     union 
     {
@@ -30,8 +31,8 @@ void vfs_init_file_table()
 {
     for (int i = 0; i < 256; i++)
     {
-        if (i < 3)  file_table[i].used = true;
-        else        file_table[i].used = false;
+        if (i < 3)  file_table[i].used = 1; // * Will "always" be positive
+        else        file_table[i].used = 0;
     }
 }
 
