@@ -535,6 +535,15 @@ int vfprintf(FILE* stream, const char *format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
+int printf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int length = vfprintf(stdout, format, args);
+    va_end(args);
+    return length;
+}
+
 FILE* fopen(const char* path, const char* mode)
 {
     if (!path || !mode) 

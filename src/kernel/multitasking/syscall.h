@@ -27,20 +27,20 @@ void handle_syscall(interrupt_registers_t* registers)
         int fd = *(int*)&registers->ebx;
         if (fd < 0 || fd >= OPEN_MAX)
         {
-            registers->eax = 0;
+            registers->eax = 0xffffffff;
             registers->ebx = EBADF;
             break;
         }
         if (tasks[current_task_index].file_table[fd] == invalid_fd)
         {
-            registers->eax = 0;
+            registers->eax = 0xffffffff;
             registers->ebx = EBADF;
             break;
         }
         if (tasks[current_task_index].file_table[fd] > 2) // ! Only default fds are supported for now
         {
-            registers->eax = 0xffffffff;   // -1
-            registers->ebx = EBADF;
+            registers->eax = 0;
+            registers->ebx = 0;
         } 
         else
         {
@@ -78,20 +78,20 @@ void handle_syscall(interrupt_registers_t* registers)
         int fd = *(int*)&registers->ebx;
         if (fd < 0 || fd >= OPEN_MAX)
         {
-            registers->eax = 0;
+            registers->eax = 0xffffffff;
             registers->ebx = EBADF;
             break;
         }
         if (tasks[current_task_index].file_table[fd] == invalid_fd)
         {
-            registers->eax = 0;
+            registers->eax = 0xffffffff;
             registers->ebx = EBADF;
             break;
         }
         if (tasks[current_task_index].file_table[fd] > 2)   // ! Only default fds are supported for now
         {
-            registers->eax = 0xffffffff;   // -1
-            registers->ebx = EBADF;
+            registers->eax = 0;
+            registers->ebx = 0;
         }
         else
         {

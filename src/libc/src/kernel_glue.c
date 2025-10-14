@@ -3,16 +3,20 @@
 ssize_t write(int fildes, const void *buf, size_t nbyte)
 {
     ssize_t bytes_written;
-    asm volatile("int 0xf0" : "=a" (bytes_written), "=b" (errno)
+    int _errno;
+    asm volatile("int 0xf0" : "=a" (bytes_written), "=b" (_errno)
         : "a" (SYSCALL_WRITE), "b" (fildes), "c" (buf), "d" (nbyte));
+    if (_errno) errno = _errno;
     return bytes_written;
 }
 
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
     ssize_t bytes_read;
-    asm volatile("int 0xf0" : "=a" (bytes_read), "=b" (errno)
+    int _errno;
+    asm volatile("int 0xf0" : "=a" (bytes_read), "=b" (_errno)
         : "a" (SYSCALL_READ), "b" (fildes), "c" (buf), "d" (nbyte) : "memory");
+    if (_errno) errno = _errno;
     return bytes_read;
 }
 

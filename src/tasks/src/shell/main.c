@@ -85,7 +85,11 @@ int main(int argc, char** argv)
                     continue;
                 }
                 if (chdir(first_arg) != 0)
-                    perror("cd");
+                {
+                    char buf[PATH_MAX + 4];
+                    snprintf(buf, PATH_MAX + 4, "cd: %s", first_arg);
+                    perror(buf);
+                }
             }
             else 
             {

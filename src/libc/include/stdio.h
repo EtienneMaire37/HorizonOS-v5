@@ -82,9 +82,7 @@ int putchar(int c);
 int fputs(const char* s, FILE* stream);
 int puts(const char* s);
 
-// int printf(const char* format, ...);
-#define printf(...) fprintf(stdout, __VA_ARGS__)
-
+int printf(const char* format, ...);
 int fprintf(FILE* stream, const char* format, ...);
 int vfprintf(FILE* stream, const char* format, va_list args);
 int vprintf(const char* format, va_list args);

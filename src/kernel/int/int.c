@@ -31,6 +31,8 @@ void interrupt_handler(interrupt_registers_t* registers)
         }
         else
         {
+            if (registers->interrupt_number == 14)  // * Page fault
+                printf("Segmentation fault\n");
             tasks[current_task_index].is_dead = true;
             tasks[current_task_index].return_value = 0x80000000;
             switch_task();
