@@ -1,5 +1,5 @@
-export PREFIX="$(pwd)/i486elfgcc"
-export TARGET=i486-elf
+export PREFIX="$(pwd)/i686elfgcc"
+export TARGET=i686-elf
 export PATH="$PREFIX/bin:$PATH"
 
 set -x -e

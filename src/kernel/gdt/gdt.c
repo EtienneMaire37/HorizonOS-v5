@@ -11,7 +11,7 @@ void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t 
     entry->flags = flags;
 }
 
-void install_gdt()
+void __attribute__((optimize("O0"))) install_gdt()
 {
     _gdtr.size = sizeof(GDT) - 1;
     _gdtr.address = (uint32_t)&GDT;

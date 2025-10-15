@@ -24,8 +24,8 @@ jobs:
       uses: actions/cache@v3
       id: compiler-cache
       with:
-        path: ./i486elfgcc
-        key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.44-gcc-15.1.0
+        path: ./i686elfgcc
+        key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.44-gcc-15.1.0-i686
 
     - name: Install cross-compiler
       if: steps.compiler-cache.outputs.cache-hit != 'true'

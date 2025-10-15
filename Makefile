@@ -1,9 +1,9 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -fno-builtin -march=i486
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=i686 # -fbuiltin -fno-builtin-fork
 DATE := `date +"%Y-%m-%d"`
-CROSSGCC := ./i486elfgcc/bin/i486-elf-gcc
-CROSSLD := ./i486elfgcc/bin/i486-elf-ld
-CROSSNM := ./i486elfgcc/bin/i486-elf-nm
-CROSSAR := ./i486elfgcc/bin/i486-elf-ar
+CROSSGCC := ./i686elfgcc/bin/i686-elf-gcc
+CROSSLD := ./i686elfgcc/bin/i686-elf-ld
+CROSSNM := ./i686elfgcc/bin/i686-elf-nm
+CROSSAR := ./i686elfgcc/bin/i686-elf-ar
 USERGCC := 
 CLOGLEVEL := 
 
@@ -32,8 +32,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	 
 	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) \
-	-Ofast -Wall -Wextra -Werror -Wno-stringop-overflow -Wno-unused-parameter -Wno-unused-variable -Wno-comment -Wno-unused-value \
-	-Wno-array-bounds -Wno-type-limits -Wno-implicit-fallthrough -Wno-unused-function -Wno-maybe-uninitialized \
+	-Ofast -Wall -Werror \
+	-Wno-stringop-overflow -Wno-array-bounds -Wno-unused-variable -Wno-unused-function -Wno-unused-value -Wno-comment -Wno-nonnull-compare -Wno-format \
 	$(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \

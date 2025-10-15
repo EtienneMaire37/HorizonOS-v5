@@ -12,7 +12,7 @@ struct idt_descriptor
     uint32_t address;   // The linear address of the IDT (not the physical address, paging applies).
 } __attribute__((__packed__));
 
-struct idt_descriptor _idtr;
+volatile struct idt_descriptor _idtr;
 
 struct idt_entry
 {   

@@ -280,6 +280,21 @@ virtual_address_t physical_address_to_virtual(physical_address_t address)
 
 void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t magic_number)
 {
+    has_fpu = (fpu_test == 0);
+
+    uint32_t cr0 = get_cr0();
+    cr0 &= ~(1 << 3);   // * Clear TS
+    cr0 &= ~(1 << 2);   // * Clear EM
+    cr0 |= (1 << 1);    // * Set MP
+    load_cr0(cr0);
+
+    uint32_t cr4 = get_cr4();
+    cr4 |= (1 << 9);    // * OSFXSR
+    cr4 |= (1 << 10);   // * OSXMMEXCPT
+    cr4 &= ~(1 << 11);  // * !UMIP
+    load_cr4(cr4);
+    
+
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
 
@@ -347,22 +362,11 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(INFO, "CPUID highest function parameter : 0x%x", cpuid_highest_function_parameter);
     printf("CPUID highest function parameter : 0x%x\n", cpuid_highest_function_parameter);
 
-    LOG(DEBUG, "FPU test word : 0x%x", fpu_test);
-    has_fpu = (fpu_test == 0);
-    if (has_fpu)
+    if (!has_fpu)
     {
-        LOG(INFO, "FPU found");
-        printf("FPU found\n");
+        LOG(ERROR, "FPU not found");
+        printf("FPU not found\n");
     }
-
-    uint32_t cr0 =  (get_cr0() | 
-                    // ((!has_fpu) << 2) |  // emulate fpu only if there is none // * Actually never emulate it
-                    (1 << 5) | // you shouldn't try running hos on a i386 anyways...
-                    (has_fpu << 1)) & ~(1 << 3);
-    load_cr0(cr0);
-
-    uint32_t cr4 = (get_cr4() | (1 << 9) | (1 << 10)) & ~(1 << 11); // OSFXSR | OSXMMEXCPT & !UMIP 
-    load_cr4(cr4);
 
     fpu_init_defaults();
 

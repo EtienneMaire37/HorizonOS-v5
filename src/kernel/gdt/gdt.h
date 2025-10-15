@@ -6,7 +6,7 @@ struct gdt_decriptor
     uint32_t address;   // The linear address of the GDT (not the physical address, paging applies).
 } __attribute__((__packed__));
 
-struct gdt_decriptor _gdtr;
+volatile struct gdt_decriptor _gdtr;
 
 struct gdt_entry
 {   

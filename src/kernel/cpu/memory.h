@@ -42,7 +42,6 @@ inline void set_current_phys_mem_page(uint32_t page)
 
     // reload_page_directory();
 
-    // !! Only works on i486+
     invlpg((uint32_t)recursive_paging_pte);
     invlpg(4096 * (uint32_t)(1024 * 767 + 1021));
 
