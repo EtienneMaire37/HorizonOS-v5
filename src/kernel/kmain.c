@@ -54,6 +54,8 @@ char cwd[PATH_MAX] = {0};
 #include "../libc/include/dirent.h"
 #include "../libc/src/startup_data.h"
 
+#include "../libc/src/misc.h"
+
 #include "../libc/src/syscall_defines.h"
 #include "../libc/include/sys/wait.h"
 #include "../libc/include/sys/stat.h"
@@ -293,7 +295,6 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     cr4 |= (1 << 10);   // * OSXMMEXCPT
     cr4 &= ~(1 << 11);  // * !UMIP
     load_cr4(cr4);
-    
 
     multiboot_info = _multiboot_info;
     tty_cursor = 0;

@@ -5,7 +5,6 @@ extern uint32_t kernel_data;
 
 void _main()
 {
-#include "misc.h"
     memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
 

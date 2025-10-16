@@ -1,6 +1,6 @@
-// #pragma once
+#pragma once
 
-char* find_next_contiguous_string(char* str, int* bytes_left)
+static char* find_next_contiguous_string(char* str, int* bytes_left)
 {
     if (!str) return NULL;
     if (!bytes_left) return NULL;
@@ -18,7 +18,7 @@ char* find_next_contiguous_string(char* str, int* bytes_left)
     return str;
 }
 
-char* find_first_arg(char* data, int* bytes_left)
+static char* find_first_arg(char* data, int* bytes_left)
 {
     return data[0] ? data : find_next_contiguous_string(data, bytes_left);
 }

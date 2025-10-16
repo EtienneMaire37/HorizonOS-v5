@@ -38,6 +38,8 @@ static char cwd[PATH_MAX] = {0};
 #include "../include/sys/stat.h"
 #include "../include/dirent.h"
 
+#include "misc.h"
+
 #include "startup_data.h"
 
 FILE* FILE_create()

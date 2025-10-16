@@ -392,7 +392,6 @@ int unsetenv(const char* name)
 
 int system(const char* command)
 {
-#include "misc.h"
     if (!command) return 1;
 
     size_t bytes = strlen(command) + 1;
