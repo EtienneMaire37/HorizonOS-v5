@@ -29,6 +29,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
+	nasm -f elf32 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 	 
 	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) \
 	-Ofast -Wall -Werror \
@@ -44,6 +45,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	"bin/paging.o" \
     "bin/context_switch.o" \
     "bin/registers.o"  \
+	"bin/sse.o"  \
 	-lgcc
 	
 	mkdir -p ./root/boot/grub

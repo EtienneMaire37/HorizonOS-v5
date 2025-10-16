@@ -127,6 +127,7 @@ const char* multiboot_block_type_text[5] =
 #include "multicore/spinlock.h"
 #include "cpu/cpuid.h"
 #include "cpu/registers.h"
+#include "fpu/sse.h"
 
 #include "../libc/include/math.h"
 
@@ -284,17 +285,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 {
     has_fpu = (fpu_test == 0);
 
-    uint32_t cr0 = get_cr0();
-    cr0 &= ~(1 << 3);   // * Clear TS
-    cr0 &= ~(1 << 2);   // * Clear EM
-    cr0 |= (1 << 1);    // * Set MP
-    load_cr0(cr0);
-
-    uint32_t cr4 = get_cr4();
-    cr4 |= (1 << 9);    // * OSFXSR
-    cr4 |= (1 << 10);   // * OSXMMEXCPT
-    cr4 &= ~(1 << 11);  // * !UMIP
-    load_cr4(cr4);
+    enable_sse();
 
     multiboot_info = _multiboot_info;
     tty_cursor = 0;
@@ -370,6 +361,16 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     }
 
     fpu_init_defaults();
+
+    if (1 <= cpuid_highest_function_parameter)
+    {
+        cpuid(1, cpuid_highest_function_parameter, ebx, ecx, edx);
+        if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
+        {
+            LOG(INFO, "Enabling AVX");
+            avx_enable();
+        }
+    }
 
     LOG(INFO, "Memory map:");
 
