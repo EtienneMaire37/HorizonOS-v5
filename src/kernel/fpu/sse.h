@@ -15,4 +15,4 @@ void enable_sse()
     load_cr4(cr4);
 }
 
-extern void avx_enable();
+extern void enable_avx();

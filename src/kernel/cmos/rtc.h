@@ -3,12 +3,6 @@
 bool rtc_binary_mode;   // 0 = BCD, 1 = Binary
 bool rtc_24_hour_mode;  // 0 = 12-hour, 1 = 24-hour
 
-uint8_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
-uint16_t system_year = 0;
-uint16_t system_thousands = 0;
-
-bool time_initialized = false;
-
 void rtc_detect_mode()
 {
     cmos_select_register(CMOS_REGISTER_STATUS_B);

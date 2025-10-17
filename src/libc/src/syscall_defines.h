@@ -14,6 +14,8 @@
 #define SYSCALL_STAT        11
 #define SYSCALL_READDIR     12
 #define SYSCALL_ISATTY      13
+#define SYSCALL_OPEN        14
+#define SYSCALL_CLOSE       15
 
 #define SYSCALL_FLUSH_INPUT_BUFFER  0x40
 #define SYSCALL_SET_KB_LAYOUT       0x8000

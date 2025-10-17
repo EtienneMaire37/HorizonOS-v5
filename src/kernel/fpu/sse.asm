@@ -1,8 +1,8 @@
 section .text
 bits 32
 
-global avx_enable
-avx_enable:
+global enable_avx
+enable_avx:
     push ebp
     mov ebp, esp
 

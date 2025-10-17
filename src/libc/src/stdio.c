@@ -1,8 +1,6 @@
-#ifndef BUILDING_KERNEL
 #include "../include/math.h"
 #include "math_float_util.h"
 #include "math_fmod.c"
-#endif
 #include "../include/fcntl.h"
 
 int putchar(int c)
@@ -116,7 +114,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             }
         }
     }
-    #ifndef BUILDING_KERNEL
     void printf_fld(long double val)
     {
         if(val < 0)
@@ -181,7 +178,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             div /= 10;
         }
     }
-    #endif
     void printf_X(uint64_t val, uint8_t padding)
     {
         bool first0 = true;
@@ -197,7 +193,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             }
         }
     }
-    #ifndef BUILDING_KERNEL
     void printf_lf(long double val)
     {
         if (val < 0)
@@ -289,7 +284,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             digits++;
         }
     }
-    #endif
 
     bool next_arg_64 = false, na64_set = false;
     bool next_formatted = false;
@@ -340,22 +334,10 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                     printf_X(va_arg(args, uint32_t), 1);
                 break;
             case 'f':
-                #ifndef BUILDING_KERNEL
                 if (next_arg_64)
                     printf_lf(va_arg(args, long double));
                 else
                     printf_f(va_arg(args, double));
-                #else
-                if (next_arg_64)
-                {
-                    volatile long double x = va_arg(args, long double);
-                }
-                else
-                {
-                    volatile double x = va_arg(args, double);
-                }
-                func_s("(floating point value)");
-                #endif
                 break;
             case 'c':
                 func((char)va_arg(args, int));
@@ -891,6 +873,10 @@ void perror(const char* prefix)
     int _errno = errno;
     fprintf(stderr, "%s", prefix);
     if (_errno != 0)
-        fprintf(stderr, ": %s", strerror(_errno));
+    {
+        if (strcmp(prefix, "") != 0)
+            fprintf(stderr, ": ");
+        fprintf(stderr, "%s", strerror(_errno));
+    }
     fputc('\n', stderr);
 }

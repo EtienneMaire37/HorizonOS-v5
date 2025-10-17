@@ -19,10 +19,79 @@ void handle_syscall(interrupt_registers_t* registers)
         unlock_task_queue();
         switch_task();
         break;
-    case SYSCALL_TIME:     // * time || $eax = time
+    case SYSCALL_TIME:      // * time || $eax = time
         registers->eax = ktime(NULL);
         break;
-    case SYSCALL_READ:     // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
+
+    case SYSCALL_OPEN:      // * open | path = $ebx, oflag = $ecx, mode = $edx | $eax = errno, $ebx = fd
+    {
+        struct stat st;
+        const char* path = (const char*)registers->ebx;
+        int stat_ret = vfs_stat(path, &st);
+        if (stat_ret != 0)
+        {
+            registers->ebx = 0xffffffff;
+            registers->eax = stat_ret;
+            break;
+        }
+        int fd = vfs_allocate_global_file();
+        file_table[fd].type = get_drive_type(path);
+        file_table[fd].flags = (*(int*)&registers->ecx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
+        if (file_table[fd].flags != *(int*)&registers->ecx)
+        {
+            vfs_remove_global_file(fd);
+            registers->ebx = 0xffffffff;
+            registers->eax = EINVAL;
+            break;
+        }
+        file_table[fd].flags &= ~(O_APPEND | O_CREAT);
+        switch (file_table[fd].type)
+        {
+        case DT_INITRD:
+            file_table[fd].data.initrd_data.file = initrd_find_file_entry((char*)path + 
+                            strlen("/initrd") + (strlen(path) > strlen("/initrd") ? 1 : 0));
+            break;
+        default:
+            file_table[fd].type = DT_INVALID;
+        }
+        int ret = vfs_allocate_thread_file(current_task_index);
+        // LOG(DEBUG, "global fd : %d", fd);
+        // LOG(DEBUG, "fd : %d", ret);
+        if (ret == -1)
+        {
+            vfs_remove_global_file(fd);
+
+            registers->ebx = 0xffffffff;
+            registers->eax = ENOMEM;
+        }
+        else
+        {
+            tasks[current_task_index].file_table[ret] = fd;
+            registers->ebx = *(uint32_t*)&ret;
+            registers->eax = 0;
+        }
+        break;
+    }
+
+    case SYSCALL_CLOSE:     // * close | fildes = $ebx | $eax = errno, $ebx = ret
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->ebx = 0xffffffff;
+            registers->eax = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->ebx = 0xffffffff;
+            registers->eax = EBADF;
+            break;
+        }
+        vfs_remove_global_file(tasks[current_task_index].file_table[fd]);
+        tasks[current_task_index].file_table[fd] = invalid_fd;
+        break;
+
+    case SYSCALL_READ:      // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
     {
         int fd = *(int*)&registers->ebx;
         if (fd < 0 || fd >= OPEN_MAX)
@@ -141,58 +210,62 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
 
     case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
+    {
+        // LOG(DEBUG, "execve");
+        startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
+        // LOG(DEBUG, "execve.");
+        lock_task_queue();
+        if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
-            // LOG(DEBUG, "execve");
-            startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
-            // LOG(DEBUG, "execve.");
-            lock_task_queue();
-            if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
-            {
-                unlock_task_queue();
-                registers->eax = ENOENT;
-                break;
-            }
-            else
-            {
-                pid_t old_pid = tasks[current_task_index].pid;
-                tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
-                tasks[task_count - 1].parent = tasks[current_task_index].parent;
-                tasks[current_task_index].parent = -1;
-                tasks[current_task_index].pid = tasks[task_count - 1].pid;
-                tasks[task_count - 1].pid = old_pid;
-                unlock_task_queue();
-                switch_task();
-                break;
-            }
+            unlock_task_queue();
+            registers->eax = ENOENT;
+            break;
         }
-
-    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
+        else
         {
-            uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
-            lock_task_queue();
-            tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+            uint16_t new_task_index = task_count - 1;
+            pid_t old_pid = tasks[current_task_index].pid;
+            tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
+            tasks[new_task_index].parent = tasks[current_task_index].parent;
+            tasks[current_task_index].parent = -1;
+            tasks[current_task_index].pid = tasks[new_task_index].pid;
+            tasks[new_task_index].pid = old_pid;
+
+            task_copy_file_table(current_task_index, new_task_index, true);
+
             unlock_task_queue();
             switch_task();
-            registers->ecx = pid & 0xffffffff;
-            registers->edx = pid >> 32;
-            registers->ebx = tasks[current_task_index].wstatus;
+            break;
         }
+    }
+
+    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
+    {
+        uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
+        lock_task_queue();
+        tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+        unlock_task_queue();
+        switch_task();
+        registers->ecx = pid & 0xffffffff;
+        registers->edx = pid >> 32;
+        registers->ebx = tasks[current_task_index].wstatus;
         break;
+    }
 
     case SYSCALL_STAT:  // * stat | path = $ebx, stat_buf = $ecx | $eax = ret   
-        {
-            struct stat* st = (struct stat*)registers->ecx;
-            const char* path = (const char*)registers->ebx;
-            registers->eax = vfs_stat(path, st);
-        }
+    {
+        struct stat* st = (struct stat*)registers->ecx;
+        const char* path = (const char*)registers->ebx;
+        registers->eax = vfs_stat(path, st);
         break;
+    }
 
     case SYSCALL_ACCESS:  // * access | path = $ebx, mode = $ecx | $eax = ret
-        {
-            const char* path = (const char*)registers->ebx;
-            registers->eax = vfs_access(path, registers->ecx);
-        }
+    {
+        const char* path = (const char*)registers->ebx;
+        registers->eax = vfs_access(path, registers->ecx);
         break;
+    }
 
     case SYSCALL_READDIR:   // * readdir | &dirent_entry = $ebx, dirp = $ecx | $eax = errno, $ebx = return_address
     {

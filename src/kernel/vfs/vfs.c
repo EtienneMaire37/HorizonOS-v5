@@ -28,20 +28,13 @@ int vfs_stat(const char* path, struct stat* st)
     if (strcmp(path, "/") == 0)
         return vfs_root_stat(st);
 
-    const char* initrd_prefix = "/initrd";
-
-    if (strcmp(initrd_prefix, path) == 0)
-        return vfs_initrd_root_stat(st);
-
-    size_t i = 0;
-    while (path[i] != 0 && initrd_prefix[i] != 0 && path[i] == initrd_prefix[i])
-        i++;
-    const size_t len = strlen(initrd_prefix);
-    // printf("%s | %s\n", path, initrd_prefix);
-    if (i == len)
-        return vfs_initrd_stat((char*)((uint32_t)path + len + 1), st);
-
-    return ENOENT;
+    switch (get_drive_type(path))
+    {
+    case DT_INITRD:
+        return vfs_initrd_stat((char*)((uint32_t)path + strlen("/initrd") + 1), st);
+    default:
+        return ENOENT;
+    }
 }
 
 int vfs_access(const char* path, mode_t mode)
@@ -119,19 +112,15 @@ struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
         return NULL;
     }
 
-    // LOG(DEBUG, "\"%s\" - \"%s\" : \"%s\"", dirp->path, dirp->current_path, dirp->current_entry);
-
     if (strcmp(dirp->path, "/") == 0)
         return vfs_root_readdir(dirent, dirp);
 
-    const char* initrd_prefix = "/initrd";
-
-    size_t i = 0;
-    while (dirp->path[i] != 0 && initrd_prefix[i] != 0 && dirp->path[i] == initrd_prefix[i])
-        i++;
-    const size_t len = strlen(initrd_prefix);
-    if (i == len)
+    switch (get_drive_type(dirp->path))
+    {
+    case DT_INITRD:
         return vfs_initrd_readdir(dirent, dirp);
-        
-    return NULL;
+    default:
+        errno = ENOENT;
+        return NULL;
+    }
 }

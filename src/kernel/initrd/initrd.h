@@ -8,7 +8,7 @@ typedef struct initrd_file
     uint32_t size;
     uint8_t* data;
     tar_file_type type;
-    uint8_t* link;
+    char* link;
 } initrd_file_t;
 
 #define MAX_INITRD_FILES 32
@@ -60,7 +60,7 @@ void initrd_parse()
             initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
             if (header->type == 0) header->type = '0';
             initrd_files[initrd_files_count].type = header->type;
-            initrd_files[initrd_files_count].link = &header->linked_file[0];
+            initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
             initrd_files_count++;
         }
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;
@@ -123,7 +123,7 @@ initrd_file_t* initrd_find_file(const char* name)
 
 initrd_file_t* initrd_find_file_entry(const char* name)
 {
-    LOG(INFO, "Opening file \"%s\" from initrd", name);
+    LOG(INFO, "Opening file entry \"%s\" from initrd", name);
 
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {

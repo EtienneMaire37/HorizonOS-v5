@@ -42,6 +42,12 @@ int64_t absint(int64_t x)
 
 char cwd[PATH_MAX] = {0};
 
+uint8_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
+uint16_t system_year = 0;
+uint16_t system_thousands = 0;
+
+bool time_initialized = false;
+
 #include "../libc/include/assert.h"
 
 #include "../libc/include/errno.h"
@@ -368,7 +374,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
         {
             LOG(INFO, "Enabling AVX");
-            avx_enable();
+            enable_avx();
         }
     }
 
@@ -554,7 +560,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/kernel32.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
     if (!multitasking_add_task_from_vfs("kernel32", "/initrd/bin/kernel32.elf", 0, true, &data))
     {
-        LOG(ERROR, "Kernel task couldn't start");
+        LOG(CRITICAL, "Kernel task couldn't start");
         abort();
     }
 

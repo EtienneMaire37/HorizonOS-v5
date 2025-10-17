@@ -84,6 +84,16 @@ void unlock_task_queue()
     pic_enable();
 }
 
+int vfs_allocate_thread_file(int index)
+{
+    for (int i = 3; i < OPEN_MAX; i++)
+    {
+        if (tasks[index].file_table[i] == invalid_fd)
+            return i;
+    }
+    return -1;
+}
+
 extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
 extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)

@@ -15,7 +15,7 @@ run:
 	-accel kvm                       					\
 	-cpu host                                  			\
 	-debugcon file:debug/latest.log						\
-	-m 128                                        		\
+	-m 64                                        		\
 	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8 \
 	-d cpu
@@ -32,8 +32,8 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	nasm -f elf32 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 	 
 	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) \
-	-Ofast -Wall -Werror \
-	-Wno-stringop-overflow -Wno-array-bounds -Wno-unused-variable -Wno-unused-function -Wno-unused-value -Wno-comment -Wno-nonnull-compare -Wno-format \
+	-Ofast -Werror \
+	-Wno-stringop-overflow \
 	$(CLOGLEVEL)
 	
 	$(CROSSGCC) -T src/kernel/link.ld \

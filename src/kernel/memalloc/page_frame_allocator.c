@@ -133,7 +133,7 @@ physical_address_t pfa_allocate_physical_page()
                     remaining -= block_pages;
                 }
 
-                LOG(CRITICAL, "Invalid page index");
+                LOG(CRITICAL, "Invalid page index %u (%u / %u bytes used)", page_index, memory_allocated, allocatable_memory);
                 abort();
                 return physical_null;
             }

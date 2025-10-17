@@ -125,31 +125,44 @@ int open(const char* path, int oflag, ...)
         mode = va_arg(args, mode_t) & ~fd_creation_mask;
         va_end(args);
     }
-    errno = ENOENT;
-    return -1;
+    char* _path = realpath(path, NULL);
+    int fd, _errno;
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(fd) : "a"(SYSCALL_OPEN), "b"(_path), "c"(oflag), "d"(mode));
+    if (_errno != 0)
+        errno = _errno;
+    free(_path);
+    return fd;
 }
 
 int close(int fildes)
 {
-    errno = EBADF;
-    return -1;
+    int ret, _errno;
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(ret) : "a"(SYSCALL_CLOSE), "b"(fildes));
+    if (_errno != 0)
+        errno = _errno;
+    return ret;
 }
 
 int execve(const char* path, char* const argv[], char* const envp[])
 {
     char resolved_path[PATH_MAX] = {0};
     realpath(path, resolved_path);
-    asm volatile ("int 0xf0" : "=a"(errno) : "a"(SYSCALL_EXECVE), "b"(resolved_path), "c"(argv), "d"(envp), "S"(cwd));
+    int _errno;
+    asm volatile ("int 0xf0" : "=a"(_errno) : "a"(SYSCALL_EXECVE), "b"(resolved_path), "c"(argv), "d"(envp), "S"(cwd));
+    if (_errno != 0)
+        errno = _errno;
     return -1;
 }
 
 pid_t waitpid(pid_t pid, int* wstatus, int options)
 {
-    int _wstatus;
+    int _wstatus, _errno;
     uint32_t ret_lo, ret_hi;
     uint32_t pid_lo = pid & 0xffffffff, pid_hi = pid >> 32;
-    asm volatile ("int 0xf0" : "=a"(errno), "=b"(_wstatus), "=c"(ret_lo), "=d"(ret_hi) : "a"(SYSCALL_WAITPID), "b"(pid_lo), "c"(pid_hi), "d"(options) : "memory");
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(_wstatus), "=c"(ret_lo), "=d"(ret_hi) : "a"(SYSCALL_WAITPID), "b"(pid_lo), "c"(pid_hi), "d"(options) : "memory");
     if (wstatus) *wstatus = _wstatus;
+    if (_errno != 0)
+        errno = _errno;
     uint64_t ret = ((uint64_t)ret_hi << 32) | ret_lo;
     return *(pid_t*)&ret;
 }
@@ -227,7 +240,9 @@ struct dirent* readdir(DIR* dirp)
 
 int isatty(int fd)
 {
-    int ret;
-    asm volatile ("int 0xf0" : "=a"(errno), "=b"(ret) : "a"(SYSCALL_ISATTY), "b"(fd));
+    int ret, _errno;
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(ret) : "a"(SYSCALL_ISATTY), "b"(fd));
+    if (_errno != 0)
+        errno = _errno;
     return ret;
 }

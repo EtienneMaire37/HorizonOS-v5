@@ -52,6 +52,11 @@ void task_destroy(thread_t* task)
     LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", task->name, task->pid, task->ring);
     vas_free(task->cr3);
     utf32_buffer_destroy(&task->input_buffer);
+    for (int i = 0; i < OPEN_MAX; i++)
+    {
+        if (task->file_table[i] != invalid_fd)
+            vfs_remove_global_file(task->file_table[i]);
+    }
 }
 
 void multitasking_init()
@@ -203,6 +208,23 @@ void task_kill(uint16_t index)
     task_count--;
 }
 
+void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
+{
+    acquire_spinlock(&file_table_spinlock);
+    for (int i = 3; i < OPEN_MAX; i++)
+    {
+        if (cloexec && tasks[from].file_table[i] == invalid_fd && (file_table[tasks[to].file_table[i]].flags & O_CLOEXEC))
+            tasks[to].file_table[i] = invalid_fd;
+        else
+        {
+            tasks[to].file_table[i] = tasks[from].file_table[i];
+            if (tasks[to].file_table[i] != invalid_fd)
+                file_table[tasks[to].file_table[i]].used++;
+        }
+    }
+    release_spinlock(&file_table_spinlock);
+}
+
 void copy_task(uint16_t index)
 {
     if (index >= task_count || index == 0)
@@ -230,6 +252,8 @@ void copy_task(uint16_t index)
     tasks[new_task_index].esp = tasks[index].esp;
 
     copy_fpu_state(&tasks[index].fpu_state, &tasks[new_task_index].fpu_state);
+
+    task_copy_file_table(index, new_task_index, false);
 
     tasks[new_task_index].forked_pid = 0;
     tasks[new_task_index].is_dead = false;
