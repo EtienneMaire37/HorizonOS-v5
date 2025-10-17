@@ -471,7 +471,7 @@ int vprintf(const char* format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
-int dprintf(int fd, const char *format, ...)
+int dprintf(int fd, const char*format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -480,7 +480,7 @@ int dprintf(int fd, const char *format, ...)
     return length;
 }
 
-int vdprintf(int fd, const char *format, va_list args)
+int vdprintf(int fd, const char*format, va_list args)
 {
     void _putc(char c)
     {
@@ -494,7 +494,7 @@ int vdprintf(int fd, const char *format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
-int fprintf(FILE* stream, const char *format, ...)
+int fprintf(FILE* stream, const char*format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -503,7 +503,7 @@ int fprintf(FILE* stream, const char *format, ...)
     return length;
 }
 
-int vfprintf(FILE* stream, const char *format, va_list args)
+int vfprintf(FILE* stream, const char*format, va_list args)
 {
     void _putc(char c)
     {
@@ -517,7 +517,7 @@ int vfprintf(FILE* stream, const char *format, va_list args)
     return _printf(_putc, _puts, format, args);
 }
 
-int printf(const char *format, ...)
+int printf(const char*format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -640,7 +640,6 @@ FILE* fopen(const char* path, const char* mode)
     stream->buffer_size = BUFSIZ;
     stream->buffer_index = 0;
     stream->buffer_end_index = 0;
-    stream->buffer_mode = FILE_BFMD_READ;
 
     stream->flags = 0;
     stream->current_flags = 0;
@@ -663,6 +662,8 @@ FILE* fopen(const char* path, const char* mode)
     }
 
     stream->flags |= FILE_FLAGS_BF_ALLOC;
+
+    stream->buffer_mode = (stream->flags & FILE_FLAGS_READ) ? FILE_BFMD_READ : FILE_BFMD_WRITE;
 
     return stream;
 }
@@ -702,6 +703,9 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
         return 0;
     }
 
+    if (stream->current_flags & FILE_CFLAGS_EOF)
+        return 0;
+
     if (size == 0 || nitems == 0) return 0;
 
     if (stream->fd == STDIN_FILENO) // ! Not defined by the standard but a lot of programs rely on it
@@ -721,16 +725,17 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
         stream->buffer_end_index = ret;
     }
 
-    uint32_t bytes = size * nitems; // ! Might overflow
-    for (uint32_t i = 0; i < bytes; i++)
+    size_t bytes = size * nitems; // ! Might overflow
+    for (size_t i = 0; i < bytes; i++)
     {
-        if (stream->buffer_index >= stream->buffer_end_index || stream->buffer_end_index == 0)
+        if (stream->buffer_index >= stream->buffer_end_index)
         {
             stream->buffer_index = 0;
             int ret = read(stream->fd, stream->buffer, stream->buffer_size);
             if (ret == 0)
             {
                 stream->current_flags |= FILE_CFLAGS_EOF;
+                stream->buffer_end_index = 0;
                 return i / size;
             }
             if (ret < 0)
@@ -821,11 +826,7 @@ int fflush(FILE* stream)
     }
 
     if (stream->buffer_mode == FILE_BFMD_READ) 
-    {
-        stream->buffer_index = 0;
-        stream->buffer_end_index = 0;
         return 0;
-    }
 
     if (stream->buffer_mode == FILE_BFMD_READ || stream->buffer_index == 0)
         return 0;

@@ -110,7 +110,7 @@ int toupper(int c)
 
 long strtol(const char* nptr, char** endptr, int base) 
 {
-    const char *s = nptr;
+    const char*s = nptr;
     long result = 0;
     int neg = 0;
     int overflow = 0;
@@ -158,7 +158,7 @@ long strtol(const char* nptr, char** endptr, int base)
     if (base < 2 || base > 36) 
     {
         if (endptr != NULL) 
-            *endptr = (char *)nptr;
+            *endptr = (char*)nptr;
         errno = EINVAL;
         return 0;
     }
@@ -207,7 +207,7 @@ long strtol(const char* nptr, char** endptr, int base)
     if (!any_digits) 
     {
         if (endptr != NULL) 
-            *endptr = (char *)nptr;
+            *endptr = (char*)nptr;
         errno = EINVAL;
         return 0;
     }
@@ -221,7 +221,7 @@ long strtol(const char* nptr, char** endptr, int base)
         result = -result;
 
     if (endptr != NULL) 
-        *endptr = (char *)s;
+        *endptr = (char*)s;
 
     return result;
 }

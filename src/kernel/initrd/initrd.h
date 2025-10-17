@@ -113,7 +113,10 @@ initrd_file_t* initrd_find_file(const char* name)
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
         if (strcmp(initrd_files[i].name, name) == 0 && initrd_files[i].type == USTAR_TYPE_FILE_1)
+        {
+            LOG(INFO, "Found at index %u", i);
             return &initrd_files[i];
+        }
     }
 
     LOG(INFO, "Error opening file \"%s\"", name);
@@ -128,7 +131,10 @@ initrd_file_t* initrd_find_file_entry(const char* name)
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
         if (strcmp(initrd_files[i].name, name) == 0)
+        {
+            LOG(INFO, "Found at index %u", i);
             return &initrd_files[i];
+        }
     }
 
     LOG(INFO, "Error opening file \"%s\"", name);

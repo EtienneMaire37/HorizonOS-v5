@@ -124,3 +124,22 @@ struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
         return NULL;
     }
 }
+
+int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read)
+{
+    if (!bytes_read) abort();
+    if (!((f->flags & O_RDONLY) || (f->flags & O_RDWR))) 
+    {
+        *bytes_read = -1;
+        return EBADF;
+    }
+
+    switch (f->type)
+    {
+    case DT_INITRD:
+        return vfs_initrd_read(f, buffer, num_bytes, bytes_read);
+    default:
+        *bytes_read = -1;
+        return EBADF;
+    }
+}

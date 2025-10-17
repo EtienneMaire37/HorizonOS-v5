@@ -1,6 +1,6 @@
 #pragma once
 
-ssize_t write(int fildes, const void *buf, size_t nbyte)
+ssize_t write(int fildes, const void*buf, size_t nbyte)
 {
     // abort();
 
@@ -29,7 +29,7 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
     return 0;
 }
 
-ssize_t read(int fildes, void *buf, size_t nbyte)
+ssize_t read(int fildes, void*buf, size_t nbyte)
 {
     abort();
 
@@ -89,7 +89,7 @@ pid_t fork()
     return (pid_t)-1;
 }
 
-int brk(void *addr)
+int brk(void*addr)
 {
     abort();
     errno = ENOMEM;

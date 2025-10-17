@@ -37,6 +37,7 @@ void handle_syscall(interrupt_registers_t* registers)
         int fd = vfs_allocate_global_file();
         file_table[fd].type = get_drive_type(path);
         file_table[fd].flags = (*(int*)&registers->ecx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
+        file_table[fd].position = 0;
         if (file_table[fd].flags != *(int*)&registers->ecx)
         {
             vfs_remove_global_file(fd);
@@ -106,10 +107,12 @@ void handle_syscall(interrupt_registers_t* registers)
             registers->ebx = EBADF;
             break;
         }
-        if (tasks[current_task_index].file_table[fd] > 2) // ! Only default fds are supported for now
+        if (tasks[current_task_index].file_table[fd] > 2)
         {
-            registers->eax = 0;
-            registers->ebx = 0;
+            file_entry_t* entry = &file_table[tasks[current_task_index].file_table[fd]];
+            ssize_t bytes_read;
+            registers->ebx = vfs_read(entry, (void*)registers->ecx, registers->edx, &bytes_read);
+            registers->eax = *(uint32_t*)&bytes_read;
         } 
         else
         {

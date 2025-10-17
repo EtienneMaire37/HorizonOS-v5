@@ -19,6 +19,7 @@ typedef struct file_entry
     int used;
     drive_type_t type;
     int flags;
+    uint64_t position;
     union 
     {
         initrd_file_entry_data_t initrd_data;
