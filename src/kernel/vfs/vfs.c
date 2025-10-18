@@ -44,6 +44,7 @@ int vfs_access(const char* path, mode_t mode)
     int ret = vfs_stat(path, &st);
     if (ret)
         return ret;
+    // * Assume we're the owner of every file
     if ((mode & R_OK) && ((st.st_mode & S_IRUSR) == 0))
         return EACCES;
     if ((mode & W_OK) && ((st.st_mode & S_IWUSR) == 0))
@@ -105,10 +106,27 @@ struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
 {
     errno = 0;
     if (!dirent)
+    {
+        errno = EINVAL;
         return NULL;
+    }
     if (!dirp)
     {
         errno = EBADF;
+        return NULL;
+    }
+
+    struct stat st;
+    int ret = vfs_stat(dirp->path, &st);
+    if (ret != 0) 
+    {
+        errno = ret;
+        return NULL;
+    }
+
+    if (!(st.st_mode & S_IRUSR))    // * Assume we're the owner of every directory
+    {
+        errno = EACCES;
         return NULL;
     }
 

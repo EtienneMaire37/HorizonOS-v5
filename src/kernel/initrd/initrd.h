@@ -9,6 +9,7 @@ typedef struct initrd_file
     uint8_t* data;
     tar_file_type type;
     char* link;
+    mode_t mode;
 } initrd_file_t;
 
 #define MAX_INITRD_FILES 32
@@ -42,7 +43,7 @@ void initrd_parse()
             break;
         }
 
-        uint64_t file_size = ustar_get_number(header->size);
+        uint64_t file_size = ustar_get_number(header->size, 12);
 
         // if (header->type != USTAR_TYPE_FILE_1 && header->type != USTAR_TYPE_FILE_2 && header->type != USTAR_TYPE_DIRECTORY)
         //     continue;
@@ -59,8 +60,16 @@ void initrd_parse()
             initrd_files[initrd_files_count].size = file_size;
             initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
             if (header->type == 0) header->type = '0';
+
             initrd_files[initrd_files_count].type = header->type;
             initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
+
+            uint64_t mode = ustar_get_number(header->mode, 8);
+            initrd_files[initrd_files_count].mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
+            ((mode & TUREAD) ? S_IRUSR : 0) | ((mode & TUEXEC) ? S_IXUSR : 0) | // * | ((mode & TUWRITE) ? S_IWUSR : 0)
+            ((mode & TGREAD) ? S_IRGRP : 0) | ((mode & TGEXEC) ? S_IXGRP : 0) | // * | ((mode & TGWRITE) ? S_IWGRP : 0)
+            ((mode & TOREAD) ? S_IROTH : 0) | ((mode & TOEXEC) ? S_IXOTH : 0);  // * | ((mode & TOWRITE) ? S_IWOTH : 0)
+
             initrd_files_count++;
         }
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;

@@ -4,7 +4,7 @@ int vfs_initrd_root_stat(struct stat* st)
 {
     st->st_dev = -1;
     st->st_ino = -1;
-    st->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+    st->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;  // * dr-xr-xr-x
     st->st_nlink = 1;
     st->st_uid = 0;
     st->st_gid = 0;
@@ -30,9 +30,10 @@ int vfs_initrd_stat(const char* path, struct stat* st)
     initrd_file_t* file = initrd_find_file_entry(path);
     if (!file)
         return ENOENT;
+
     st->st_dev = -1;
     st->st_ino = -1;
-    st->st_mode = (file->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+    st->st_mode = file->mode;
     st->st_nlink = 1;
     st->st_uid = 0;
     st->st_gid = 0;

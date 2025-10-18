@@ -18,6 +18,9 @@ DIR* opendir(const char* name)
         return NULL;
     }
 
+    if (access(rp, R_OK) != 0)
+        return NULL;
+
     DIR* d = malloc(sizeof(DIR));
     strncpy(d->path, rp, PATH_MAX);
     memset(d->current_path, 0, PATH_MAX);

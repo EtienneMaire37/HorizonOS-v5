@@ -34,12 +34,25 @@ struct ustar_header
 
 #define USTAR_IS_VALID_HEADER(header) ((header).ustar[0] == 'u' && (header).ustar[1] == 's' && (header).ustar[2] == 't' && (header).ustar[3] == 'a' && (header).ustar[4] == 'r')
 
-uint64_t ustar_get_number(char* str)
+#define TSUID 	04000 	// set user ID on execution
+#define TSGID 	02000 	// set group ID on execution
+#define TSVTX 	01000 	// reserved
+#define TUREAD 	00400 	// read by owner
+#define TUWRITE 00200 	// write by owner
+#define TUEXEC 	00100 	// execute or search by owner
+#define TGREAD 	00040 	// read by group
+#define TGWRITE 00020 	// write by group
+#define TGEXEC 	00010 	// execute or search by group
+#define TOREAD 	00004 	// read by others
+#define TOWRITE 00002 	// write by others
+#define TOEXEC 	00001 	// execute or search by other
+
+uint64_t ustar_get_number(char* str, int characters)
 {
     uint64_t result = 0;
     uint64_t count = 1;
 
-    for (uint8_t j = 11; j > 0; j--, count *= 8)
+    for (uint8_t j = characters - 1; j > 0; j--, count *= 8)
         result += ((str[j - 1] - '0') * count);
 
     return result;

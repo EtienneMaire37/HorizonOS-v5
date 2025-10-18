@@ -25,19 +25,13 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_OPEN:      // * open | path = $ebx, oflag = $ecx, mode = $edx | $eax = errno, $ebx = fd
     {
-        struct stat st;
         const char* path = (const char*)registers->ebx;
-        int stat_ret = vfs_stat(path, &st);
-        if (stat_ret != 0)
-        {
-            registers->ebx = 0xffffffff;
-            registers->eax = stat_ret;
-            break;
-        }
+
         int fd = vfs_allocate_global_file();
         file_table[fd].type = get_drive_type(path);
         file_table[fd].flags = (*(int*)&registers->ecx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
         file_table[fd].position = 0;
+
         if (file_table[fd].flags != *(int*)&registers->ecx)
         {
             vfs_remove_global_file(fd);
@@ -45,6 +39,33 @@ void handle_syscall(interrupt_registers_t* registers)
             registers->eax = EINVAL;
             break;
         }
+
+        struct stat st;
+        int stat_ret = vfs_stat(path, &st);
+        if (stat_ret != 0)
+        {
+            vfs_remove_global_file(fd);
+            registers->ebx = 0xffffffff;
+            registers->eax = stat_ret;
+            break;
+        }
+
+        if ((!(st.st_mode & S_IRUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_RDONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->ebx = 0xffffffff;
+            registers->eax = EACCES;
+            break;
+        }
+
+        if ((!(st.st_mode & S_IWUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_WRONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->ebx = 0xffffffff;
+            registers->eax = EACCES;
+            break;
+        }
+
         file_table[fd].flags &= ~(O_APPEND | O_CREAT);
         switch (file_table[fd].type)
         {
