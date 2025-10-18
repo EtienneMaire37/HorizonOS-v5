@@ -14,8 +14,6 @@
 #include <limits.h>
 #include <sys/wait.h>
 
-#include <horizonos.h>
-
 #include "../../libc/src/misc.h"
 
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};

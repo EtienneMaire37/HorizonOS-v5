@@ -280,6 +280,7 @@ int setenv(const char* name, const char* value, int overwrite)
         return 0;
     int name_len = strlen(name), val_len = strlen(value);
     int i = 0;
+    int new_num_environ = num_environ;
     if (old_var)
     {
         if (strcmp(old_var, value) == 0)
@@ -297,36 +298,35 @@ int setenv(const char* name, const char* value, int overwrite)
                 j++;
             }
             if (environ[i][j] == '=')
-            {
                 goto allocate_new_var;
-            }
             i++;
         }
         errno = EINVAL;
         return -1;
     }
 
+    new_num_environ++;
     i = num_environ;
-    goto allocate_new_var;
+    // goto allocate_new_var;
 
 allocate_new_var:
-    char* new_var = malloc(name_len + 1 + val_len);
+    char* new_var = malloc(name_len + 1 + val_len + 1);
     if (!new_var)
     {
         errno = ENOMEM;
         return -1;
     }
-    char** new_environ = malloc((num_environ + 2) * sizeof(char*));   // num_environ + 1 + 1
+    char** new_environ = malloc((new_num_environ + 1) * sizeof(char*));
     if (!new_environ)
     {
         errno = ENOMEM;
         return -1;
     }
-    for (int k = 0; k < num_environ + 2; k++)
+    for (int k = 0; k < new_num_environ; k++)
     {
         if (k == i)
             continue;
-        if (k < i)
+        if (k < i || i != num_environ)
             new_environ[k] = environ[k];
         else
             new_environ[k] = environ[k - 1];
@@ -336,6 +336,7 @@ allocate_new_var:
     new_var[name_len] = '=';
     __builtin_memcpy(new_var + name_len + 1, value, val_len);
     new_var[name_len + 1 + val_len] = 0;
+    new_environ[new_num_environ] = NULL;
     new_environ[i] = new_var;
     environ = new_environ;
     num_environ++;

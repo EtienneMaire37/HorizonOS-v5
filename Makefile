@@ -63,7 +63,7 @@ horizonos.iso: rmbin src/tasks/bin/kernel32.elf resources/pci.ids
 	 
 	grub-mkrescue -o ./horizonos.iso ./root
 
-src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+src/tasks/bin/kernel32.elf: src/tasks/src/kernel32/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/kernel32/main.c" -o "src/tasks/bin/kernel32.o" $(CFLAGS) -I"src/libc/include" -Ofast
 	$(CROSSGCC) -T src/tasks/link.ld \
@@ -110,6 +110,16 @@ src/tasks/bin/clear: src/tasks/src/clear/* src/tasks/link.ld src/libc/lib/libc.a
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/clear" \
     "src/tasks/bin/clear.o" \
+    "src/libc/lib/libc.a" \
+	-ffreestanding -nostdlib \
+	-lgcc
+
+src/tasks/bin/printenv: src/tasks/src/printenv/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+	mkdir -p ./src/tasks/bin
+	$(CROSSGCC) -c "src/tasks/src/printenv/main.c" -o "src/tasks/bin/printenv.o" $(CFLAGS) -I"src/libc/include" -Ofast
+	$(CROSSGCC) -T src/tasks/link.ld \
+    -o "src/tasks/bin/printenv" \
+    "src/tasks/bin/printenv.o" \
     "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
