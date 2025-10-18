@@ -11,7 +11,9 @@ int main(int argc, char** argv)
         struct stat st;
         if (stat(argv[i], &st) == 0 && S_ISDIR(st.st_mode))
         {
-            fprintf(stderr, "cat: %s: Is a directory\n", argv[i]);
+            fprintf(stderr, "cat: %s: ", argv[i]);
+            errno = EISDIR;
+            perror("");
             continue;
         }
 

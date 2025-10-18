@@ -21,7 +21,7 @@ static const char* host_name = "horizonos-pc";
 int gethostname(char* name, size_t namelen)
 {
     if (!name || namelen <= 0) return -1;
-    memcpy(name, host_name, namelen - 1);
+    __builtin_memcpy(name, host_name, namelen - 1);
     name[namelen - 1] = 0;
 
     return 0;
@@ -66,7 +66,7 @@ int chdir(const char* path)
 char* getcwd(char* buffer, size_t size)
 {
     if (!buffer || size <= 0) return NULL;
-    memcpy(buffer, &cwd[0], minint(size, PATH_MAX) - 1);
+    __builtin_memcpy(buffer, &cwd[0], minint(size, PATH_MAX) - 1);
     buffer[size - 1] = 0;
     return buffer;
 }

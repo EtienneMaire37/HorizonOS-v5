@@ -18,8 +18,8 @@ void* memcpy(void* destination, const void* source, size_t num)
 void* memmove(void* dst, const void* src, size_t length)
 {
     uint8_t data[length];
-    memcpy(data, src, length);
-    memcpy(dst, data, length);
+    __builtin_memcpy(data, src, length);
+    __builtin_memcpy(dst, data, length);
     return dst;
 }
 

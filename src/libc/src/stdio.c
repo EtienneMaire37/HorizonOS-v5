@@ -726,7 +726,8 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
     }
 
     size_t bytes = size * nitems; // ! Might overflow
-    for (size_t i = 0; i < bytes; i++)
+    size_t bytes_copied;
+    for (size_t i = 0; i < bytes; i += bytes_copied)
     {
         if (stream->buffer_index >= stream->buffer_end_index)
         {
@@ -746,9 +747,9 @@ size_t fread(void* ptr, size_t size, size_t nitems, FILE* stream)
             
             stream->buffer_end_index = ret;
         }
-        uint8_t byte = stream->buffer[stream->buffer_index];
-        stream->buffer_index++;
-        ((uint8_t*)ptr)[i] = byte;
+        bytes_copied = stream->buffer_end_index - stream->buffer_index;
+        __builtin_memcpy(ptr + i, stream->buffer, bytes_copied);
+        stream->buffer_index += bytes_copied;
     }
     return nitems;
 }

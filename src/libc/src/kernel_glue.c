@@ -204,7 +204,7 @@ struct dirent* readdir(DIR* dirp)
     if (dirp->current_path[0])
     {
         char current_path[PATH_MAX];
-        memcpy(current_path, dirp->current_path, PATH_MAX);
+        __builtin_memcpy(current_path, dirp->current_path, PATH_MAX);
         int i = 0, j = 0;
         bool slash = 1;
         while (current_path[j - 1 + slash])

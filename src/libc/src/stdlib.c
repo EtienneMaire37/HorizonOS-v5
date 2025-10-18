@@ -332,9 +332,9 @@ allocate_new_var:
             new_environ[k] = environ[k - 1];
     }
     free(environ);
-    memcpy(new_var, name, name_len);
+    __builtin_memcpy(new_var, name, name_len);
     new_var[name_len] = '=';
-    memcpy(new_var + name_len + 1, value, val_len);
+    __builtin_memcpy(new_var + name_len + 1, value, val_len);
     new_var[name_len + 1 + val_len] = 0;
     new_environ[i] = new_var;
     environ = new_environ;
@@ -577,7 +577,7 @@ char* realpath(const char* path, char* resolved_path)
             return NULL; 
         }
 
-        memcpy(resolved_path + j, path + start, len);
+        __builtin_memcpy(resolved_path + j, path + start, len);
         j += len;
     }
 
