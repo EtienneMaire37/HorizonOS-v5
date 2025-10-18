@@ -94,7 +94,7 @@ uint8_t tty_ansi_to_vga_mask(uint8_t ansi_code)
     return 0xff;
 }
 
-void tty_ansi_reset_state()
+void tty_ansi_reset_m_state()
 {
 	tty_ansi_sequence_state = 0;
 	tty_ansi_sequence_first_nb = 0;
@@ -154,7 +154,7 @@ void tty_outc(char c)
 		if (tty_ansi_sequence_state != 0)
 		{
 			if (tty_ansi_sequence_first_nb == 0)
-				tty_ansi_reset_state();
+				tty_ansi_reset_m_state();
 			else
 			{
 				uint8_t code = tty_ansi_to_vga(tty_ansi_sequence_first_nb & 0xff);
@@ -162,6 +162,33 @@ void tty_outc(char c)
 				tty_color = (tty_color & (~mask)) | (code & mask);
 				tty_ansi_sequence_state = 0;
 			}
+			break;
+		}
+		else
+			goto default_character;
+
+	case 'J':
+		if (tty_ansi_sequence_state != 0)
+		{
+			switch(tty_ansi_sequence_first_nb)
+			{
+			case 2:
+				tty_clear_screen(' ');
+				break;
+			default:
+				;
+			}
+			tty_ansi_sequence_state = 0;
+			break;
+		}
+		else
+			goto default_character;
+
+	case 'H':
+		if (tty_ansi_sequence_state != 0)
+		{
+			tty_cursor = 0;
+			tty_ansi_sequence_state = 0;
 			break;
 		}
 		else

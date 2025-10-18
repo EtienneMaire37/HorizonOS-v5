@@ -1,6 +1,6 @@
 #pragma once
 
-ssize_t write(int fildes, const void*buf, size_t nbyte)
+ssize_t write(int fildes, const void* buf, size_t nbyte)
 {
     ssize_t bytes_written;
     int _errno;
@@ -10,7 +10,7 @@ ssize_t write(int fildes, const void*buf, size_t nbyte)
     return bytes_written;
 }
 
-ssize_t read(int fildes, void*buf, size_t nbyte)
+ssize_t read(int fildes, void* buf, size_t nbyte)
 {
     ssize_t bytes_read;
     int _errno;
