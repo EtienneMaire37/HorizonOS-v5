@@ -13,6 +13,7 @@
 // #include <signal.h>
 #include <limits.h>
 #include <sys/wait.h>
+#include <termios.h>
 
 #include "../../libc/src/misc.h"
 
@@ -25,6 +26,28 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 extern char** environ;
 
+// void set_canonical_mode(bool enable) 
+// {
+//     static struct termios oldt, newt;
+
+//     if (enable) 
+//     {
+//         tcgetattr(STDIN_FILENO, &oldt);
+//         newt = oldt;
+//         newt.c_lflag &= ~(ICANON | ECHO);   // * Enable Canonical mode and disable echoing
+//         newt.c_cc[VMIN] = 1;
+//         newt.c_cc[VTIME] = 0;
+//         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+//     } 
+//     else
+//         tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+// }
+
+// void disable_canonical_mode()
+// {
+//     set_canonical_mode(false);
+// }
+
 int main(int argc, char** argv)
 {
     // struct sigaction sa;
@@ -32,6 +55,11 @@ int main(int argc, char** argv)
     // sigemptyset(&(sa.sa_mask));
     // sigaddset(&(sa.sa_mask), SIGINT);
     // sigaction(SIGINT, &sa, NULL);
+
+    // if (atexit(disable_canonical_mode) != 0)
+    //     return 1;
+
+    // set_canonical_mode(true);
 
     setenv("?", "0", true);
 
