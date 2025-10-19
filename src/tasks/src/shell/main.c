@@ -61,7 +61,7 @@ int main(int argc, char** argv)
         int history_index = -1;
         while (read(STDIN_FILENO, &byte, 1) > 0)
         {
-            if (byte == '\n' || byte == newt.c_cc[VEOF] || write_position > BUFSIZ - 1)
+            if (byte == '\n' || byte == newt.c_cc[VEOF] || write_position >= BUFSIZ - 1)
                 break;
             else
             {
