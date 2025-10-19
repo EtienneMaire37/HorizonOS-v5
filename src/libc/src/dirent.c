@@ -22,6 +22,11 @@ DIR* opendir(const char* name)
         return NULL;
 
     DIR* d = malloc(sizeof(DIR));
+    if (!d)
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
     strncpy(d->path, rp, PATH_MAX);
     memset(d->current_path, 0, PATH_MAX);
     memset(d->current_entry, 0, PATH_MAX);
