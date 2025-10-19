@@ -60,7 +60,7 @@ bool keyboard_is_key_pressed(virtual_address_t vk)
     return ps2_kb_is_key_pressed(vk);
 }
 
-void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool echo, bool canonical)
+void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool echo, bool raw, int noncanonical_read_minimum_count)
 {
     char ascii = utf32_to_bios_oem(character);
     if (ascii == 0
@@ -197,7 +197,7 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool ec
                         }
                     }
                     
-                    if ((character == '\n' || character == 4 || canonical) && get_buffered_characters(tasks[i].input_buffer) != 0)   // * EOL or EOF
+                    if ((character == '\n' || character == 4 && get_buffered_characters(tasks[i].input_buffer) != 0) || (raw && get_buffered_characters(tasks[i].input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
                         tasks[i].reading_stdin = false;
                 }
             }

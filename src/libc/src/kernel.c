@@ -68,6 +68,7 @@ void exit(int r)
     fflush(stdout);
     halt();
     while (true);
+    __builtin_unreachable();
 }
 
 time_t time(time_t* t)
@@ -153,4 +154,14 @@ int isatty(int fd)
 {
     abort();
     return 0;
+}
+
+int tcgetattr(int fildes, struct termios* termios_p)
+{
+    abort();
+}
+
+int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
+{
+    abort();
 }

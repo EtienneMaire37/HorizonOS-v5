@@ -17,7 +17,7 @@ typedef struct initrd_file_entry_data
 
 typedef struct terminal_data
 {
-    bool canonical_mode, echo;
+    struct termios ts;
 } terminal_data_t;
 
 typedef struct file_entry
@@ -67,20 +67,42 @@ void vfs_init_file_table()
     }
     
     file_table[STDIN_FILENO].type = DT_TERMINAL;
-    file_table[STDIN_FILENO].data.terminal_data.canonical_mode = false;
-    file_table[STDIN_FILENO].data.terminal_data.echo = true;
+    file_table[STDIN_FILENO].data.terminal_data.ts = (struct termios)
+    {
+        .c_iflag = ICRNL | IXON,
+        .c_oflag = OPOST | ONLCR,
+        .c_cflag = B38400 | CS8 | CREAD | HUPCL,
+        .c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | IEXTEN,
+        .c_cc = 
+        {
+            [VINTR]    = 0x03,
+            [VQUIT]    = 0x1C,
+            [VERASE]   = 0x7F,
+            [VKILL]    = 0x15,
+            [VEOF]     = 0x04,
+            [VTIME]    = 0,
+            [VMIN]     = 1,
+            [VSTART]   = 0x11,
+            [VSTOP]    = 0x13,
+            [VSUSP]    = 0x1A,
+            [VEOL]     = 0,
+            [VREPRINT] = 0x12,
+            [VDISCARD] = 0x0F,
+            [VWERASE]  = 0x17,
+            [VLNEXT]   = 0x16,
+            [VEOL2]    = 0
+        }
+    };
     file_table[STDIN_FILENO].position = 0;
     file_table[STDIN_FILENO].flags = O_RDONLY;
 
     file_table[STDOUT_FILENO].type = DT_TERMINAL;
-    file_table[STDOUT_FILENO].data.terminal_data.canonical_mode = false;
-    file_table[STDOUT_FILENO].data.terminal_data.echo = false;
+    file_table[STDOUT_FILENO].data.terminal_data.ts = file_table[STDIN_FILENO].data.terminal_data.ts;
     file_table[STDOUT_FILENO].position = 0;
     file_table[STDOUT_FILENO].flags = O_WRONLY;
 
     file_table[STDERR_FILENO].type = DT_TERMINAL;
-    file_table[STDERR_FILENO].data.terminal_data.canonical_mode = false;
-    file_table[STDERR_FILENO].data.terminal_data.echo = false;
+    file_table[STDERR_FILENO].data.terminal_data.ts = file_table[STDIN_FILENO].data.terminal_data.ts;
     file_table[STDERR_FILENO].position = 0;
     file_table[STDERR_FILENO].flags = O_WRONLY;
 

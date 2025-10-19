@@ -26,27 +26,27 @@ const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
 extern char** environ;
 
-// void set_canonical_mode(bool enable) 
-// {
-//     static struct termios oldt, newt;
+void set_raw_mode(bool enable) 
+{
+    static struct termios oldt, newt;
 
-//     if (enable) 
-//     {
-//         tcgetattr(STDIN_FILENO, &oldt);
-//         newt = oldt;
-//         newt.c_lflag &= ~(ICANON | ECHO);   // * Enable Canonical mode and disable echoing
-//         newt.c_cc[VMIN] = 1;
-//         newt.c_cc[VTIME] = 0;
-//         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-//     } 
-//     else
-//         tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-// }
+    if (enable) 
+    {
+        tcgetattr(STDIN_FILENO, &oldt);
+        newt = oldt;
+        newt.c_lflag &= ~(ICANON | ECHO);   // * Disable canonical mode and echoing
+        newt.c_cc[VMIN] = 1;
+        newt.c_cc[VTIME] = 0;
+        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    } 
+    else
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
 
-// void disable_canonical_mode()
-// {
-//     set_canonical_mode(false);
-// }
+void disable_raw_mode()
+{
+    set_raw_mode(false);
+}
 
 int main(int argc, char** argv)
 {
@@ -56,10 +56,10 @@ int main(int argc, char** argv)
     // sigaddset(&(sa.sa_mask), SIGINT);
     // sigaction(SIGINT, &sa, NULL);
 
-    // if (atexit(disable_canonical_mode) != 0)
+    // if (atexit(disable_raw_mode) != 0)
     //     return 1;
 
-    // set_canonical_mode(true);
+    // set_raw_mode(true);
 
     setenv("?", "0", true);
 

@@ -246,3 +246,15 @@ int isatty(int fd)
         errno = _errno;
     return ret;
 }
+
+int tcgetattr(int fildes, struct termios* termios_p)
+{
+    errno = EINVAL;
+    return -1;
+}
+
+int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
+{
+    errno = EINVAL;
+    return -1;
+}

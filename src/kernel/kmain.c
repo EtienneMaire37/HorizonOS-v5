@@ -58,6 +58,7 @@ bool time_initialized = false;
 #include "../libc/include/string.h"
 #include "../libc/include/time.h"
 #include "../libc/include/dirent.h"
+#include "../libc/include/termios.h"
 #include "../libc/src/startup_data.h"
 
 #include "../libc/src/misc.h"
