@@ -19,7 +19,7 @@ thread_t task_create_empty()
     memset(task.name, 0, THREAD_NAME_MAX);
 
     utf32_buffer_init(&task.input_buffer);
-    task.reading_stdin = task.was_reading_stdin = false;
+    task.reading_stdin = false;
 
     task.cr3 = physical_null;
     task.ring = 0;

@@ -31,13 +31,8 @@ int main(int argc, char** argv)
         fflush(stdout);
         char kb_layout_choice_str[2] = { 0 };
         read(STDIN_FILENO, &kb_layout_choice_str[0], 2);
-        if (kb_layout_choice_str[1] != '\n')
-            kb_layout_choice = 0;
-        else
-        {
-            kb_layout_choice_str[1] = 0;
-            kb_layout_choice = atoi(kb_layout_choice_str);
-        }
+        kb_layout_choice_str[1] = 0;
+        kb_layout_choice = atoi(kb_layout_choice_str);
         flush_stdin();
     }
 

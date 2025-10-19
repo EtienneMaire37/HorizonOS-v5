@@ -9,7 +9,7 @@ typedef struct thread
     uint32_t esp, cr3;
 
     utf32_buffer_t input_buffer;
-    bool reading_stdin, was_reading_stdin, is_dead;
+    bool reading_stdin, is_dead;
 
     uint32_t return_value;
 

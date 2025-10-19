@@ -176,7 +176,7 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
             ps2_kb_update_leds(port);
 
             utf32_char_t character = ps2_scancode_to_unicode(current_ps2_keyboard_scancodes[port_index], port);
-            keyboard_handle_character(character, vk);
+            keyboard_handle_character(character, vk, file_table[STDIN_FILENO].data.terminal_data.echo, file_table[STDIN_FILENO].data.terminal_data.canonical_mode);
         }
 
         current_ps2_keyboard_scancodes[port_index].release = current_ps2_keyboard_scancodes[port_index].extended = false;

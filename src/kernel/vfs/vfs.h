@@ -6,6 +6,7 @@ const file_table_index_t invalid_fd = -1;
 typedef enum drive_type
 {
     DT_INITRD,
+    DT_TERMINAL,
     DT_INVALID
 } drive_type_t;
 
@@ -13,6 +14,11 @@ typedef struct initrd_file_entry_data
 {
     initrd_file_t* file;
 } initrd_file_entry_data_t;
+
+typedef struct terminal_data
+{
+    bool canonical_mode, echo;
+} terminal_data_t;
 
 typedef struct file_entry
 {
@@ -23,6 +29,7 @@ typedef struct file_entry
     union 
     {
         initrd_file_entry_data_t initrd_data;
+        terminal_data_t terminal_data;
     } data;
 } file_entry_t;
 
@@ -55,9 +62,28 @@ void vfs_init_file_table()
     acquire_spinlock(&file_table_spinlock);
     for (int i = 0; i < MAX_FILE_TABLE_ENTRIES; i++)
     {
-        if (i < 3)  file_table[i].used = 1; // * Will "always" be positive
+        if (i < 3)  file_table[i].used = 1; // * Will always be used (hopefully)
         else        file_table[i].used = 0;
     }
+    
+    file_table[STDIN_FILENO].type = DT_TERMINAL;
+    file_table[STDIN_FILENO].data.terminal_data.canonical_mode = false;
+    file_table[STDIN_FILENO].data.terminal_data.echo = true;
+    file_table[STDIN_FILENO].position = 0;
+    file_table[STDIN_FILENO].flags = O_RDONLY;
+
+    file_table[STDOUT_FILENO].type = DT_TERMINAL;
+    file_table[STDOUT_FILENO].data.terminal_data.canonical_mode = false;
+    file_table[STDOUT_FILENO].data.terminal_data.echo = false;
+    file_table[STDOUT_FILENO].position = 0;
+    file_table[STDOUT_FILENO].flags = O_WRONLY;
+
+    file_table[STDERR_FILENO].type = DT_TERMINAL;
+    file_table[STDERR_FILENO].data.terminal_data.canonical_mode = false;
+    file_table[STDERR_FILENO].data.terminal_data.echo = false;
+    file_table[STDERR_FILENO].position = 0;
+    file_table[STDERR_FILENO].flags = O_WRONLY;
+
     release_spinlock(&file_table_spinlock);
 }
 
