@@ -115,8 +115,8 @@ void tty_outc(char c)
 
 	case '\b':
 		tty_cursor--;
-		tty_outc(' ');
-		tty_cursor--;
+		// tty_outc(' ');
+		// tty_cursor--;
 
 		break;
 

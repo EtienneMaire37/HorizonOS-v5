@@ -37,6 +37,7 @@ static char cwd[PATH_MAX] = {0};
 #include "../include/horizonos.h"
 #include "../include/sys/stat.h"
 #include "../include/dirent.h"
+#include "../include/termios.h"
 
 #include "misc.h"
 

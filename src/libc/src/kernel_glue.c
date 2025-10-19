@@ -32,6 +32,7 @@ void exit(int r)
         : "a" (SYSCALL_EXIT), "b" (r));
 
     while (true);
+    __builtin_unreachable();
 }
 
 time_t time(time_t* t)
@@ -249,12 +250,24 @@ int isatty(int fd)
 
 int tcgetattr(int fildes, struct termios* termios_p)
 {
-    errno = EINVAL;
-    return -1;
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_TCGETATTR), "b"(fildes), "c"(termios_p));
+    if (ret)
+    {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }
 
 int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
 {
-    errno = EINVAL;
-    return -1;
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_TCSETATTR), "b"(fildes), "c"(termios_p), "d"(optional_actions));
+    if (ret)
+    {
+        errno = ret;
+        return -1;
+    }
+    return 0;
 }

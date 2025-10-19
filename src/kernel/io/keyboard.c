@@ -76,9 +76,14 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool ec
         {            
             if (character == '\b')
             {
-                if (!no_buffered_characters(tasks[i].input_buffer))
+                if (raw)
                 {
-                    putchar('\b');
+                    utf32_buffer_putchar(&tasks[i].input_buffer, '\b');
+                    if (echo) printf("\b \b");
+                }
+                else if (!no_buffered_characters(tasks[i].input_buffer))
+                {
+                    if (echo) printf("\b \b");
                     utf32_buffer_unputchar(&tasks[i].input_buffer);
                 }
             }
@@ -196,11 +201,10 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool ec
                             if (echo) putchar(ascii);
                         }
                     }
-                    
-                    if ((character == '\n' || character == 4 && get_buffered_characters(tasks[i].input_buffer) != 0) || (raw && get_buffered_characters(tasks[i].input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
-                        tasks[i].reading_stdin = false;
                 }
             }
+            if ((character == '\n' || character == 4 && get_buffered_characters(tasks[i].input_buffer) != 0) || (raw && get_buffered_characters(tasks[i].input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
+                tasks[i].reading_stdin = false;
         }
     }
 

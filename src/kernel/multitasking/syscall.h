@@ -321,6 +321,64 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
     }
 
+    case SYSCALL_TCGETATTR:     // * tcgetattr | fildes = $ebx, termios_p = $ecx | $eax = errno
+    {
+        struct termios* termios_p = (struct termios*)registers->ecx;
+        if (!termios_p)
+        {
+            registers->eax = EINVAL;
+            break;
+        }
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->eax = EBADF;
+            break;
+        }
+        if (file_table[tasks[current_task_index].file_table[fd]].type != DT_TERMINAL)  // ! not a tty
+        {
+            registers->eax = ENOTTY;
+            break;
+        }
+        *termios_p = file_table[tasks[current_task_index].file_table[fd]].data.terminal_data.ts;
+        registers->eax = 0;
+        break;
+    }
+
+    case SYSCALL_TCSETATTR:     // * tcsetattr | fildes = $ebx, termios_p = $ecx, optional_actions = $edx | $eax = errno
+    {
+        struct termios* termios_p = (struct termios*)registers->ecx;
+        if (!termios_p)
+        {
+            registers->eax = EINVAL;
+            break;
+        }
+        int fd = *(int*)&registers->ebx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->eax = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->eax = EBADF;
+            break;
+        }
+        if (file_table[tasks[current_task_index].file_table[fd]].type != DT_TERMINAL)  // ! not a tty
+        {
+            registers->eax = ENOTTY;
+            break;
+        }
+        file_table[tasks[current_task_index].file_table[fd]].data.terminal_data.ts = *termios_p;
+        registers->eax = 0;
+        break;
+    }
+
     case SYSCALL_FLUSH_INPUT_BUFFER:
         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
         break;
