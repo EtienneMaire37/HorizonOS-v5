@@ -198,7 +198,9 @@ int main(int argc, char** argv)
         else 
         {
         cmd:
+            set_raw_mode(false);
             int status = system(data);
+            set_raw_mode(true);
             int exit_code = -1;
             if (status != -1) 
             {
