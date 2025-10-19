@@ -1,5 +1,3 @@
-// #define _POSIX_C_SOURCE 200809L
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -10,7 +8,6 @@
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-// #include <signal.h>
 #include <limits.h>
 #include <sys/wait.h>
 #include <termios.h>
@@ -19,12 +16,7 @@
 
 const char* kb_layouts[] = {"us_qwerty", "fr_azerty"};
 
-// void int_handler()
-// {
-//     putchar('\n');
-// }
-
-extern char** environ;
+#define HISTORY_MAX 128
 
 struct termios oldt, newt;
 
@@ -51,17 +43,12 @@ void disable_raw_mode_and_exit()
 
 int main(int argc, char** argv)
 {
-    // struct sigaction sa;
-    // sa.sa_handler = int_handler;
-    // sigemptyset(&(sa.sa_mask));
-    // sigaddset(&(sa.sa_mask), SIGINT);
-    // sigaction(SIGINT, &sa, NULL);
-
     set_raw_mode(true);
 
     setenv("?", "0", true);
 
     char cwd[PATH_MAX];
+    char* command_history[HISTORY_MAX] = {NULL};
 
     while (true)
     {
@@ -71,6 +58,7 @@ int main(int argc, char** argv)
         char data[BUFSIZ] = {0};
         char byte;
         int write_position = 0;
+        int history_index = -1;
         while (read(STDIN_FILENO, &byte, 1) > 0)
         {
             if (byte == '\n' || byte == newt.c_cc[VEOF] || write_position > BUFSIZ - 1)
@@ -89,6 +77,7 @@ int main(int argc, char** argv)
                 case '\x1b':    // * escape sequence
                 {
                     char next_bytes[8];
+                    // * VMIN == 1 so it should be safe
                     read(STDIN_FILENO, &next_bytes[0], 1);
                     read(STDIN_FILENO, &next_bytes[1], 1);
                     int byte_count = 1;
@@ -99,7 +88,44 @@ int main(int argc, char** argv)
                         switch (next_bytes[1])
                         {
                         case 'A':   // * Up arrow
-                            
+                            if (history_index < HISTORY_MAX - 1)
+                            {
+                                if (command_history[history_index + 1] != NULL)
+                                {
+                                    strncpy(data, command_history[history_index + 1], BUFSIZ);
+                                    data[BUFSIZ - 1] = 0;
+                                    for (int i = 0; i < write_position; i++)
+                                        printf("\b \b");
+                                    write_position = strlen(data);
+                                    for (int i = 0; i < write_position; i++)
+                                        putchar(data[i]);
+                                    history_index++;
+                                }
+                            }
+                            break;
+                        case 'B':   // * Down arrow
+                            if (history_index > 0)
+                            {
+                                if (command_history[history_index - 1] != NULL)
+                                {
+                                    strncpy(data, command_history[history_index - 1], BUFSIZ);
+                                    data[BUFSIZ - 1] = 0;
+                                    for (int i = 0; i < write_position; i++)
+                                        printf("\b \b");
+                                    write_position = strlen(data);
+                                    for (int i = 0; i < write_position; i++)
+                                        putchar(data[i]);
+                                    history_index--;
+                                }
+                            }
+                            else if (history_index == 0)
+                            {
+                                for (int i = 0; i < write_position; i++)
+                                    printf("\b \b");
+                                data[0] = 0;
+                                write_position = 0;
+                                history_index--;
+                            }
                             break;
                         default:
                             ;
@@ -116,6 +142,17 @@ int main(int argc, char** argv)
         }
         data[write_position] = 0;
         putchar('\n');
+
+        if (strcmp(data, "") != 0)
+        {
+            free(command_history[HISTORY_MAX - 1]);
+            for (int i = HISTORY_MAX - 1; i > 0; i--)
+                command_history[i] = command_history[i - 1];
+
+            size_t new_command_bytes = strlen(data) + 1;
+            command_history[0] = malloc(new_command_bytes);
+            strncpy(command_history[0], data, new_command_bytes);
+        }
 
         char data_processed[BUFSIZ] = {0};
         memcpy(data_processed, data, BUFSIZ);
