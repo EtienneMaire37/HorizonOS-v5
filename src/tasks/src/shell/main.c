@@ -155,9 +155,9 @@ int main(int argc, char** argv)
         }
 
         char data_processed[BUFSIZ] = {0};
-        memcpy(data_processed, data, BUFSIZ);
+        memcpy(data_processed, data, write_position);
         bool string = false;
-        for (int i = 0; i < BUFSIZ - 1; i++)
+        for (int i = 0; i < write_position; i++)
         {
             if (data_processed[i] == ' ' && !string) data_processed[i] = 0;
             if (data_processed[i] == '\"') 
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
                 data_processed[i] = 0;
             }
         }
-        int bytes_left = write_position - 1;
+        int bytes_left = write_position;
         char* first_arg = find_first_arg(data_processed, &bytes_left);
         if (!first_arg) goto cmd;
         if (*first_arg == 0) goto cmd;
