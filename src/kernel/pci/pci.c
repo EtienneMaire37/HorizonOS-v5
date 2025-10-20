@@ -45,12 +45,20 @@ void pci_scan_buses()
                 uint16_t device_id = reg_0 >> 16;
                 if (vendor_id != 0xffff)
                 {
-                    LOG(DEBUG, "PCI Device at 0x%x:0x%x:0x%x (Header type : %u) :", i, j, k, header_type);
-                    LOG(DEBUG, "    Device ID: 0x%x | Vendor ID: 0x%x", device_id, vendor_id);
-                    LOG(DEBUG, "    Vendor : \"");
+                    uint32_t reg_1 = pci_configuration_address_space_read_dword(i, j, k, 8);
+                    uint8_t class_code = reg_1 >> 24, subclass = (reg_1 >> 16) & 0xff;
+
+                    if (class_code == 0x01 && subclass == 0x01) // * PCI IDE Controller
+                        pci_connect_ide_controller(i, j, k);
+
+                    LOG(INFO, "PCI Device at 0x%x:0x%x:0x%x (Header type : %u) :", i, j, k, header_type);
+                    LOG(INFO, "    Device ID: 0x%x | Vendor ID: 0x%x", device_id, vendor_id);
+                    LOG(INFO, "    Class : 0x%x.0x%x", class_code, subclass);
+                    LOG(INFO, "    Vendor : \"");
 
                     printf("PCI Device at 0x%x:0x%x:0x%x (Header type : %u) :\n", i, j, k, header_type);
                     printf("    Device ID: 0x%x | Vendor ID: 0x%x\n", device_id, vendor_id);
+                    printf("    Class : 0x%x.0x%x\n", class_code, subclass);
                     printf("    Vendor : ");
                     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                     putchar('\"');
@@ -79,15 +87,15 @@ void pci_scan_buses()
                                     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                                     putchar('\"');
                                     // fputc('\"', stderr);
-                                    CONTINUE_LOG(DEBUG, "\"");
-                                    LOG(DEBUG, "    Device : \"");
+                                    CONTINUE_LOG(INFO, "\"");
+                                    LOG(INFO, "    Device : \"");
                                     printed_vendor = true;
                                 }
                                 if (found_device)
                                 {
                                     printf("\"\n");
                                     // fputc('\"', stderr);
-                                    CONTINUE_LOG(DEBUG, "\"");
+                                    CONTINUE_LOG(INFO, "\"");
                                     tty_set_color(FG_WHITE, BG_BLACK);
                                     break;
                                 }
@@ -149,7 +157,7 @@ void pci_scan_buses()
                             {
                                 putchar(byte);
                                 // fputc(byte, stderr);
-                                CONTINUE_LOG(DEBUG, "%c", byte);
+                                CONTINUE_LOG(INFO, "%c", byte);
                                 found_vendor = true;
                             }
 
@@ -157,7 +165,7 @@ void pci_scan_buses()
                             {
                                 putchar(byte);
                                 // fputc(byte, stderr);
-                                CONTINUE_LOG(DEBUG, "%c", byte);
+                                CONTINUE_LOG(INFO, "%c", byte);
                                 found_device = true;
                             }
                         }
@@ -166,7 +174,7 @@ void pci_scan_buses()
                             tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                             putchar('\"');
                             // fputc('\"', stderr);
-                            CONTINUE_LOG(DEBUG, "\"");
+                            CONTINUE_LOG(INFO, "\"");
                             putchar('\n');
                             tty_set_color(FG_WHITE, BG_BLACK);
                         }
@@ -175,7 +183,7 @@ void pci_scan_buses()
                     {
                         tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                         putchar('\"');
-                        CONTINUE_LOG(DEBUG, "\"");
+                        CONTINUE_LOG(INFO, "\"");
                         putchar('\n');
                         tty_set_color(FG_WHITE, BG_BLACK);
                     }

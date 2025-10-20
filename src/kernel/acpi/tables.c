@@ -114,7 +114,7 @@ found_rsdp:
         rsdt_address = (physical_address_t)rsdp->rsdt_address;
         // xsdt_address = 0;
 
-        LOG(INFO, "RSDT address : 0x%lx", rsdt_address);
+        LOG(DEBUG, "RSDT address : 0x%lx", rsdt_address);
 
         uint32_t header_length = table_read_member(struct rsdt_table, rsdt_address, header.length, true);
         printf("Header length : %u\n", header_length); // ? 4026597203 on VBox
@@ -227,8 +227,6 @@ void fadt_extract_data()
     {
         if (acpi_table_valid(_dsdt_address))
         {
-            LOG(INFO, "Valid DSDT");
-            // printf("Found valid DSDT\n");
             dsdt_address = _dsdt_address;
         }
     }

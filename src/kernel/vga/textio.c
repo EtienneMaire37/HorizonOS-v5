@@ -231,8 +231,8 @@ void tty_outc(char c)
 
 	tty_cursor %= 80 * 25;
 
-	if (scrolled)
-		tty_update_cursor();
+	// if (scrolled)
+	// 	tty_update_cursor();
 }
 
 void tty_set_color(uint8_t fg_color, uint8_t bg_color)

@@ -176,6 +176,7 @@ const char* multiboot_block_type_text[5] =
 #include "time/gdn.h"
 #include "time/ktime.h"
 #include "multitasking/loader.h"
+#include "disk/ata.h"
 
 // ---------------------------------------------------------------
 
@@ -317,7 +318,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     LOG(INFO, "Kernel loaded at address 0x%x - 0x%x (%u bytes long)", &_kernel_start, &kernel_end, kernel_size); 
     LOG(INFO, "Stack : 0x%x-0x%x", &stack_bottom, &stack_top);
-    LOG(INFO, "cr3 : 0x%x", virtual_address_to_physical((virtual_address_t)&page_directory));
+    LOG(DEBUG, "cr3 : 0x%x", virtual_address_to_physical((virtual_address_t)&page_directory));
 
     uint32_t max_kernel_size = (uint32_t)(((uint32_t)4096 * 1023 * 1024) - (uint32_t)&_kernel_start);
     if (kernel_size >= max_kernel_size)
@@ -379,7 +380,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         }
     }
 
-    LOG(INFO, "Memory map:");
+    LOG(DEBUG, "Memory map:");
 
     printf("Detecting available memory...");
 
@@ -388,7 +389,7 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
         physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
         uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
-        LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu bytes (type: %s)", addr, len, multiboot_block_type_text[mmmt->type - 1]);
+        LOG(DEBUG, "   Memory block : address : 0x%lx ; length : %lu bytes (type: %s)", addr, len, multiboot_block_type_text[mmmt->type - 1]);
         if (mmmt->type == MULTIBOOT_MEMORY_AVAILABLE)
             available_memory += len;
     }
@@ -558,8 +559,8 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     multitasking_init();
 
-    startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/kernel32.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
-    if (!multitasking_add_task_from_vfs("kernel32", "/initrd/bin/kernel32.elf", 0, true, &data))
+    startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/start.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
+    if (!multitasking_add_task_from_vfs("start", "/initrd/bin/start.elf", 0, true, &data))
     {
         LOG(CRITICAL, "Kernel task couldn't start");
         abort();

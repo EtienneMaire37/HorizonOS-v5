@@ -232,9 +232,12 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_EXECVE:    // * execve | path = $ebx, argv = $ecx, envp = $edx, cwd = $esi | $eax = errno
     {
-        // LOG(DEBUG, "execve");
+        if (vfs_access((char*)registers->ebx, X_OK) != 0)
+        {
+            registers->eax = EACCES;
+            break;
+        }
         startup_data_struct_t data = startup_data_init_from_argv((const char**)registers->ecx, (char**)registers->edx, (char*)registers->esi);
-        // LOG(DEBUG, "execve.");
         lock_task_queue();
         if (!multitasking_add_task_from_vfs((char*)registers->ebx, (char*)registers->ebx, 3, false, &data))
         {
