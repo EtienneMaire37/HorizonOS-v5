@@ -49,7 +49,7 @@ thread_t task_create_empty()
 
 void task_destroy(thread_t* task)
 {
-    LOG(DEBUG, "Destroying task \"%s\" (pid = %lu, ring = %u)", task->name, task->pid, task->ring);
+    LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %u)", task->name, task->pid, task->ring);
     vas_free(task->cr3);
     utf32_buffer_destroy(&task->input_buffer);
     for (int i = 0; i < OPEN_MAX; i++)

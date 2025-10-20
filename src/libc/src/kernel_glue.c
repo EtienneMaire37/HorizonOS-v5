@@ -46,19 +46,15 @@ time_t time(time_t* t)
 
 pid_t getpid()
 {
-    uint32_t hi, lo;
-    asm volatile("int 0xf0" : "=a" (hi), "=b" (lo)
-        : "a" (SYSCALL_GETPID));
-    return ((pid_t)hi << 32) | lo;
+    pid_t ret;
+    asm volatile("int 0xf0" : "=a" (ret) : "a" (SYSCALL_GETPID));
+    return ret;
 }
 
 pid_t fork()
 {
-    uint32_t hi, lo;
-    asm volatile("int 0xf0" : "=a" (hi), "=b" (lo)
-        : "a" (SYSCALL_FORK));
-    uint64_t combined = ((uint64_t)hi << 32) | lo;
-    pid_t ret = (pid_t)combined;
+    pid_t ret;
+    asm volatile("int 0xf0" : "=a" (ret) : "a" (SYSCALL_FORK));
     return ret;
 }
 
@@ -158,14 +154,12 @@ int execve(const char* path, char* const argv[], char* const envp[])
 pid_t waitpid(pid_t pid, int* wstatus, int options)
 {
     int _wstatus, _errno;
-    uint32_t ret_lo, ret_hi;
-    uint32_t pid_lo = pid & 0xffffffff, pid_hi = pid >> 32;
-    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(_wstatus), "=c"(ret_lo), "=d"(ret_hi) : "a"(SYSCALL_WAITPID), "b"(pid_lo), "c"(pid_hi), "d"(options) : "memory");
+    pid_t ret;
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(_wstatus), "=c"(ret) : "a"(SYSCALL_WAITPID), "b"(pid), "d"(options) : "memory");
     if (wstatus) *wstatus = _wstatus;
     if (_errno != 0)
         errno = _errno;
-    uint64_t ret = ((uint64_t)ret_hi << 32) | ret_lo;
-    return *(pid_t*)&ret;
+    return ret;
 }
 
 int access(const char* path, int mode)

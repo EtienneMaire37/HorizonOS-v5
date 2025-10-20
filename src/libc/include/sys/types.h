@@ -1,10 +1,10 @@
 #pragma once
 
-#define INT64 long long
-#define INT32 int
-#define UINT32 unsigned int
+#define INT64   long long
+#define INT32   int
+#define UINT32  unsigned int
 
-typedef INT64 pid_t;
+typedef INT32 pid_t;
 typedef UINT32 size_t;
 
 typedef INT32 ssize_t;

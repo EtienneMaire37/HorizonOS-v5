@@ -6,13 +6,13 @@
 void handle_syscall(interrupt_registers_t* registers)
 {
     #ifdef LOG_SYSCALLS
-    LOG(DEBUG, "Task \"%s\" (pid = %lu) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
+    LOG(DEBUG, "Task \"%s\" (pid = %d) sent system call %u", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
     #endif
 
     switch (registers->eax) // !! for some of these path resolution is handled in libc
     {
     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
-        LOG(WARNING, "Task \"%s\" (pid = %lu) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
         lock_task_queue();
         tasks[current_task_index].is_dead = true;
         tasks[current_task_index].return_value = registers->ebx & 0xff;
@@ -203,17 +203,15 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         break;
     }
-    case SYSCALL_GETPID:     // * getpid || $eax = pid_hi, $ebx = pid_lo
+    case SYSCALL_GETPID:     // * getpid || $eax = pid
         lock_task_queue();
-        registers->eax = tasks[current_task_index].pid >> 32;
-        registers->ebx = (uint32_t)tasks[current_task_index].pid;
+        registers->eax = tasks[current_task_index].pid;
         unlock_task_queue();
         break;
     case SYSCALL_FORK:     // * fork
         if (task_count >= MAX_TASKS)
         {
-            registers->eax = 0xffffffff;
-            registers->ebx = 0xffffffff;   // -1
+            registers->eax = 0xffffffff;   // -1
         }
         else
         {
@@ -224,11 +222,10 @@ void handle_syscall(interrupt_registers_t* registers)
             switch_task();
             current_phys_mem_page = 0xffffffff;
             if (tasks[current_task_index].pid == forked_pid)
-                registers->eax = registers->ebx = 0;
+                registers->eax = 0;
             else
             {
-                registers->eax = forked_pid >> 32;
-                registers->ebx = forked_pid & 0xffffffff;
+                registers->eax = forked_pid;
             }
         } 
         break;
@@ -263,15 +260,14 @@ void handle_syscall(interrupt_registers_t* registers)
         }
     }
 
-    case SYSCALL_WAITPID: // * waitpid | pid_lo = $ebx, pid_hi = $ecx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value[0:32], $edx = return_value[32:64]
+    case SYSCALL_WAITPID: // * waitpid | pid = $ebx, options = $edx | $eax = errno, $ebx = *wstatus, $ecx = return_value
     {
-        uint64_t pid = ((uint64_t)registers->ecx << 32) | registers->ebx;
+        pid_t pid = registers->ecx;
         lock_task_queue();
-        tasks[current_task_index].wait_pid = *(pid_t*)&pid;
+        tasks[current_task_index].wait_pid = registers->ebx;
         unlock_task_queue();
         switch_task();
-        registers->ecx = pid & 0xffffffff;
-        registers->edx = pid >> 32;
+        registers->ecx = pid;
         registers->ebx = tasks[current_task_index].wstatus;
         break;
     }

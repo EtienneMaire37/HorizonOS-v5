@@ -53,12 +53,12 @@ void handle_irq_0(bool* should_task_switch)
                     if (this_percentage <= 0) this_percentage = 0;
                     if (this_percentage >= 1000) this_percentage = 1000;
                     #endif
-                    LOG(TRACE, "%s── task %d (\"%s\") : %d.%d %%\t[pid = %ld]%s%s%s", task_count - i > 1 ? "├" : "└", i, tasks[i].name, this_percentage / 10, this_percentage % 10, tasks[i].pid, 
+                    LOG(TRACE, "%s── task %d (\"%s\") : %d.%d %%\t[pid = %d]%s%s%s", task_count - i > 1 ? "├" : "└", i, tasks[i].name, this_percentage / 10, this_percentage % 10, tasks[i].pid, 
                         i == 0 ? " (* idle task *)" : "", 
                         tasks[i].is_dead ? " [waiting for deletion...]" : "", 
                         tasks[i].wait_pid != -1 ? " [waiting for a child...]" : "");
                     if (tasks[i].parent != -1)
-                        CONTINUE_LOG(TRACE, " {parent pid = %ld}", tasks[i].parent);
+                        CONTINUE_LOG(TRACE, " {parent pid = %d}", tasks[i].parent);
                 }
             }
         }

@@ -213,6 +213,7 @@ void tty_outc(char c)
 		tty_cursor++;
 	}
 
+	bool scrolled = false;
 	while ((tty_cursor / 80) >= 25)	// Last line
 	{
 		memmove(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
@@ -224,9 +225,14 @@ void tty_outc(char c)
 		}
 
 		tty_cursor -= 80;
+
+		scrolled = true;
 	}
 
 	tty_cursor %= 80 * 25;
+
+	if (scrolled)
+		tty_update_cursor();
 }
 
 void tty_set_color(uint8_t fg_color, uint8_t bg_color)
