@@ -2,6 +2,9 @@
 
 void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
 {
+    if (connected_pci_ide_controllers >= IDE_MAX)
+        return;
+
     pci_ide_controller[connected_pci_ide_controllers].bus = bus;
     pci_ide_controller[connected_pci_ide_controllers].device = device;
     pci_ide_controller[connected_pci_ide_controllers].function = function;
@@ -43,6 +46,94 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
         pci_ide_controller[connected_pci_ide_controllers].channels[1].irq = pci_configuration_address_space_read_dword(bus, device, function, 0x3C) & 0xff;
     }
 
+    // * Disable IRQs
+    ata_write_control_block_register(&pci_ide_controller[connected_pci_ide_controllers], ATA_PRIMARY_CHANNEL, ATA_REG_CONTROL, 0b10); // ! Default value is 0
+    ata_write_control_block_register(&pci_ide_controller[connected_pci_ide_controllers], ATA_SECONDARY_CHANNEL, ATA_REG_CONTROL, 0b10);
+
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        for (uint8_t j = 0; j < 2; j++) 
+        {
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].connected = false;
+
+            // * Select Drive
+            ata_write_command_block_register(&pci_ide_controller[connected_pci_ide_controllers], i, ATA_REG_HDDEVSEL, 0xA0 | (j << 4)); 
+            ksleep(1);
+
+            ata_write_command_block_register(&pci_ide_controller[connected_pci_ide_controllers], i, ATA_REG_COMMAND, ATA_CMD_IDENTIFY);
+            ksleep(1); 
+
+            if (ata_read_command_block_register(&pci_ide_controller[connected_pci_ide_controllers], i, ATA_REG_STATUS) == 0) 
+                continue;
+
+            uint8_t status;
+            while (true) 
+            {
+                status = ata_read_command_block_register(&pci_ide_controller[connected_pci_ide_controllers], i, ATA_REG_STATUS);
+                if (status & ATA_SR_ERR)
+                    break;
+                if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) 
+                    break;
+            }
+
+            if (status & ATA_SR_ERR)
+            {
+                // * Don't support ATAPI drives for now
+                continue;
+            }
+
+            uint8_t ide_buf[512];
+            for (uint16_t k = 0; k < 256; k++)
+            {
+                ((uint16_t*)ide_buf)[k] = inw(pci_ide_controller[connected_pci_ide_controllers].channels[i].base_address + ATA_REG_DATA);
+                // LOG(TRACE, "IDE IDENTIFY data word %u : 0x%x", k, ((uint16_t*)ide_buf)[k]);
+            }
+
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].connected = 1;
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].signature = *((uint16_t*)(ide_buf + ATA_IDENT_DEVICETYPE));
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].capabilities = *((uint16_t*)(ide_buf + ATA_IDENT_CAPABILITIES));
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].command_sets = *((uint32_t*)(ide_buf + ATA_IDENT_COMMANDSETS));
+
+            if (pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].command_sets & (1 << 26))    
+                // * 48-Bit LBA
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = *((uint32_t*)(ide_buf + ATA_IDENT_MAX_LBA_EXT));
+            else                 
+                // * 28-Bit LBA or CHS
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = *((uint32_t*)(ide_buf + ATA_IDENT_MAX_LBA));
+
+            for(uint8_t k = 0; k < 40; k += 2) 
+            {
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[k] = ide_buf[ATA_IDENT_MODEL + k + 1];
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[k + 1] = ide_buf[ATA_IDENT_MODEL + k];
+            }
+            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[40] = 0;
+        }
+    }
+
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        for (uint8_t j = 0; j < 2; j++)
+        {
+            if (pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].connected) 
+            {
+                uint64_t bytes = (uint64_t)pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size * 512;
+                uint8_t magnitude = 0;
+                uint64_t magnitude_value = bytes;
+                const char* magnitude_text[] = {"B", "KB", "MB", "GB", "TB", "PB", "EB"};
+                while (magnitude_value >= 1024 * 1024)
+                {
+                    magnitude_value /= 1024;
+                    magnitude++;
+                }
+                if (magnitude_value >= 1024)
+                    magnitude++;
+                LOG(INFO, "Found drive \"%s\" (%lu bytes) [%lu.%lu %s]", 
+                    pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model, 
+                   bytes, magnitude_value / 1024, (uint64_t)(magnitude_value / 102.4) % 10, magnitude_text[magnitude]);
+            }
+        }
+    }
+
     connected_pci_ide_controllers++;
 
     LOG(DEBUG, "Connected PCI IDE controller at %u:%u:%u", bus, device, function);
@@ -58,4 +149,22 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
         pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].base_address,
         pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].ctrl_base_address,
         pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].irq);
+}
+
+void ata_write_command_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg, uint8_t data)
+{
+    outb(controller->channels[channel].base_address + reg, data);
+}
+uint8_t ata_read_command_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg)
+{
+    return inb(controller->channels[channel].base_address + reg);
+}
+
+void ata_write_control_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg, uint8_t data)
+{
+    outb(controller->channels[channel].ctrl_base_address + reg, data);
+}
+uint8_t ata_read_control_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg)
+{
+    return inb(controller->channels[channel].ctrl_base_address + reg);
 }

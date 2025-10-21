@@ -1,6 +1,6 @@
 #pragma once
 
-#define IDE_MAX     8
+#define IDE_MAX     4
 
 #define ATA_SR_BSY     0x80    // Busy
 #define ATA_SR_DRDY    0x40    // Drive ready
@@ -63,12 +63,26 @@
 #define ATA_REG_ALTSTATUS  0x00
 #define ATA_REG_DEVADDRESS 0x01
 
+#define ATA_PRIMARY_CHANNEL     0
+#define ATA_SECONDARY_CHANNEL   1
+
+typedef struct ide_device
+{
+    bool connected;         // 0: Drive not connected, 1: Drive connected
+    uint16_t signature;     // Drive Signature
+    uint16_t capabilities;
+    uint32_t command_sets;
+    uint32_t size;          // Sector count
+    char model[41];         // Model string
+} ide_device_t;
+
 typedef struct ide_channel_data
 {
     bool compatibility_mode;
     uint8_t irq;
     uint32_t base_address;
     uint32_t ctrl_base_address;
+    ide_device_t devices[2];
 } ide_channel_data_t;
 
 typedef struct pci_ide_controller_data
@@ -83,3 +97,7 @@ pci_ide_controller_data_t pci_ide_controller[IDE_MAX];
 uint16_t connected_pci_ide_controllers = 0;
 
 void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function);
+void ata_write_command_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg, uint8_t data);
+uint8_t ata_read_command_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg);
+void ata_write_control_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg, uint8_t data);
+uint8_t ata_read_control_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg);
