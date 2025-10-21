@@ -219,6 +219,7 @@ int imod(int a, int b)
 #include "multitasking/loader.c"
 #include "ps2/ps2.c"
 #include "pci/pci.c"
+#include "disk/ata.c"
 
 #include "../libc/src/kernel.c"
 #include "../libc/src/startup_data.c"

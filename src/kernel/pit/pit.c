@@ -78,6 +78,6 @@ void pit_channel_0_set_frequency(uint32_t frequency)
 
 void ksleep(precise_time_t time)
 {
-    precise_time_t target_timer = global_timer + time;
+    precise_time_t target_timer = global_timer + time + PIT_INCREMENT;  // * wait AT LEAST time
     while(target_timer > global_timer);
 }
