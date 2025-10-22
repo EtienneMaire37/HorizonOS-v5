@@ -153,6 +153,16 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
 
     connected_pci_ide_controllers++;
 
+    // uint16_t buffer[256] = {0};
+    // if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 0, 0, 1, buffer))
+    // {
+    //     LOG(TRACE, "First sector of primary master drive:");
+    //     for (int i = 0; i < 512; i++)
+    //     {
+    //         LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+    //     }
+    // }
+
     LOG(DEBUG, "Connected PCI IDE controller at %u:%u:%u", bus, device, function);
 
     LOG(DEBUG, "    %s mode on primary channel", pci_ide_controller[connected_pci_ide_controllers - 1].channels[0].compatibility_mode ? "Compatibility" : "Native");
@@ -184,4 +194,74 @@ void ata_write_control_block_register(pci_ide_controller_data_t* controller, uin
 uint8_t ata_read_control_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg)
 {
     return inb(controller->channels[channel].ctrl_base_address + reg);
+}
+
+bool ata_poll(pci_ide_controller_data_t* controller, uint8_t channel)
+{
+    uint8_t status;
+    do
+    {
+        status = ata_read_command_block_register(controller, channel, ATA_REG_STATUS);
+
+    // * "Read the Regular Status port until bit 7 (BSY, value = 0x80) clears, and bit 3 (DRQ, value = 8) sets -- 
+    // * or until bit 0 (ERR, value = 1) or bit 5 (DF, value = 0x20) sets. 
+    // * If neither error bit is set, the device is ready right then."
+    } while (!(!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) && !((status & ATA_SR_ERR) || (status & ATA_SR_DF)));
+    return !(status & ATA_SR_ERR);
+}
+
+bool ata_pio_read_sectors(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t drive, uint64_t lba, uint8_t sector_count, uint16_t* buffer)
+{
+    if (!buffer)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: NULL buffer");
+        return false;
+    }
+
+    if (sector_count == 0)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: sector_count is 0");
+        return false;
+    }
+
+    if (channel > 1 || drive > 1)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Invalid channel or drive");
+        return false;
+    }
+
+    if (!controller->channels[channel].devices[drive].connected)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Drive not connected");
+        return false;
+    }
+
+    if (lba + sector_count > controller->channels[channel].devices[drive].size)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Invalid read (LBA out of range)");
+        if (lba >= controller->channels[channel].devices[drive].size)
+            return false;
+        sector_count = controller->channels[channel].devices[drive].size - lba;
+    }
+
+    ata_write_command_block_register(controller, channel, ATA_REG_HDDEVSEL, 0xe0 | (drive << 4) | ((lba >> 24) & 0x0f));
+    // ata_write_command_block_register(controller, channel, ATA_REG_FEATURES, 0);
+
+    ata_write_command_block_register(controller, channel, ATA_REG_SECCOUNT, sector_count);
+    ata_write_command_block_register(controller, channel, ATA_REG_SECNUM, (uint8_t)(lba & 0xff));
+    ata_write_command_block_register(controller, channel, ATA_REG_CYLLOW, (uint8_t)((lba >> 8) & 0xff));
+    ata_write_command_block_register(controller, channel, ATA_REG_CYLHIGH, (uint8_t)((lba >> 16) & 0xff));
+
+    ata_write_command_block_register(controller, channel, ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+
+    for (uint8_t i = 0; i < sector_count; i++)
+    {
+        if (!ata_poll(controller, channel))
+            return false;
+
+        for (uint16_t j = 0; j < 256; j++)
+            buffer[i * 256 + j] = inw(controller->channels[channel].base_address + ATA_REG_DATA);
+    }
+
+    return true;
 }
