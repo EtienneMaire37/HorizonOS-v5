@@ -96,17 +96,25 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
 
             if (pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].command_sets & (1 << 26))    
                 // * 48-Bit LBA
-                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = *((uint32_t*)(ide_buf + ATA_IDENT_MAX_LBA_EXT));
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = (*((uint64_t*)(ide_buf + ATA_IDENT_MAX_LBA_EXT))) & 0xffffffffffff;
             else                 
                 // * 28-Bit LBA or CHS
-                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = *((uint32_t*)(ide_buf + ATA_IDENT_MAX_LBA));
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].size = (*((uint32_t*)(ide_buf + ATA_IDENT_MAX_LBA))) & 0x0fffffff;
 
+            uint8_t last_char_index = 0;
             for(uint8_t k = 0; k < 40; k += 2) 
             {
                 pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[k] = ide_buf[ATA_IDENT_MODEL + k + 1];
+                if (ide_buf[ATA_IDENT_MODEL + k] != ' ')
+                    last_char_index = k;
                 pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[k + 1] = ide_buf[ATA_IDENT_MODEL + k];
+                if (ide_buf[ATA_IDENT_MODEL + k + 1] != ' ')
+                    last_char_index = k + 1;
             }
-            pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[40] = 0;
+            if (last_char_index <= 40)
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[last_char_index] = 0;
+            else
+                pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model[40] = 0;
         }
     }
 
@@ -127,9 +135,18 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
                 }
                 if (magnitude_value >= 1024)
                     magnitude++;
-                LOG(INFO, "Found drive \"%s\" (%lu bytes) [%lu.%lu %s]", 
+                LOG(INFO, "Found drive \"%s\" (%lu bytes) [%lu.%lu%lu %s]", 
                     pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model, 
-                   bytes, magnitude_value / 1024, (uint64_t)(magnitude_value / 102.4) % 10, magnitude_text[magnitude]);
+                   bytes, magnitude_value / 1024, (magnitude_value * 10 / 1024) % 10, (magnitude_value * 100 / 1024) % 10, magnitude_text[magnitude]);
+                printf("Found drive ");
+                tty_set_color(FG_LIGHTGREEN, BG_BLACK);
+                printf("\"%s\" ", pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model);
+                tty_set_color(FG_WHITE, BG_BLACK);
+                printf("(%lu bytes) [", bytes);
+                tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+                printf("%lu.%lu%lu ", magnitude_value / 1024, (magnitude_value * 10 / 1024) % 10, (magnitude_value * 100 / 1024) % 10);
+                tty_set_color(FG_WHITE, BG_BLACK);
+                printf("%s]\n", magnitude_text[magnitude]);
             }
         }
     }

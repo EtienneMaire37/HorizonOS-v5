@@ -479,19 +479,19 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
     LOG(INFO, "Time : %u-%u%u-%u%u %u%u:%u%u:%u%u", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
     printf("Time : %u-%u%u-%u%u %u%u:%u%u:%u%u\n", system_year, system_month / 10, system_month % 10, system_day / 10, system_day % 10, system_hours / 10, system_hours % 10, system_minutes / 10, system_minutes % 10, system_seconds / 10, system_seconds % 10);
 
-    LOG(DEBUG, "Scanning PCI buses...");
-    printf("Scanning PCI buses...");
-
-    pci_scan_buses();
-    
-    putchar('\n');
-
     LOG(INFO, "Unix time : %u", ktime(NULL));
 
     LOG(INFO, "Detecting ACPI tables and ebda");
 
     bios_get_ebda_pointer();
     acpi_find_tables();
+
+    LOG(DEBUG, "Scanning PCI buses...");
+    printf("Scanning PCI buses...\n\n");
+
+    pci_scan_buses();
+    
+    putchar('\n');
 
     LOG(INFO, "Detecting PS/2 devices");
     printf("Detecting PS/2 devices\n");

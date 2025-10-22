@@ -72,7 +72,7 @@ typedef struct ide_device
     uint16_t signature;     // Drive Signature
     uint16_t capabilities;
     uint32_t command_sets;
-    uint32_t size;          // Sector count
+    uint64_t size;          // Sector count
     char model[41];         // Model string
 } ide_device_t;
 

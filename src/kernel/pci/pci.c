@@ -31,6 +31,7 @@ void pci_scan_buses()
 {
     pci_ids = initrd_find_file("pci.ids");
 
+// #define PRINT_PCI_INFO
     for (uint16_t i = 0; i < 256; i++)
     {
         for (uint8_t j = 0; j < 32; j++)
@@ -56,12 +57,15 @@ void pci_scan_buses()
                     LOG(INFO, "    Class : 0x%x.0x%x", class_code, subclass);
                     LOG(INFO, "    Vendor : \"");
 
+                #ifdef PRINT_PCI_INFO
                     printf("PCI Device at 0x%x:0x%x:0x%x (Header type : %u) :\n", i, j, k, header_type);
                     printf("    Device ID: 0x%x | Vendor ID: 0x%x\n", device_id, vendor_id);
                     printf("    Class : 0x%x.0x%x\n", class_code, subclass);
                     printf("    Vendor : ");
+
                     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                     putchar('\"');
+                #endif
 
                     if (pci_ids)
                     {
@@ -81,22 +85,26 @@ void pci_scan_buses()
                                 vendor_id_line = device_id_line = true;
                                 if (found_vendor && !printed_vendor)
                                 {
+                                #ifdef PRINT_PCI_INFO
                                     putchar('\"');
                                     tty_set_color(FG_WHITE, BG_BLACK);
                                     printf("\n    Device : ");
                                     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                                     putchar('\"');
                                     // fputc('\"', stderr);
+                                #endif
                                     CONTINUE_LOG(INFO, "\"");
                                     LOG(INFO, "    Device : \"");
                                     printed_vendor = true;
                                 }
                                 if (found_device)
                                 {
+                                #ifdef PRINT_PCI_INFO
                                     printf("\"\n");
                                     // fputc('\"', stderr);
-                                    CONTINUE_LOG(INFO, "\"");
                                     tty_set_color(FG_WHITE, BG_BLACK);
+                                #endif
+                                    CONTINUE_LOG(INFO, "\"");
                                     break;
                                 }
                                 continue;
@@ -155,37 +163,45 @@ void pci_scan_buses()
 
                             if (vendor_id_line && current_vendor_id == vendor_id && line_offset >= 6)
                             {
+                            #ifdef PRINT_PCI_INFO
                                 putchar(byte);
                                 // fputc(byte, stderr);
+                            #endif
                                 CONTINUE_LOG(INFO, "%c", byte);
                                 found_vendor = true;
                             }
 
                             if (device_id_line && current_line_device_id == device_id && current_vendor_id == vendor_id && line_offset >= 7)
                             {
+                            #ifdef PRINT_PCI_INFO
                                 putchar(byte);
                                 // fputc(byte, stderr);
+                            #endif
                                 CONTINUE_LOG(INFO, "%c", byte);
                                 found_device = true;
                             }
                         }
                         if (!found_device)
                         {
+                        #ifdef PRINT_PCI_INFO
                             tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                             putchar('\"');
                             // fputc('\"', stderr);
-                            CONTINUE_LOG(INFO, "\"");
                             putchar('\n');
                             tty_set_color(FG_WHITE, BG_BLACK);
+                        #endif
+                            CONTINUE_LOG(INFO, "\"");
                         }
                     }
                     else
                     {
+                    #ifdef PRINT_PCI_INFO
                         tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                         putchar('\"');
-                        CONTINUE_LOG(INFO, "\"");
                         putchar('\n');
                         tty_set_color(FG_WHITE, BG_BLACK);
+                    #endif
+                        CONTINUE_LOG(INFO, "\"");
                     }
                 }
             }

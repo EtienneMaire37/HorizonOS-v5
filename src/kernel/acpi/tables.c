@@ -117,7 +117,7 @@ found_rsdp:
         LOG(DEBUG, "RSDT address : 0x%lx", rsdt_address);
 
         uint32_t header_length = table_read_member(struct rsdt_table, rsdt_address, header.length, true);
-        printf("Header length : %u\n", header_length); // ? 4026597203 on VBox
+        // printf("Header length : %u\n", header_length);
 
         sdt_count = header_length <= sizeof(struct sdt_header) ? 0 : (header_length - sizeof(struct sdt_header)) / 4;
     }
@@ -128,7 +128,7 @@ found_rsdp:
     }
 
     LOG(INFO, "%u SDT tables detected", sdt_count);
-    printf("%u SDT tables detected\n", sdt_count);
+    // printf("%u SDT tables detected\n", sdt_count);
 
     for (uint32_t i = 0; i < sdt_count; i++)
     {
@@ -141,7 +141,7 @@ found_rsdp:
                 uint32_t signature = table_read_member(struct sdt_header, address, signature, true);
                 char signature_text[5] = { (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), 0 };
                 LOG(INFO, "\t\tSignature: %s (0x%x)", signature_text, signature);
-                printf("Signature: %s (0x%x)\n", signature_text, signature);
+                // printf("Signature: %s (0x%x)\n", signature_text, signature);
                 switch (signature)
                 {
                 case 0x50434146:    // FACP : FADT
@@ -168,7 +168,7 @@ found_rsdp:
         else
         {
             LOG(WARNING, "\t\t64bit table address");
-            printf("64bit table address\n");
+            // printf("64bit table address\n");
         }
     }
 
