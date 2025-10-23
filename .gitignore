@@ -1,4 +1,5 @@
 horizonos.img
+horizonos.vdi
 debug/*
 bin/*
 src/tasks/bin/*

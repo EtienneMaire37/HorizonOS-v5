@@ -66,6 +66,8 @@ horizonos.img: rmbin src/tasks/bin/start.elf resources/pci.ids
 
 	sudo ./install-image.sh
 
+	qemu-img convert -O vdi horizonos.img horizonos.vdi
+
 src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/start/main.c" -o "src/tasks/bin/start.o" $(CFLAGS) -I"src/libc/include" -Ofast
