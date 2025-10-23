@@ -177,6 +177,7 @@ const char* multiboot_block_type_text[5] =
 #include "time/ktime.h"
 #include "multitasking/loader.h"
 #include "disk/ata.h"
+#include "disk/mbr.h"
 
 // ---------------------------------------------------------------
 
@@ -485,6 +486,13 @@ void __attribute__((cdecl)) kernel(multiboot_info_t* _multiboot_info, uint32_t m
 
     bios_get_ebda_pointer();
     acpi_find_tables();
+
+    if (sizeof(mbr_boot_sector_t) != 512)
+    {
+        LOG(CRITICAL, "MBR boot sector wasn't packed correctly (%u bytes)", sizeof(mbr_boot_sector_t));
+        printf("MBR boot sector wasn't packed correctly (%u bytes)\n", sizeof(mbr_boot_sector_t));
+        abort();
+    }
 
     LOG(DEBUG, "Scanning PCI buses...");
     printf("Scanning PCI buses...\n\n");

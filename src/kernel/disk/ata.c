@@ -153,15 +153,93 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
 
     connected_pci_ide_controllers++;
 
-    // uint16_t buffer[256] = {0};
-    // if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 0, 0, 1, buffer))
-    // {
-    //     LOG(TRACE, "First sector of primary master drive:");
-    //     for (int i = 0; i < 512; i++)
-    //     {
-    //         LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
-    //     }
-    // }
+// #define LOG_BOOT_SECTORS
+    uint16_t buffer[256] = {0};
+    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 0, 0, 1, buffer))
+    {
+        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[0].devices[0].boot_sector, buffer, 512);
+    #ifdef LOG_BOOT_SECTORS
+        LOG(TRACE, "First sector of primary master drive:");
+        for (int i = 0; i < 512; i++)
+        {
+            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+        }
+    #endif
+    }
+
+    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 1, 0, 1, buffer))
+    {
+        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[0].devices[1].boot_sector, buffer, 512);
+    #ifdef LOG_BOOT_SECTORS
+        LOG(TRACE, "First sector of primary slave drive:");
+        for (int i = 0; i < 512; i++)
+        {
+            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+        }
+    #endif
+    }
+
+    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_SECONDARY_CHANNEL, 0, 0, 1, buffer))
+    {
+        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].devices[0].boot_sector, buffer, 512);
+    #ifdef LOG_BOOT_SECTORS
+        LOG(TRACE, "First sector of secondary master drive:");
+        for (int i = 0; i < 512; i++)
+        {
+            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+        }
+    #endif
+    }   
+
+    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_SECONDARY_CHANNEL, 1, 0, 1, buffer))
+    {
+        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].devices[1].boot_sector, buffer, 512);
+    #ifdef LOG_BOOT_SECTORS
+        LOG(TRACE, "First sector of secondary slave drive:");
+        for (int i = 0; i < 512; i++)
+        {
+            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+        }
+    #endif
+    }
+
+    LOG(INFO, "Partitions on connected drives:");
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        for (uint8_t j = 0; j < 2; j++)
+        {
+            if (pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].connected) 
+            {
+                LOG(INFO, "Drive %u:%u:", i, j);
+                printf("Drive %u:%u:\n", i, j);
+                mbr_boot_sector_t* data = (mbr_boot_sector_t*)&pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].boot_sector;
+                for (uint8_t k = 0; k < 4; k++)
+                {
+                    if (data->partition_table[k].partition_type != 0)
+                    {
+                        LOG(INFO, "    Partition %u: Type 0x%x | Start LBA : %u | Size : %luB%s", 
+                            k + 1, 
+                            data->partition_table[k].partition_type, data->partition_table[k].start_lba, data->partition_table[k].size_in_sectors * 512ULL,
+                            data->partition_table[k].drive_attributes & 0x80 ? " [Bootable]" : "");
+                        printf("  Partition %u: Type 0x%x | Start LBA : %u | Size : ", 
+                            k + 1, 
+                            data->partition_table[k].partition_type, data->partition_table[k].start_lba);
+                        tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+                        printf("%lu", data->partition_table[k].size_in_sectors * 512ULL);
+                        tty_set_color(FG_WHITE, BG_BLACK);
+                        printf("B");
+                        if (data->partition_table[k].drive_attributes & 0x80)
+                        {
+                            tty_set_color(FG_YELLOW, BG_BLACK);
+                            printf(" [Bootable]");
+                        }
+                        tty_set_color(FG_WHITE, BG_BLACK);
+                        printf("\n");
+                    }
+                }
+            }
+        }
+    }
 
     LOG(DEBUG, "Connected PCI IDE controller at %u:%u:%u", bus, device, function);
 

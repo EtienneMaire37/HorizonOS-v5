@@ -7,7 +7,7 @@ CROSSAR := ./i686elfgcc/bin/i686-elf-ar
 USERGCC := 
 CLOGLEVEL := 
 
-all: $(CROSSGCC) $(USERGCC) horizonos.iso
+all: $(CROSSGCC) $(USERGCC) horizonos.img
 
 run:
 	mkdir debug -p
@@ -16,11 +16,11 @@ run:
 	-cpu host                                  			\
 	-debugcon file:debug/latest.log						\
 	-m 64                                        		\
-	-drive file=horizonos.iso,index=0,media=disk,format=raw \
+	-drive file=horizonos.img,index=0,media=disk,format=raw \
 	-smp 8 \
 	-d cpu
 
-horizonos.iso: rmbin src/tasks/bin/start.elf resources/pci.ids
+horizonos.img: rmbin src/tasks/bin/start.elf resources/pci.ids
 	mkdir bin -p
 
 	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
@@ -47,8 +47,7 @@ horizonos.iso: rmbin src/tasks/bin/start.elf resources/pci.ids
     "bin/registers.o"  \
 	"bin/sse.o"  \
 	-lgcc
-	
-	mkdir -p ./root/boot/grub
+
 	mkdir -p ./bin/initrd
 
 	rm src/tasks/bin/*.o
@@ -56,12 +55,16 @@ horizonos.iso: rmbin src/tasks/bin/start.elf resources/pci.ids
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
+	mkdir -p ./root/boot/grub
+
 	tar --transform 's|^\./||' -cvf ./root/boot/initrd.tar -C ./bin/initrd .
 	
 	cp ./bin/kernel.elf ./root/boot/kernel.elf
 	cp ./src/kernel/grub.cfg ./root/boot/grub/grub.cfg
-	 
-	grub-mkrescue -o ./horizonos.iso ./root
+
+	dd if=/dev/zero of="horizonos.img" bs=1M count=200
+
+	sudo ./install-image.sh
 
 src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
@@ -163,4 +166,4 @@ rmbin:
 	rm -rf ./initrd.tar
 
 clean: rmbin
-	rm -f ./horizonos.iso
+	rm -f ./horizonos.img

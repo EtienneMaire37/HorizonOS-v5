@@ -207,6 +207,9 @@ void tty_outc(char c)
 				tty_ansi_sequence_state++;
 			break;
 		}
+		
+		tty_ansi_sequence_state = 0;
+
 		tty_vram[tty_cursor]._char = c;
 		tty_vram[tty_cursor].color = tty_color;
 

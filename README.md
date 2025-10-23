@@ -39,7 +39,7 @@ These instructions assume a Debian-like environment. Feel free to adapt those in
 Install dependencies:
 ```bash
 sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
-sudo apt install nasm xorriso mtools
+sudo apt install nasm xorriso mtools 
 ```
 
 ### Building
@@ -53,7 +53,7 @@ Or:
 make all CLOGLEVEL=-DLOGLEVEL=TRACE
 ```
 To build with E9 port logs.
-A `horizonos.iso` disk image file will be created in the root of the repository.
+A `horizonos.img` disk image file will be created in the root of the repository.
 
 ### Running HorizonOS
 
