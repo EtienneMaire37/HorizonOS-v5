@@ -16,6 +16,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install sudo
+      run: apt-get update && apt-get install -y sudo
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
