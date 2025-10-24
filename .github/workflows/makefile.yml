@@ -22,16 +22,8 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt update
-        sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
-        sudo apt install -y nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools
-
-    - name: Cache cross-compiler
-      uses: actions/cache@v3
-      id: compiler-cache
-      with:
-        path: ./i686elfgcc
-        key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.44-gcc-15.1.0-i686
+        sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo \
+          nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools
 
     - name: Cache cross-compiler
       uses: actions/cache@v3
@@ -42,6 +34,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-i686elfgcc-
 
+    # - name: Debug cache restore
+    #   run: |
+    #     echo "CACHE-HIT=${{ steps.compiler-cache.outputs.cache-hit }}"
+    #     ls -la i686elfgcc || true
+    #     du -sh i686elfgcc || true
+
     - name: Install cross-compiler
       if: steps.compiler-cache.outputs.cache-hit != 'true'
       run: sh install-cross-compiler.sh
@@ -49,7 +47,7 @@ jobs:
     - name: Build
       run: make all
 
-    - name: Upload file 
+    - name: Upload file
       uses: actions/upload-artifact@v4
       with:
         name: Disk image
