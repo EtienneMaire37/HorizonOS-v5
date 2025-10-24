@@ -23,7 +23,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo \
-          nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools
+          nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools qemu-utils
 
     - name: Cache cross-compiler
       uses: actions/cache@v3
@@ -51,4 +51,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Disk image
-        path: ./horizonos.img
+        path: ./horizonos.vdi
