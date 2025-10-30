@@ -5,7 +5,7 @@ bin/*
 src/tasks/bin/*
 root/
 src/libc/lib/*
-i686elfgcc/
+crossgcc/
 tmp/
 pci.ids
 custom-toolchain/

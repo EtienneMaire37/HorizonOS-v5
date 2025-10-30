@@ -9,36 +9,23 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: ubuntu:24.04
-      options: --privileged
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install sudo
-      run: apt-get update && apt-get install -y sudo
-
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo \
-          nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools qemu-utils
+        sudo apt update
+        sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
+        sudo apt install -y nasm xorriso mtools mkbootimg util-linux dosfstools mtools
 
     - name: Cache cross-compiler
       uses: actions/cache@v3
       id: compiler-cache
       with:
-        path: i686elfgcc
-        key: ${{ runner.os }}-i686elfgcc-${{ hashFiles('install-cross-compiler.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-i686elfgcc-
-
-    # - name: Debug cache restore
-    #   run: |
-    #     echo "CACHE-HIT=${{ steps.compiler-cache.outputs.cache-hit }}"
-    #     ls -la i686elfgcc || true
-    #     du -sh i686elfgcc || true
+        path: ./crossgcc
+        key: ${{ runner.os }}-compiler-${{ hashFiles('install-cross-compiler.sh') }}-binutils-2.44-gcc-15.1.0-x86_64
 
     - name: Install cross-compiler
       if: steps.compiler-cache.outputs.cache-hit != 'true'
@@ -47,8 +34,8 @@ jobs:
     - name: Build
       run: make all
 
-    - name: Upload file
+    - name: Upload file 
       uses: actions/upload-artifact@v4
       with:
         name: Disk image
-        path: ./horizonos.vdi
+        path: ./horizonos.iso

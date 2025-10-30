@@ -1,5 +1,5 @@
-export PREFIX="$(pwd)/i686elfgcc"
-export TARGET=i686-elf
+export PREFIX="$(pwd)/crossgcc"
+export TARGET=x86_64-elf
 export PATH="$PREFIX/bin:$PATH"
 
 set -x -e
@@ -25,7 +25,7 @@ make install
 cd ..
 
 mkdir -p gcc-build
-cd gcc-build
+cd gcc-build 
 ../gcc-15.1.0/configure --target=$TARGET --prefix="$PREFIX" --disable-nls --enable-languages=c,c++ --without-headers --disable-hosted-libstdcxx
 make all-gcc
 make all-target-libgcc

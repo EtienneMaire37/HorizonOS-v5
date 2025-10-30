@@ -39,7 +39,7 @@ These instructions assume a Debian-like environment. Feel free to adapt those in
 Install dependencies:
 ```bash
 sudo apt-get install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-dev texinfo
-sudo apt install -y nasm xorriso mtools grub-pc-bin grub2-common wget parted util-linux dosfstools qemu-utils
+sudo apt install -y nasm xorriso mtools mkbootimg util-linux dosfstools mtools
 ```
 
 ### Building
