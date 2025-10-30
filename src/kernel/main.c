@@ -104,6 +104,38 @@ bool time_initialized = false;
 #include "../libc/src/unistd.c"
 #include "../libc/src/time.c"
 
+FILE _stdin, _stdout, _stderr;
+
+uint8_t stdin_buffer[BUFSIZ];
+uint8_t stdout_buffer[BUFSIZ];
+uint8_t stderr_buffer[BUFSIZ];
+
+#define _init_file_flags(f) { f->fd = -1; f->buffer_size = BUFSIZ; f->buffer_index = 0; f->buffer_mode = 0; f->flags = FILE_FLAGS_BF_ALLOC; f->current_flags = 0; f->buffer_end_index = 0;}
+
+void kernel_init_std()
+{
+    stdin = &_stdin;
+    stdout = &_stdout;
+    stderr = &_stderr;
+
+    stdin->buffer = stdin_buffer;
+    stdout->buffer = stdout_buffer;
+    stderr->buffer = stderr_buffer;
+
+    _init_file_flags(stdin);
+    _init_file_flags(stdout);
+    _init_file_flags(stderr);
+    
+    stdin->fd = STDIN_FILENO;
+    stdin->flags = FILE_FLAGS_READ;
+
+    stdout->fd = STDOUT_FILENO;
+    stdout->flags = FILE_FLAGS_WRITE | FILE_FLAGS_LBF;
+
+    stderr->fd = STDERR_FILENO;
+    stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
+}
+
 int _gdtr, _idtr;
 
 void interrupt_handler()
@@ -115,6 +147,9 @@ extern BOOTBOOT bootboot;
 extern unsigned char environment[4096];
 extern uint8_t fb;
 
+atomic_flag print_spinlock = ATOMIC_FLAG_INIT;
+atomic_bool did_init_std = false;
+
 void _start()
 {
     if (!bootboot.fb_scanline) 
@@ -123,16 +158,25 @@ void _start()
     apic_init();
     uint16_t cpu_id = apic_get_cpu_id();
 
-    if (bootboot.bspid != cpu_id) // * Only one core supported for now
-        halt();
+    // if (bootboot.bspid != cpu_id) // * Only one core supported for now
+    //     halt();
 
-    const char* str = "Kernel booted successfully with BOOTBOOT";
-    size_t len = strlen(str);
-    write(STDERR_FILENO, str, len);
+    if (bootboot.bspid == cpu_id)
+    {
+        kernel_init_std();
 
-    // puts("Hello from a simple BOOTBOOT kernel");
+        fprintf(stderr, "Kernel booted successfully with BOOTBOOT\n");
+        fprintf(stderr, "Framebuffer : %ux%u (scanline %u bytes) at 0x%x\n", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
+        fprintf(stderr, "Type: %u\n", bootboot.fb_type);
 
-    // LOG(INFO, "Kernel booted successfully with BOOTBOOT");
+        atomic_store(&did_init_std, true);
+    }
+
+    while (!atomic_load(&did_init_std));
+
+    acquire_spinlock(&print_spinlock);
+    fprintf(stderr, "cpu_id : %u\n", cpu_id);
+    release_spinlock(&print_spinlock);
     
     halt();
 }
