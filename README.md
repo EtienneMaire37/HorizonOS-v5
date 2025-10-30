@@ -53,7 +53,7 @@ Or:
 make all CLOGLEVEL=-DLOGLEVEL=TRACE
 ```
 To build with E9 port logs.
-A `horizonos.img` disk image file will be created in the root of the repository.
+A `horizonos.iso` disk image file will be created in the root of the repository.
 
 ### Running HorizonOS
 

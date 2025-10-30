@@ -10,7 +10,7 @@ USERGCC :=
 CLOGLEVEL := 
 MKBOOTIMG := ./bootboot/mkbootimg/mkbootimg
 
-all: horizonos.img
+all: horizonos.iso
 
 run:
 	mkdir debug -p
@@ -19,13 +19,13 @@ run:
 	-cpu host                                  			\
 	-debugcon file:debug/latest.log						\
 	-m 64                                        		\
-	-drive file=horizonos.img,index=0,media=disk,format=raw \
+	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8 \
 	-d cpu \
 	-device VGA,edid=on,xres=1920,yres=1080
 
 	// src/tasks/bin/start.elf
-horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
+horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
 	mkdir bin -p
 
 	nasm -f elf64 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
@@ -66,9 +66,9 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	$(DIR2FAT32) bin/horizonos.bin 256 ./root
 	
-	$(MKBOOTIMG) src/kernel/bootboot.json horizonos.img
+	$(MKBOOTIMG) src/kernel/bootboot.json horizonos.iso
 
-	qemu-img convert -O vdi horizonos.img horizonos.vdi
+	qemu-img convert -O vdi horizonos.iso horizonos.vdi
 
 src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
@@ -181,7 +181,7 @@ rmbin:
 	rm -rf ./initrd.tar
 
 clean: rmbin
-	rm -f ./horizonos.img
+	rm -f ./horizonos.iso
 	rm -f ./resources/pci.ids
 	rm -rf ./bootboot
 	rm -rf ./root
