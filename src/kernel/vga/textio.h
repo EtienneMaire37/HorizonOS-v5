@@ -41,7 +41,7 @@
 
 #define TAB_LENGTH       4
 
-#define TTY_RES_X   100
+#define TTY_RES_X   92
 #define TTY_RES_Y   50
 
 uint32_t tty_cursor = 0;

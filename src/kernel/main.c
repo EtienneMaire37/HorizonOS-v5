@@ -196,10 +196,12 @@ void _start()
 
     initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
 
-    tty_font = psf_font_load_from_initrd("font.psf");
+    tty_font = psf_font_load_from_initrd("iso06.f14.psf");
 
     printf("Hello from kernel!\n");
-    printf("Hey this is a newline");
+    printf("Hey this is a newline\n\n");
+    for (int i = 0; i < 1000; i++)
+        printf("%c%c%c", 'A' + (i % 26), 'A' + (i % 26), 'A' + (i % 26));
 
     fflush(stdout);
 

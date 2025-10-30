@@ -97,15 +97,19 @@ void tty_clear_screen(char c)
 
 void tty_outc(char c)
 {
-	if (c == 0) return;
+	if (c == 0)
+	{
+		// tty_cursor++;
+		return;
+	}
 	
 	switch(c)
 	{
 	case '\n':
 		tty_cursor += TTY_RES_X;
 	case '\r':
-		tty_cursor /= TTY_RES_Y;
-		tty_cursor *= TTY_RES_Y;
+		tty_cursor /= TTY_RES_X;
+		tty_cursor *= TTY_RES_X;
 		break;
 	
 	default:
@@ -114,12 +118,10 @@ void tty_outc(char c)
 			tty_cursor++;
 			break;
 		}
-		
-		psf2_t* font_data = ((psf2_t*)tty_font.f->data);
 
 		uint32_t padding = 2;	// pixels
 
-		uint32_t width = (framebuffer.width - 2 * padding) / TTY_RES_Y * font_data->width / font_data->height;
+		uint32_t width = (framebuffer.width - 2 * padding) * psf_get_glyph_width(&tty_font) / TTY_RES_Y / psf_get_glyph_height(&tty_font);
 		uint32_t height = (framebuffer.height - 2 * padding) / TTY_RES_Y;
 
 		uint32_t x = padding + width * (tty_cursor % TTY_RES_X);
@@ -130,7 +132,7 @@ void tty_outc(char c)
 		tty_cursor++;
 	}
 
-	tty_cursor %= TTY_RES_X * TTY_RES_Y;
+	// tty_cursor %= TTY_RES_X * TTY_RES_Y;
 }
 
 void tty_set_color(uint8_t fg_color, uint8_t bg_color)

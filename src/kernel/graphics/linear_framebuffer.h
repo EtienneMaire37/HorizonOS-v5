@@ -91,7 +91,7 @@ void framebuffer_render_psf2_char(linear_framebuffer_t* buffer, uint32_t x, uint
     const uint32_t  glyph_width = psf_get_glyph_width(font),
                     glyph_height = psf_get_glyph_height(font);
 
-    uint8_t bytes_per_row = (glyph_width + 7) / 8;
+    const uint8_t bytes_per_row = (glyph_width + 7) / 8;
     uint8_t* glyph = (uint8_t*)psf_get_glyph_data(font) + psf_get_bytes_per_glyph(font) * glyph_index;
 
     for (uint32_t i = y; i < y + height; i++) 
