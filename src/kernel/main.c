@@ -206,8 +206,19 @@ void _start()
 
         fpu_init_defaults();
 
+        atomic_store(&did_init_std, true);
+    }
+
+    while (!atomic_load(&did_init_std));
+
+    acquire_spinlock(&print_spinlock);
+
+    LOG(INFO, "cpu_id : %u", cpu_id);
+
+    {
         if (cpuid_highest_function_parameter >= 1)
         {
+            uint32_t ebx, ecx = 0, edx; // Just so gcc doesn't complain but cant possibly be used uninitialized
             cpuid(1, cpuid_highest_function_parameter, ebx, ecx, edx);
             if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
             {
@@ -215,14 +226,8 @@ void _start()
                 enable_avx();
             }
         }
-
-        atomic_store(&did_init_std, true);
     }
-
-    while (!atomic_load(&did_init_std));
-
-    acquire_spinlock(&print_spinlock);
-    LOG(INFO, "cpu_id : %u", cpu_id);
+    
     release_spinlock(&print_spinlock);
 
     initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
