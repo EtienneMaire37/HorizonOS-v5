@@ -41,10 +41,8 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	-Wno-stringop-overflow -Wno-unused-variable \
 	$(CLOGLEVEL)
 
-	$(CROSSLD) -r -b binary -o bin/font.o resources/font.psf
-
 	$(CROSSGCC) -nostdlib -n -T src/kernel/link.ld -o bin/kernel.elf -ffreestanding \
-	bin/kernel.o bin/font.o \
+	bin/kernel.o \
 	"bin/gdt.o" \
 	"bin/idt.o"  \
 	"bin/paging.o" \
@@ -59,7 +57,7 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	rm -f src/tasks/bin/*.o
 	cp src/tasks/bin/ ./bin/initrd/ -r
-	cp resources/pci.ids ./bin/initrd/pci.ids
+	cp resources/* ./bin/initrd/
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
 	mkdir -p ./root

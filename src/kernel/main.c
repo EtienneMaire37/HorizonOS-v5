@@ -83,6 +83,7 @@ bool time_initialized = false;
 #include "cpu/registers.h"
 #include "multicore/spinlock.h"
 #include "../libc/src/misc.h"
+#include "graphics/linear_framebuffer.h"
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
@@ -178,6 +179,12 @@ void _start()
         LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%x", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
         LOG(INFO, "Type: %s", fb_type_string[bootboot.fb_type]);
 
+        framebuffer.width = bootboot.fb_width;
+        framebuffer.height = bootboot.fb_height;
+        framebuffer.stride = bootboot.fb_scanline;
+        framebuffer.address = (uintptr_t)bootboot.fb_ptr;
+        framebuffer.format = bootboot.fb_type;
+
         atomic_store(&did_init_std, true);
     }
 
@@ -187,9 +194,14 @@ void _start()
     LOG(INFO, "cpu_id : %u", cpu_id);
     release_spinlock(&print_spinlock);
 
-    // write(STDERR_FILENO, (void*)bootboot.initrd_ptr, bootboot.initrd_size);
-
     initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
-    
+
+    tty_font = psf_font_load_from_initrd("font.psf");
+
+    printf("Hello from kernel!\n");
+    printf("Hey this is a newline");
+
+    fflush(stdout);
+
     halt();
 }

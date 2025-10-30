@@ -41,10 +41,13 @@
 
 #define TAB_LENGTH       4
 
-uint16_t tty_cursor = 0;
+#define TTY_RES_X   100
+#define TTY_RES_Y   50
+
+uint32_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
 
-extern volatile psf2_t _binary_resources_font_psf_start;
+psf_font_t tty_font;
 
 void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
 void tty_hide_cursor();
