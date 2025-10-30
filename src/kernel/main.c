@@ -84,6 +84,8 @@ bool time_initialized = false;
 #include "multicore/spinlock.h"
 #include "../libc/src/misc.h"
 #include "graphics/linear_framebuffer.h"
+#include "cpu/cpuid.h"
+#include "fpu/sse.h"
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
@@ -102,6 +104,7 @@ bool time_initialized = false;
 
 #include "vga/textio.c"
 #include "pic/apic.c"
+#include "fpu/fpu.c"
 
 #include "../libc/src/kernel.c"
 #include "../libc/src/stdio.c"
@@ -162,6 +165,8 @@ const char* fb_type_string[] =
 
 void _start()
 {
+    enable_sse();
+
     if (!bootboot.fb_scanline) 
         abort();
 
@@ -184,6 +189,32 @@ void _start()
         framebuffer.stride = bootboot.fb_scanline;
         framebuffer.address = (uintptr_t)bootboot.fb_ptr;
         framebuffer.format = bootboot.fb_type;
+
+        tty_cursor = 0;
+
+        cpuid_highest_function_parameter = 0xffffffff;
+        has_cpuid = true;
+        uint32_t ebx, ecx, edx;
+        cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
+
+        *(uint32_t*)&manufacturer_id_string[0] = ebx;
+        *(uint32_t*)&manufacturer_id_string[4] = edx;
+        *(uint32_t*)&manufacturer_id_string[8] = ecx;
+        manufacturer_id_string[12] = 0;
+
+        LOG(INFO, "cpu manufacturer id : \"%s\"", manufacturer_id_string);
+
+        fpu_init_defaults();
+
+        if (cpuid_highest_function_parameter >= 1)
+        {
+            cpuid(1, cpuid_highest_function_parameter, ebx, ecx, edx);
+            if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
+            {
+                LOG(INFO, "Enabling AVX");
+                enable_avx();
+            }
+        }
 
         atomic_store(&did_init_std, true);
     }
