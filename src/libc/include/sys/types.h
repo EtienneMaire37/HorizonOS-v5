@@ -1,24 +1,20 @@
 #pragma once
 
-#define INT64   long long
-#define INT32   int
-#define UINT32  unsigned int
+typedef int pid_t;
+typedef long unsigned int size_t;
 
-typedef INT32 pid_t;
-typedef UINT32 size_t;
+typedef int ssize_t;
+typedef int off_t;
 
-typedef INT32 ssize_t;
-typedef INT32 off_t;
+typedef int dev_t;
+typedef long long ino_t;
 
-typedef INT32 dev_t;
-typedef INT64 ino_t;
+typedef int gid_t;
+typedef unsigned int mode_t;
+typedef int nlink_t;
+typedef int uid_t;
 
-typedef INT32 gid_t;
-typedef UINT32 mode_t;
-typedef INT32 nlink_t;
-typedef INT32 uid_t;
+typedef int blksize_t;
+typedef int blkcnt_t;
 
-typedef INT32 blksize_t;
-typedef INT32 blkcnt_t;
-
-typedef UINT32 time_t;
+typedef unsigned int time_t;

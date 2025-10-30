@@ -9,7 +9,7 @@
 #define EXIT_SUCCESS 0
 #define MB_CUR_MAX   1  // Only ASCII is supported
 
-typedef unsigned int size_t;
+typedef long unsigned int size_t;
 typedef char wchar_t;
 
 void exit(int r);

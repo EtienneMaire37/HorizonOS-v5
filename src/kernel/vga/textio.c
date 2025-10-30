@@ -1,5 +1,8 @@
 #pragma once
 
+#include "textio.h"
+#include "vga.h"
+
 void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 {
 // ~ bit 6,7 : reserved; bit 5 : (0: show, 1: hide); bit 0-4: scanline_start
@@ -216,7 +219,7 @@ void tty_outc(char c)
 		tty_cursor++;
 	}
 
-	bool scrolled = false;
+	// bool scrolled = false;
 	while ((tty_cursor / 80) >= 25)	// Last line
 	{
 		memmove(&tty_vram[0], &tty_vram[80], 80 * 25 * sizeof(tty_char_t));
@@ -229,7 +232,7 @@ void tty_outc(char c)
 
 		tty_cursor -= 80;
 
-		scrolled = true;
+		// scrolled = true;
 	}
 
 	tty_cursor %= 80 * 25;

@@ -232,11 +232,18 @@ int atoi(const char* str)
 }
 
 #ifdef BUILDING_KERNEL
-#define abort() (printf("Kernel aborted. (func: \"%s\"; line: %d; file: \"%s\")\n", __CURRENT_FUNC__, __LINE__, __FILE__), halt())
+void abort()
+{
+    printf("Kernel aborted.");
+    fflush(stdout);
+    halt();
+    __builtin_unreachable();
+}
 #else
 void abort()
 {
     exit(EXIT_FAILURE);
+    __builtin_unreachable();
 }
 #endif
 

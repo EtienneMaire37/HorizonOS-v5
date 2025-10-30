@@ -325,7 +325,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 break;
             case 'p':
                 func_s("0x");
-                printf_x((uint32_t)va_arg(args, void*), 1);
+                printf_x((uintptr_t)va_arg(args, void*), 1);
                 break;
             case 'X':
                 if (next_arg_64)

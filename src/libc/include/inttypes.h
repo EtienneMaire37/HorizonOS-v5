@@ -10,4 +10,4 @@ typedef unsigned char uint8_t;
 typedef char int8_t;
 
 typedef int64_t intptr_t;
-typedef uint32_t uintptr_t;
+typedef uint64_t uintptr_t;
