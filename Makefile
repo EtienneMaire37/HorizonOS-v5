@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m32 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=i686 # -fbuiltin -fno-builtin-fork
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=x86-64
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./crossgcc/bin/x86_64-elf-gcc
 CROSSLD := ./crossgcc/bin/x86_64-elf-ld
@@ -21,47 +21,37 @@ run:
 	-m 64                                        		\
 	-drive file=horizonos.img,index=0,media=disk,format=raw \
 	-smp 8 \
-	-d cpu
+	-d cpu \
+	-device VGA,edid=on,xres=1920,yres=1080
 
 	// * src/tasks/bin/start.elf resources/pci.ids
 horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32)
 	mkdir bin -p
 
-# 	nasm -f elf32 -o "bin/kernelentry.o" "src/kernel/kernelentry.asm"
-# 	nasm -f elf32 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
-# 	nasm -f elf32 -o "bin/idt.o" "src/kernel/int/idt.asm"
-# 	nasm -f elf32 -o "bin/paging.o" "src/kernel/paging/paging.asm"
-# 	nasm -f elf32 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
-# 	nasm -f elf32 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
-# 	nasm -f elf32 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
-	 
-# 	$(CROSSGCC) -c "src/kernel/kmain.c" -o "bin/kernel.o" $(CFLAGS) \
-# 	-Ofast -Werror \
-# 	-Wno-stringop-overflow \
-# 	$(CLOGLEVEL)
-	
-# 	$(CROSSGCC) -T src/kernel/link.ld \
-# 	-ffreestanding -nostdlib \
-# 	"bin/kernelentry.o" \
-#  	"bin/kernel.o" \
-# 	"bin/gdt.o" \
-# 	"bin/idt.o"  \
-# 	"bin/paging.o" \
-#     "bin/context_switch.o" \
-#     "bin/registers.o"  \
-# 	"bin/sse.o"  \
-# 	-lgcc
+	nasm -f elf64 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
+	nasm -f elf64 -o "bin/idt.o" "src/kernel/int/idt.asm"
+	nasm -f elf64 -o "bin/paging.o" "src/kernel/paging/paging.asm"
+	nasm -f elf64 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
+	nasm -f elf64 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
+	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
-	-Wall -fpic -ffreestanding -fno-stack-protector -nostdinc -nostdlib -I./bootboot/dist/ -mno-red-zone \
+	-Wall -fpic $(CFLAGS) -fno-stack-protector -I./bootboot/dist/ \
 	-Ofast \
 	-Wno-stringop-overflow \
 	$(CLOGLEVEL)
 
 	$(CROSSLD) -r -b binary -o bin/font.o resources/font.psf
 
-	$(CROSSLD) -nostdlib -n -T src/kernel/link.ld bin/kernel.o bin/font.o -o bin/kernel.elf \
-	-nostdlib
+	$(CROSSGCC) -nostdlib -n -T src/kernel/link.ld -o bin/kernel.elf -ffreestanding \
+	bin/kernel.o bin/font.o \
+	"bin/gdt.o" \
+	"bin/idt.o"  \
+	"bin/paging.o" \
+	"bin/context_switch.o" \
+	"bin/registers.o"  \
+	"bin/sse.o"  \
+	-lgcc
 
 	$(CROSSSTRIP) -s -K mmio -K fb -K bootboot -K environment -K initstack bin/kernel.elf
 
@@ -81,6 +71,8 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32)
 	$(DIR2FAT32) bin/horizonos.bin 256 ./root
 	
 	$(MKBOOTIMG) src/kernel/bootboot.json horizonos.img
+
+	qemu-img convert -O vdi horizonos.img horizonos.vdi
 
 src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
@@ -155,7 +147,7 @@ src/tasks/bin/shell: src/tasks/src/shell/* src/tasks/link.ld src/libc/lib/libc.a
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	nasm -f elf32 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
+	nasm -f elf64 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
 	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O3 $(CFLAGS)
 	$(CROSSGCC) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -o "src/libc/lib/libc.o" -r
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"

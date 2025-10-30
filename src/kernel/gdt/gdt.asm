@@ -1,4 +1,4 @@
-bits 32
+bits 64
 section .text
 
 global load_gdt
@@ -6,7 +6,10 @@ extern _gdtr
 ; void LoadGDT()
 load_gdt:
     lgdt  [_gdtr]
-    jmp 0x08:.reload_seg
+    ; jmp far 0x08:.reload_seg
+    push 0x08
+    push .reload_seg
+    retf
 .reload_seg:
     mov   ax, 0x10
     mov   ds, ax

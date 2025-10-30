@@ -1,4 +1,4 @@
-bits 32
+bits 64
 section .text
 
 global load_idt
@@ -59,34 +59,49 @@ INT_NO_ERROR_CODE 29
 INT_ERROR_CODE    30
 INT_NO_ERROR_CODE 31
 
-; IRQs
-%assign i 32
-    %rep    16
-        INT_NO_ERROR_CODE i
-    %assign i i+1 
-    %endrep
+; !! Change this to 64bit IDT entries ASAP
+; ; ; IRQs
+; ; %assign i 32
+; ;     %rep    16
+; ;         INT_NO_ERROR_CODE i
+; ;     %assign i i+1 
+; ;     %endrep
 
-; All the other interrupts
-%assign i 48
-    %rep    (256 - 48)
-        INT_NO_ERROR_CODE i
-    %assign i i+1 
-    %endrep
+; ; ; All the other interrupts
+; ; %assign i 48
+; ;     %rep    (256 - 48)
+; ;         INT_NO_ERROR_CODE i
+; ;     %assign i i+1 
+; ;     %endrep
 
-global interrupt_table
-interrupt_table:
-    %assign i 0 
-    %rep    256
-        dd INT_%+i
-    %assign i i+1 
-    %endrep
+; ; global interrupt_table
+; ; interrupt_table:
+; ;     %assign i 0 
+; ;     %rep    256
+; ;         dd INT_%+i
+; ;     %assign i i+1 
+; ;     %endrep
 
 _interrupt_handler:
-    pusha
+    push rax
+    push rcx
+    push rdx
+    push rbx
+    push rbp
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
 
-    xor eax, eax
+    xor rax, rax
     mov ax, ds
-    push eax
+    push rax
 
     mov ax, 0x10
     mov ds, ax
@@ -95,26 +110,41 @@ _interrupt_handler:
     mov gs, ax
     mov ss, ax
 
-    mov eax, cr2
-    push eax
+    mov rax, cr2
+    push rax
 
-    mov eax, cr3
-    push eax
+    mov rax, cr3
+    push rax
     
-    push esp
+    push rsp
     call interrupt_handler
-    pop esp
+    pop rsp
     
-    add esp, 8  ; skip cr2 and cr3
+    add rsp, 8  ; skip cr2 and cr3
 
-    pop eax
+    pop rax
     mov ds, ax
     mov es, ax
     mov fs, ax
     mov gs, ax
 
-    popa
-    add esp, 8
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    pop rbp
+    pop rbx
+    pop rdx
+    pop rcx
+    pop rax
+    
+    add rsp, 8
 global iret_instruction
 iret_instruction:
     iret

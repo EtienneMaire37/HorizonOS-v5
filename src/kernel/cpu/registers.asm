@@ -1,15 +1,15 @@
-bits 32
+bits 64
 section .text
 
-global get_eflags
-get_eflags:
-    pushfd
-    pop eax
+global get_rflags
+get_rflags:
+    pushfq
+    pop rax
     ret
 
-global set_eflags
-set_eflags:
-    mov eax, [esp + 4]
-    push eax
-    popfd
+global set_rflags
+set_rflags:
+    mov rax, [rsp + 4]
+    push rax
+    popfq
     ret

@@ -1,29 +1,29 @@
 section .text
-bits 32
+bits 64
 
 global enable_avx
 enable_avx:
-    push ebp
-    mov ebp, esp
+    push rbp
+    mov rbp, rsp
 
-    push eax
-    push ecx
-    push edx
+    push rax
+    push rcx
+    push rdx
 
-    mov eax, cr4
-    or eax, (1 << 18)   ; * OSXSAVE
-    mov cr4, eax
+    mov rax, cr4
+    or rax, (1 << 18)   ; * OSXSAVE
+    mov cr4, rax
 
-    xor ecx, ecx
+    xor rcx, rcx
     xgetbv
     or eax, 0b111 ; * AVX | SSE | X87
     xsetbv
 
-    pop edx
-    pop ecx
-    pop eax
+    pop rdx
+    pop rcx
+    pop rax
 
-    mov esp, ebp
-    pop ebp
+    mov rsp, rbp
+    pop rbp
 
     ret
