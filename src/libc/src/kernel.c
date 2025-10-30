@@ -159,9 +159,11 @@ int isatty(int fd)
 int tcgetattr(int fildes, struct termios* termios_p)
 {
     abort();
+    return -1;
 }
 
 int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
 {
     abort();
+    return -1;
 }

@@ -129,7 +129,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             return;
         }
         bool first0 = true;
-        uint16_t digits = 0;
+        // uint16_t digits = 0;
         long double div = 1;
         while (val / div >= 1) div *= 10;
         div /= 10;
@@ -161,7 +161,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             return;
         }
         bool first0 = true;
-        uint16_t digits = 0;
+        // uint16_t digits = 0;
         double div = 1;
         while (val / div >= 1) div *= 10;
         div /= 10;
@@ -226,7 +226,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         func('.');
         length++;
         uint64_t mul = 10;
-        uint64_t max_mul = 10;
+        // uint64_t max_mul = 10;
         long double _p = p;
         uint16_t digits = 0;
         while (_p > LONG_DOUBLE_PRINT_LIMIT && digits < LONG_DOUBLE_PRINT_MAX_DIGITS)

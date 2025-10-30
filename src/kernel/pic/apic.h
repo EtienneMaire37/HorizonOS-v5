@@ -77,4 +77,4 @@ struct local_apic_registers
     uint32_t divide_configuration_register;
 } __attribute__((packed));
 
-volatile struct local_apic_registers lapic;
+volatile struct local_apic_registers* lapic;

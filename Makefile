@@ -36,9 +36,9 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32)
 	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
-	-Wall -fpic $(CFLAGS) -fno-stack-protector -I./bootboot/dist/ \
+	-Wall -Werror -fpic $(CFLAGS) -fno-stack-protector -I./bootboot/dist/ \
 	-Ofast \
-	-Wno-stringop-overflow \
+	-Wno-stringop-overflow -Wno-unused-variable \
 	$(CLOGLEVEL)
 
 	$(CROSSLD) -r -b binary -o bin/font.o resources/font.psf

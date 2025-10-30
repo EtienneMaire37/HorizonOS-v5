@@ -74,6 +74,10 @@ uint16_t system_thousands = 0;
 bool time_initialized = false;
 
 #include "io/io.h"
+#include "cpu/cpuid.h"
+#include "cpu/msr.h"
+#include "cpu/registers.h"
+#include "multicore/spinlock.h"
 #include "../libc/src/misc.h"
 
 #include "../libc/include/errno.h"
@@ -91,6 +95,8 @@ bool time_initialized = false;
 #include "time/ktime.h"
 
 #include "vga/textio.c"
+#include "pic/apic.c"
+
 #include "../libc/src/kernel.c"
 #include "../libc/src/stdio.c"
 #include "../libc/src/stdlib.c"
@@ -111,12 +117,18 @@ extern uint8_t fb;
 
 void _start()
 {
-    debug_outc('[');
-
     if (!bootboot.fb_scanline) 
-    {
         abort();
-    }
+
+    apic_init();
+    uint16_t cpu_id = apic_get_cpu_id();
+
+    if (bootboot.bspid != cpu_id) // * Only one core supported for now
+        halt();
+
+    const char* str = "Kernel booted successfully with BOOTBOOT";
+    size_t len = strlen(str);
+    write(STDERR_FILENO, str, len);
 
     // puts("Hello from a simple BOOTBOOT kernel");
 
