@@ -1,11 +1,13 @@
 #pragma once
 
+#include "../files/ustar.h"
+
 typedef uint8_t tar_file_type;
 
 typedef struct initrd_file
 {
     char* name;
-    uint32_t size;
+    uint64_t size;
     uint8_t* data;
     tar_file_type type;
     char* link;
@@ -17,18 +19,15 @@ typedef struct initrd_file
 initrd_file_t initrd_files[MAX_INITRD_FILES];
 uint8_t initrd_files_count = 0;
 
-void initrd_parse()
+void initrd_parse(uintptr_t initrd_start, uintptr_t initrd_end)
 {
     LOG(INFO, "Parsing initrd");
 
-    uint32_t initrd_start = initrd_module->mod_start;
-    uint32_t initrd_end = initrd_module->mod_end;
-
-    uint32_t initrd_size = initrd_end - initrd_start;
+    intptr_t initrd_size = initrd_end - initrd_start;
 
     LOG(INFO, "Initrd size : %u bytes", initrd_size);
 
-    uint32_t initrd_offset = 0;
+    intptr_t initrd_offset = 0;
 
     while (initrd_offset < initrd_size)
     {
@@ -49,12 +48,9 @@ void initrd_parse()
         //     continue;
 
         initrd_files[initrd_files_count].name = &header->name[0];
-        int str_len = strlen(initrd_files[initrd_files_count].name);
-        for (int i = 0; i < str_len; i++)
-        {
-            if (initrd_files[initrd_files_count].name[i] == '/' && !initrd_files[initrd_files_count].name[i + 1])
-                initrd_files[initrd_files_count].name[i] = 0;
-        }
+        size_t len = strlen(initrd_files[initrd_files_count].name);
+        if (len >= 1 && initrd_files[initrd_files_count].name[len - 1] == '/')
+            initrd_files[initrd_files_count].name[len - 1] = 0;
         if (strcmp(initrd_files[initrd_files_count].name, ".") != 0)
         {
             initrd_files[initrd_files_count].size = file_size;
@@ -64,7 +60,7 @@ void initrd_parse()
             initrd_files[initrd_files_count].type = header->type;
             initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
 
-            uint64_t mode = ustar_get_number(header->mode, 8);
+            uint64_t mode = ustar_get_number((char*)header->mode, 8);
             initrd_files[initrd_files_count].mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
             ((mode & TUREAD) ? S_IRUSR : 0) | ((mode & TUEXEC) ? S_IXUSR : 0) | // * | ((mode & TUWRITE) ? S_IWUSR : 0)
             ((mode & TGREAD) ? S_IRGRP : 0) | ((mode & TGEXEC) ? S_IXGRP : 0) | // * | ((mode & TGWRITE) ? S_IWGRP : 0)

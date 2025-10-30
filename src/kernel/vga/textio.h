@@ -1,5 +1,8 @@
 #pragma once
 
+#include "../files/psf.h"
+
+// VGA text mode 3 colors
 #define FG_BLACK         0x00
 #define FG_BLUE          0x01
 #define FG_GREEN         0x02
@@ -41,13 +44,7 @@
 uint16_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
 
-typedef struct tty_char
-{
-    uint8_t _char;
-    uint8_t color;
-} tty_char_t;
-
-tty_char_t* tty_vram = (tty_char_t*)0xb8000;
+extern volatile psf2_t _binary_resources_font_psf_start;
 
 void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
 void tty_hide_cursor();
@@ -56,4 +53,4 @@ void tty_set_cursor_pos(uint16_t pos);
 void tty_update();
 void tty_clear_screen(char c);
 void tty_set_color(uint8_t fg_color, uint8_t bg_color);
-void outc(char c);
+void tty_outc(char c);

@@ -6,6 +6,10 @@
 
 #include <bootboot.h>
 
+extern BOOTBOOT bootboot;
+extern uint8_t environment[4096];
+extern uint8_t fb;
+
 #define enable_interrupts()     asm volatile ("sti")
 #define disable_interrupts()    asm volatile ("cli")
 
@@ -93,6 +97,7 @@ bool time_initialized = false;
 
 #include "debug/out.h"
 #include "time/ktime.h"
+#include "initrd/initrd.h"
 
 #include "vga/textio.c"
 #include "pic/apic.c"
@@ -143,12 +148,16 @@ void interrupt_handler()
     ;
 }
 
-extern BOOTBOOT bootboot;
-extern unsigned char environment[4096];
-extern uint8_t fb;
-
 atomic_flag print_spinlock = ATOMIC_FLAG_INIT;
 atomic_bool did_init_std = false;
+
+const char* fb_type_string[] = 
+{
+    "FB_ARGB",
+    "FB_RGBA",
+    "FB_ABGR",
+    "FB_BGRA"
+};
 
 void _start()
 {
@@ -158,16 +167,16 @@ void _start()
     apic_init();
     uint16_t cpu_id = apic_get_cpu_id();
 
-    // if (bootboot.bspid != cpu_id) // * Only one core supported for now
-    //     halt();
+    if (bootboot.bspid != cpu_id) // * Only one core supported for now
+        halt();
 
     if (bootboot.bspid == cpu_id)
     {
         kernel_init_std();
 
-        fprintf(stderr, "Kernel booted successfully with BOOTBOOT\n");
-        fprintf(stderr, "Framebuffer : %ux%u (scanline %u bytes) at 0x%x\n", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
-        fprintf(stderr, "Type: %u\n", bootboot.fb_type);
+        LOG(INFO, "Kernel booted successfully with BOOTBOOT");
+        LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%x", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
+        LOG(INFO, "Type: %s", fb_type_string[bootboot.fb_type]);
 
         atomic_store(&did_init_std, true);
     }
@@ -175,43 +184,12 @@ void _start()
     while (!atomic_load(&did_init_std));
 
     acquire_spinlock(&print_spinlock);
-    fprintf(stderr, "cpu_id : %u\n", cpu_id);
+    LOG(INFO, "cpu_id : %u", cpu_id);
     release_spinlock(&print_spinlock);
+
+    // write(STDERR_FILENO, (void*)bootboot.initrd_ptr, bootboot.initrd_size);
+
+    initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
     
     halt();
 }
-
-// typedef struct 
-// {
-//     uint32_t magic;
-//     uint32_t version;
-//     uint32_t headersize;
-//     uint32_t flags;
-//     uint32_t numglyph;
-//     uint32_t bytesperglyph;
-//     uint32_t height;
-//     uint32_t width;
-//     uint8_t glyphs;
-// } __attribute__((packed)) psf2_t;
-
-// extern volatile psf2_t _binary_resources_font_psf_start;
-
-// void puts(char* s)
-// {
-//     int x,y,kx=0,line,mask,offs;
-//     int bpl=(_binary_resources_font_psf_start.width+7)/8;
-//     while (*s) 
-//     {
-//         uint8_t* glyph = (uint8_t*)&_binary_resources_font_psf_start + _binary_resources_font_psf_start.headersize + (*s > 0 && *s < _binary_resources_font_psf_start.numglyph ? *s : 0) * _binary_resources_font_psf_start.bytesperglyph;
-//         offs = (kx * (_binary_resources_font_psf_start.width+1) * 4);
-//         for(y=0;y<_binary_resources_font_psf_start.height;y++) {
-//             line=offs; mask=1<<(_binary_resources_font_psf_start.width-1);
-//             for(x=0;x<_binary_resources_font_psf_start.width;x++) {
-//                 *((uint32_t*)((uint64_t)&fb+line))=((int)*glyph) & (mask)?0xFFFFFF:0;
-//                 mask>>=1; line+=4;
-//             }
-//             *((uint32_t*)((uint64_t)&fb+line))=0; glyph+=bpl; offs+=bootboot.fb_scanline;
-//         }
-//         s++; kx++;
-//     }
-// }

@@ -24,8 +24,8 @@ run:
 	-d cpu \
 	-device VGA,edid=on,xres=1920,yres=1080
 
-	// * src/tasks/bin/start.elf resources/pci.ids
-horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32)
+	// src/tasks/bin/start.elf
+horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
 	mkdir bin -p
 
 	nasm -f elf64 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
@@ -62,11 +62,9 @@ horizonos.img: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32)
 	cp resources/pci.ids ./bin/initrd/pci.ids
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
 
-	mkdir -p ./root/boot/
-
-	tar --transform 's|^\./||' -cvf ./root/boot/initrd.tar -C ./bin/initrd .
+	mkdir -p ./root
 	
-	cp ./bin/kernel.elf ./root/boot/kernel.elf
+	cp ./bin/kernel.elf ./bin/initrd/kernel.elf
 
 	$(DIR2FAT32) bin/horizonos.bin 256 ./root
 	
@@ -188,3 +186,4 @@ clean: rmbin
 	rm -f ./horizonos.img
 	rm -f ./resources/pci.ids
 	rm -rf ./bootboot
+	rm -rf ./root
