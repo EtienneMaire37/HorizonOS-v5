@@ -77,7 +77,10 @@ void framebuffer_fill_rect(linear_framebuffer_t* buffer, uint32_t x, uint32_t y,
     }
 }
 
-void framebuffer_render_psf2_char(linear_framebuffer_t* buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height, psf_font_t* font, char c)
+void framebuffer_render_psf2_char(
+    linear_framebuffer_t* buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height, 
+    psf_font_t* font, char c,
+    uint8_t r, uint8_t g, uint8_t b)
 {
     if (!font) return;
     if (!font->f) return;
@@ -107,7 +110,7 @@ void framebuffer_render_psf2_char(linear_framebuffer_t* buffer, uint32_t x, uint
             bool put = (glyph_row[byte_index] >> bit_index) & 1;
 
             if (put)
-                framebuffer_setpixel(buffer, j, i, 255, 255, 255, 0);
+                framebuffer_setpixel(buffer, j, i, r, g, b, 0);
         }
     }
 }

@@ -3,7 +3,7 @@
 #include "textio.h"
 #include "vga.h"
 
-void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
+inline void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 {
 // // ~ bit 6,7 : reserved; bit 5 : (0: show, 1: hide); bit 0-4: scanline_start
 // 	vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) & 0b11000000) | scanline_start);
@@ -11,32 +11,33 @@ void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 // 	vga_write_port_3d4(VGA_REG_3D4_CURSOR_END, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_END) & 0b10000000) | scanline_end);
 }
 
-void tty_hide_cursor()
+inline void tty_hide_cursor()
 {
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) | (1 << 5));
 }
 
-void tty_reset_cursor()
+inline void tty_reset_cursor()
 {
 	// tty_show_cursor(14, 15);
 }
 
-void tty_set_cursor_pos(uint16_t pos)
+inline void tty_set_cursor_pos(uint16_t pos)
 {
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_LOW, pos & 0xff);
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_HIGH, (pos >> 8) & 0xff);
 }
 
-void tty_update_cursor()
+inline void tty_update_cursor()
 {
 	tty_set_cursor_pos(tty_cursor);
 }
 
-void tty_clear_screen(char c)
+inline void tty_clear_screen(char c)
 {
 	if (c == 0 || c == ' ')
 	{
-		framebuffer_fill_rect(&framebuffer, 0, 0, framebuffer.width, framebuffer.height, 0, 0, 0, 0);
+		srgb_t bg_color = vga_get_bg_color(tty_color);
+		framebuffer_fill_rect(&framebuffer, 0, 0, framebuffer.width, framebuffer.height, bg_color.r, bg_color.g, bg_color.b, 0);
 		tty_cursor = 0;
 		goto end;
 	}
@@ -101,6 +102,13 @@ end:
 //     return 0xff;
 // }
 
+inline void tty_set_color(uint8_t fg_color, uint8_t bg_color)
+{
+	fflush(stdout);
+
+	tty_color = (fg_color & 0x0f) | (bg_color & 0xf0);
+}
+
 inline uint32_t tty_get_character_width()
 {
 	return (framebuffer.width - 2 * tty_padding) / TTY_RES_X;
@@ -162,16 +170,15 @@ inline void tty_outc(char c)
 		uint32_t x = tty_get_character_pos_x(tty_cursor);
 		uint32_t y = tty_get_character_pos_y(tty_cursor);
 
-		framebuffer_fill_rect(&framebuffer, x, y, width, height, 0, 0, 0, 0);
-		framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c);
+		srgb_t bg_color = vga_get_bg_color(tty_color);
+		framebuffer_fill_rect(&framebuffer, x, y, width, height, bg_color.r, bg_color.g, bg_color.b, 0);
+
+		srgb_t fg_color = vga_get_fg_color(tty_color);
+		framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c,
+			fg_color.r,
+			fg_color.g,
+			fg_color.b);
 
 		tty_cursor++;
 	}
-}
-
-void tty_set_color(uint8_t fg_color, uint8_t bg_color)
-{
-	// fflush(stdout);
-
-	// tty_color = (fg_color & 0x0f) | (bg_color & 0xf0);
 }

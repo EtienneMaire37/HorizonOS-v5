@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../graphics/color.h"
+
 // ! VGA Registers are not guaranteed to work under UEFI
 
 #define VGA_REG_3C4_RESET                 0x00
@@ -43,6 +45,41 @@
 #define VGA_REG_3D4_VERTICAL_BLANK_END        0x16
 #define VGA_REG_3D4_MODE_CONTROL              0x17
 #define VGA_REG_3D4_LINE_COMPARE              0x18
+
+srgb_t vga_colors[16] = 
+{
+    {0x00, 0x00, 0x00}, // 0: Black
+    {0x00, 0x00, 0xAA}, // 1: Blue
+    {0x00, 0xAA, 0x00}, // 2: Green
+    {0x00, 0xAA, 0xAA}, // 3: Cyan
+    {0xAA, 0x00, 0x00}, // 4: Red
+    {0xAA, 0x00, 0xAA}, // 5: Magenta
+    {0xAA, 0x55, 0x00}, // 6: Brown (Dark Yellow)
+    {0xAA, 0xAA, 0xAA}, // 7: Light Gray
+    {0x55, 0x55, 0x55}, // 8: Dark Gray
+    {0x55, 0x55, 0xFF}, // 9: Light Blue
+    {0x55, 0xFF, 0x55}, // 10: Light Green
+    {0x55, 0xFF, 0xFF}, // 11: Light Cyan
+    {0xFF, 0x55, 0x55}, // 12: Light Red
+    {0xFF, 0x55, 0xFF}, // 13: Light Magenta
+    {0xFF, 0xFF, 0x55}, // 14: Yellow
+    {0xFF, 0xFF, 0xFF}  // 15: White
+};
+
+inline srgb_t vga_get_color(uint8_t vga_color_code)
+{
+    return vga_colors[vga_color_code & 0x0f];
+}
+
+inline srgb_t vga_get_bg_color(uint8_t vga_color_code)
+{
+    return vga_get_color(vga_color_code >> 4);
+}
+
+inline srgb_t vga_get_fg_color(uint8_t vga_color_code)
+{
+    return vga_get_color(vga_color_code);
+}
 
 void vga_write_port_3c0(uint8_t reg, uint8_t data)
 {
