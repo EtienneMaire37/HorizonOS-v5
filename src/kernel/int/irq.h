@@ -3,7 +3,7 @@
 void handle_irq_0(bool* ts)
 {
     if (!ts) abort();
-    putchar('.');
+    // putchar('.');
     *ts = false;
 }
 
