@@ -112,6 +112,7 @@ bool time_initialized = false;
 #include "../libc/src/string.c"
 #include "../libc/src/unistd.c"
 #include "../libc/src/time.c"
+#include "gdt/gdt.c"
 
 FILE _stdin, _stdout, _stderr;
 
@@ -145,12 +146,12 @@ void kernel_init_std()
     stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
 }
 
-int _gdtr, _idtr;
-
 void interrupt_handler()
 {
     ;
 }
+
+int _idtr;
 
 atomic_flag print_spinlock = ATOMIC_FLAG_INIT;
 atomic_bool did_init_std = false;
@@ -165,6 +166,8 @@ const char* fb_type_string[] =
 
 void _start()
 {
+    disable_interrupts();
+
     enable_sse();
 
     if (!bootboot.fb_scanline) 
@@ -196,6 +199,7 @@ void _start()
         has_cpuid = true;
         uint32_t ebx, ecx, edx;
         cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
+        // !! Actually will cause a triple fault on CPUs that don't support CPUID but you shouldn't be running this OS on such hardware anyway
 
         *(uint32_t*)&manufacturer_id_string[0] = ebx;
         *(uint32_t*)&manufacturer_id_string[4] = edx;
@@ -227,17 +231,31 @@ void _start()
             }
         }
     }
-    
+
     release_spinlock(&print_spinlock);
 
     initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
 
     tty_font = psf_font_load_from_initrd("iso06.f14.psf");
 
-    printf("Hello from kernel!\n");
-    printf("Hey this is a newline\n\n");
-    for (int i = 0; i < 1000; i++)
-        printf("%c%c%c", 'A' + (i % 26), 'A' + (i % 26), 'A' + (i % 26));
+    LOG(INFO, "Loading a GDT with TSS...");
+    printf("Loading a GDT with TSS...");
+
+    memset(&GDT[0], 0, sizeof(struct gdt_entry));       // NULL Descriptor
+    setup_gdt_entry(&GDT[1], 0, 0xfffff, 0x9A, 0xA);    // Kernel mode code segment
+    setup_gdt_entry(&GDT[2], 0, 0xfffff, 0x92, 0xC);    // Kernel mode data segment
+    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xFA, 0xA);    // User mode code segment
+    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xF2, 0xC);    // User mode data segment
+
+    memset(&TSS, 0, sizeof(struct tss_entry));
+    TSS.rsp0 = 0;
+    setup_ssd_gdt_entry(&GDT[5], (physical_address_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
+
+    install_gdt();
+    load_tss();
+
+    printf(" | Done\n");
+    LOG(INFO, "GDT and TSS loaded");
 
     fflush(stdout);
 

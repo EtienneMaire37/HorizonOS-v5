@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gdt.h"
+
 void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
     entry->base_lo = (base & 0xffff);
@@ -11,10 +13,13 @@ void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t 
     entry->flags = flags;
 }
 
-void __attribute__((optimize("O0"))) install_gdt()
+void setup_ssd_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
-    _gdtr.size = sizeof(GDT) - 1;
-    _gdtr.address = (uint32_t)&GDT;
+    setup_gdt_entry(entry, base & 0xffffffff, limit, access_byte, flags);
+    *(uint64_t*)&entry[1] = (base >> 32) & 0xffffffff;
+}
 
-    load_gdt();
+void install_gdt()
+{
+    load_gdt(sizeof(GDT) - 1, (uint64_t)&GDT);
 }

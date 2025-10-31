@@ -1,16 +1,22 @@
 bits 64
 section .text
 
+gdtr: 
+    dw 0
+    dq 0
+
 global load_gdt
-extern _gdtr
-; void LoadGDT()
 load_gdt:
-    lgdt  [_gdtr]
+    mov word [gdtr], di
+    mov qword [gdtr + 2], rsi
+    lgdt  [gdtr]
     ; jmp far 0x08:.reload_seg
-    push 0x08
-    push .reload_seg
-    retf
-.reload_seg:
+    push qword 0x08
+    push qword .reload_seg
+
+    retfq
+
+.reload_seg:    
     mov   ax, 0x10
     mov   ds, ax
     mov   es, ax
