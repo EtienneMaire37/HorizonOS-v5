@@ -30,7 +30,6 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	nasm -f elf64 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
 	nasm -f elf64 -o "bin/idt.o" "src/kernel/int/idt.asm"
-	nasm -f elf64 -o "bin/paging.o" "src/kernel/paging/paging.asm"
 	nasm -f elf64 -o "bin/context_switch.o" "src/kernel/multitasking/context_switch.asm"
 	nasm -f elf64 -o "bin/registers.o" "src/kernel/cpu/registers.asm"
 	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
@@ -45,7 +44,6 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	bin/kernel.o \
 	"bin/gdt.o" \
 	"bin/idt.o"  \
-	"bin/paging.o" \
 	"bin/context_switch.o" \
 	"bin/registers.o"  \
 	"bin/sse.o"  \

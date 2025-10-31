@@ -6,6 +6,8 @@
 
 #include <bootboot.h>
 
+uint8_t physical_address_width; // ! Should probably be in paging.h but didn't add it back yet
+
 typedef uint64_t physical_address_t;
 typedef uint64_t virtual_address_t;
 
@@ -240,11 +242,12 @@ void _start()
 
         tty_cursor = 0;
 
-        cpuid_highest_function_parameter = 0xffffffff;
         has_cpuid = true;
         uint32_t ebx, ecx, edx;
         cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
         // !! Actually will cause a triple fault on CPUs that don't support CPUID but you shouldn't be running this OS on such hardware anyway
+
+        LOG(DEBUG, "CPUID highest function parameter: 0x%x", cpuid_highest_function_parameter);
 
         *(uint32_t*)&manufacturer_id_string[0] = ebx;
         *(uint32_t*)&manufacturer_id_string[4] = edx;
@@ -252,6 +255,20 @@ void _start()
         manufacturer_id_string[12] = 0;
 
         LOG(INFO, "cpu manufacturer id : \"%s\"", manufacturer_id_string);
+
+        cpuid(0x80000000, cpuid_highest_extended_function_parameter, ebx, ecx, edx);
+        LOG(DEBUG, "CPUID highest extended function parameter: 0x%x", cpuid_highest_extended_function_parameter);
+
+        if (cpuid_highest_extended_function_parameter >= 0x80000008)
+        {
+            uint32_t eax = 0, ebx, ecx, edx; // Just so gcc doesn't complain but cant possibly be used uninitialized
+            cpuid(0x80000008, eax, ebx, ecx, edx);
+            physical_address_width = eax & 0xff;
+        }
+        else
+            abort();
+
+        LOG(INFO, "Physical address is %u bits long", physical_address_width);
 
         fpu_init_defaults();
 
@@ -267,8 +284,8 @@ void _start()
     {
         if (cpuid_highest_function_parameter >= 1)
         {
-            uint32_t ebx, ecx = 0, edx; // Just so gcc doesn't complain but cant possibly be used uninitialized
-            cpuid(1, cpuid_highest_function_parameter, ebx, ecx, edx);
+            uint32_t eax, ebx, ecx = 0, edx; // same as above
+            cpuid(1, eax, ebx, ecx, edx);
             if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
             {
                 LOG(INFO, "Enabling AVX");
@@ -283,6 +300,10 @@ void _start()
     kernel_symbols_file = initrd_find_file("symbols.txt");
 
     tty_font = psf_font_load_from_initrd("iso06.f14.psf");
+
+    printf("CPUID highest function parameter: 0x%x\n", cpuid_highest_function_parameter);
+    printf("CPUID highest extended function parameter: 0x%x\n", cpuid_highest_extended_function_parameter);
+    printf("Physical address is %u bits long\n", physical_address_width);
 
     LOG(INFO, "Loading a GDT with TSS...");
     printf("Loading a GDT with TSS...");
@@ -321,11 +342,6 @@ void _start()
     pfa_detect_usable_memory();
 
     printf("Detected %u bytes of allocatable memory\n", allocatable_memory);
-
-    // for (int i = 0; i < 1000; i++)
-    //     printf("%c%c%c", 'A' + (i % 26), 'A' + (i % 26), 'A' + (i % 26));
-
-    // asm volatile("div rcx" :: "c"(0));
 
     fflush(stdout);
 

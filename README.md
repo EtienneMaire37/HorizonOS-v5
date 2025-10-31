@@ -3,32 +3,13 @@
 <div align="center">
    
    ![GPL License](https://img.shields.io/badge/license-GPL-yellow.svg) 
-   ![x86](https://img.shields.io/badge/arch-x86-informational) 
+   ![x86-64](https://img.shields.io/badge/arch-x86_64-informational) 
    ![GitHub Contributors](https://img.shields.io/github/contributors/EtienneMaire37/HorizonOS-v5?color=blue)
    ![Monthly Commits](https://img.shields.io/github/commit-activity/m/EtienneMaire37/HorizonOS-v5?color=orange)
    ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/EtienneMaire37/HorizonOS-v5/.github%2Fworkflows%2Fmakefile.yml)
 </div>
 
-HorizonOS is a hobby 32-bit monolithic kernel for the x86 architecture. It aims at simplicity and readability.
-
-## Features
-
-HorizonOS currently supports the following features:
-
-* **Features:**
-    * Single-core multitasking with basic round robin scheduling
-    * Memory management limited to 4GB
-    * Simple (non standard compliant) C library implementation
-    * Extremely basic ACPI parsing 
-    * GRUB bootloader integration
-    * PS/2 keyboard driver (8042)
-    * Legacy (8259) PIC support
-* **Planned:**
-    * More than 4GB memory with PAE
-    * Full APIC and ACPI support 
-    * Multicore support with SMP
-    * ATA and USB drivers
-    * Network stack support and Ethernet drivers
+HorizonOS is a hobby 64-bit monolithic kernel for the x86-64 architecture. It aims at simplicity and readability.
 
 ## Building HorizonOS
 
@@ -61,6 +42,17 @@ To run HorizonOS in QEMU:
 ```bash
 make run
 ```
+
+## Memory map (when multitasking)
+
+| Range     | Mapping         |
+| --------- | --------------- |
+| 0-1TB     | Identity mapped |
+| 1TB-128TB | Process segments, heap and stack    |
+| 128TB-[-128TB] | Noncanonical addresses |
+| [-2MB]-0 | Process kernel stack |
+| [-1MB]-0 | Process stack |
+
 
 ## Contributing
 

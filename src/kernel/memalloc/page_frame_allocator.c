@@ -58,14 +58,14 @@ void pfa_detect_usable_memory()
     }
 
     first_alloc_block = 0;
-    uint32_t total_pages = 0;
-    for (uint32_t i = 0; i < usable_memory_blocks; i++)
+    uint64_t total_pages = 0;
+    for (uint64_t i = 0; i < usable_memory_blocks; i++)
         total_pages += usable_memory_map[i].length / 0x1000;
     
     bitmap_size = (total_pages + 7) / 8;
-    uint32_t bitmap_pages = (bitmap_size + 0xfff) / 0x1000;
+    uint64_t bitmap_pages = (bitmap_size + 0xfff) / 0x1000;
 
-    while (first_alloc_block < usable_memory_blocks && usable_memory_map[first_alloc_block].length < bitmap_pages)
+    while (first_alloc_block < usable_memory_blocks && (usable_memory_map[first_alloc_block].length / 0x1000) < bitmap_pages)
         first_alloc_block++;
 
     bitmap = (uint8_t*)usable_memory_map[first_alloc_block].address;
@@ -179,4 +179,16 @@ void pfa_free_physical_page(physical_address_t address)
     memory_allocated -= 0x1000;
     release_spinlock(&pfa_spinlock);
     LOG_MEM_ALLOCATED();
+}
+
+// * 1st TB will always be identity mapped
+void* pfa_allocate_page()
+{
+    return (void*)pfa_allocate_physical_page();
+}
+
+// * same
+void pfa_free_page(void* ptr)
+{
+    pfa_free_physical_page((physical_address_t)ptr);
 }
