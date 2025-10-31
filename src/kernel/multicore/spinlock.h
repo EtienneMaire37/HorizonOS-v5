@@ -6,7 +6,7 @@ inline void acquire_spinlock(atomic_flag* spinlock)
         __builtin_ia32_pause();
 }
 
-bool try_acquire_spinlock(atomic_flag* spinlock)
+inline bool try_acquire_spinlock(atomic_flag* spinlock)
 {
 	return !atomic_flag_test_and_set_explicit(spinlock, memory_order_acquire);
 }

@@ -41,13 +41,15 @@
 
 #define TAB_LENGTH       4
 
-#define TTY_RES_X   92
-#define TTY_RES_Y   50
+#define TTY_RES_X   100
+#define TTY_RES_Y   40
 
 uint32_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
 
 psf_font_t tty_font;
+
+const uint32_t tty_padding = 2;	// pixels
 
 void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
 void tty_hide_cursor();
@@ -56,4 +58,4 @@ void tty_set_cursor_pos(uint16_t pos);
 void tty_update();
 void tty_clear_screen(char c);
 void tty_set_color(uint8_t fg_color, uint8_t bg_color);
-void tty_outc(char c);
+inline void tty_outc(char c);

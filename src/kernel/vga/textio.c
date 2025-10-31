@@ -29,17 +29,23 @@ void tty_set_cursor_pos(uint16_t pos)
 
 void tty_update_cursor()
 {
-	// // tty_cursor %= 80 * 25;
-	// tty_set_cursor_pos(tty_cursor);
+	tty_set_cursor_pos(tty_cursor);
 }
 
 void tty_clear_screen(char c)
 {
-	// for(uint16_t i = 0; i < 80 * 25; i++)
-	// {
-    //     tty_vram[i]._char = c;
-	// 	tty_vram[i].color = tty_color;
-	// }
+	if (c == 0 || c == ' ')
+	{
+		framebuffer_fill_rect(&framebuffer, 0, 0, framebuffer.width, framebuffer.height, 0, 0, 0, 0);
+		tty_cursor = 0;
+		goto end;
+	}
+	tty_cursor = 0;
+	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
+		tty_outc(c);
+	tty_cursor = 0;
+end:
+	// tty_update_cursor();
 }
 
 // uint8_t tty_ansi_to_vga(uint8_t ansi_code) 
@@ -95,7 +101,27 @@ void tty_clear_screen(char c)
 //     return 0xff;
 // }
 
-void tty_outc(char c)
+inline uint32_t tty_get_character_width()
+{
+	return (framebuffer.width - 2 * tty_padding) / TTY_RES_X;
+}
+
+inline uint32_t tty_get_character_height()
+{
+	return (framebuffer.height - 2 * tty_padding) * psf_get_glyph_height(&tty_font) / psf_get_glyph_width(&tty_font) / TTY_RES_X;
+}
+
+inline uint32_t tty_get_character_pos_x(uint32_t index)
+{
+	return tty_padding + tty_get_character_width() * (tty_cursor % TTY_RES_X);
+}
+
+inline uint32_t tty_get_character_pos_y(uint32_t index)
+{
+	return tty_padding + tty_get_character_height() * (tty_cursor / TTY_RES_X);
+}
+
+inline void tty_outc(char c)
 {
 	if (c == 0)
 	{
@@ -111,6 +137,17 @@ void tty_outc(char c)
 		tty_cursor /= TTY_RES_X;
 		tty_cursor *= TTY_RES_X;
 		break;
+
+	case '\t':
+		tty_cursor += TAB_LENGTH;
+		tty_cursor /= TAB_LENGTH;
+		tty_cursor *= TAB_LENGTH;
+		break;
+
+	case '\b':
+		if (tty_cursor > 0)
+			tty_cursor--;
+		break;
 	
 	default:
 		if (!tty_font.f || !tty_font.f->data)
@@ -119,20 +156,17 @@ void tty_outc(char c)
 			break;
 		}
 
-		uint32_t padding = 2;	// pixels
+		uint32_t width = tty_get_character_width();
+		uint32_t height = tty_get_character_height();
 
-		uint32_t width = (framebuffer.width - 2 * padding) * psf_get_glyph_width(&tty_font) / TTY_RES_Y / psf_get_glyph_height(&tty_font);
-		uint32_t height = (framebuffer.height - 2 * padding) / TTY_RES_Y;
+		uint32_t x = tty_get_character_pos_x(tty_cursor);
+		uint32_t y = tty_get_character_pos_y(tty_cursor);
 
-		uint32_t x = padding + width * (tty_cursor % TTY_RES_X);
-		uint32_t y = padding + height * (tty_cursor / TTY_RES_X);
-
+		framebuffer_fill_rect(&framebuffer, x, y, width, height, 0, 0, 0, 0);
 		framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c);
 
 		tty_cursor++;
 	}
-
-	// tty_cursor %= TTY_RES_X * TTY_RES_Y;
 }
 
 void tty_set_color(uint8_t fg_color, uint8_t bg_color)

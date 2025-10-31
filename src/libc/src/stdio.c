@@ -285,7 +285,8 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
         }
     }
 
-    bool next_arg_64 = false, na64_set = false;
+    bool na64_set = false;
+    bool next_arg_64 = false;
     bool next_formatted = false;
     while (*format)
     {
@@ -306,32 +307,20 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             switch (*format)
             {
             case 'd':
-                if (next_arg_64)
-                    printf_d(va_arg(args, int64_t));
-                else
-                    printf_d(va_arg(args, int32_t));
+                printf_d(va_arg(args, int64_t));
                 break;
             case 'u':
-                if (next_arg_64)
-                    printf_u(va_arg(args, uint64_t));
-                else
-                    printf_u(va_arg(args, uint32_t));
+                printf_u(va_arg(args, uint64_t));
                 break;
             case 'x':
-                if (next_arg_64)
-                    printf_x(va_arg(args, uint64_t), 1);
-                else
-                    printf_x(va_arg(args, uint32_t), 1);
+                printf_x(va_arg(args, uint64_t), 1);
                 break;
             case 'p':
                 func_s("0x");
                 printf_x((uintptr_t)va_arg(args, void*), 1);
                 break;
             case 'X':
-                if (next_arg_64)
-                    printf_X(va_arg(args, uint64_t), 1);
-                else
-                    printf_X(va_arg(args, uint32_t), 1);
+                printf_X(va_arg(args, uint64_t), 1);
                 break;
             case 'f':
                 if (next_arg_64)
@@ -340,7 +329,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                     printf_f(va_arg(args, double));
                 break;
             case 'c':
-                func((char)va_arg(args, int));
+                func((char)va_arg(args, uint64_t));
                 length++;
                 break;
             case 'l':

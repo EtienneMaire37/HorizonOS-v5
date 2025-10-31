@@ -1,15 +1,17 @@
 #pragma once
 
+#include "../multitasking/task.h"
+
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
-void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
+void __attribute__((optimize("O0"))) print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
 {
-    if (ebp <= 0xc0000000 && ebp != 0) return;
     initrd_file_t* file = kernel_symbols_file;
     if (file == NULL) return;
+    if (file->size == 0 || file->data == NULL) return;
     
-    uint32_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
-    uint32_t file_offset = 0, line_offset = 0;
+    uintptr_t symbol_address = 0, last_symbol_address = 0, current_symbol_address = 0;
+    uintptr_t file_offset = 0, line_offset = 0;
     char last_symbol_buffer[64] = {0};
     uint16_t last_symbol_buffer_length = 0;
     char current_symbol_type = ' ', found_symbol_type = ' ';
@@ -18,7 +20,7 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
         char ch = file->data[file_offset];
         if (ch == '\n')
         {
-            if (last_symbol_address <= eip && symbol_address > eip && is_a_valid_function(found_symbol_type))
+            if (last_symbol_address <= rip && symbol_address > rip && is_a_valid_function(found_symbol_type))
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
                 CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "[" : "(");
@@ -55,19 +57,19 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
             }
             else if (is_a_valid_function(current_symbol_type))
             {
-                last_symbol_buffer_length = line_offset - 11;
+                last_symbol_buffer_length = line_offset - 19;
             }
             line_offset = 0;
         }
         else
         {
-            if (line_offset < 8)
+            if (line_offset < 16)
             {
-                uint32_t val = hex_char_to_int(ch);
-                current_symbol_address &= ~((uint32_t)0xf << ((7 - line_offset) * 4));
-                current_symbol_address |= val << ((7 - line_offset) * 4);
+                uint64_t val = hex_char_to_int(ch);
+                current_symbol_address &= ~((uint64_t)0xf << ((15 - line_offset) * 4));
+                current_symbol_address |= val << ((15 - line_offset) * 4);
             }
-            if (line_offset == 9)
+            if (line_offset == 17)
             {
                 current_symbol_type = ch;
                 if (current_symbol_address != 0)    // && is_a_valid_function(current_symbol_type)
@@ -76,11 +78,11 @@ void print_kernel_symbol_name(uint32_t eip, uint32_t ebp)
                     symbol_address = current_symbol_address;
                 }
             }
-            if (line_offset >= 11 && line_offset < 64 + 11) // && is_a_valid_function(current_symbol_type)
+            if (line_offset >= 19 && line_offset < 64 + 19) // && is_a_valid_function(current_symbol_type)
             {
-                if (!(last_symbol_address <= eip && symbol_address > eip))
+                if (!(last_symbol_address <= rip && symbol_address > rip))
                 {
-                    last_symbol_buffer[line_offset - 11] = ch;
+                    last_symbol_buffer[line_offset - 19] = ch;
                     found_symbol_type = current_symbol_type;
                 }
             }
@@ -122,8 +124,6 @@ void kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("Error code:  0x%x\n\n", registers->error_code);
 
-    LOG(DEBUG, "cr0 : 0x%x", get_cr0());
-
     if (registers->interrupt_number == 14)
     {
         if (registers->cr2)
@@ -137,14 +137,14 @@ void kernel_panic(interrupt_registers_t* registers)
         }
         printf("cr3: 0x%x\n\n", registers->cr3);
 
-        uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
+        // uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
         
-        LOG(DEBUG, "Page directory entry : 0x%x", pde);
+        // LOG(DEBUG, "Page directory entry : 0x%x", pde);
 
-        if (pde & 1)
-        {
-            LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
-        }
+        // if (pde & 1)
+        // {
+        //     LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
+        // }
     }
 
     printf("Stack trace : \n");
@@ -156,38 +156,38 @@ void kernel_panic(interrupt_registers_t* registers)
     {
         uint32_t* ptr = !(tasks[current_task_index].ring != 0 && multitasking_enabled && !first_task_switch) ? 
             &((uint32_t*)&registers[1])[i] : 
-            &((uint32_t*)((privilege_switch_interrupt_registers_t*)registers)->esp)[i];
+            &((uint32_t*)((privilege_switch_interrupt_registers_t*)registers)->rsp)[i];
 
-        printf("esp + %u (0x%x) : 0x%x\n", i * 4, ptr, *ptr);
+        printf("rsp + %u (0x%x) : 0x%x\n", i * 4, ptr, *ptr);
     }
     #else
     typedef struct __attribute__((packed)) call_frame
     {
-        uint32_t ebp;
-        uint32_t eip;
+        uintptr_t rbp;
+        uintptr_t rip;
     } call_frame_t;
 
-    call_frame_t* ebp = (call_frame_t*)registers->ebp;
-    // asm volatile ("mov eax, ebp" : "=a"(ebp));
+    call_frame_t* rbp = (call_frame_t*)registers->rbp;
+    // asm volatile ("mov eax, rbp" : "=a"(rbp));
 
     // ~ Log the last function (the one the exception happened in)
-    printf("eip : 0x");
+    printf("rip : 0x");
     tty_set_color(FG_YELLOW, BG_BLACK);
-    printf("%x", registers->eip);
+    printf("%x", registers->rip);
     tty_set_color(FG_WHITE, BG_BLACK);
     putchar(' ');
 
-    LOG(DEBUG, "eip : 0x%x ", registers->eip);
-    print_kernel_symbol_name(registers->eip, (uint32_t)ebp);
+    LOG(DEBUG, "rip : 0x%x ", registers->rip);
+    print_kernel_symbol_name(registers->rip, (uintptr_t)rbp);
     putchar('\n');
 
     int i = 0;
     const int max_stack_frames = 10;
 
-    while (i <= max_stack_frames && (uint32_t)ebp != 0 && (uint32_t)ebp->eip != 0 && 
+    while (i <= max_stack_frames && is_address_canonical((uintptr_t)rbp) && is_address_canonical((uintptr_t)rbp->rip) && (uintptr_t)rbp != 0 && (uintptr_t)rbp->rip != 0 && 
     (((!multitasking_enabled || (multitasking_enabled && first_task_switch)) &&
-            (((uint32_t)ebp > (uint32_t)&stack_bottom) && ((uint32_t)ebp <= (uint32_t)&stack_top))) || 
-        (((uint32_t)ebp < TASK_STACK_TOP_ADDRESS) && ((uint32_t)ebp >= TASK_STACK_BOTTOM_ADDRESS))))
+            (((uintptr_t)rbp > 0xffffffffffffffff - 1024 * bootboot.numcores) && ((uintptr_t)rbp <= 0xffffffffffffffff))) || 
+        (((uintptr_t)rbp < TASK_STACK_TOP_ADDRESS) && ((uintptr_t)rbp >= TASK_STACK_BOTTOM_ADDRESS))))
     {
         if (i == max_stack_frames)
         {
@@ -198,34 +198,34 @@ void kernel_panic(interrupt_registers_t* registers)
         }
         else
         {
-            printf("eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-            LOG(DEBUG, "eip : 0x%x | ebp : 0x%x ", ebp->eip, ebp);
-            print_kernel_symbol_name(ebp->eip - 1, (uint32_t)ebp);
+            printf("rip : 0x%x | rbp : 0x%x ", rbp->rip, rbp);
+            LOG(DEBUG, "rip : 0x%x | rbp : 0x%x ", rbp->rip, rbp);
+            print_kernel_symbol_name(rbp->rip - 1, (uintptr_t)rbp);
             putchar('\n');
-            ebp = (call_frame_t*)ebp->ebp;
+            rbp = (call_frame_t*)rbp->rbp;
         }
         i++;
     }
     #endif
 
-    LOG(DEBUG, "VAS:");
-    LOG(DEBUG, "...");
-    for (int i = 0; i < 768; i++)
-    {
-        uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * i);
-        if (!(pde & 1)) 
-            continue;
-        for (int j = (i == 0 ? 256 : 0); j < 1024; j++)
-        {
-            uint32_t pte = read_physical_address_4b((pde & 0xfffff000) + 4 * j);
-            if (pte & 1)
-            {
-                uint32_t address = pte & 0xfffff000;
-                LOG(DEBUG, "0x%x - 0x%x", address, address + 0x1000);
-            }
-        }
-    }
-    LOG(DEBUG, "...");
+    // LOG(DEBUG, "VAS:");
+    // LOG(DEBUG, "...");
+    // for (int i = 0; i < 768; i++)
+    // {
+    //     uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * i);
+    //     if (!(pde & 1)) 
+    //         continue;
+    //     for (int j = (i == 0 ? 256 : 0); j < 1024; j++)
+    //     {
+    //         uint32_t pte = read_physical_address_4b((pde & 0xfffff000) + 4 * j);
+    //         if (pte & 1)
+    //         {
+    //             uint32_t address = pte & 0xfffff000;
+    //             LOG(DEBUG, "0x%x - 0x%x", address, address + 0x1000);
+    //         }
+    //     }
+    // }
+    // LOG(DEBUG, "...");
 
     halt();
 }

@@ -2,29 +2,30 @@
 
 typedef struct __attribute__((packed)) interrupt_registers
 {
-    uint32_t cr3, cr2;
-    uint32_t ds;
-    uint32_t edi, esi, ebp;
-    uint32_t handled_esp, ebx, edx, ecx, eax;
-    uint32_t interrupt_number, error_code;
-    uint32_t eip, cs, eflags;
+    uint64_t cr3, cr2;
+    uint64_t ds;
+    
+    uint64_t r15;
+    uint64_t r14;
+    uint64_t r13;
+    uint64_t r12;
+    uint64_t r11;
+    uint64_t r10;
+    uint64_t r9;
+    uint64_t r8;
+    uint64_t rdi;
+    uint64_t rsi;
+    uint64_t rbp;
+    uint64_t rbx;
+    uint64_t rdx;
+    uint64_t rcx;
+    uint64_t rax;
+
+    uint64_t interrupt_number, error_code;
+    uint64_t rip, cs, rflags;
+
+    uint64_t rsp, ss;   // * "64-bit mode also pushes SS:RSP unconditionally, rather than only on a CPL change." -- Intel manual vol 3A 7.14.2
 } interrupt_registers_t;
-
-typedef struct __attribute__((packed)) privilege_switch_interrupt_registers
-{
-    uint32_t cr3, cr2;
-    uint32_t ds;
-    uint32_t edi, esi, ebp;
-    uint32_t handled_esp, ebx, edx, ecx, eax;
-    uint32_t interrupt_number, error_code;
-    uint32_t eip, cs, eflags;
-
-    uint32_t esp, ss;   // * Read Intel Manuals ->> Vol. 3A 7-13
-} privilege_switch_interrupt_registers_t;
-
-// ^ Changed to local variables
-// uint32_t iret_cr3;
-// bool flush_tlb;  
 
 char* error_str[32] = 
 {
@@ -84,5 +85,5 @@ char* get_error_message(uint32_t fault, uint32_t error_code)
 
 initrd_file_t* kernel_symbols_file = NULL;
 
-void print_kernel_symbol_name(uint32_t eip, uint32_t ebp);
+void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp);
 void interrupt_handler(interrupt_registers_t* registers);

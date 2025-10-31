@@ -28,8 +28,6 @@ INT_%1:
     jmp _interrupt_handler
 %endmacro
 
-extern interrupt_handler
-
 ; ISRs
 INT_NO_ERROR_CODE 0
 INT_NO_ERROR_CODE 1
@@ -86,7 +84,8 @@ interrupt_table:
     %assign i i+1 
     %endrep
 
-extern putchar
+extern interrupt_handler
+; extern putchar
 _interrupt_handler:
     push rax
     push rcx
@@ -121,9 +120,13 @@ _interrupt_handler:
     mov rax, cr3
     push rax
     
-    push rsp
-    ; call interrupt_handler
-    pop rsp
+    mov rdi, rsp
+    call interrupt_handler
+    
+    ; mov rdi, 'A'
+    ; call putchar
+    ; mov rdi, 10
+    ; call putchar
     
     add rsp, 8 + 8  ; skip cr2 and cr3
 

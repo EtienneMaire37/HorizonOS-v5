@@ -1,15 +1,31 @@
 #pragma once
 
-#include "../multitasking/vas.h"
-#include "../multitasking/task.c"
-#include "../multitasking/syscall.h"
+// #include "../multitasking/vas.h"
+// #include "../multitasking/task.c"
+// #include "../multitasking/syscall.h"
+#include "int.h"
+#include "irq.h"
 
 #include "kernel_panic.h"
+
+int current_phys_mem_page;
+
+void handle_syscall(interrupt_registers_t* registers)
+{
+    ;
+}
+
+void switch_task()
+{
+    ;
+}
 
 #define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
+    // LOG(DEBUG, "Interrupt number : %u", registers->interrupt_number);
+
     uint32_t old_phys_mem_page = current_phys_mem_page;
     current_phys_mem_page = 0xffffffff;
 
@@ -17,7 +33,7 @@ void interrupt_handler(interrupt_registers_t* registers)
     {
         LOG(WARNING, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
 
-        if (registers->interrupt_number == 6 && *((uint16_t*)registers->eip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
+        if (registers->interrupt_number == 6 && *((uint16_t*)registers->rip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
         {
             has_cpuid = false;
             return_from_isr();

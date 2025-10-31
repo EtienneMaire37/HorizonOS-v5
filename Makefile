@@ -51,7 +51,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	"bin/sse.o"  \
 	-lgcc
 
-	$(CROSSSTRIP) -s -K mmio -K fb -K bootboot -K environment -K initstack bin/kernel.elf
+# 	$(CROSSSTRIP) -s -K mmio -K fb -K bootboot -K environment -K initstack bin/kernel.elf
 
 	mkdir -p ./bin/initrd
 

@@ -1,12 +1,14 @@
 #pragma once
 
+#include "../io/keyboard.h"
+
 #define THREAD_NAME_MAX 64
 
 typedef struct thread
 {
     char name[THREAD_NAME_MAX];
 
-    uint32_t esp, cr3;
+    uint64_t rsp, cr3;
 
     utf32_buffer_t input_buffer;
     bool reading_stdin, is_dead;
@@ -35,9 +37,8 @@ typedef struct thread
 
 uint8_t global_cpu_ticks = 0;
 
-const int task_esp_offset = offsetof(thread_t, esp);
-// const int task_esp0_offset = offsetof(thread_t, esp0);
-const int task_cr3_offset = offsetof(thread_t, cr3);
+// const int task_rsp_offset = offsetof(thread_t, rsp);
+// const int task_cr3_offset = offsetof(thread_t, cr3);
 
 #define TASK_STACK_PAGES        0x100       // 1MB
 #define TASK_KERNEL_STACK_PAGES 32          // 128KB
@@ -94,17 +95,17 @@ int vfs_allocate_thread_file(int index)
     return -1;
 }
 
-extern void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
-extern void __attribute__((cdecl)) fork_context_switch(thread_t* next_tcb);
+extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
+extern void fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
-    int last_index = current_task_index;
-    current_task_index = next_task_index;
-    TSS.esp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    uint8_t* old_fpu_state = (uint8_t*)(((uint32_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
-    uint8_t* new_fpu_state = (uint8_t*)(((uint32_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
-    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
-    old_fpu_state, new_fpu_state);
+    // int last_index = current_task_index;
+    // current_task_index = next_task_index;
+    // TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
+    // uint8_t* old_fpu_state = (uint8_t*)(((uintptr_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    // uint8_t* new_fpu_state = (uint8_t*)(((uintptr_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    // context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
+    // old_fpu_state, new_fpu_state);
 }
 
 bool task_is_blocked(uint16_t index)

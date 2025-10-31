@@ -15,14 +15,29 @@ extern uint8_t fb;
 
 #define hlt()                   asm volatile ("hlt")
 
-void halt()
+void halt();
+
+void _halt()
 {
-    while (1) 
+    while (true)
     {
         disable_interrupts();
         hlt();
     }
     __builtin_unreachable();
+}
+
+// * Only support 48-bit canonical addresses for now (4 level paging)
+bool is_address_canonical(uint64_t address)
+{
+    return (address < 0x0000800000000000ULL) || (address >= 0xffff800000000000ULL);
+}
+uint64_t make_address_canonical(uint64_t address)
+{
+    if (address & 0x0000800000000000ULL)
+        return address | 0xffff800000000000ULL;
+    else
+        return address & 0x00007fffffffffffULL;
 }
 
 #define KB 1024
@@ -66,6 +81,10 @@ int64_t absint(int64_t x)
     return x < 0 ? -x : x;
 }
 
+#define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
+
+#define bcd_to_binary(bcd) (((bcd) & 0x0f) + ((bcd) >> 4) * 10)
+
 char cwd[PATH_MAX] = {0};
 
 char** environ = NULL;
@@ -97,8 +116,11 @@ bool time_initialized = false;
 #include "../libc/include/sys/types.h"
 #include "../libc/include/sys/wait.h"
 #include "../libc/include/sys/stat.h"
+#include "../libc/include/fcntl.h"
+#include "../libc/include/dirent.h"
 
 #include "debug/out.h"
+#include "vfs/vfs.h"
 #include "time/ktime.h"
 #include "initrd/initrd.h"
 
@@ -114,6 +136,27 @@ bool time_initialized = false;
 #include "../libc/src/time.c"
 #include "gdt/gdt.c"
 #include "int/idt.c"
+#include "int/int.c"
+
+void cause_halt(const char* func, const char* file, int line)
+{
+    disable_interrupts();
+    // LOG(ERROR, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
+    _halt();
+}
+
+void simple_cause_halt()
+{
+    disable_interrupts();
+    // LOG(ERROR, "Kernel halted");
+    _halt();
+}
+
+void halt()
+{
+    // fflush(stdout);
+    cause_halt(__CURRENT_FUNC__, __FILE__, __LINE__);
+}
 
 FILE _stdin, _stdout, _stderr;
 
@@ -145,11 +188,6 @@ void kernel_init_std()
 
     stderr->fd = STDERR_FILENO;
     stderr->flags = FILE_FLAGS_WRITE | FILE_FLAGS_NBF;
-}
-
-void interrupt_handler()
-{
-    ;
 }
 
 atomic_flag print_spinlock = ATOMIC_FLAG_INIT;
@@ -234,6 +272,7 @@ void _start()
     release_spinlock(&print_spinlock);
 
     initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
+    kernel_symbols_file = initrd_find_file("symbols.txt");
 
     tty_font = psf_font_load_from_initrd("iso06.f14.psf");
 
@@ -262,14 +301,17 @@ void _start()
     printf(" | Done\n");
     LOG(INFO, "IDT loaded");
 
-    LOG(INFO, "Remapping PIC");
-    printf("Remapping PIC...");
+    LOG(INFO, "Remapping the PIC");
+    printf("Remapping the PIC...");
     pic_remap(32, 32 + 8);
     printf(" | Done\n");
     LOG(INFO, "PIC remapped");
 
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
+
+    // for (int i = 0; i < 1000; i++)
+    //     printf("%c%c%c", 'A' + (i % 26), 'A' + (i % 26), 'A' + (i % 26));
 
     // asm volatile("div rcx" :: "c"(0));
 
