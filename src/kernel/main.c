@@ -380,6 +380,8 @@ void _start()
 
     printf("Detected %u bytes of allocatable memory\n", allocatable_memory);
 
+    // asm volatile("div rcx" :: "c"(0));
+
     fflush(stdout);
 
     halt();
