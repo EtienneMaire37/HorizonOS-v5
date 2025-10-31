@@ -1,11 +1,11 @@
 #pragma once
 
-uint32_t usable_memory;
+uint64_t usable_memory;
 
 struct mem_block
 {
     physical_address_t address;
-    uint32_t length;
+    uint64_t length;
 } __attribute__((packed));
 
 #define MAX_USABLE_MEMORY_BLOCKS 64
@@ -14,10 +14,10 @@ uint8_t usable_memory_blocks;
 
 uint8_t first_alloc_block;
 
-uint32_t bitmap_size;
+uint64_t bitmap_size;
 uint8_t* bitmap;
 
-uint32_t memory_allocated, allocatable_memory;
+uint64_t memory_allocated, allocatable_memory;
 
 atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
 

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "page_frame_allocator.h"
+
+#define MAX_MEMORY (1 * TB)
+
 void pfa_detect_usable_memory() 
 {
     usable_memory = usable_memory_blocks = 0;
@@ -9,26 +13,21 @@ void pfa_detect_usable_memory()
 
     LOG(INFO, "Usable memory map:");
 
-    physical_address_t kernel_end_phys = virtual_address_to_physical(kernel_end);
-
-    for (uint32_t i = 0; i < multiboot_info->mmap_length; i += sizeof(multiboot_memory_map_t)) 
+    for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++) 
     {
-        multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*)(multiboot_info->mmap_addr + i);
-        physical_address_t addr = ((physical_address_t)mmmt->addr_high << 32) | mmmt->addr_low;
-        uint64_t len = ((physical_address_t)mmmt->len_high << 32) | mmmt->len_low;
+        LOG(INFO, "   BOOTBOOT memory block : address : 0x%x ; length : %u | type : %u", 
+            MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
 
-        if (mmmt->type != MULTIBOOT_MEMORY_AVAILABLE || addr >= 0xffffffff)
+        if (!MMapEnt_IsFree(mmap_ent))
             continue;
-        if (addr + len > 0xffffffff)
-            len = 0xffffffff - addr;
 
-        if (addr < kernel_end_phys) 
-        {
-            if (addr + len <= kernel_end_phys)
-                continue;
-            len -= kernel_end_phys - addr;
-            addr = kernel_end_phys;
-        }
+        physical_address_t addr = MMapEnt_Ptr(mmap_ent);
+        uint64_t len = MMapEnt_Size(mmap_ent);
+
+        if (addr >= MAX_MEMORY)
+            break;
+        if (addr + len > MAX_MEMORY)
+            len = MAX_MEMORY - addr;
 
         uint32_t align = addr & 0xfff;
         if (align != 0) 
@@ -51,11 +50,11 @@ void pfa_detect_usable_memory()
         }
 
         usable_memory_map[usable_memory_blocks].address = addr;
-        usable_memory_map[usable_memory_blocks].length = (uint32_t)len;
+        usable_memory_map[usable_memory_blocks].length = (uint64_t)len;
         usable_memory += len;
         usable_memory_blocks++;
 
-        LOG(INFO, "   Memory block : address : 0x%lx ; length : %lu", addr, len);
+        LOG(INFO, "   Memory block : address : 0x%x ; length : %u", addr, len);
     }
 
     first_alloc_block = 0;
@@ -69,7 +68,7 @@ void pfa_detect_usable_memory()
     while (first_alloc_block < usable_memory_blocks && usable_memory_map[first_alloc_block].length < bitmap_pages)
         first_alloc_block++;
 
-    bitmap = (uint8_t*)physical_address_to_virtual(usable_memory_map[first_alloc_block].address);
+    bitmap = (uint8_t*)usable_memory_map[first_alloc_block].address;
 
     if (usable_memory == 0 || first_alloc_block >= usable_memory_blocks) 
         goto no_memory;

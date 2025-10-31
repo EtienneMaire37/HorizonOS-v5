@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=x86-64
+CFLAGS := -std=gnu99 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mno-red-zone -mlong-double-80 -fno-omit-frame-pointer -march=x86-64 -mstackrealign
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./crossgcc/bin/x86_64-elf-gcc
 CROSSLD := ./crossgcc/bin/x86_64-elf-ld

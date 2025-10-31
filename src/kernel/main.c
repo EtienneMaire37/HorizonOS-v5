@@ -6,9 +6,15 @@
 
 #include <bootboot.h>
 
+typedef uint64_t physical_address_t;
+typedef uint64_t virtual_address_t;
+
 extern BOOTBOOT bootboot;
 extern uint8_t environment[4096];
 extern uint8_t fb;
+
+extern char kernel_start, kernel_end;
+physical_address_t kernel_start_phys, kernel_end_phys;
 
 #define enable_interrupts()     asm volatile ("sti")
 #define disable_interrupts()    asm volatile ("cli")
@@ -40,10 +46,10 @@ uint64_t make_address_canonical(uint64_t address)
         return address & 0x00007fffffffffffULL;
 }
 
-#define KB 1024
-#define MB (1024 * KB)
-#define GB (1024 * MB)
-#define TB (1024 * GB)
+#define KB 1024ULL
+#define MB (1024ULL * KB)
+#define GB (1024ULL * MB)
+#define TB (1024ULL * GB)
 
 #define BUILDING_C_LIB
 #define BUILDING_KERNEL
@@ -59,9 +65,6 @@ uint64_t make_address_canonical(uint64_t address)
 #endif
 
 #endif
-
-typedef uint64_t physical_address_t;
-typedef uint64_t virtual_address_t;
 
 #define physical_null ((physical_address_t)0)
 
@@ -137,6 +140,7 @@ bool time_initialized = false;
 #include "gdt/gdt.c"
 #include "int/idt.c"
 #include "int/int.c"
+#include "memalloc/page_frame_allocator.c"
 
 void cause_halt(const char* func, const char* file, int line)
 {
@@ -220,7 +224,11 @@ void _start()
     {
         kernel_init_std();
 
-        LOG(INFO, "Kernel booted successfully with BOOTBOOT");
+        kernel_start_phys = (physical_address_t)&kernel_start;
+        kernel_end_phys = (physical_address_t)&kernel_end;
+
+        LOG(INFO, "Kernel booted successfully with BOOTBOOT (0x%x-0x%x)", kernel_start_phys, kernel_end_phys);
+        LOG(INFO, "Kernel is %u bytes long", kernel_end_phys - kernel_start_phys);
         LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%x", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
         LOG(INFO, "Type: %s", fb_type_string[bootboot.fb_type]);
 
@@ -309,6 +317,10 @@ void _start()
 
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
+
+    pfa_detect_usable_memory();
+
+    printf("Detected %u bytes of allocatable memory\n", allocatable_memory);
 
     // for (int i = 0; i < 1000; i++)
     //     printf("%c%c%c", 'A' + (i % 26), 'A' + (i % 26), 'A' + (i % 26));
