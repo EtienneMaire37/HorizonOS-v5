@@ -70,34 +70,26 @@ uint64_t make_address_canonical(uint64_t address)
 
 #define physical_null ((physical_address_t)0)
 
+int64_t minint(int64_t a, int64_t b);
+int64_t maxint(int64_t a, int64_t b);
+int64_t absint(int64_t x);
+int imod(int a, int b);
+
 #include "../libc/include/inttypes.h"
 #include "../libc/include/limits.h"
 
-int64_t minint(int64_t a, int64_t b)
-{
-    return a < b ? a : b;
-}
-int64_t maxint(int64_t a, int64_t b)
-{
-    return a > b ? a : b;
-}
-int64_t absint(int64_t x)
-{
-    return x < 0 ? -x : x;
-}
-
 #define hex_char_to_int(ch) (ch >= '0' && ch <= '9' ? (ch - '0') : (ch >= 'a' && ch <= 'f' ? (ch - 'a' + 10) : 0))
 
-#define bcd_to_binary(bcd) (((bcd) & 0x0f) + ((bcd) >> 4) * 10)
+#define bcd_to_binary(bcd) (((bcd) & 0x0f) + (((bcd) >> 4) & 0x0f) * 10 + (((bcd) >> 8) & 0x0f) * 100 + (((bcd) >> 12) & 0x0f) * 1000)
 
 char cwd[PATH_MAX] = {0};
 
 char** environ = NULL;
 static int num_environ = 0;
 
-uint8_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
-uint16_t system_year = 0;
-uint16_t system_thousands = 0;
+int64_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
+int64_t system_year = 0;
+int64_t system_thousands = 0;
 
 bool time_initialized = false;
 
@@ -110,6 +102,7 @@ bool time_initialized = false;
 #include "graphics/linear_framebuffer.h"
 #include "cpu/cpuid.h"
 #include "fpu/sse.h"
+#include "debug/out.h"
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
@@ -124,10 +117,12 @@ bool time_initialized = false;
 #include "../libc/include/fcntl.h"
 #include "../libc/include/dirent.h"
 
-#include "debug/out.h"
 #include "vfs/vfs.h"
 #include "time/ktime.h"
 #include "initrd/initrd.h"
+#include "time/gdn.h"
+#include "time/ktime.h"
+#include "time/time.h"
 
 #include "vga/textio.c"
 #include "pic/apic.c"
@@ -143,6 +138,30 @@ bool time_initialized = false;
 #include "int/idt.c"
 #include "int/int.c"
 #include "memalloc/page_frame_allocator.c"
+
+int64_t minint(int64_t a, int64_t b)
+{
+    return a < b ? a : b;
+}
+int64_t maxint(int64_t a, int64_t b)
+{
+    return a > b ? a : b;
+}
+int64_t absint(int64_t x)
+{
+    return x < 0 ? -x : x;
+}
+int imod(int a, int b)
+{
+    if (b <= 0) 
+    {
+        LOG(WARNING, "Kernel tried to compute %d %% %d", a, b);
+        return 0;
+    }
+    int ret = a - (a / b) * b;
+    if (ret < 0) ret += b;
+    return ret;
+}
 
 void cause_halt(const char* func, const char* file, int line)
 {
@@ -210,6 +229,20 @@ const char* fb_type_string[] =
 void _start()
 {
     disable_interrupts();
+
+    system_thousands = 0;
+    system_seconds =    bcd_to_binary(bootboot.datetime[6]);
+    system_minutes =    bcd_to_binary(bootboot.datetime[5]);
+    system_hours =      bcd_to_binary(bootboot.datetime[4]);
+    system_day =        bcd_to_binary(bootboot.datetime[3]);
+    system_month =      bcd_to_binary(bootboot.datetime[2]);
+    system_year =       bcd_to_binary(bootboot.datetime[1] | ((uint16_t)bootboot.datetime[0] << 8));
+
+    system_minutes += bootboot.timezone;
+
+    resolve_time();
+
+    time_initialized = true;
 
     enable_sse();
 
@@ -300,6 +333,10 @@ void _start()
     kernel_symbols_file = initrd_find_file("symbols.txt");
 
     tty_font = psf_font_load_from_initrd("iso06.f14.psf");
+
+// * vvv Now we can use printf
+
+    printf("Time: %u-%u-%u %u:%u:%u.%u%u%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds, (system_thousands / 100) % 10, (system_thousands / 10) % 10, system_thousands % 10);
 
     printf("CPUID highest function parameter: 0x%x\n", cpuid_highest_function_parameter);
     printf("CPUID highest extended function parameter: 0x%x\n", cpuid_highest_extended_function_parameter);

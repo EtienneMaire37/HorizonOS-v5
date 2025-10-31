@@ -91,7 +91,6 @@ bool first_log = true;
 // }
 
 #ifndef LOG_LEVEL 
-#define _LOG(level_text, ...)
 #define LOG(level, ...)
 #define CONTINUE_LOG(level, ...)
 #else

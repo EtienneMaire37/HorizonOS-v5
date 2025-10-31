@@ -149,7 +149,6 @@ void handle_syscall(interrupt_registers_t* registers)
                 {
                     tasks[current_task_index].reading_stdin = true;
                     switch_task();
-                    current_phys_mem_page = 0xffffffff;
                 }
                 registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
                 for (uint32_t i = 0; i < registers->eax; i++)
@@ -220,7 +219,6 @@ void handle_syscall(interrupt_registers_t* registers)
             pid_t forked_pid = tasks[current_task_index].forked_pid;
             unlock_task_queue();
             switch_task();
-            current_phys_mem_page = 0xffffffff;
             if (tasks[current_task_index].pid == forked_pid)
                 registers->eax = 0;
             else

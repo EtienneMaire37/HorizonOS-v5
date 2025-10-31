@@ -8,8 +8,6 @@
 
 #include "kernel_panic.h"
 
-int current_phys_mem_page;
-
 void handle_syscall(interrupt_registers_t* registers)
 {
     ;
@@ -20,14 +18,11 @@ void switch_task()
     ;
 }
 
-#define return_from_isr() do { current_phys_mem_page = old_phys_mem_page; return; } while (0)
+#define return_from_isr() return
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
     // LOG(DEBUG, "Interrupt number : %u", registers->interrupt_number);
-
-    uint32_t old_phys_mem_page = current_phys_mem_page;
-    current_phys_mem_page = 0xffffffff;
 
     if (registers->interrupt_number < 32)            // Fault
     {
@@ -52,7 +47,6 @@ void interrupt_handler(interrupt_registers_t* registers)
             tasks[current_task_index].is_dead = true;
             tasks[current_task_index].return_value = 0x80000000;
             switch_task();
-            current_phys_mem_page = 0xffffffff;
         }
 
         return_from_isr();
@@ -95,7 +89,6 @@ void interrupt_handler(interrupt_registers_t* registers)
         if (ts) 
         {
             switch_task();
-            current_phys_mem_page = 0xffffffff;
         }
         return_from_isr();
     }
