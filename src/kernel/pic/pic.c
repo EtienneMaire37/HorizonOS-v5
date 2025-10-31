@@ -1,5 +1,7 @@
 #pragma once
- 
+
+#include "pic.h"
+
 void pic_send_eoi(uint8_t irq)
 {
 	if(irq > 0b111) // Slave PIC

@@ -113,6 +113,7 @@ bool time_initialized = false;
 #include "../libc/src/unistd.c"
 #include "../libc/src/time.c"
 #include "gdt/gdt.c"
+#include "int/idt.c"
 
 FILE _stdin, _stdout, _stderr;
 
@@ -150,8 +151,6 @@ void interrupt_handler()
 {
     ;
 }
-
-int _idtr;
 
 atomic_flag print_spinlock = ATOMIC_FLAG_INIT;
 atomic_bool did_init_std = false;
@@ -256,6 +255,23 @@ void _start()
 
     printf(" | Done\n");
     LOG(INFO, "GDT and TSS loaded");
+
+    printf("Loading an IDT...");
+    LOG(INFO, "Loading an IDT...");
+    install_idt();
+    printf(" | Done\n");
+    LOG(INFO, "IDT loaded");
+
+    LOG(INFO, "Remapping PIC");
+    printf("Remapping PIC...");
+    pic_remap(32, 32 + 8);
+    printf(" | Done\n");
+    LOG(INFO, "PIC remapped");
+
+    enable_interrupts(); 
+    LOG(INFO, "Enabled interrupts");
+
+    // asm volatile("div rcx" :: "c"(0));
 
     fflush(stdout);
 

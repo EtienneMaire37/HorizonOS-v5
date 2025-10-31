@@ -1,24 +1,29 @@
 bits 64
 section .text
 
+idtr:
+    dw 0
+    dq 0
+
 global load_idt
-extern _idtr
 ; void load_idt()
 load_idt:
-    lidt [_idtr]
+    mov [idtr], di
+    mov [idtr + 2], rsi
+    lidt [idtr]
     ret
 
 %macro INT_ERROR_CODE 1
 INT_%1:
-    push %1
+    push qword %1
 
     jmp _interrupt_handler
 %endmacro
 
 %macro INT_NO_ERROR_CODE 1
 INT_%1:
-    push 0    
-    push %1
+    push qword 0
+    push qword %1
 
     jmp _interrupt_handler
 %endmacro
@@ -59,29 +64,29 @@ INT_NO_ERROR_CODE 29
 INT_ERROR_CODE    30
 INT_NO_ERROR_CODE 31
 
-; !! Change this to 64bit IDT entries ASAP
-; ; ; IRQs
-; ; %assign i 32
-; ;     %rep    16
-; ;         INT_NO_ERROR_CODE i
-; ;     %assign i i+1 
-; ;     %endrep
+; IRQs
+%assign i 32
+    %rep    16
+        INT_NO_ERROR_CODE i
+    %assign i i+1 
+    %endrep
 
-; ; ; All the other interrupts
-; ; %assign i 48
-; ;     %rep    (256 - 48)
-; ;         INT_NO_ERROR_CODE i
-; ;     %assign i i+1 
-; ;     %endrep
+; All the other interrupts
+%assign i 48
+    %rep    (256 - 48)
+        INT_NO_ERROR_CODE i
+    %assign i i+1 
+    %endrep
 
-; ; global interrupt_table
-; ; interrupt_table:
-; ;     %assign i 0 
-; ;     %rep    256
-; ;         dd INT_%+i
-; ;     %assign i i+1 
-; ;     %endrep
+global interrupt_table
+interrupt_table:
+    %assign i 0 
+    %rep    256
+        dq INT_%+i
+    %assign i i+1 
+    %endrep
 
+extern putchar
 _interrupt_handler:
     push rax
     push rcx
@@ -117,10 +122,10 @@ _interrupt_handler:
     push rax
     
     push rsp
-    call interrupt_handler
+    ; call interrupt_handler
     pop rsp
     
-    add rsp, 8  ; skip cr2 and cr3
+    add rsp, 8 + 8  ; skip cr2 and cr3
 
     pop rax
     mov ds, ax
@@ -144,7 +149,7 @@ _interrupt_handler:
     pop rcx
     pop rax
     
-    add rsp, 8
+    add rsp, 8 + 8  ; skip error code and interrupt number
 global iret_instruction
 iret_instruction:
-    iret
+    iretq
