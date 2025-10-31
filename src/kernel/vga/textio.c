@@ -108,7 +108,7 @@ inline uint32_t tty_get_character_width()
 
 inline uint32_t tty_get_character_height()
 {
-	return (framebuffer.height - 2 * tty_padding) * psf_get_glyph_height(&tty_font) / psf_get_glyph_width(&tty_font) / TTY_RES_X;
+	return (framebuffer.height - 2 * tty_padding) * (psf_get_glyph_height(&tty_font) + psf_get_glyph_width(&tty_font) - 1) / psf_get_glyph_width(&tty_font) / TTY_RES_X;
 }
 
 inline uint32_t tty_get_character_pos_x(uint32_t index)
