@@ -101,7 +101,6 @@ void kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     tty_clear_screen(' ');
 
-    tty_cursor = 0;
     tty_update_cursor();
     // tty_hide_cursor();
 

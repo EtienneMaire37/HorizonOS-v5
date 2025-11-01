@@ -103,7 +103,6 @@ bool time_initialized = false;
 #include "cpu/cpuid.h"
 #include "fpu/sse.h"
 #include "debug/out.h"
-#include "cmos/rtc.h"
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
@@ -124,6 +123,7 @@ bool time_initialized = false;
 #include "time/gdn.h"
 #include "time/ktime.h"
 #include "time/time.h"
+#include "cmos/rtc.h"
 
 #include "vga/textio.c"
 #include "pic/apic.c"
@@ -274,8 +274,6 @@ void _start()
         framebuffer.address = (uintptr_t)bootboot.fb_ptr;
         framebuffer.format = bootboot.fb_type;
 
-        tty_cursor = 0;
-
         LOG(INFO, "LAPIC base: %p", lapic);
 
         uint32_t ebx, ecx, edx;
@@ -338,11 +336,7 @@ void _start()
 
 // * vvv Now we can use printf
 
-    printf("Time: ");
-
-    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-    printf("%u-%u-%u %u:%u:%u.%u%u%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds, (system_thousands / 100) % 10, (system_thousands / 10) % 10, system_thousands % 10);
-    tty_set_color(FG_WHITE, BG_BLACK);
+    tty_clear_screen(' ');
 
     printf("LAPIC base: %p\n", lapic);
 
@@ -415,7 +409,7 @@ void _start()
         lapic->divide_configuration_register = 3;
         lapic->initial_count_register = 0xffffffff;
 
-        rtc_wait_while_updating();
+        rtc_get_time();
 
         lapic->lvt_timer_register = 0x10000;    // mask it
 
@@ -428,6 +422,12 @@ void _start()
 
     LOG(INFO, "Set up the APIC timer");
     printf(" | Done\n");
+
+    printf("Time: ");
+
+    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+    printf("%u-%u-%u %u:%u:%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
+    tty_set_color(FG_WHITE, BG_BLACK);
 
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");

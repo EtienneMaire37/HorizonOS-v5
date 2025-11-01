@@ -44,12 +44,21 @@
 #define TTY_RES_X   100
 #define TTY_RES_Y   40
 
+uint16_t tty_data[TTY_RES_X * TTY_RES_Y] = {0};
+
 uint32_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
+
+bool tty_cursor_blink = true;
 
 psf_font_t tty_font;
 
 const uint32_t tty_padding = 2;	// pixels
+
+bool is_printable_character(char c)
+{
+    return c >= 32;
+}
 
 void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
 void tty_hide_cursor();

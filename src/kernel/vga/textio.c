@@ -34,6 +34,8 @@ inline void tty_update_cursor()
 
 inline void tty_clear_screen(char c)
 {
+	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
+		tty_data[i] = 0x0f20;
 	if (c == 0 || c == ' ')
 	{
 		srgb_t bg_color = vga_get_bg_color(tty_color);
@@ -129,13 +131,44 @@ inline uint32_t tty_get_character_pos_y(uint32_t index)
 	return tty_padding + tty_get_character_height() * (tty_cursor / TTY_RES_X);
 }
 
+inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
+{
+	uint32_t width = tty_get_character_width();
+	uint32_t height = tty_get_character_height();
+
+	uint32_t x = tty_get_character_pos_x(cursor);
+	uint32_t y = tty_get_character_pos_y(cursor);
+
+	srgb_t bg_color = vga_get_bg_color(color);
+	framebuffer_fill_rect(&framebuffer, x, y, width, height, bg_color.r, bg_color.g, bg_color.b, 0);
+
+	srgb_t fg_color = vga_get_fg_color(color);
+	framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c,
+		fg_color.r,
+		fg_color.g,
+		fg_color.b);
+}
+
+inline void tty_render_cursor(uint32_t cursor)
+{
+	uint32_t width = tty_get_character_width();
+	uint32_t height = tty_get_character_height();
+
+	uint32_t x = tty_get_character_pos_x(cursor);
+	uint32_t y = tty_get_character_pos_y(cursor);
+
+	framebuffer_fill_rect(&framebuffer, x, y + (8 * height / 10), width, height / 5, 255, 255, 255, 0);
+}
+
 inline void tty_outc(char c)
 {
 	if (c == 0)
-	{
-		// tty_cursor++;
 		return;
-	}
+
+	if (is_printable_character(c))
+		tty_data[tty_cursor] = c | ((uint16_t)tty_color << 8);
+
+	tty_render_character(tty_cursor, tty_data[tty_cursor], tty_data[tty_cursor] >> 8);
 	
 	switch(c)
 	{
@@ -147,38 +180,32 @@ inline void tty_outc(char c)
 		break;
 
 	case '\t':
+		tty_render_character(tty_cursor, c, tty_color);
 		tty_cursor += TAB_LENGTH;
 		tty_cursor /= TAB_LENGTH;
 		tty_cursor *= TAB_LENGTH;
+		if (tty_cursor_blink)
+			tty_render_cursor(tty_cursor);
 		break;
 
 	case '\b':
+		tty_render_character(tty_cursor, c, tty_color);
 		if (tty_cursor > 0)
 			tty_cursor--;
+		if (tty_cursor_blink)
+			tty_render_cursor(tty_cursor);
 		break;
 	
 	default:
-		if (!tty_font.f || !tty_font.f->data)
+		if (tty_cursor / TTY_RES_X >= TTY_RES_Y)
 		{
 			tty_cursor++;
 			break;
 		}
 
-		uint32_t width = tty_get_character_width();
-		uint32_t height = tty_get_character_height();
-
-		uint32_t x = tty_get_character_pos_x(tty_cursor);
-		uint32_t y = tty_get_character_pos_y(tty_cursor);
-
-		srgb_t bg_color = vga_get_bg_color(tty_color);
-		framebuffer_fill_rect(&framebuffer, x, y, width, height, bg_color.r, bg_color.g, bg_color.b, 0);
-
-		srgb_t fg_color = vga_get_fg_color(tty_color);
-		framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c,
-			fg_color.r,
-			fg_color.g,
-			fg_color.b);
-
 		tty_cursor++;
 	}
+
+	if (tty_cursor_blink)
+		tty_render_cursor(tty_cursor);
 }

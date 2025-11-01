@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cmos.h"
+#include "../time/ktime.h"
 
 bool rtc_binary_mode;   // 0 = BCD, 1 = Binary
 bool rtc_24_hour_mode;  // 0 = 12-hour, 1 = 24-hour
@@ -52,4 +53,6 @@ void rtc_get_time()
     }
 
     system_thousands = 0;
+
+    resolve_time();
 }
