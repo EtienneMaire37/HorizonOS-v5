@@ -103,6 +103,7 @@ bool time_initialized = false;
 #include "cpu/cpuid.h"
 #include "fpu/sse.h"
 #include "debug/out.h"
+#include "cmos/rtc.h"
 
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
@@ -250,7 +251,7 @@ void _start()
         abort();
 
     apic_init();
-    uint16_t cpu_id = apic_get_cpu_id();
+    uint8_t cpu_id = apic_get_cpu_id();
 
     if (bootboot.bspid != cpu_id) // * Only one core supported for now
         halt();
@@ -275,22 +276,23 @@ void _start()
 
         tty_cursor = 0;
 
-        has_cpuid = true;
+        LOG(INFO, "LAPIC base: %p", lapic);
+
         uint32_t ebx, ecx, edx;
         cpuid(0, cpuid_highest_function_parameter, ebx, ecx, edx);
         // !! Actually will cause a triple fault on CPUs that don't support CPUID but you shouldn't be running this OS on such hardware anyway
 
-        LOG(DEBUG, "CPUID highest function parameter: 0x%x", cpuid_highest_function_parameter);
+        LOG(INFO, "CPUID highest function parameter: 0x%x", cpuid_highest_function_parameter);
 
         *(uint32_t*)&manufacturer_id_string[0] = ebx;
         *(uint32_t*)&manufacturer_id_string[4] = edx;
         *(uint32_t*)&manufacturer_id_string[8] = ecx;
         manufacturer_id_string[12] = 0;
 
-        LOG(INFO, "cpu manufacturer id : \"%s\"", manufacturer_id_string);
+        LOG(INFO, "CPU manufacturer id : \"%s\"", manufacturer_id_string);
 
         cpuid(0x80000000, cpuid_highest_extended_function_parameter, ebx, ecx, edx);
-        LOG(DEBUG, "CPUID highest extended function parameter: 0x%x", cpuid_highest_extended_function_parameter);
+        LOG(INFO, "CPUID highest extended function parameter: 0x%x", cpuid_highest_extended_function_parameter);
 
         if (cpuid_highest_extended_function_parameter >= 0x80000008)
         {
@@ -336,14 +338,31 @@ void _start()
 
 // * vvv Now we can use printf
 
-    printf("Time: %u-%u-%u %u:%u:%u.%u%u%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds, (system_thousands / 100) % 10, (system_thousands / 10) % 10, system_thousands % 10);
+    printf("Time: ");
+
+    tty_set_color(FG_LIGHTCYAN, BG_BLACK);
+    printf("%u-%u-%u %u:%u:%u.%u%u%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds, (system_thousands / 100) % 10, (system_thousands / 10) % 10, system_thousands % 10);
+    tty_set_color(FG_WHITE, BG_BLACK);
+
+    printf("LAPIC base: %p\n", lapic);
+
+    printf("CPU manufacturer id : ");
+    tty_set_color(FG_LIGHTRED, BG_BLACK);
+    printf("\"%s\"\n", manufacturer_id_string);
+    tty_set_color(FG_WHITE, BG_BLACK);
 
     printf("CPUID highest function parameter: 0x%x\n", cpuid_highest_function_parameter);
     printf("CPUID highest extended function parameter: 0x%x\n", cpuid_highest_extended_function_parameter);
-    printf("Physical address is %u bits long\n", physical_address_width);
+
+    printf("Physical address is ");
+    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
+    printf("%u ", physical_address_width);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    printf("bits long\n");
 
     LOG(INFO, "Loading a GDT with TSS...");
     printf("Loading a GDT with TSS...");
+    fflush(stdout);
 
     memset(&GDT[0], 0, sizeof(struct gdt_entry));       // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0x9A, 0xA);    // Kernel mode code segment
@@ -362,27 +381,70 @@ void _start()
     LOG(INFO, "GDT and TSS loaded");
 
     printf("Loading an IDT...");
+    fflush(stdout);
     LOG(INFO, "Loading an IDT...");
     install_idt();
     printf(" | Done\n");
     LOG(INFO, "IDT loaded");
 
-    LOG(INFO, "Remapping the PIC");
-    printf("Remapping the PIC...");
-    pic_remap(32, 32 + 8);
+    LOG(INFO, "Disabling the PIC");
+    printf("Disabling the PIC...");
+    fflush(stdout);
+    pic_disable();
     printf(" | Done\n");
-    LOG(INFO, "PIC remapped");
+    LOG(INFO, "PIC disabled");
+
+    LOG(INFO, "Enabling the APIC");
+    printf("Enabling the APIC...");
+    fflush(stdout);
+
+    lapic_set_spurious_interrupt_number(0xff);
+    lapic_enable();
+    lapic_set_tpr(0);
+
+    printf(" | Done\n");
+    LOG(INFO, "APIC enabled");
+
+    LOG(INFO, "Setting up the APIC timer");
+    printf("Setting up the APIC timer");
+    fflush(stdout);
+
+    {
+        rtc_wait_while_updating();
+
+        lapic->divide_configuration_register = 3;
+        lapic->initial_count_register = 0xffffffff;
+
+        rtc_wait_while_updating();
+
+        lapic->lvt_timer_register = 0x10000;    // mask it
+
+        uint32_t ticks_in_1_sec = 0xffffffff - lapic->current_count_register;
+
+        lapic->lvt_timer_register = 0x80 | 0x20000; // 0x80 | PERIODIC
+        lapic->divide_configuration_register = 3;
+        lapic->initial_count_register = ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY;
+    }
+
+    LOG(INFO, "Set up the APIC timer");
+    printf(" | Done\n");
 
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
 
     pfa_detect_usable_memory();
 
-    printf("Detected %u bytes of allocatable memory\n", allocatable_memory);
+    printf("Detected ");
+    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
+    printf("%u ", allocatable_memory);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    printf("bytes of allocatable memory\n");
 
     // asm volatile("div rcx" :: "c"(0));
 
     fflush(stdout);
+
+    while(true);
 
     halt();
 }

@@ -27,12 +27,6 @@ void interrupt_handler(interrupt_registers_t* registers)
     if (registers->interrupt_number < 32)            // Fault
     {
         LOG(WARNING, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), registers->error_code, registers->cr2, registers->cr3);
-
-        if (registers->interrupt_number == 6 && *((uint16_t*)registers->rip) == 0xa20f)  // Invalid Opcode + CPUID // ~ Assumes no instruction prefix // !! Also assumes that eip does not cross a non present page boundary
-        {
-            has_cpuid = false;
-            return_from_isr();
-        }
         
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
@@ -65,31 +59,8 @@ void interrupt_handler(interrupt_registers_t* registers)
             return_from_isr();
         }
 
-        bool ts = false;
-
-        switch (irq_number)
-        {
-        case 0:
-            handle_irq_0(&ts);
-            break;
-
-        case 1:
-            handle_irq_1();
-            break;
-        case 12:
-            handle_irq_12();
-            break;
-
-        default:
-            break;
-        }
-
         pic_send_eoi(irq_number);
 
-        if (ts) 
-        {
-            switch_task();
-        }
         return_from_isr();
     }
     if (registers->interrupt_number == 0xf0)  // System call
@@ -98,6 +69,24 @@ void interrupt_handler(interrupt_registers_t* registers)
 
         handle_syscall(registers);
     }
+
+    // * APIC interrupt
+
+    // LOG(DEBUG, "Interrupt 0x%x from APIC", registers->interrupt_number);
+
+    switch (registers->interrupt_number)
+    {
+    case 0x80:  // * APIC Timer
+        global_timer += GLOBAL_TIMER_INCREMENT;
+        system_thousands += precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
+        resolve_time();
+        // printf("APIC Timer interrupt\n");
+        break;
+    default:    // * Spurious interrupt (probably)
+        return_from_isr();
+    }
+
+    lapic_send_eoi();
 
     return_from_isr();
 }

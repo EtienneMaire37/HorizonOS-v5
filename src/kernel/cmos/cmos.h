@@ -7,15 +7,17 @@
 #define cmos_read_register()        inb(CMOS_REGISTER_DATA)
 #define cmos_write_register(data)   outb(CMOS_REGISTER_DATA, data)
 
-#define CMOS_REGISTER_SECONDS    0x00
-#define CMOS_REGISTER_MINUTES    0x02
-#define CMOS_REGISTER_HOURS      0x04
-#define CMOS_REGISTER_DAY        0x07
-#define CMOS_REGISTER_MONTH      0x08
-#define CMOS_REGISTER_YEAR       0x09
-#define CMOS_REGISTER_STATUS_A   0x0a
-#define CMOS_REGISTER_STATUS_B   0x0b
+#define CMOS_REGISTER_SECONDS       0x00
+#define CMOS_REGISTER_MINUTES       0x02
+#define CMOS_REGISTER_HOURS         0x04
+#define CMOS_REGISTER_DAY           0x07
+#define CMOS_REGISTER_MONTH         0x08
+#define CMOS_REGISTER_YEAR          0x09
+#define CMOS_REGISTER_STATUS_A      0x0a
+#define CMOS_REGISTER_STATUS_B      0x0b
 
-#define CMOS_CENTURY_REGISTER    0x32
+#define CMOS_CENTURY_REGISTER       0x32
 
-#define cmos_wait_while_updating()  { do { cmos_select_register(CMOS_REGISTER_STATUS_A); } while(!(cmos_read_register() & 0x80)); do { cmos_select_register(CMOS_REGISTER_STATUS_A); } while(cmos_read_register() & 0x80); }
+#define RTC_UPDATE_IN_PROGRESS      0x80
+
+#define rtc_wait_while_updating()  { do { cmos_select_register(CMOS_REGISTER_STATUS_A); } while(!(cmos_read_register() & RTC_UPDATE_IN_PROGRESS)); do { cmos_select_register(CMOS_REGISTER_STATUS_A); } while(cmos_read_register() & RTC_UPDATE_IN_PROGRESS); }

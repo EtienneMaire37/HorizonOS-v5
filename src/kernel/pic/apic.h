@@ -27,7 +27,7 @@ struct local_apic_icr_register
     uint8_t reserved[lapic_reg_next_offset()];
 } __attribute__((packed));
 
-struct local_apic_registers
+typedef struct __attribute__((packed)) local_apic_registers 
 {
     uint8_t reserved0[0x20];
     uint32_t id_register;
@@ -48,7 +48,7 @@ struct local_apic_registers
     uint8_t reserved8[lapic_reg_next_offset()];
     uint32_t destination_format_register;
     uint8_t reserved9[lapic_reg_next_offset()];
-    uint32_t spurious_interrupt_vector__register;
+    uint32_t spurious_interrupt_vector_register;
     uint8_t reserved10[lapic_reg_next_offset()];
     struct local_apic_isr_register in_service_registers[8];
     struct local_apic_tmr_register trigger_mode_registers[8];
@@ -75,6 +75,6 @@ struct local_apic_registers
     uint32_t current_count_register;
     uint8_t reserved20[lapic_reg_offset(0x390, 0x3e0)];
     uint32_t divide_configuration_register;
-} __attribute__((packed));
+} local_apic_registers_t;
 
 volatile struct local_apic_registers* lapic;

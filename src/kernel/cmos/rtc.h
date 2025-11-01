@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cmos.h"
+
 bool rtc_binary_mode;   // 0 = BCD, 1 = Binary
 bool rtc_24_hour_mode;  // 0 = 12-hour, 1 = 24-hour
 
@@ -14,7 +16,7 @@ void rtc_detect_mode()
 
 void rtc_get_time()
 {
-    cmos_wait_while_updating();
+    rtc_wait_while_updating();
     cmos_select_register(CMOS_REGISTER_SECONDS);
     system_seconds = cmos_read_register();
     cmos_select_register(CMOS_REGISTER_MINUTES);
@@ -50,60 +52,4 @@ void rtc_get_time()
     }
 
     system_thousands = 0;
-}
-
-void system_increment_time()
-{
-    system_thousands += precise_time_to_milliseconds(PIT_INCREMENT);
-    while (system_thousands >= 1000)
-    {
-        system_thousands -= 1000;
-        system_seconds++;
-        if (system_seconds >= 60)
-        {
-            system_minutes++;
-            system_seconds = 0;
-            if (system_minutes >= 60)
-            {
-                system_hours++;
-                system_minutes = 0;
-                if (system_hours >= 24)
-                {
-                    system_day++;
-                    system_hours = 0;
-                    if ((system_year % 4 == 0) && (system_year % 400 != 0)) // Leap year
-                    {
-                        if (system_month == 2 && system_day > 29)
-                        {
-                            system_month++;
-                            system_day = 1;
-                        }
-                        else if (system_day > 30 + ((system_month <= 7) ? system_month % 2 : (system_month + 1) % 2))
-                        {
-                            system_month++;
-                            system_day = 1;
-                        }
-                    }
-                    else
-                    {
-                        if (system_month == 2 && system_day > 28)
-                        {
-                            system_month++;
-                            system_day = 1;
-                        }
-                        else if (system_day > 30 + ((system_month <= 7) ? system_month % 2 : (system_month + 1) % 2))
-                        {
-                            system_month++;
-                            system_day = 1;
-                        }
-                    }
-                    if (system_month > 12)
-                    {
-                        system_year++;
-                        system_month = 1;
-                    }
-                }
-            }
-        }
-    }
 }

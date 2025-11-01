@@ -31,6 +31,11 @@ uint8_t get_num_days_in_month(int64_t month, int64_t year)
 
 void resolve_time()
 {
+    while (system_thousands < 0 || system_thousands >= 1000)
+    {
+        system_seconds -= system_thousands >= 1000 ? -1 : 1;
+        system_thousands += (system_thousands >= 1000 ? -1 : 1) * 1000;
+    }
     while (system_seconds < 0 || system_seconds >= 60)
     {
         system_minutes -= system_seconds >= 60 ? -1 : 1;
