@@ -6,8 +6,6 @@
 
 #include <bootboot.h>
 
-uint8_t physical_address_width; // ! Should probably be in paging.h but didn't add it back yet
-
 typedef uint64_t physical_address_t;
 typedef uint64_t virtual_address_t;
 
@@ -231,20 +229,6 @@ void _start()
 {
     disable_interrupts();
 
-    system_thousands = 0;
-    system_seconds =    bcd_to_binary(bootboot.datetime[6]);
-    system_minutes =    bcd_to_binary(bootboot.datetime[5]);
-    system_hours =      bcd_to_binary(bootboot.datetime[4]);
-    system_day =        bcd_to_binary(bootboot.datetime[3]);
-    system_month =      bcd_to_binary(bootboot.datetime[2]);
-    system_year =       bcd_to_binary(bootboot.datetime[1] | ((uint16_t)bootboot.datetime[0] << 8));
-
-    system_minutes += bootboot.timezone;
-
-    resolve_time();
-
-    time_initialized = true;
-
     enable_sse();
 
     if (!bootboot.fb_scanline) 
@@ -418,6 +402,8 @@ void _start()
         lapic->lvt_timer_register = 0x80 | 0x20000; // 0x80 | PERIODIC
         lapic->divide_configuration_register = 3;
         lapic->initial_count_register = ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY;
+
+        time_initialized = true;
     }
 
     LOG(INFO, "Set up the APIC timer");
@@ -444,7 +430,8 @@ void _start()
 
     fflush(stdout);
 
-    while(true);
+    while(true)
+        hlt();
 
     halt();
 }

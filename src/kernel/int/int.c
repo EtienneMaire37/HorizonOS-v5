@@ -1,6 +1,6 @@
 #pragma once
 
-// #include "../multitasking/vas.h"
+#include "../multitasking/vas.h"
 // #include "../multitasking/task.c"
 // #include "../multitasking/syscall.h"
 #include "int.h"

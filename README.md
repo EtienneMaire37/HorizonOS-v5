@@ -50,8 +50,9 @@ make run
 | 0-1TB     | Identity mapped |
 | 1TB-128TB | Process segments, heap and stack    |
 | 128TB-[-128TB] | Noncanonical addresses |
-| [-2MB]-0 | Process kernel stack |
-| [-1MB]-0 | Process stack |
+| [-133MB]-[-132MB] | Process kernel stack |
+| [-132MB]-[-128MB] | Process stack |
+| [-128MB]-0 | mmio, framebuffer, bootboot data and kernel code segment |
 
 
 ## Contributing

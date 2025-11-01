@@ -68,11 +68,29 @@ void framebuffer_fill_rect(linear_framebuffer_t* buffer, uint32_t x, uint32_t y,
 
     uint32_t dword = framebuffer_decode_color_data(buffer, red, green, blue, alpha);
 
-    for (uint32_t i = y; i < bottom; i++)
+    if (red == green && red == blue)
     {
-        for (uint32_t j = x; j < right; j++)
+        if (x == 0 && y == 0 && size_x == buffer->width && size_y == buffer->height)
         {
-            ((uint32_t*)(buffer->address + buffer->stride * i))[j] = dword;
+            memset((void*)buffer->address, red, buffer->stride * size_y);
+        }
+        else
+        {
+            for (uint32_t i = y; i < bottom; i++)
+            {
+                memset((void*)(buffer->address + buffer->stride * i) + 4 * x, red, 4 * (right - x));
+            }
+        }
+    }
+    else
+    {
+        for (uint32_t i = y; i < bottom; i++)
+        {
+            uint32_t* row = (uint32_t*)(buffer->address + buffer->stride * i);
+            for (uint32_t j = x; j < right; j++)
+            {
+                row[j] = dword;
+            }
         }
     }
 }
