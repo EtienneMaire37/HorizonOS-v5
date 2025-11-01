@@ -1,17 +1,18 @@
-#pragma onced
+#pragma once
 
-void invlpg(uint32_t addr)
+void invlpg(uint64_t addr)
 {
     asm volatile("invlpg [%0]" :: "r" (addr) : "memory");
 }
 
-void load_cr3(physical_address_t addr)
+void load_cr3(uint64_t addr)
 {
-    if (addr >> 32)
-    {
-        LOG(CRITICAL, "Tried to load a page directory above 4GB");
-        abort();
-    }
-    
-    asm volatile("mov cr3, eax" :: "a" ((uint32_t)addr) : "memory");
+    asm volatile("mov cr3, rax" :: "a" ((uint64_t)addr) : "memory");
+}
+
+uint64_t get_cr3()
+{
+    uint64_t val;
+    asm volatile("mov rax, cr3" : "=a"(val));
+    return val;
 }

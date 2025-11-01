@@ -137,6 +137,7 @@ bool time_initialized = false;
 #include "int/idt.c"
 #include "int/int.c"
 #include "memalloc/page_frame_allocator.c"
+#include "paging/paging.c"
 
 int64_t minint(int64_t a, int64_t b)
 {
@@ -338,6 +339,55 @@ void _start()
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("bits long\n");
 
+    pfa_detect_usable_memory();
+
+    printf("Detected ");
+    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
+    printf("%u ", allocatable_memory);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    printf("bytes of allocatable memory\n");
+
+    LOG(INFO, "Setting up paging...");
+    printf("Setting up paging...");
+    fflush(stdout);
+
+    uint64_t* cr3 = NULL;
+
+    {
+        uint64_t* bootboot_cr3 = (uint64_t*)get_cr3();
+
+    // * "When the kernel gains control, the memory mapping looks like this:"
+    // *  -128M         "mmio" area           (0xFFFFFFFFF8000000)
+    // *   -64M         "fb" framebuffer      (0xFFFFFFFFFC000000)
+    // *    -2M         "bootboot" structure  (0xFFFFFFFFFFE00000)
+    // *    -2M+1page   "environment" string  (0xFFFFFFFFFFE01000)
+    // *    -2M+2page.. code segment   v      (0xFFFFFFFFFFE02000)
+    // *     ..0        stack          ^      (0x0000000000000000)
+    // *    0-16G       RAM identity mapped   (0x0000000400000000)
+
+        // LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFF8000000, 0);
+        // copy_mapping(bootboot_cr3, cr3, 0xFFFFFFFFF8000000, (-0xFFFFFFFFF8000000) >> 12);
+
+        // LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0, 0x0000000400000000);
+        // copy_mapping(bootboot_cr3, cr3, 0, 0x0000000400000000 >> 12);
+
+        // for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
+        // {
+        //     uint64_t ptr = MMapEnt_Ptr(mmap_ent) & 0xfffffffffffff000;
+        //     uint64_t len = ((MMapEnt_Size(mmap_ent) + 0xfff) / 0x1000) * 0x1000 + 0x1000;
+        //     LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
+        //     remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE);
+        // }
+
+        // LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, lapic + 0x1000);
+        // remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE);
+
+        cr3 = bootboot_cr3;
+    }
+
+    printf(" | Done\n");
+    LOG(INFO, "Set up paging");
+
     LOG(INFO, "Loading a GDT with TSS...");
     printf("Loading a GDT with TSS...");
     fflush(stdout);
@@ -418,13 +468,7 @@ void _start()
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
 
-    pfa_detect_usable_memory();
-
-    printf("Detected ");
-    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
-    printf("%u ", allocatable_memory);
-    tty_set_color(FG_WHITE, BG_BLACK);
-    printf("bytes of allocatable memory\n");
+    load_cr3((uint64_t)cr3);
 
     // asm volatile("div rcx" :: "c"(0));
 
