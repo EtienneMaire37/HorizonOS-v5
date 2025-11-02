@@ -11,6 +11,11 @@ typedef long unsigned int size_t;
 // int memcmp(const void* a, const void* b, size_t n);
 // void* memmove(void* dst, const void* src, size_t length);
 
+#undef memcpy
+#undef memset
+#undef memcmp
+#undef memmove
+
 #define memcpy __builtin_memcpy
 #define memset __builtin_memset
 #define memcmp __builtin_memcmp
@@ -20,6 +25,11 @@ typedef long unsigned int size_t;
 // int strcmp(const char* a, const char* b);
 // char* strcpy(char* dst, const char* src);
 // char* strncpy(char* dst, const char* src, size_t n);
+
+#undef strlen
+#undef strcmp
+#undef strcpy
+#undef strncpy
 
 #define strlen __builtin_strlen
 #define strcmp __builtin_strcmp

@@ -17,6 +17,8 @@ uint8_t first_alloc_block;
 uint64_t bitmap_size;
 uint8_t* bitmap;
 
+uint64_t first_free_page_index_hint = 0;
+
 uint64_t memory_allocated, allocatable_memory;
 
 atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
@@ -31,5 +33,5 @@ atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
 
 void pfa_detect_usable_memory();
 void pfa_bitmap_init();
-physical_address_t pfa_allocate_physical_page();
-void pfa_free_physical_page(physical_address_t address);
+static inline physical_address_t pfa_allocate_physical_page();
+static inline void pfa_free_physical_page(physical_address_t address);

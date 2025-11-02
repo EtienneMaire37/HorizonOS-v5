@@ -155,7 +155,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* old_pml4_entry = &src[pml4e];
         if (!is_pdpt_entry_present(old_pml4_entry))
         {
-            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte;
+            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1;
             continue;
         }
 
@@ -169,7 +169,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* old_pdpt_entry = &old_pdpt[pdpte];
         if (!is_pdpt_entry_present(old_pdpt_entry))
         {
-            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte;
+            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1;
             continue;
         }
 
@@ -185,7 +185,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* old_pd_entry = &old_pd[pde];
         if (!is_pdpt_entry_present(old_pd_entry))
         {
-            i += ((uint64_t)1 << 9) - pte;
+            i += ((uint64_t)1 << 9) - pte - 1;
             continue;
         }
 
@@ -197,14 +197,11 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
             set_pdpt_entry(new_pd_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE);
 
         uint64_t* old_pt = get_pdpt_entry_address(old_pd_entry);
+        uint64_t* new_pt = get_pdpt_entry_address(new_pd_entry);
 
-        uint64_t* old_pt_entry = &old_pt[pte];
-        if (is_pdpt_entry_present(old_pt_entry))
-        {
-            uint64_t* new_pt = get_pdpt_entry_address(new_pd_entry);
+        memcpy(new_pt, old_pt, 4096);
 
-            new_pt[pte] = *old_pt_entry;
-        }
+        i += ((uint64_t)1 << 9) - pte - 1;
     }
 }
 

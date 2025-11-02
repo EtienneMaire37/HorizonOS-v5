@@ -6,13 +6,15 @@ void* memset(void* ptr, int value, size_t num)
     return ptr;
 }
 
-void* memcpy(void* destination, const void* source, size_t num)
+void* memcpy(void* dst, const void* src, size_t n) 
 {
-    uint8_t* d = (uint8_t*)destination;
-    const uint8_t* s = (const uint8_t*)source;
-    for (size_t i = 0; i < num; i++)
-        d[i] = s[i];
-    return destination;
+    asm volatile(
+        "rep movsb"
+        : "=D"(dst), "=S"(src), "=c"(n)
+        : "0"(dst), "1"(src), "2"(n)
+        : "memory"
+    );
+    return dst;
 }
 
 void* memmove(void* dst, const void* src, size_t length)

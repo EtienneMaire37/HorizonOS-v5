@@ -21,8 +21,7 @@ run:
 	-m 64                                        		\
 	-drive file=horizonos.iso,index=0,media=disk,format=raw \
 	-smp 8 \
-	-d cpu \
-	-device VGA,edid=on,xres=1920,yres=1080
+	-d cpu
 
 	// src/tasks/bin/start.elf
 horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
@@ -35,7 +34,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
-	-Wall -Werror -fpic $(CFLAGS) -fno-stack-protector -I./bootboot/dist/ \
+	-Wall -Werror -fpic $(CFLAGS) -I./bootboot/dist/ \
 	-Ofast \
 	-Wno-stringop-overflow -Wno-unused-variable \
 	$(CLOGLEVEL)

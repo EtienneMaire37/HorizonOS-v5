@@ -105,6 +105,7 @@ bool time_initialized = false;
 #include "../libc/include/errno.h"
 #include "../libc/include/stdio.h"
 #include "../libc/include/stdlib.h"
+#include "../libc/src/string.c"
 #include "../libc/include/string.h"
 #include "../libc/include/unistd.h"
 #include "../libc/include/termios.h"
@@ -130,7 +131,6 @@ bool time_initialized = false;
 #include "../libc/src/kernel.c"
 #include "../libc/src/stdio.c"
 #include "../libc/src/stdlib.c"
-#include "../libc/src/string.c"
 #include "../libc/src/unistd.c"
 #include "../libc/src/time.c"
 #include "gdt/gdt.c"
@@ -347,57 +347,6 @@ void _start()
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("bytes of allocatable memory\n");
 
-    LOG(INFO, "Setting up paging...");
-    printf("Setting up paging...");
-    fflush(stdout);
-
-    uint64_t* cr3 = create_empty_virtual_address_space();
-
-    {
-        uint64_t* bootboot_cr3 = (uint64_t*)get_cr3();
-
-    // * "When the kernel gains control, the memory mapping looks like this:"
-    // *  -128M         "mmio" area           (0xFFFFFFFFF8000000)
-    // *   -64M         "fb" framebuffer      (0xFFFFFFFFFC000000)
-    // *    -2M         "bootboot" structure  (0xFFFFFFFFFFE00000)
-    // *    -2M+1page   "environment" string  (0xFFFFFFFFFFE01000)
-    // *    -2M+2page.. code segment   v      (0xFFFFFFFFFFE02000)
-    // *     ..0        stack          ^      (0x0000000000000000)
-    // *    0-16G       RAM identity mapped   (0x0000000400000000)
-
-        LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFF8000000, 0);
-        copy_mapping(bootboot_cr3, cr3, 0xFFFFFFFFF8000000, (-0xFFFFFFFFF8000000) >> 12);
-
-        for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
-        {
-            uint64_t ptr = MMapEnt_Ptr(mmap_ent) & 0xfffffffffffff000;
-            uint64_t len = ((MMapEnt_Size(mmap_ent) + 0xfff) / 0x1000) * 0x1000 + 0x1000;
-
-            if (!MMapEnt_IsFree(mmap_ent))
-                continue;
-
-            if (ptr >= 1 * TB)
-                continue;
-            if (ptr + len >= 1 * TB)
-                len = 1 * TB - ptr;
-                
-            LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
-            remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE);
-        }
-
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
-        remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE);
-
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
-
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
-    }
-
-    printf(" | Done\n");
-    LOG(INFO, "Set up paging");
-
     LOG(INFO, "Loading a GDT with TSS...");
     printf("Loading a GDT with TSS...");
     fflush(stdout);
@@ -477,6 +426,66 @@ void _start()
 
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
+
+    LOG(INFO, "Setting up paging...");
+    printf("Setting up paging...\n");
+
+    uint64_t* cr3 = create_empty_virtual_address_space();
+
+    precise_time_t paging_start_time = global_timer;
+
+    {
+        uint64_t* bootboot_cr3 = (uint64_t*)get_cr3();
+
+    // * "When the kernel gains control, the memory mapping looks like this:"
+    // *  -128M         "mmio" area           (0xFFFFFFFFF8000000)
+    // *   -64M         "fb" framebuffer      (0xFFFFFFFFFC000000)
+    // *    -2M         "bootboot" structure  (0xFFFFFFFFFFE00000)
+    // *    -2M+1page   "environment" string  (0xFFFFFFFFFFE01000)
+    // *    -2M+2page.. code segment   v      (0xFFFFFFFFFFE02000)
+    // *     ..0        stack          ^      (0x0000000000000000)
+    // *    0-16G       RAM identity mapped   (0x0000000400000000)
+
+        printf("Copying mapping of range 0x%x-0x%x from bootboot\n", 0xFFFFFFFFFFE00000, 0);
+
+        LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFFFE00000, 0);
+        copy_mapping(bootboot_cr3, cr3, 0xFFFFFFFFFFE00000, (-0xFFFFFFFFFFE00000) >> 12);
+
+        for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
+        {
+            uint64_t ptr = MMapEnt_Ptr(mmap_ent) & 0xfffffffffffff000;
+            uint64_t len = ((MMapEnt_Size(mmap_ent) + 0xfff) / 0x1000) * 0x1000 + 0x1000;
+
+            if (!MMapEnt_IsFree(mmap_ent))
+                continue;
+
+            if (ptr >= 1 * TB)
+                continue;
+            if (ptr + len >= 1 * TB)
+                len = 1 * TB - ptr;
+                
+            LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
+            printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
+            remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE);
+        }
+
+        printf("Identity mapping range 0x%x-0x%x\n", lapic, (uint64_t)lapic + 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
+        remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE);
+
+        printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
+
+        printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
+    }
+
+    uint32_t paging_milliseconds = precise_time_to_milliseconds(global_timer - paging_start_time);
+
+    printf("Paging setup done in %u.%u%u%u seconds\n", paging_milliseconds / 1000, (paging_milliseconds / 100) % 10, (paging_milliseconds / 10) % 10, paging_milliseconds % 10);
+    LOG(INFO, "Set up paging");
 
     load_cr3((uint64_t)cr3);
 
