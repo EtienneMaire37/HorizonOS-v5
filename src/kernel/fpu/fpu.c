@@ -17,20 +17,20 @@ void fpu_init(void)
     asm volatile("fninit" ::: "memory");
 }
 
-inline void fpu_save_state(fpu_state_t* s)
+static inline void fpu_save_state(fpu_state_t* s)
 {
     if (!has_fpu) return;
     
     asm volatile("fxsave %0" : "=m" (*(fpu_state_t*)(((uintptr_t)s & 0xfffffff0) + 16)) :: "memory");
 }
 
-inline void fpu_restore_state(fpu_state_t* s)
+static inline void fpu_restore_state(fpu_state_t* s)
 {
     if (!has_fpu) return;
     asm volatile("fxrstor %0" :: "m" (*(fpu_state_t*)(((uintptr_t)s & 0xfffffff0) + 16)) : "memory");
 }
 
-inline void fpu_state_init(fpu_state_t* s)
+static inline void fpu_state_init(fpu_state_t* s)
 {
     if (!has_fpu) return;
     
@@ -38,7 +38,7 @@ inline void fpu_state_init(fpu_state_t* s)
     memcpy((void*)((uintptr_t)s->data + offset), &default_state, 512);
 }
 
-inline void copy_fpu_state(fpu_state_t* from, fpu_state_t* to)
+static inline void copy_fpu_state(fpu_state_t* from, fpu_state_t* to)
 {
     if (!has_fpu) return;
 

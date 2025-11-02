@@ -3,7 +3,7 @@
 #include "textio.h"
 #include "vga.h"
 
-inline void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
+static inline void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 {
 // // ~ bit 6,7 : reserved; bit 5 : (0: show, 1: hide); bit 0-4: scanline_start
 // 	vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) & 0b11000000) | scanline_start);
@@ -11,28 +11,28 @@ inline void tty_show_cursor(uint8_t scanline_start, uint8_t scanline_end)
 // 	vga_write_port_3d4(VGA_REG_3D4_CURSOR_END, (vga_read_port_3d4(VGA_REG_3D4_CURSOR_END) & 0b10000000) | scanline_end);
 }
 
-inline void tty_hide_cursor()
+static inline void tty_hide_cursor()
 {
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_START, vga_read_port_3d4(VGA_REG_3D4_CURSOR_START) | (1 << 5));
 }
 
-inline void tty_reset_cursor()
+static inline void tty_reset_cursor()
 {
 	// tty_show_cursor(14, 15);
 }
 
-inline void tty_set_cursor_pos(uint16_t pos)
+static inline void tty_set_cursor_pos(uint16_t pos)
 {
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_LOW, pos & 0xff);
 	// vga_write_port_3d4(VGA_REG_3D4_CURSOR_LOCATION_HIGH, (pos >> 8) & 0xff);
 }
 
-inline void tty_update_cursor()
+static inline void tty_update_cursor()
 {
 	tty_set_cursor_pos(tty_cursor);
 }
 
-inline void tty_clear_screen(char c)
+static inline void tty_clear_screen(char c)
 {
 	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
 		tty_data[i] = 0x0f20;
@@ -104,34 +104,34 @@ end:
 //     return 0xff;
 // }
 
-inline void tty_set_color(uint8_t fg_color, uint8_t bg_color)
+static inline void tty_set_color(uint8_t fg_color, uint8_t bg_color)
 {
 	fflush(stdout);
 
 	tty_color = (fg_color & 0x0f) | (bg_color & 0xf0);
 }
 
-inline uint32_t tty_get_character_width()
+static inline uint32_t tty_get_character_width()
 {
 	return (framebuffer.width - 2 * tty_padding) / TTY_RES_X;
 }
 
-inline uint32_t tty_get_character_height()
+static inline uint32_t tty_get_character_height()
 {
 	return (framebuffer.height - 2 * tty_padding) * (psf_get_glyph_height(&tty_font) + psf_get_glyph_width(&tty_font) - 1) / psf_get_glyph_width(&tty_font) / TTY_RES_X;
 }
 
-inline uint32_t tty_get_character_pos_x(uint32_t index)
+static inline uint32_t tty_get_character_pos_x(uint32_t index)
 {
 	return tty_padding + tty_get_character_width() * (tty_cursor % TTY_RES_X);
 }
 
-inline uint32_t tty_get_character_pos_y(uint32_t index)
+static inline uint32_t tty_get_character_pos_y(uint32_t index)
 {
 	return tty_padding + tty_get_character_height() * (tty_cursor / TTY_RES_X);
 }
 
-inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
+static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 {
 	uint32_t width = tty_get_character_width();
 	uint32_t height = tty_get_character_height();
@@ -149,7 +149,7 @@ inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 		fg_color.b);
 }
 
-inline void tty_render_cursor(uint32_t cursor)
+static inline void tty_render_cursor(uint32_t cursor)
 {
 	uint32_t width = tty_get_character_width();
 	uint32_t height = tty_get_character_height();
@@ -160,7 +160,7 @@ inline void tty_render_cursor(uint32_t cursor)
 	framebuffer_fill_rect(&framebuffer, x, y + (8 * height / 10), width, height / 5, 255, 255, 255, 0);
 }
 
-inline void tty_outc(char c)
+static inline void tty_outc(char c)
 {
 	if (c == 0)
 		return;

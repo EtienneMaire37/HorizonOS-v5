@@ -1,17 +1,17 @@
 #pragma once
 
-inline void acquire_spinlock(atomic_flag* spinlock)
+static inline void acquire_spinlock(atomic_flag* spinlock)
 {
 	while (atomic_flag_test_and_set_explicit(spinlock, memory_order_acquire))
         __builtin_ia32_pause();
 }
 
-inline bool try_acquire_spinlock(atomic_flag* spinlock)
+static inline bool try_acquire_spinlock(atomic_flag* spinlock)
 {
 	return !atomic_flag_test_and_set_explicit(spinlock, memory_order_acquire);
 }
 
-inline void release_spinlock(atomic_flag* spinlock)
+static inline void release_spinlock(atomic_flag* spinlock)
 {
 	atomic_flag_clear_explicit(spinlock, memory_order_release);
 }

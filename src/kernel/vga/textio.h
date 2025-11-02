@@ -55,16 +55,15 @@ psf_font_t tty_font;
 
 const uint32_t tty_padding = 2;	// pixels
 
-bool is_printable_character(char c)
+static inline bool is_printable_character(char c)
 {
     return c >= 32;
 }
 
-void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
-void tty_hide_cursor();
-void tty_reset_cursor();
-void tty_set_cursor_pos(uint16_t pos);
-void tty_update();
-void tty_clear_screen(char c);
-void tty_set_color(uint8_t fg_color, uint8_t bg_color);
-inline void tty_outc(char c);
+static inline void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
+static inline void tty_hide_cursor();
+static inline void tty_reset_cursor();
+static inline void tty_set_cursor_pos(uint16_t pos);
+static inline void tty_clear_screen(char c);
+static inline void tty_set_color(uint8_t fg_color, uint8_t bg_color);
+static inline void tty_outc(char c);

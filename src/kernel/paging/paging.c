@@ -3,7 +3,7 @@
 #include "../cpu/memory.h"
 #include "paging.h"
 
-uint64_t* create_empty_pdpt()
+static inline uint64_t* create_empty_pdpt()
 {
     uint64_t* pdpt = pfa_allocate_page();
     if (!pdpt) 
@@ -20,22 +20,27 @@ uint64_t* create_empty_pdpt()
     return (uint64_t*)pdpt;
 }
 
-inline bool is_pdpt_entry_present(uint64_t* entry)
+uint64_t* create_empty_virtual_address_space()
+{
+    return create_empty_pdpt();
+}
+
+static inline bool is_pdpt_entry_present(const uint64_t* entry)
 {
     return (*entry) & 1;
 }
 
-inline uint64_t* get_pdpt_entry_address(uint64_t* entry)
+static inline uint64_t* get_pdpt_entry_address(const uint64_t* entry)
 {
     return is_pdpt_entry_present(entry) ? (uint64_t*)(((*entry) & 0xfffffffffffff000) & get_physical_address_mask()) : NULL;
 }
 
-inline void remove_pdpt_entry(uint64_t* entry)
+static inline void remove_pdpt_entry(uint64_t* entry)
 {
     *entry = 0;
 }
 
-inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write)
+static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write)
 {
     if (address == 0)
     {
@@ -119,25 +124,28 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
 {
     if (!src)
     {
-        LOG(ERROR, "remap_range: NULL source virtual address space");
+        LOG(ERROR, "copy_mapping: NULL source virtual address space");
         return;
     }
 
     if (!dst)
     {
-        LOG(ERROR, "remap_range: NULL destination virtual address space");
+        LOG(ERROR, "copy_mapping: NULL destination virtual address space");
         return;
     }
 
     if (start_virtual_address & 0xfff)
     {
-        LOG(CRITICAL, "remap_range: Kernel tried to map non page aligned addresses");
+        LOG(CRITICAL, "copy_mapping: Kernel tried to map non page aligned addresses");
         abort();
     }
 
     for (uint64_t i = 0; i < pages; i++)
     {
         uint64_t vaddr = start_virtual_address + 0x1000 * i;
+
+        if (vaddr < start_virtual_address)
+            break;
 
         uint64_t pte = (vaddr >> 12) & 0x1ff;
         uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
@@ -196,6 +204,54 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
             uint64_t* new_pt = get_pdpt_entry_address(new_pd_entry);
 
             new_pt[pte] = *old_pt_entry;
+        }
+    }
+}
+
+void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
+{
+    LOG(DEBUG, "Virtual address space 0x%x:", cr3);
+
+    for (int i = 0; i < 512; i++)
+    {
+        if (!is_pdpt_entry_present(&cr3[i]))
+            continue;
+        
+        uint64_t* pdpt = get_pdpt_entry_address(&cr3[i]);
+        
+        for (int j = 0; j < 512; j++)
+        {
+            if (!is_pdpt_entry_present(&pdpt[j]))
+                continue;
+            
+            uint64_t* pd = get_pdpt_entry_address(&pdpt[j]);
+
+            uint64_t vaddr = i * ((uint64_t)1 << (12 + 3 * 9)) + j * ((uint64_t)1 << (12 + 2 * 9));
+
+            // LOG(DEBUG, "\tpd: 0x%x-0x%x", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
+
+            for (int k = 0; k < 512; k++)
+            {
+                if (!is_pdpt_entry_present(&pd[k]))
+                    continue;
+                
+                uint64_t* pt = get_pdpt_entry_address(&pd[k]);
+
+                vaddr += k * ((uint64_t)1 << (12 + 1 * 9));
+
+                for (int l = 0; l < 512; l++)
+                {
+                    if (!is_pdpt_entry_present(&pt[l]))
+                        continue;
+                    
+                    uint64_t* page = get_pdpt_entry_address(&pt[l]);
+
+                    vaddr += l * ((uint64_t)1 << 12);
+
+                    if (vaddr >= start && vaddr < end)
+                        LOG(DEBUG, "\tpage: 0x%x-0x%x", vaddr, vaddr + 0x1000);
+                }
+            }
         }
     }
 }

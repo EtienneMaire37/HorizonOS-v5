@@ -9,8 +9,8 @@ typedef struct fpu_state
     uint8_t data[512 + 16];
 } __attribute__((packed)) fpu_state_t;
 
-void fpu_init();
-void fpu_save_state(fpu_state_t* fpu_state);
-void fpu_restore_state(fpu_state_t* fpu_state);
-void fpu_state_init(fpu_state_t* fpu_state);
-void copy_fpu_state(fpu_state_t* from, fpu_state_t* to);
+static inline void fpu_init();
+static inline void fpu_save_state(fpu_state_t* fpu_state);
+static inline void fpu_restore_state(fpu_state_t* fpu_state);
+static inline void fpu_state_init(fpu_state_t* fpu_state);
+static inline void copy_fpu_state(fpu_state_t* from, fpu_state_t* to);
