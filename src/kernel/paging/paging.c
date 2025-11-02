@@ -256,3 +256,8 @@ void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
         }
     }
 }
+
+void* virtual_to_physical(uint64_t* cr3, uint64_t address)
+{
+    abort();
+}

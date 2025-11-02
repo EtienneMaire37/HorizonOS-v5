@@ -138,6 +138,10 @@ bool time_initialized = false;
 #include "int/int.c"
 #include "memalloc/page_frame_allocator.c"
 #include "paging/paging.c"
+#include "multitasking/task.c"
+#include "io/keyboard.c"
+#include "ps2/keyboard.c"
+#include "ps2/ps2.c"
 
 int64_t minint(int64_t a, int64_t b)
 {
@@ -445,6 +449,8 @@ void _start()
 
     uint64_t* cr3 = create_empty_virtual_address_space();
 
+    // LOG(DEBUG, "%s", bootboot.arch.x86_64.acpi_ptr);
+
     precise_time_t paging_start_time = global_timer;
 
     {
@@ -501,6 +507,8 @@ void _start()
     LOG(INFO, "Set up paging");
 
     load_cr3((uint64_t)cr3);
+
+    // LOG(DEBUG, "%s", bootboot.arch.x86_64.acpi_ptr); // TODO: Add proper UEFI style ACPI parsing and map the tables
 
     // asm volatile("div rcx" :: "c"(0));
 

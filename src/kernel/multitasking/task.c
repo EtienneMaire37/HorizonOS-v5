@@ -24,7 +24,7 @@ thread_t task_create_empty()
     task.cr3 = physical_null;
     task.ring = 0;
 
-    task.esp = 0;
+    task.rsp = 0;
 
     task.pid = current_pid++;
     task.system_task = true;
@@ -49,14 +49,15 @@ thread_t task_create_empty()
 
 void task_destroy(thread_t* task)
 {
-    LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %u)", task->name, task->pid, task->ring);
-    vas_free(task->cr3);
-    utf32_buffer_destroy(&task->input_buffer);
-    for (int i = 0; i < OPEN_MAX; i++)
-    {
-        if (task->file_table[i] != invalid_fd)
-            vfs_remove_global_file(task->file_table[i]);
-    }
+    // LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %u)", task->name, task->pid, task->ring);
+    // vas_free(task->cr3);
+    // utf32_buffer_destroy(&task->input_buffer);
+    // for (int i = 0; i < OPEN_MAX; i++)
+    // {
+    //     if (task->file_table[i] != invalid_fd)
+    //         vfs_remove_global_file(task->file_table[i]);
+    // }
+    abort();
 }
 
 void multitasking_init()
@@ -77,7 +78,6 @@ void multitasking_start()
     current_task_index = 0;
 
     idle_main();
-    abort();    // !!! Critical error if eip somehow gets there (impossible)
 }
 
 void multitasking_add_idle_task(char* name)
@@ -98,25 +98,31 @@ void multitasking_add_idle_task(char* name)
     int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
     memcpy(task.name, name, name_bytes);
     task.name[name_bytes] = 0;
-    task.cr3 = (uint32_t)page_directory;
+    task.cr3 = get_cr3();
 
     tasks[task_count++] = task;
 }
 
-void task_stack_push(thread_t* task, uint32_t value)
+void task_stack_push(thread_t* task, uint64_t value)
 {
-    task->esp -= 4;
-    task_write_at_address_1b(task, (physical_address_t)task->esp + 0, (value >> 0)  & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->esp + 1, (value >> 8)  & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->esp + 2, (value >> 16) & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->esp + 3, (value >> 24) & 0xff);
+    task->rsp -= 8;
+
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 0, (value >> 0)  & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 1, (value >> 8)  & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 2, (value >> 16) & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 3, (value >> 24) & 0xff);
+
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 4, (value >> 32) & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 5, (value >> 40) & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 6, (value >> 48) & 0xff);
+    task_write_at_address_1b(task, (physical_address_t)task->rsp + 7, (value >> 56) & 0xff);
 }
 
 void task_stack_push_data(thread_t* task, void* data, size_t bytes)
 {
-    task->esp -= bytes;
+    task->rsp -= bytes;
     for (size_t i = 0; i < bytes; i++)
-        task_write_at_address_1b(task, (physical_address_t)task->esp + i, ((uint8_t*)data)[i]);
+        task_write_at_address_1b(task, (physical_address_t)task->rsp + i, ((uint8_t*)data)[i]);
 }
 
 void task_stack_push_string(thread_t* task, const char* str)
@@ -125,7 +131,7 @@ void task_stack_push_string(thread_t* task, const char* str)
     task_stack_push_data(task, (void*)str, bytes);
 }
 
-void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
+static inline void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value)
 {
     if (task->cr3 == physical_null)
     {
@@ -133,14 +139,8 @@ void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value)
         return;
     }
     
-    uint32_t pde = read_physical_address_4b(task->cr3 + 4 * (address >> 22));
-    if (!(pde & 1)) return;
-    physical_address_t pt_address = pde & 0xfffff000;
-    uint32_t pte = read_physical_address_4b(pt_address + 4 * ((address >> 12) & 0x3ff));
-    if (!(pte & 1)) return;
-    physical_address_t page_address = pte & 0xfffff000;
-    physical_address_t byte_address = page_address | (address & 0xfff);
-    write_physical_address_1b(byte_address, value);
+    uint8_t* ptr = (uint8_t*)virtual_to_physical((uint64_t*)task->cr3, address);
+    *ptr = value;
 }
 
 void switch_task()
@@ -248,8 +248,8 @@ void copy_task(uint16_t index)
     tasks[new_task_index].reading_stdin = false;
     utf32_buffer_copy(&tasks[index].input_buffer, &tasks[new_task_index].input_buffer);
 
-    tasks[new_task_index].cr3 = vas_create_empty();
-    tasks[new_task_index].esp = tasks[index].esp;
+    tasks[new_task_index].cr3 = (uint64_t)task_create_empty_vas();
+    tasks[new_task_index].rsp = tasks[index].rsp;
 
     copy_fpu_state(&tasks[index].fpu_state, &tasks[new_task_index].fpu_state);
 
@@ -260,41 +260,43 @@ void copy_task(uint16_t index)
 
     tasks[new_task_index].parent = tasks[index].pid;
     tasks[new_task_index].wait_pid = -1;
+
+    abort();
     
-    for (uint16_t i = 0; i < 768; i++)
-    {
-        uint32_t old_pde = read_physical_address_4b(tasks[index].cr3 + 4 * i);
-        if (!(old_pde & 1)) continue;
-        uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
-        physical_address_t old_pt_address = old_pde & 0xfffff000;
-        physical_address_t new_pt_address = new_pde & 0xfffff000;
-        if (!(new_pde & 1))
-        {
-            new_pt_address = pfa_allocate_physical_page();
-            physical_init_page_table(new_pt_address);
-            write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
-        }
-        // LOG(TRACE, "%u : old_pt_address : 0x%lx", i, old_pt_address);
-        // LOG(TRACE, "%u : new_pt_address : 0x%lx", i, new_pt_address);
-        for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
-        {
-            uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
-            physical_address_t old_page_address = old_pte & 0xfffff000;
-            if (old_pte & 1)
-            {
-                uint32_t new_pte = read_physical_address_4b(new_pt_address + 4 * j);
-                physical_address_t new_page_address = new_pte & 0xfffff000;
-                if (!(new_pte & 1))
-                {
-                    new_page_address = pfa_allocate_physical_page();
-                    write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
-                }
-                // LOG(TRACE, "%u.%u : old_page_address : 0x%lx", i, j, old_page_address);
-                // LOG(TRACE, "%u.%u : new_page_address : 0x%lx", i, j, new_page_address);
-                copy_page(old_page_address, new_page_address);
-            }
-        }
-    }
+    // for (uint16_t i = 0; i < 768; i++)
+    // {
+    //     uint32_t old_pde = read_physical_address_4b(tasks[index].cr3 + 4 * i);
+    //     if (!(old_pde & 1)) continue;
+    //     uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
+    //     physical_address_t old_pt_address = old_pde & 0xfffff000;
+    //     physical_address_t new_pt_address = new_pde & 0xfffff000;
+    //     if (!(new_pde & 1))
+    //     {
+    //         new_pt_address = pfa_allocate_physical_page();
+    //         physical_init_page_table(new_pt_address);
+    //         write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
+    //     }
+    //     // LOG(TRACE, "%u : old_pt_address : 0x%lx", i, old_pt_address);
+    //     // LOG(TRACE, "%u : new_pt_address : 0x%lx", i, new_pt_address);
+    //     for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
+    //     {
+    //         uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
+    //         physical_address_t old_page_address = old_pte & 0xfffff000;
+    //         if (old_pte & 1)
+    //         {
+    //             uint32_t new_pte = read_physical_address_4b(new_pt_address + 4 * j);
+    //             physical_address_t new_page_address = new_pte & 0xfffff000;
+    //             if (!(new_pte & 1))
+    //             {
+    //                 new_page_address = pfa_allocate_physical_page();
+    //                 write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
+    //             }
+    //             // LOG(TRACE, "%u.%u : old_page_address : 0x%lx", i, j, old_page_address);
+    //             // LOG(TRACE, "%u.%u : new_page_address : 0x%lx", i, j, new_page_address);
+    //             copy_page(old_page_address, new_page_address);
+    //         }
+    //     }
+    // }
 }
 
 void cleanup_tasks()

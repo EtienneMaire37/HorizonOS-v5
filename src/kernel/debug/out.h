@@ -90,9 +90,9 @@ bool first_log = true;
 //     fputs("\x1b[0m", stderr);
 // }
 
-#ifndef LOG_LEVEL
-#define LOG_LEVEL INFO
-#endif
+// #ifndef LOG_LEVEL
+// #define LOG_LEVEL INFO
+// #endif
 
 #ifndef LOG_LEVEL 
 #define LOG(level, ...)

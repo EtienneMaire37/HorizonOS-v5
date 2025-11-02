@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ps2.h"
+
 #define PS2_KB_KEY_DETECTION_ERROR_0     0x00
 #define PS2_KB_INTERNAL_BUFFER_OVERRUN_0 0x00
 #define PS2_KB_SELF_TEST_PASSED          0xaa

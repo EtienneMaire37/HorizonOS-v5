@@ -26,7 +26,7 @@ int isalpha(int c);
 int tolower(int c);
 int toupper(int c);
 int atoi(const char* str);
-void abort(void);
+void __attribute__((noreturn)) abort(void);
 long strtol(const char* nptr, char** endptr, int base);
 int atoi(const char* str);
 

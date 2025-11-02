@@ -29,11 +29,12 @@ Simply run:
 ```bash
 make all
 ```
+To build without logs.
 Or:
 ```bash
 make all CLOGLEVEL=-DLOGLEVEL=TRACE
 ```
-To build with E9 port logs.
+To build with E9 port logs. 
 A `horizonos.iso` disk image file will be created in the root of the repository.
 
 ### Running HorizonOS

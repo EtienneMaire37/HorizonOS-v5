@@ -13,11 +13,6 @@ void handle_syscall(interrupt_registers_t* registers)
     ;
 }
 
-void switch_task()
-{
-    ;
-}
-
 #define return_from_isr() return
 
 void interrupt_handler(interrupt_registers_t* registers)
@@ -71,41 +66,9 @@ void interrupt_handler(interrupt_registers_t* registers)
         handle_syscall(registers);
     }
 
-    // * APIC interrupt
+    // * APIC interrupt (probably)
 
-    // LOG(DEBUG, "Interrupt 0x%x from APIC", registers->interrupt_number);
-
-    switch (registers->interrupt_number)
-    {
-    case 0x80:  // * APIC Timer
-    {
-        uint64_t increment = precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
-        global_timer += GLOBAL_TIMER_INCREMENT;
-        system_thousands += increment;
-        resolve_time();
-
-        if (system_thousands - increment < 500 && system_thousands >= 500)
-        {
-            tty_cursor_blink ^= true;
-            if (tty_cursor_blink)
-            {
-                tty_render_cursor(tty_cursor);
-            }
-            else
-            {
-                uint16_t data = tty_data[tty_cursor];
-                tty_render_character(tty_cursor, data, data >> 8);
-            }
-        }
-        // printf("APIC Timer interrupt\n");
-        break;
-    }
-
-    default:    // * Spurious interrupt (probably)
-        return_from_isr();
-    }
-
-    lapic_send_eoi();
+    handle_apic_irq(registers);
 
     return_from_isr();
 }

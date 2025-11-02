@@ -232,7 +232,7 @@ int atoi(const char* str)
 }
 
 #ifdef BUILDING_KERNEL
-void abort()
+void __attribute__((noreturn)) abort()
 {
     printf("Kernel aborted.");
     fflush(stdout);
@@ -240,7 +240,7 @@ void abort()
     __builtin_unreachable();
 }
 #else
-void abort()
+void __attribute__((noreturn)) abort()
 {
     exit(EXIT_FAILURE);
     __builtin_unreachable();

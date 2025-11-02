@@ -1,8 +1,10 @@
 #pragma once
 
+#include "../ps2/keyboard.h"
+
 void utf32_buffer_init(utf32_buffer_t* buffer)
 {
-    buffer->characters = (utf32_char_t*)physical_address_to_virtual(pfa_allocate_physical_page());
+    buffer->characters = (utf32_char_t*)pfa_allocate_page();
     buffer->size = 1024; // 4096 / sizeof(utf32_char_t)
     buffer->put_index = buffer->get_index = 0;
 }
@@ -10,7 +12,7 @@ void utf32_buffer_init(utf32_buffer_t* buffer)
 void utf32_buffer_destroy(utf32_buffer_t* buffer)
 {
     if (buffer->characters)
-        pfa_free_physical_page(virtual_address_to_physical((virtual_address_t)buffer->characters));   // !!! buffer must be allocated below 1GB
+        pfa_free_page(buffer->characters);
     buffer->characters = 0;
     buffer->size = 0;
     buffer->put_index = buffer->get_index = 0;
@@ -203,7 +205,7 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool ec
                     }
                 }
             }
-            if ((character == '\n' || character == 4 && get_buffered_characters(tasks[i].input_buffer) != 0) || (raw && get_buffered_characters(tasks[i].input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
+            if (((character == '\n' || character == 4) && get_buffered_characters(tasks[i].input_buffer) != 0) || (raw && get_buffered_characters(tasks[i].input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
                 tasks[i].reading_stdin = false;
         }
     }

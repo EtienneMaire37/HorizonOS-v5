@@ -128,7 +128,7 @@ uint16_t find_next_task_index()
     return index;
 }
 
-void task_write_at_address_1b(thread_t* task, uint32_t address, uint8_t value);
+static inline void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
 
 void task_destroy(thread_t* task);
 void switch_task();
@@ -137,7 +137,7 @@ void multitasking_start();
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 
-void task_stack_push(thread_t*, uint32_t);
+void task_stack_push(thread_t*, uint64_t);
 
 void cleanup_tasks();
 

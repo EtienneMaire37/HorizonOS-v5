@@ -1,7 +1,7 @@
-; section .text
-; bits 64
+section .text
+bits 64
 
-; extern task_esp_offset
+; extern task_rsp_offset
 ; extern task_cr3_offset
 
 ; ; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state)
