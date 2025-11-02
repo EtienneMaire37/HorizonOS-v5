@@ -1,10 +1,14 @@
 #pragma once
 
+// #include <stdint.h>
+
 #define IA32_APIC_BASE_MSR          0x1B
 #define IA32_APIC_BASE_MSR_BSP      0x100
 #define IA32_APIC_BASE_MSR_ENABLE   0x800
 
-uint64_t rdmsr(uint32_t msr) 
+#define IA32_PAT_MSR                0x277
+
+uint64_t rdmsr(uint32_t msr)
 {
     uint32_t low, high;
     asm volatile ("rdmsr" : "=a"(low), "=d"(high) : "c"(msr));

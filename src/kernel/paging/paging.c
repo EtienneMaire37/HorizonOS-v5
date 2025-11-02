@@ -40,13 +40,18 @@ static inline void remove_pdpt_entry(uint64_t* entry)
     *entry = 0;
 }
 
-static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write)
+static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write, uint8_t cache_type)
 {
     if (address == 0)
     {
         remove_pdpt_entry(entry);
         return;
     }
+
+    cache_type &= 7;
+
+    uint64_t pcd_bit = (pdpt_pat_bits[cache_type] & 3) >> 1,
+             pwt_bit = (pdpt_pat_bits[cache_type] & 3) & 1;
 
     uint64_t masked_address = (address & 0xfffffffffffff000) & get_physical_address_mask();
     if (masked_address != address)
@@ -55,16 +60,13 @@ static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t pri
         abort();
     }
 
-    *entry = masked_address | ((privilege & 1) << 2) | ((read_write & 1) << 1) | 1;
+    *entry = masked_address | (pcd_bit << 4) | (pwt_bit << 3) | ((privilege & 1) << 2) | ((read_write & 1) << 1) | 1;
 }
-
-// TODO: Add PAT support to enable WC caching for the framebuffer
-// !! Actually do this ASAP given how important it is to performance
 
 void remap_range(uint64_t* pml4, 
     uint64_t start_virtual_address, uint64_t start_physical_address, 
     uint64_t pages,
-    uint8_t privilege, uint8_t read_write)
+    uint8_t privilege, uint8_t read_write, uint8_t cache_type)
 {
     if (!pml4)
     {
@@ -92,19 +94,19 @@ void remap_range(uint64_t* pml4,
 
         uint64_t* pml4_entry = &pml4[pml4e];
         if (!is_pdpt_entry_present(pml4_entry))
-            set_pdpt_entry(pml4_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE);
+            set_pdpt_entry(pml4_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* pdpt = get_pdpt_entry_address(pml4_entry);
         
         uint64_t* pdpt_entry = &pdpt[pdpte];
         if (!is_pdpt_entry_present(pdpt_entry))
-            set_pdpt_entry(pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE);
+            set_pdpt_entry(pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* pd = get_pdpt_entry_address(pdpt_entry);
 
         uint64_t* pd_entry = &pd[pde];
         if (!is_pdpt_entry_present(pd_entry))
-            set_pdpt_entry(pd_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE);
+            set_pdpt_entry(pd_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* pt = get_pdpt_entry_address(pd_entry);
 
@@ -114,7 +116,9 @@ void remap_range(uint64_t* pml4,
             continue;
         }
 
-        set_pdpt_entry(pt_entry, vaddr - start_virtual_address + start_physical_address, privilege, read_write);
+        set_pdpt_entry(pt_entry, vaddr - start_virtual_address + start_physical_address, 
+            privilege, read_write,
+            cache_type);
     }
 }
 
@@ -162,7 +166,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* new_pml4_entry = &dst[pml4e];
 
         if (!is_pdpt_entry_present(new_pml4_entry))
-            set_pdpt_entry(new_pml4_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE);
+            set_pdpt_entry(new_pml4_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* old_pdpt = get_pdpt_entry_address(old_pml4_entry);
         
@@ -178,7 +182,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* new_pdpt_entry = &new_pdpt[pdpte];
 
         if (!is_pdpt_entry_present(new_pdpt_entry))
-            set_pdpt_entry(new_pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE);
+            set_pdpt_entry(new_pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* old_pd = get_pdpt_entry_address(old_pdpt_entry);
 
@@ -194,7 +198,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* new_pd_entry = &new_pd[pde];
 
         if (!is_pdpt_entry_present(new_pd_entry))
-            set_pdpt_entry(new_pd_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE);
+            set_pdpt_entry(new_pd_entry, (uintptr_t)create_empty_pdpt(), PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* old_pt = get_pdpt_entry_address(old_pd_entry);
         uint64_t* new_pt = get_pdpt_entry_address(new_pd_entry);

@@ -1,16 +1,64 @@
 #pragma once
 
+#include "../cpu/msr.h"
+#include "../cpu/cpuid.h"
+
 #define PG_SUPERVISOR   0
 #define PG_USER         1
 
 #define PG_READ_ONLY    0
 #define PG_READ_WRITE   1
 
+#define CACHE_UC        0ULL    // * All accesses are uncacheable. Write combining is not allowed. Speculative accesses are not allowed.
+#define CACHE_WC        1ULL    // * All accesses are uncacheable. Write combining is allowed. Speculative reads are allowed. 
+#define CACHE_WT        4ULL    // * Reads allocate cache lines on a cache miss. Cache lines are not allocated on a write miss.
+                                // - Write hits update the cache and main memory. 
+#define CACHE_WP        5ULL    // * Reads allocate cache lines on a cache miss. All writes update main memory.
+                                // - Cache lines are not allocated on a write miss. Write hits invalidate the cache line and update main memory. 
+#define CACHE_WB        6ULL    // * Reads allocate cache lines on a cache miss, and can allocate to either the shared,
+                                // - exclusive, or modified state. Writes allocate to the modified state on a cache miss. 
+#define CACHE_UC_MINUS  7ULL    // * Same as uncacheable, except that this can be overriden by Write-Combining MTRRs. 
+
+uint8_t pdpt_pat_bits[8] = 
+{
+    3,
+    3,
+    0,
+    0,
+    1,
+    2,
+    0,
+    2
+};
+
 uint8_t physical_address_width = 0; // M
+bool pat_enabled = false;
 
 static inline uint64_t get_physical_address_mask()
 {
     if (physical_address_width == 0)
         abort();
     return ((uint64_t)1 << physical_address_width) - 1;
+}
+
+static inline void init_pat()
+{
+    uint32_t eax, ebx, ecx, edx = 0;
+    cpuid(1, eax, ebx, ecx, edx);
+
+    pat_enabled = (edx >> 16) & 1;
+
+    if (!pat_enabled)
+        return;
+
+    // * WC if PAT is set or UC, default else
+    wrmsr(IA32_PAT_MSR, 
+         CACHE_WB | 
+        (CACHE_WT << 8) | 
+        (CACHE_UC_MINUS << 16) | 
+        (CACHE_WC << 24) |
+        (CACHE_WC << 32) |
+        (CACHE_WC << 40) |
+        (CACHE_WC << 48) |
+        (CACHE_WC << 56));
 }

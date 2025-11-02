@@ -290,6 +290,8 @@ void _start()
 
         fpu_init_defaults();
 
+        init_pat();
+
         atomic_store(&did_init_std, true);
     }
 
@@ -427,6 +429,17 @@ void _start()
     enable_interrupts(); 
     LOG(INFO, "Enabled interrupts");
 
+    if (pat_enabled)
+    {
+        LOG(INFO, "PAT successfully enabled");
+        printf("PAT successfully enabled\n");
+    }
+    else
+    {
+        LOG(WARNING, "PAT not supported");
+        printf("warning: PAT not supported (this might cause poor performance only graphical intensive programs)\n");
+    }
+
     LOG(INFO, "Setting up paging...");
     printf("Setting up paging...\n");
 
@@ -466,20 +479,20 @@ void _start()
                 
             LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
             printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
-            remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE);
+            remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
         }
 
         printf("Identity mapping range 0x%x-0x%x\n", lapic, (uint64_t)lapic + 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
-        remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE);
+        remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
 
         printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
+        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
         printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE);
+        remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
     }
 
     uint32_t paging_milliseconds = precise_time_to_milliseconds(global_timer - paging_start_time);
