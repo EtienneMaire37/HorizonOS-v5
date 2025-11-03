@@ -14,7 +14,7 @@ typedef struct linear_framebuffer
 
 linear_framebuffer_t framebuffer;
 
-uint32_t framebuffer_decode_color_data(linear_framebuffer_t* buffer, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
+uint32_t framebuffer_encode_color_data(linear_framebuffer_t* buffer, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
 {
     if (!buffer)
         return 0;
@@ -46,7 +46,7 @@ void framebuffer_setpixel(linear_framebuffer_t* buffer, uint32_t x, uint32_t y, 
     if (x >= buffer->width) return;
     if (y >= buffer->height) return;
 
-    ((uint32_t*)(buffer->address + buffer->stride * y))[x] = framebuffer_decode_color_data(buffer, red, green, blue, alpha);
+    ((uint32_t*)(buffer->address + buffer->stride * y))[x] = framebuffer_encode_color_data(buffer, red, green, blue, alpha);
 }
 
 void framebuffer_fill_rect(linear_framebuffer_t* buffer, uint32_t x, uint32_t y, uint32_t size_x, uint32_t size_y, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha)
@@ -66,7 +66,7 @@ void framebuffer_fill_rect(linear_framebuffer_t* buffer, uint32_t x, uint32_t y,
     if (bottom >= buffer->height)
         bottom = buffer->height;
 
-    uint32_t dword = framebuffer_decode_color_data(buffer, red, green, blue, alpha);
+    uint32_t dword = framebuffer_encode_color_data(buffer, red, green, blue, alpha);
 
     if (red == green && red == blue)
     {

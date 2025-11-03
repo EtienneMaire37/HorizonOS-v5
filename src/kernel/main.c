@@ -68,10 +68,10 @@ uint64_t make_address_canonical(uint64_t address)
 
 #define physical_null ((physical_address_t)0)
 
-int64_t minint(int64_t a, int64_t b);
-int64_t maxint(int64_t a, int64_t b);
-int64_t absint(int64_t x);
-int imod(int a, int b);
+static inline int64_t minint(int64_t a, int64_t b);
+static inline int64_t maxint(int64_t a, int64_t b);
+static inline int64_t absint(int64_t x);
+static inline int imod(int a, int b);
 
 #include "../libc/include/inttypes.h"
 #include "../libc/include/limits.h"
@@ -142,20 +142,23 @@ bool time_initialized = false;
 #include "io/keyboard.c"
 #include "ps2/keyboard.c"
 #include "ps2/ps2.c"
+#include "acpi/tables.c"
+#include "pci/pci.c"
+#include "disk/ata.c"
 
-int64_t minint(int64_t a, int64_t b)
+static inline int64_t minint(int64_t a, int64_t b)
 {
     return a < b ? a : b;
 }
-int64_t maxint(int64_t a, int64_t b)
+static inline int64_t maxint(int64_t a, int64_t b)
 {
     return a > b ? a : b;
 }
-int64_t absint(int64_t x)
+static inline int64_t absint(int64_t x)
 {
     return x < 0 ? -x : x;
 }
-int imod(int a, int b)
+static inline int imod(int a, int b)
 {
     if (b <= 0) 
     {
@@ -494,7 +497,10 @@ void _start()
 
         printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
+        
+        // * Write-combining cache
+        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
+            PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
         printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
@@ -508,7 +514,57 @@ void _start()
 
     load_cr3((uint64_t)cr3);
 
-    // LOG(DEBUG, "%s", bootboot.arch.x86_64.acpi_ptr); // TODO: Add proper UEFI style ACPI parsing and map the tables
+    LOG(INFO, "Parsing ACPI tables..");
+    printf("Parsing ACPI tables...\n");
+    acpi_find_tables();
+    printf("Done.\n");
+    LOG(INFO, "Done parsing ACPI tables.");
+
+    LOG(DEBUG, "Scanning PCI buses...");
+    printf("Scanning PCI buses...\n");
+
+    pci_scan_buses();
+
+    // {
+    //     LOG(INFO, "Detecting PS/2 devices");
+    //     printf("Detecting PS/2 devices\n");
+
+    //     ps2_device_1_interrupt = ps2_device_2_interrupt = false;
+
+    //     ps2_flush_buffer();
+
+    //     ksleep(10 * PRECISE_MILLISECONDS);
+
+    //     ps2_controller_init();
+    //     ps2_detect_keyboards();
+
+    //     ps2_init_keyboards();
+
+    //     ksleep(10 * PRECISE_MILLISECONDS);
+        
+    //     ps2_enable_interrupts();
+        
+    //     if (ps2_device_1_connected)
+    //     {
+    //         LOG(INFO, "PS/2 device 1 connected");
+    //         printf("PS/2 device 1 connected\n");
+    //     }
+    //     if (ps2_device_2_connected)
+    //     {
+    //         LOG(INFO, "PS/2 device 2 connected");
+    //         printf("PS/2 device 2 connected\n");
+    //     }
+    //     if (!(ps2_device_1_connected || ps2_device_2_connected))
+    //     {
+    //         LOG(INFO, "No PS/2 devices detected");
+    //         printf("No PS/2 devices detected\n");
+    //     }
+
+    //     putchar('\n');
+    // }
+
+    // TODO: Find out what efi_ptr points to and if it can be used to use runtime uefi functions
+    // * (it could allow for an easy shutdown mechanism)
 
     // asm volatile("div rcx" :: "c"(0));
 

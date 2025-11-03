@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mbr.h"
+
 #define IDE_MAX     4
 
 #define ATA_SR_BSY     0x80    // Busy

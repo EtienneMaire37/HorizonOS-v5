@@ -34,7 +34,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
-	-Wall -Werror -fpic $(CFLAGS) -I./bootboot/dist/ \
+	-Wall -Werror -Wno-address-of-packed-member -fpic $(CFLAGS) -I./bootboot/dist/ \
 	-Ofast \
 	-Wno-stringop-overflow -Wno-unused-variable \
 	$(CLOGLEVEL)

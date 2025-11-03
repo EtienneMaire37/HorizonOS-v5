@@ -1,5 +1,8 @@
 #pragma once
 
+#include "pci.h"
+#include "../disk/ata.h"
+
 uint32_t pci_configuration_address_space_read_dword(uint8_t bus, uint8_t device, uint8_t function, uint8_t offset) 
 {
     if ((device & 0b11111) != device) return 0xffffffff;
@@ -31,7 +34,7 @@ void pci_scan_buses()
 {
     pci_ids = initrd_find_file("pci.ids");
 
-// #define PRINT_PCI_INFO
+#define PRINT_PCI_INFO
     for (uint16_t i = 0; i < 256; i++)
     {
         for (uint8_t j = 0; j < 32; j++)

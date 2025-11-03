@@ -42,7 +42,9 @@
 #define TAB_LENGTH       4
 
 #define TTY_RES_X   100
-#define TTY_RES_Y   40
+
+#define TTY_RES_Y   38
+// Assume ar (probably should set a max value and dynamically scroll if below a certain threshold)
 
 uint16_t tty_data[TTY_RES_X * TTY_RES_Y] = {0};
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ata.h"
+
 void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
 {
     if (connected_pci_ide_controllers >= IDE_MAX)

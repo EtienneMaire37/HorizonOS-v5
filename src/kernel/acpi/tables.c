@@ -1,178 +1,140 @@
 #pragma once
 
-uint32_t table_read_bytes(physical_address_t table_address, uint32_t offset, uint8_t size, bool little_endian)
-{
-    if (size > 4)
-    {
-        LOG(ERROR, "Kernel tried to read more than 4 bytes of a table");
-        abort();
-    }
+#include "tables.h"
 
-    uint32_t result = 0;
-    for (uint8_t i = 0; i < size; i++)
-    {
-        if (little_endian)
-        {
-            result |= ((uint32_t)read_physical_address_1b(table_address + offset + i)) << (8 * i);
-        }
-        else
-        {
-            result <<= 8;
-            result |= read_physical_address_1b(table_address + offset + i);
-        }
-    }
-
-    return result;
-}
-
-void bios_get_ebda_pointer()
-{
-    uint32_t ebda_address = (*(uint16_t*)0x40e) << 4;
-    LOG(INFO, "EBDA address : 0x%x", ebda_address);
-    ebda = (uint8_t*)ebda_address;
-}
+#include "../paging/paging.h"
+#include "../cpu/memory.h"
 
 bool acpi_table_valid(physical_address_t table_address)
 {
     uint8_t sum = 0;
-    uint32_t length = table_read_member(struct sdt_header, table_address, length, true);
+    struct sdt_header* hdr = (struct sdt_header*)table_address;
+    uint32_t length = hdr->length;
     for (uint32_t i = 0; i < length; i++)
-        sum += table_read_bytes(table_address, i, 1, true);
+        sum += ((uint8_t*)table_address)[i];
     return sum == 0;
 }
 
-bool acpi_rsdp_valid(struct rsdp_table* table)
+void map_table_in_current_vas(uint64_t address, uint8_t privilege, uint8_t read_write)
 {
-    uint8_t sum = 0;
-    for (uint32_t i = 0; i < (acpi_10 ? 20 : table->length); i++)
-        sum += ((uint8_t*)&table[0])[i];
-    return sum == 0;
+    LOG(DEBUG, "Mapping table at address 0x%x in memory", address);
+
+    uint64_t* current_cr3 = (uint64_t*)get_cr3();
+
+    uint64_t aligned_address = address & 0xfffffffffffff000;
+    struct sdt_header* hdr = (struct sdt_header*)address;
+    uint32_t* length_ptr = &(hdr->length);
+    
+    uint64_t aligned_len_address = ((uint64_t)length_ptr) & 0xfffffffffffff000;
+
+    remap_range(current_cr3, 
+        aligned_len_address, aligned_len_address,
+        1, privilege, read_write, CACHE_WB);
+    invlpg(aligned_len_address);
+
+    uint64_t mapping_offset = aligned_len_address != aligned_address ? 0 : 1;
+
+    if ((((uint64_t)length_ptr) & 0xfff) > 0x1000 - 4)
+    {
+        mapping_offset = (mapping_offset == 1 ? 2 : 0);
+        remap_range(current_cr3, 
+            aligned_len_address + 0x1000, aligned_len_address + 0x1000,
+            1, privilege, read_write, CACHE_WB);
+        invlpg(aligned_len_address + 0x1000);
+    }
+
+    uint32_t length = *length_ptr;
+
+    uint64_t last_address = (address + length - 1);
+
+    uint64_t pages_to_map = (last_address - aligned_address + 0xfff) / 0x1000 - mapping_offset;
+    remap_range(current_cr3, 
+        aligned_address + 0x1000 * mapping_offset, aligned_address,
+        pages_to_map, privilege, read_write, CACHE_WB);
+
+    for (uint64_t i = mapping_offset; i < pages_to_map; i++)
+        invlpg(aligned_address + 0x1000 * i);
 }
 
 void acpi_find_tables()
 {
-    // rsdp = rsdt = NULL;
-    rsdp = NULL;
-    // rsdt = NULL;
-    rsdt_address = 0; // xsdt_address = 0;
-    fadt_address = madt_address = ssdt_address = dsdt_address = 0;
-    
-    LOG(INFO, "Searching for the RSDP");
-    // printf("Searching for the RSDP\n");
+    rsdt_address = bootboot.arch.x86_64.acpi_ptr;
+    rsdt = NULL;
+    xsdt = NULL;
+    fadt = NULL;
 
-    LOG(DEBUG, "\tChecking the 1rst KB of EBDA");
+    acpi_10 = false;
 
-    // Check EBDA
-    for (uint8_t i = 0; i < 64; i++)
+    if (!rsdt_address)
     {
-        virtual_address_t address = (uint32_t)ebda + 16 * (uint32_t)i;
-        if (memcmp((void*)address, "RSD PTR ", 8) == 0)
+        LOG(ERROR, "Invalid ACPI setup");
+        printf("Invalid ACPI setup\n");
+        return;
+    }
+
+    {
+        struct sdt_header* sdt = (struct sdt_header*)rsdt_address;
+        map_table_in_current_vas(rsdt_address, PG_SUPERVISOR, PG_READ_ONLY);
+
+        if (memcmp(sdt->signature, "RSDT", 4) == 0)
         {
-            rsdp = (struct rsdp_table*)address;
-            goto found_rsdp;
+            acpi_10 = true;
+            rsdt = (struct rsdt_table*)rsdt_address;
+            sdt_count = (rsdt->header.length - sizeof(struct sdt_header)) / 4;
         }
-    }
-    LOG(DEBUG, "\tChecking the 0xe0000 - 0xfffff");
-
-    // Check 0xe0000 - 0xfffff
-    for (uint16_t i = 0; i < 0x2000; i++)
-    {
-        virtual_address_t address = (uint32_t)0xe0000 + 16 * (uint32_t)i;
-        if (memcmp((void*)address, "RSD PTR ", 8) == 0)
+        else if (memcmp(sdt->signature, "XSDT", 4) == 0)
         {
-            rsdp = (struct rsdp_table*)address;
-            goto found_rsdp;
+            xsdt = (struct xsdt_table*)rsdt_address;
+            sdt_count = (xsdt->header.length - sizeof(struct sdt_header)) / 8;
         }
-    }
-
-    LOG(CRITICAL, "Couldn't find the RSDP table");
-    printf("Couldn't find the RSDP table\n");
-    
-    rsdp = NULL;
-    sdt_count = 0;
-    return;
-
-found_rsdp:
-    LOG(INFO, "Found rsdp at address 0x%x", rsdp);
-
-    acpi_10 = rsdp->revision == 0;
-    
-    LOG(INFO, "ACPI version : %s", acpi_10 ? "1.0" : "2.0+");
-    printf("ACPI version : %s\n", acpi_10 ? "1.0" : "2.0+");
-
-    bool table_valid = acpi_rsdp_valid((void*)rsdp);
-
-    if (!table_valid)
-    {
-        LOG(CRITICAL, "Invalid RSDP table");
-        printf("Invalid RSDP table\n");
-        abort();
-    }
-
-    if (acpi_10)
-    {
-        rsdt_address = (physical_address_t)rsdp->rsdt_address;
-        // xsdt_address = 0;
-
-        LOG(DEBUG, "RSDT address : 0x%lx", rsdt_address);
-
-        uint32_t header_length = table_read_member(struct rsdt_table, rsdt_address, header.length, true);
-        // printf("Header length : %u\n", header_length);
-
-        sdt_count = header_length <= sizeof(struct sdt_header) ? 0 : (header_length - sizeof(struct sdt_header)) / 4;
-    }
-    else
-    {
-        rsdt_address = physical_null;
-        sdt_count = 0;
+        else
+        {
+            LOG(ERROR, "Invalid ACPI setup");
+            printf("Invalid ACPI setup\n");
+            return;
+        }
     }
 
     LOG(INFO, "%u SDT tables detected", sdt_count);
-    // printf("%u SDT tables detected\n", sdt_count);
 
     for (uint32_t i = 0; i < sdt_count; i++)
     {
         physical_address_t address = read_rsdt_ptr(i);
         LOG(INFO, "\tFound table at address 0x%lx", address);
-        if (!(address >> 32))
+        map_table_in_current_vas(address, PG_SUPERVISOR, PG_READ_ONLY);
+
         {
             if (acpi_table_valid(address))
             {
-                uint32_t signature = table_read_member(struct sdt_header, address, signature, true);
+                struct sdt_header* sdt = (struct sdt_header*)address;
+                uint32_t signature = *(uint64_t*)&sdt->signature;
                 char signature_text[5] = { (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), 0 };
                 LOG(INFO, "\t\tSignature: %s (0x%x)", signature_text, signature);
-                // printf("Signature: %s (0x%x)\n", signature_text, signature);
+                printf("Signature: %s (0x%x)\n", signature_text, signature);
                 switch (signature)
                 {
                 case 0x50434146:    // FACP : FADT
                     LOG(INFO, "\t\tValid FADT");
-                    fadt_address = address;
+                    fadt = (struct fadt_table*)address;
                     break;
-                case 0x43495041:    // APIC : MADT
-                    LOG(INFO, "\t\tValid MADT");
-                    madt_address = address;
-                    break;
-                case 0x54445344:    // DSDT : DSDT
-                    LOG(INFO, "\t\tValid DSDT");
-                    dsdt_address = address;
-                    break;
-                case 0x54445353:    // SSDT : SSDT
-                    LOG(INFO, "\t\tValid SSDT");
-                    ssdt_address = address;
-                    break;
+                // case 0x43495041:    // APIC : MADT
+                //     LOG(INFO, "\t\tValid MADT");
+                //     // madt_address = address;
+                //     break;
+                // case 0x54445344:    // DSDT : DSDT
+                //     LOG(INFO, "\t\tValid DSDT");
+                //     // dsdt_address = address;
+                //     break;
+                // case 0x54445353:    // SSDT : SSDT
+                //     LOG(INFO, "\t\tValid SSDT");
+                //     // ssdt_address = address;
+                //     break;
                 default:
                     LOG(INFO, "\t\tUnkwown table");
                 }
             }
         }
-        else
-        {
-            LOG(WARNING, "\t\t64bit table address");
-            // printf("64bit table address\n");
-        }
     }
-
-    putchar('\n');
 
     fadt_extract_data();
 }
@@ -189,7 +151,12 @@ physical_address_t read_rsdt_ptr(uint32_t index)
     if (acpi_10)    // ACPI 1.0
     {
         physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
-        return table_read_bytes(sdt_ptr_start, 4 * index, 4, true);
+        return *(uint32_t*)(sdt_ptr_start + 4 * index);
+    }
+    else
+    {
+        physical_address_t sdt_ptr_start = sizeof(struct sdt_header) + rsdt_address;
+        return *(uint64_t*)(sdt_ptr_start + 8 * index);
     }
 
     return physical_null;
@@ -199,7 +166,7 @@ void fadt_extract_data()
 {
     preferred_power_management_profile = 0;
 
-    if (fadt_address == physical_null)
+    if (!fadt)
     {
         LOG(DEBUG, "No FADT found");
         ps2_controller_connected = true;
@@ -208,9 +175,9 @@ void fadt_extract_data()
 
     LOG(DEBUG, "Extracting data from the FADT");
 
-    ps2_controller_connected = acpi_10 ? true : (table_read_member(struct fadt_table, fadt_address, boot_architecture_flags, true) & 0b10) == 0b10;
+    ps2_controller_connected = acpi_10 ? true : (fadt->boot_architecture_flags & 0b10) == 0b10;
 
-    uint8_t _preferred_power_management_profile = table_read_member(struct fadt_table, fadt_address, preferred_power_management_profile, true);
+    uint8_t _preferred_power_management_profile = fadt->preferred_power_management_profile;
 
     if (_preferred_power_management_profile > 7)
         preferred_power_management_profile = 0;
@@ -218,16 +185,16 @@ void fadt_extract_data()
         preferred_power_management_profile = _preferred_power_management_profile;
 
     LOG(INFO, "Preferred power management profile : %s (%u)", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
-    if (preferred_power_management_profile != 0)
-        printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
+    // if (preferred_power_management_profile != 0)
+    printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
 
-    uint32_t _dsdt_address = table_read_member(struct fadt_table, fadt_address, dsdt_address, true);
-    // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
-    if (_dsdt_address != 0)
-    {
-        if (acpi_table_valid(_dsdt_address))
-        {
-            dsdt_address = _dsdt_address;
-        }
-    }
+    // uint32_t _dsdt_address = fadt->dsdt_address;
+    // // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
+    // if (_dsdt_address != 0)
+    // {
+    //     if (acpi_table_valid(_dsdt_address))
+    //     {
+    //         dsdt_address = _dsdt_address;
+    //     }
+    // }
 }

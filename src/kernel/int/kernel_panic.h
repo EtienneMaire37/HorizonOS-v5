@@ -126,7 +126,9 @@ void kernel_panic(interrupt_registers_t* registers)
     if (registers->interrupt_number == 14)
     {
         if (registers->cr2)
-            printf("cr2:  0x%x (pde %u pte %u offset 0x%x)\n", registers->cr2, registers->cr2 >> 22, (registers->cr2 >> 12) & 0x3ff, registers->cr2 & 0xfff);
+        {
+            printf("cr2:  0x%x (pml4e %u pdpte %u pde %u pte %u offset 0x%x)\n", registers->cr2, (registers->cr2 >> 39) & 0x1ff, (registers->cr2 >> 30) & 0x1ff, (registers->cr2 >> 21) & 0x1ff, (registers->cr2 >> 12) & 0x1ff, registers->cr2 & 0xfff);
+        }
         else
         {
             printf("cr2 : ");

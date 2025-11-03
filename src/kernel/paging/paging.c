@@ -80,6 +80,9 @@ void remap_range(uint64_t* pml4,
         abort();
     }
 
+    // * "uncanonize"
+    start_virtual_address &= 0xffffffffffff;
+
     // uint64_t end_virtual_address = start_virtual_address + 0x1000 * pages;
 
     // for (uint64_t vaddr = start_virtual_address; vaddr < end_virtual_address; vaddr += 0x1000)
@@ -143,6 +146,9 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         LOG(CRITICAL, "copy_mapping: Kernel tried to map non page aligned addresses");
         abort();
     }
+
+    // * "uncanonize"
+    start_virtual_address &= 0xffffffffffff;
 
     for (uint64_t i = 0; i < pages; i++)
     {

@@ -62,3 +62,8 @@ static inline void init_pat()
         (CACHE_WC << 48) |
         (CACHE_WC << 56));
 }
+
+void remap_range(uint64_t* pml4, 
+    uint64_t start_virtual_address, uint64_t start_physical_address, 
+    uint64_t pages,
+    uint8_t privilege, uint8_t read_write, uint8_t cache_type);

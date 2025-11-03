@@ -123,16 +123,18 @@ static inline uint32_t tty_get_character_height()
 
 static inline uint32_t tty_get_character_pos_x(uint32_t index)
 {
-	return tty_padding + tty_get_character_width() * (tty_cursor % TTY_RES_X);
+	return tty_padding + tty_get_character_width() * (index % TTY_RES_X);
 }
 
 static inline uint32_t tty_get_character_pos_y(uint32_t index)
 {
-	return tty_padding + tty_get_character_height() * (tty_cursor / TTY_RES_X);
+	return tty_padding + tty_get_character_height() * (index / TTY_RES_X);
 }
 
 static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 {
+	if (cursor >= TTY_RES_X * TTY_RES_Y) return;
+	
 	uint32_t width = tty_get_character_width();
 	uint32_t height = tty_get_character_height();
 
@@ -141,6 +143,8 @@ static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 
 	srgb_t bg_color = vga_get_bg_color(color);
 	framebuffer_fill_rect(&framebuffer, x, y, width, height, bg_color.r, bg_color.g, bg_color.b, 0);
+
+	if (!is_printable_character(c)) return;
 
 	srgb_t fg_color = vga_get_fg_color(color);
 	framebuffer_render_psf2_char(&framebuffer, x, y, width, height, &tty_font, c,
@@ -151,6 +155,8 @@ static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 
 static inline void tty_render_cursor(uint32_t cursor)
 {
+	if (cursor >= TTY_RES_X * TTY_RES_Y) return;
+
 	uint32_t width = tty_get_character_width();
 	uint32_t height = tty_get_character_height();
 
@@ -160,12 +166,26 @@ static inline void tty_render_cursor(uint32_t cursor)
 	framebuffer_fill_rect(&framebuffer, x, y + (8 * height / 10), width, height / 5, 255, 255, 255, 0);
 }
 
+static inline void tty_refresh_screen()
+{
+	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
+		tty_render_character(i, tty_data[i], tty_data[i] >> 8);
+	if (tty_cursor_blink)
+		tty_render_cursor(tty_cursor);
+}
+
 static inline void tty_outc(char c)
 {
 	if (c == 0)
 		return;
 
-	if (is_printable_character(c))
+	if (tty_cursor >= TTY_RES_X * TTY_RES_Y)
+	{
+		tty_cursor++;
+		return;
+	}
+
+	// if (is_printable_character(c))
 		tty_data[tty_cursor] = c | ((uint16_t)tty_color << 8);
 
 	tty_render_character(tty_cursor, tty_data[tty_cursor], tty_data[tty_cursor] >> 8);
@@ -208,4 +228,25 @@ static inline void tty_outc(char c)
 
 	if (tty_cursor_blink)
 		tty_render_cursor(tty_cursor);
+
+	if (tty_cursor / TTY_RES_X >= TTY_RES_Y)
+	{
+		uint32_t rows_to_scroll = tty_cursor / TTY_RES_X - TTY_RES_Y + 1;
+
+		tty_cursor -= rows_to_scroll * TTY_RES_X;
+
+		if (rows_to_scroll >= TTY_RES_Y)
+		{
+			memset(&tty_data, 0x0f, sizeof(tty_data));
+			tty_refresh_screen();
+			return;
+		}
+
+		for (uint32_t i = 0; i < TTY_RES_Y - rows_to_scroll; i++)
+			memcpy(&tty_data[i * TTY_RES_X], &tty_data[(i + rows_to_scroll) * TTY_RES_X], TTY_RES_X * sizeof(uint16_t));
+
+		memset(&tty_data[(TTY_RES_Y - rows_to_scroll) * TTY_RES_X], 0x0f, TTY_RES_X * sizeof(uint16_t));
+
+		tty_refresh_screen();
+	}
 }
