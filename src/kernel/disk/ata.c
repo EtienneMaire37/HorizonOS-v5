@@ -156,53 +156,26 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
     connected_pci_ide_controllers++;
 
 // #define LOG_BOOT_SECTORS
-    uint16_t buffer[256] = {0};
-    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 0, 0, 1, buffer))
+    for (uint8_t i = 0; i < 2; i++)
     {
-        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[0].devices[0].boot_sector, buffer, 512);
-    #ifdef LOG_BOOT_SECTORS
-        LOG(TRACE, "First sector of primary master drive:");
-        for (int i = 0; i < 512; i++)
+        for (uint8_t j = 0; j < 2; j++)
         {
-            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+            if (pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].connected) 
+            {
+                uint16_t buffer[256] = {0};
+                if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], i, j, 0, 1, buffer))
+                {
+                    memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].boot_sector, buffer, 512);
+                #ifdef LOG_BOOT_SECTORS
+                    LOG(TRACE, "First sector of primary master drive:");
+                    for (int i = 0; i < 512; i++)
+                    {
+                        LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
+                    }
+                #endif
+                }
+            }
         }
-    #endif
-    }
-
-    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_PRIMARY_CHANNEL, 1, 0, 1, buffer))
-    {
-        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[0].devices[1].boot_sector, buffer, 512);
-    #ifdef LOG_BOOT_SECTORS
-        LOG(TRACE, "First sector of primary slave drive:");
-        for (int i = 0; i < 512; i++)
-        {
-            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
-        }
-    #endif
-    }
-
-    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_SECONDARY_CHANNEL, 0, 0, 1, buffer))
-    {
-        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].devices[0].boot_sector, buffer, 512);
-    #ifdef LOG_BOOT_SECTORS
-        LOG(TRACE, "First sector of secondary master drive:");
-        for (int i = 0; i < 512; i++)
-        {
-            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
-        }
-    #endif
-    }   
-
-    if (ata_pio_read_sectors(&pci_ide_controller[connected_pci_ide_controllers - 1], ATA_SECONDARY_CHANNEL, 1, 0, 1, buffer))
-    {
-        memcpy(pci_ide_controller[connected_pci_ide_controllers - 1].channels[1].devices[1].boot_sector, buffer, 512);
-    #ifdef LOG_BOOT_SECTORS
-        LOG(TRACE, "First sector of secondary slave drive:");
-        for (int i = 0; i < 512; i++)
-        {
-            LOG(TRACE, "0x%x: 0x%x", i, ((uint8_t*)buffer)[i]);
-        }
-    #endif
     }
 
     LOG(INFO, "Partitions on connected drives:");
