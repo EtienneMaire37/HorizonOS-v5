@@ -468,6 +468,7 @@ void _start()
     // *     ..0        stack          ^      (0x0000000000000000)
     // *    0-16G       RAM identity mapped   (0x0000000400000000)
 
+    // * bootboot + environment + code segment + stack
         printf("Copying mapping of range 0x%x-0x%x from bootboot\n", 0xFFFFFFFFFFE00000, 0);
 
         LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFFFE00000, 0);
@@ -491,17 +492,20 @@ void _start()
             remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
         }
 
+    // * LAPIC registers
         printf("Identity mapping range 0x%x-0x%x\n", lapic, (uint64_t)lapic + 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
         remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
 
+    // * Framebuffer
         printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         
-        // * Write-combining cache
+    // ? Write-combining cache
         remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
             PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
+    // * initrd
         printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
