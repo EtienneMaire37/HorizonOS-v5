@@ -114,12 +114,70 @@ void remap_range(uint64_t* pml4,
         uint64_t* pt = get_pdpt_entry_address(pd_entry);
 
         uint64_t* pt_entry = &pt[pte];
-        if (is_pdpt_entry_present(pt_entry))
-        {
-            continue;
-        }
+        // if (is_pdpt_entry_present(pt_entry))
+        //     continue;
 
         set_pdpt_entry(pt_entry, vaddr - start_virtual_address + start_physical_address, 
+            privilege, read_write,
+            cache_type);
+    }
+}
+
+void allocate_range(uint64_t* pml4, 
+    uint64_t start_virtual_address, 
+    uint64_t pages,
+    uint8_t privilege, uint8_t read_write, uint8_t cache_type)
+{
+    if (!pml4)
+    {
+        LOG(ERROR, "allocate_range: NULL virtual address space");
+        return;
+    }
+
+    if (start_virtual_address & 0xfff)
+    {
+        LOG(CRITICAL, "allocate_range: Kernel tried to map non page aligned addresses");
+        abort();
+    }
+
+    // * "uncanonize"
+    start_virtual_address &= 0xffffffffffff;
+
+    // uint64_t end_virtual_address = start_virtual_address + 0x1000 * pages;
+
+    // for (uint64_t vaddr = start_virtual_address; vaddr < end_virtual_address; vaddr += 0x1000)
+    for (uint64_t i = 0; i < pages; i++)
+    {
+        uint64_t vaddr = start_virtual_address + 0x1000 * i;
+
+        uint64_t pte = (vaddr >> 12) & 0x1ff;
+        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
+        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
+        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
+
+        uint64_t* pml4_entry = &pml4[pml4e];
+        if (!is_pdpt_entry_present(pml4_entry))
+            set_pdpt_entry(pml4_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pdpt = get_pdpt_entry_address(pml4_entry);
+        
+        uint64_t* pdpt_entry = &pdpt[pdpte];
+        if (!is_pdpt_entry_present(pdpt_entry))
+            set_pdpt_entry(pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pd = get_pdpt_entry_address(pdpt_entry);
+
+        uint64_t* pd_entry = &pd[pde];
+        if (!is_pdpt_entry_present(pd_entry))
+            set_pdpt_entry(pd_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pt = get_pdpt_entry_address(pd_entry);
+
+        uint64_t* pt_entry = &pt[pte];
+        if (is_pdpt_entry_present(pt_entry))
+            continue;
+
+        set_pdpt_entry(pt_entry, pfa_allocate_physical_page(), 
             privilege, read_write,
             cache_type);
     }
@@ -215,55 +273,91 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
     }
 }
 
-void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
-{
-    LOG(DEBUG, "Virtual address space 0x%x:", cr3);
+// void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
+// {
+//     LOG(DEBUG, "Virtual address space 0x%x:", cr3);
 
-    for (int i = 0; i < 512; i++)
-    {
-        if (!is_pdpt_entry_present(&cr3[i]))
-            continue;
+//     for (int i = 0; i < 512; i++)
+//     {
+//         if (!is_pdpt_entry_present(&cr3[i]))
+//             continue;
         
-        uint64_t* pdpt = get_pdpt_entry_address(&cr3[i]);
+//         uint64_t* pdpt = get_pdpt_entry_address(&cr3[i]);
         
-        for (int j = 0; j < 512; j++)
-        {
-            if (!is_pdpt_entry_present(&pdpt[j]))
-                continue;
+//         for (int j = 0; j < 512; j++)
+//         {
+//             if (!is_pdpt_entry_present(&pdpt[j]))
+//                 continue;
             
-            uint64_t* pd = get_pdpt_entry_address(&pdpt[j]);
+//             uint64_t* pd = get_pdpt_entry_address(&pdpt[j]);
 
-            uint64_t vaddr = i * ((uint64_t)1 << (12 + 3 * 9)) + j * ((uint64_t)1 << (12 + 2 * 9));
+//             uint64_t vaddr = i * ((uint64_t)1 << (12 + 3 * 9)) + j * ((uint64_t)1 << (12 + 2 * 9));
 
-            // LOG(DEBUG, "\tpd: 0x%x-0x%x", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
+//             // LOG(DEBUG, "\tpd: 0x%x-0x%x", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
 
-            for (int k = 0; k < 512; k++)
-            {
-                if (!is_pdpt_entry_present(&pd[k]))
-                    continue;
+//             for (int k = 0; k < 512; k++)
+//             {
+//                 if (!is_pdpt_entry_present(&pd[k]))
+//                     continue;
                 
-                uint64_t* pt = get_pdpt_entry_address(&pd[k]);
+//                 uint64_t* pt = get_pdpt_entry_address(&pd[k]);
 
-                vaddr += k * ((uint64_t)1 << (12 + 1 * 9));
+//                 vaddr += k * ((uint64_t)1 << (12 + 1 * 9));
 
-                for (int l = 0; l < 512; l++)
-                {
-                    if (!is_pdpt_entry_present(&pt[l]))
-                        continue;
+//                 for (int l = 0; l < 512; l++)
+//                 {
+//                     if (!is_pdpt_entry_present(&pt[l]))
+//                         continue;
                     
-                    uint64_t* page = get_pdpt_entry_address(&pt[l]);
+//                     uint64_t* page = get_pdpt_entry_address(&pt[l]);
 
-                    vaddr += l * ((uint64_t)1 << 12);
+//                     vaddr += l * ((uint64_t)1 << 12);
 
-                    if (vaddr >= start && vaddr < end)
-                        LOG(DEBUG, "\tpage: 0x%x-0x%x", vaddr, vaddr + 0x1000);
-                }
-            }
-        }
-    }
-}
+//                     if (vaddr >= start && vaddr < end)
+//                         LOG(DEBUG, "\tpage: 0x%x-0x%x", vaddr, vaddr + 0x1000);
+//                 }
+//             }
+//         }
+//     }
+// }
 
-void* virtual_to_physical(uint64_t* cr3, uint64_t address)
+void* virtual_to_physical(uint64_t* cr3, uint64_t vaddr)
 {
-    abort();
+    if (!cr3)
+        return NULL;
+        // abort();
+
+    // * "uncanonize"
+    vaddr &= 0xffffffffffff;
+
+    uint64_t pte = (vaddr >> 12) & 0x1ff;
+    uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
+    uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
+    uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
+
+    uint64_t* pml4_entry = &cr3[pml4e];
+    if (!is_pdpt_entry_present(pml4_entry))
+        return NULL;
+
+    uint64_t* pdpt = get_pdpt_entry_address(pml4_entry);
+    
+    uint64_t* pdpt_entry = &pdpt[pdpte];
+    if (!is_pdpt_entry_present(pdpt_entry))
+        return NULL;
+
+    uint64_t* pd = get_pdpt_entry_address(pdpt_entry);
+
+    uint64_t* pd_entry = &pd[pde];
+    if (!is_pdpt_entry_present(pd_entry))
+        return NULL;
+
+    uint64_t* pt = get_pdpt_entry_address(pd_entry);
+
+    uint64_t* pt_entry = &pt[pte];
+    if (!is_pdpt_entry_present(pt_entry))
+        return NULL;
+
+    uint8_t* page = (uint8_t*)get_pdpt_entry_address(pt_entry);
+
+    return (void*)&page[vaddr & 0xfff];
 }

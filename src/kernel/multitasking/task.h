@@ -37,22 +37,16 @@ typedef struct thread
 
 uint8_t global_cpu_ticks = 0;
 
-// const int task_rsp_offset = offsetof(thread_t, rsp);
-// const int task_cr3_offset = offsetof(thread_t, cr3);
+const int task_rsp_offset = offsetof(thread_t, rsp);
+const int task_cr3_offset = offsetof(thread_t, cr3);
 
 #define TASK_STACK_PAGES        0x100       // 1MB
 #define TASK_KERNEL_STACK_PAGES 32          // 128KB
 
-#define TASK_STACK_TOP_ADDRESS              0xc0000000
+#define TASK_STACK_TOP_ADDRESS              0x800000000000 // 0x7fffffffffff
 #define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)
 #define TASK_KERNEL_STACK_TOP_ADDRESS       TASK_STACK_BOTTOM_ADDRESS
 #define TASK_KERNEL_STACK_BOTTOM_ADDRESS    (TASK_KERNEL_STACK_TOP_ADDRESS - 0x1000 * TASK_KERNEL_STACK_PAGES)
-
-const int kernel_stack_page_index_start = (TASK_KERNEL_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
-const int kernel_stack_page_index_end = (TASK_KERNEL_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
-
-const int stack_page_index_start = (TASK_STACK_BOTTOM_ADDRESS - (uint32_t)767 * 0x400000) / 0x1000;
-const int stack_page_index_end = (TASK_STACK_TOP_ADDRESS - 1 - (uint32_t)767 * 0x400000) / 0x1000;
 
 #define MAX_TASKS 256
 
@@ -67,7 +61,7 @@ bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
 uint64_t current_pid;
 
-extern void iret_instruction();
+extern void iretq_instruction();
 void task_kill(uint16_t index);
 
 void pic_enable();
@@ -99,13 +93,13 @@ extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, u
 extern void fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
-    // int last_index = current_task_index;
-    // current_task_index = next_task_index;
-    // TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    // uint8_t* old_fpu_state = (uint8_t*)(((uintptr_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
-    // uint8_t* new_fpu_state = (uint8_t*)(((uintptr_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
-    // context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
-    // old_fpu_state, new_fpu_state);
+    int last_index = current_task_index;
+    current_task_index = next_task_index;
+    TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
+    uint8_t* old_fpu_state = (uint8_t*)(((uintptr_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    uint8_t* new_fpu_state = (uint8_t*)(((uintptr_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
+    old_fpu_state, new_fpu_state);
 }
 
 bool task_is_blocked(uint16_t index)

@@ -153,6 +153,6 @@ _interrupt_handler:
     pop rax
     
     add rsp, 8 + 8  ; skip error code and interrupt number
-global iret_instruction
-iret_instruction:
+global iretq_instruction
+iretq_instruction:
     iretq

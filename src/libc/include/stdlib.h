@@ -19,14 +19,19 @@ void srand(unsigned int seed);
 long a64l(const char*s);
 char* l64a(long value);
 int abs(int n);
-int atexit(void (*function)(void));
+int atexit(void (*function)());
 int isdigit(int c);
 int isspace(int c);
 int isalpha(int c);
 int tolower(int c);
 int toupper(int c);
 int atoi(const char* str);
-void __attribute__((noreturn)) abort(void);
+#ifdef BUILDING_KERNEL
+void __attribute__((noreturn)) abort_core(int line, const char* file, const char* function);
+#define abort() abort_core(__LINE__, __CURRENT_FUNC__, __FILE__)
+#else
+void __attribute__((noreturn)) abort();
+#endif
 long strtol(const char* nptr, char** endptr, int base);
 int atoi(const char* str);
 

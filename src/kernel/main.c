@@ -13,6 +13,8 @@ extern BOOTBOOT bootboot;
 extern uint8_t environment[4096];
 extern uint8_t fb;
 
+uint64_t* global_cr3 = NULL;
+
 extern char kernel_start, kernel_end;
 physical_address_t kernel_start_phys, kernel_end_phys;
 
@@ -145,6 +147,7 @@ bool time_initialized = false;
 #include "acpi/tables.c"
 #include "pci/pci.c"
 #include "disk/ata.c"
+#include "multitasking/loader.c"
 
 static inline int64_t minint(int64_t a, int64_t b)
 {
@@ -232,6 +235,14 @@ const char* fb_type_string[] =
     "FB_ABGR",
     "FB_BGRA"
 };
+
+void test_func()
+{
+    while (true)
+    {
+        printf("Hello from test func!!\n");
+    }
+}
 
 void _start()
 {
@@ -450,13 +461,13 @@ void _start()
     LOG(INFO, "Setting up paging...");
     printf("Setting up paging...\n");
 
-    uint64_t* cr3 = create_empty_virtual_address_space();
-
     // LOG(DEBUG, "%s", bootboot.arch.x86_64.acpi_ptr);
 
     precise_time_t paging_start_time = global_timer;
 
     {
+        global_cr3 = create_empty_virtual_address_space();
+
         uint64_t* bootboot_cr3 = (uint64_t*)get_cr3();
 
     // * "When the kernel gains control, the memory mapping looks like this:"
@@ -472,7 +483,7 @@ void _start()
         printf("Copying mapping of range 0x%x-0x%x from bootboot\n", 0xFFFFFFFFFFE00000, 0);
 
         LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFFFE00000, 0);
-        copy_mapping(bootboot_cr3, cr3, 0xFFFFFFFFFFE00000, (-0xFFFFFFFFFFE00000) >> 12);
+        copy_mapping(bootboot_cr3, global_cr3, 0xFFFFFFFFFFE00000, (-0xFFFFFFFFFFE00000) >> 12);
 
         for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
         {
@@ -489,26 +500,36 @@ void _start()
                 
             LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
             printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
-            remap_range(cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
+            remap_range(global_cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
         }
+
+        // for (uint32_t i = 0; i < usable_memory_blocks; i++)
+        // {
+        //     uint64_t ptr = usable_memory_map[i].address;
+        //     uint64_t len = usable_memory_map[i].length;
+                
+        //     LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
+        //     printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
+        //     remap_range(global_cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
+        // }
 
     // * LAPIC registers
         printf("Identity mapping range 0x%x-0x%x\n", lapic, (uint64_t)lapic + 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
-        remap_range(cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
+        remap_range(global_cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
 
     // * Framebuffer
         printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         
     // ? Write-combining cache
-        remap_range(cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
+        remap_range(global_cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
             PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
     // * initrd
         printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
-        remap_range(cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
+        remap_range(global_cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
     }
 
     uint32_t paging_milliseconds = precise_time_to_milliseconds(global_timer - paging_start_time);
@@ -516,7 +537,7 @@ void _start()
     printf("Paging setup done in %u.%u%u%u seconds\n", paging_milliseconds / 1000, (paging_milliseconds / 100) % 10, (paging_milliseconds / 10) % 10, paging_milliseconds % 10);
     LOG(INFO, "Set up paging");
 
-    load_cr3((uint64_t)cr3);
+    load_cr3((uint64_t)global_cr3);
 
     LOG(INFO, "Parsing ACPI tables..");
     printf("Parsing ACPI tables...\n");
@@ -573,6 +594,19 @@ void _start()
     // asm volatile("div rcx" :: "c"(0));
 
     fflush(stdout);
+
+    multitasking_init();
+
+    // startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/start.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
+    // if (!multitasking_add_task_from_vfs("start", "/initrd/bin/start.elf", 0, true, &data))
+    // {
+    //     LOG(CRITICAL, "Kernel task couldn't start");
+    //     abort();
+    // }
+
+    multitasking_add_task_from_function("test", test_func);
+
+    multitasking_start();
 
     while(true)
         hlt();

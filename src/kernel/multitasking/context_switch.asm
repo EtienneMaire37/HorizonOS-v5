@@ -1,54 +1,65 @@
 section .text
 bits 64
 
-; extern task_rsp_offset
-; extern task_cr3_offset
+extern task_rsp_offset
+extern task_cr3_offset
 
-; ; void __attribute__((cdecl)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint32_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state)
-; global context_switch
-; context_switch:
-;     ; * eax, ecx and edx are caller-saved * ;
+; void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state)
+global context_switch
+context_switch:
+; * RDI, RSI, RDX, RCX, R8 are arguments (they are caller saved so no need to push them)
+    push rax
+    push rbx
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+    push rbp
 
-;     push ebx
-;     push esi
-;     push edi
-;     push ebp
+    ; $rcx = old_fpu_state
+    fxsave [rcx]
 
-;     mov ebx, [esp + (4 + 4) * 4]    ; $ebx = old_fpu_state
-;     fxsave [ebx]
+    ; $r8 = next_fpu_state
+    fxrstor [r8]
 
-;     mov ebx, [esp + (4 + 5) * 4]    ; $ebx = next_fpu_state
-;     fxrstor [ebx]
+    mov rbx, [task_rsp_offset]
+    ; $rdi = (uint64_t)old_tcb
+    mov [rdi + rbx], rsp                ; rdi->rsp = $rsp
 
-;     mov ebx, [task_esp_offset]
-;     mov edi, [esp + (4 + 1) * 4]        ; $edi = (uint32_t)old_tcb
-;     mov [edi + ebx], esp                ; edi->esp = $esp
+    ; $rsi = (uint64_t)next_tcb
 
-;     mov esi, [esp + (4 + 2) * 4]        ; $esi = (uint32_t)next_tcb
+    ; $rdx = ds
 
-;     mov edx, [esp + (4 + 3) * 4]        ; $edx = ds
+    mov rsp, [rsi + rbx]                ; $rsp = rsi->rsp
 
-;     mov esp, [esi + ebx]                ; $esp = esi->esp
+    mov rbx, [task_cr3_offset]
 
-;     mov ebx, [task_cr3_offset]
+    mov rcx, cr3
+    mov [rdi + rbx], rcx
+    mov rax, [rsi + rbx]
 
-;     mov ecx, cr3
-;     mov [edi + ebx], ecx
-;     mov eax, [esi + ebx]
+    cmp rax, rcx
+    je .end
+    mov cr3, rax
 
-;     cmp eax, ecx
-;     je .end
-;     mov cr3, eax
+.end:
+    pop rbp
+    pop rbx
+    pop rax
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
 
-; .end:
-;     pop ebp
-;     pop edi
-;     pop esi
-;     pop ebx
+    mov ds, dx
+    mov es, dx
+    mov fs, dx
+    mov gs, dx
 
-;     mov ds, dx
-;     mov es, dx
-;     mov fs, dx
-;     mov gs, dx
-
-;     ret
+    ret
