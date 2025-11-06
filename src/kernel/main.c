@@ -306,9 +306,12 @@ void _start()
 
         LOG(INFO, "Physical address is %u bits long", physical_address_width);
 
-        fpu_init_defaults();
+        // for (int i = 0; i < 512; i++)
+        //     LOG(DEBUG, "0x%x", fpu_default_state.data[i]);
 
         init_pat();
+
+        LOG(DEBUG, "Initrd size: %u bytes", bootboot.initrd_size);
 
         atomic_store(&did_init_std, true);
     }
@@ -318,19 +321,6 @@ void _start()
     acquire_spinlock(&print_spinlock);
 
     LOG(INFO, "cpu_id : %u", cpu_id);
-
-    {
-        if (cpuid_highest_function_parameter >= 1)
-        {
-            uint32_t eax, ebx, ecx = 0, edx; // same as above
-            cpuid(1, eax, ebx, ecx, edx);
-            if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
-            {
-                LOG(INFO, "Enabling AVX");
-                enable_avx();
-            }
-        }
-    }
 
     release_spinlock(&print_spinlock);
 
@@ -342,6 +332,46 @@ void _start()
 // * vvv Now we can use printf
 
     tty_clear_screen(' ');
+
+    pfa_detect_usable_memory();
+
+    printf("Detected ");
+    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
+    printf("%u ", allocatable_memory);
+    tty_set_color(FG_WHITE, BG_BLACK);
+    printf("bytes of allocatable memory\n");
+    
+    if (cpuid_highest_function_parameter < 0x0d)
+    {
+        LOG(CRITICAL, "Modern FPU not supported...");
+        tty_set_color(FG_LIGHTRED, BG_BLACK);
+        printf("Modern FPU not supported...\n");
+        tty_set_color(FG_WHITE, BG_BLACK);
+        abort();
+    }
+
+    if (cpuid_highest_function_parameter >= 1)
+    {
+        uint32_t eax, ebx, ecx = 0, edx; // same as above
+        cpuid(1, eax, ebx, ecx, edx);
+        if (((ecx >> 26) & 1) && ((ecx >> 28) & 1)) // * AVX and XSAVE supported
+        {
+            LOG(INFO, "Enabling AVX");
+            enable_avx();
+            fpu_init_defaults();
+        }
+        else
+        {
+            LOG(CRITICAL, "Modern FPU not supported...");
+            tty_set_color(FG_LIGHTRED, BG_BLACK);
+            printf("Modern FPU not supported...\n");
+            tty_set_color(FG_WHITE, BG_BLACK);
+            abort();
+        }
+    }
+
+    LOG(INFO, "XSAVE area is %u bytes", xsave_area_size);
+    printf("XSAVE area is %u bytes\n", xsave_area_size);
 
     printf("LAPIC base: %p\n", lapic);
 
@@ -358,14 +388,6 @@ void _start()
     printf("%u ", physical_address_width);
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("bits long\n");
-
-    pfa_detect_usable_memory();
-
-    printf("Detected ");
-    tty_set_color(FG_LIGHTBLUE, BG_BLACK);
-    printf("%u ", allocatable_memory);
-    tty_set_color(FG_WHITE, BG_BLACK);
-    printf("bytes of allocatable memory\n");
 
     LOG(INFO, "Loading a GDT with TSS...");
     printf("Loading a GDT with TSS...");

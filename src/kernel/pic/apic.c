@@ -32,6 +32,11 @@ void lapic_enable()
     lapic->spurious_interrupt_vector_register |= 0x100;
 }
 
+void lapic_disable()
+{
+    lapic->spurious_interrupt_vector_register &= ~0x100;
+}
+
 void lapic_set_tpr(uint8_t p)
 {
     uint32_t val = lapic->task_priority_register;

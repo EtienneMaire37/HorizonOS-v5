@@ -2,8 +2,6 @@
 
 #include "page_frame_allocator.h"
 
-#define MAX_MEMORY (1 * TB)
-
 void pfa_detect_usable_memory() 
 {
     usable_memory = usable_memory_blocks = 0;
@@ -18,8 +16,12 @@ void pfa_detect_usable_memory()
     {
         LOG(INFO, "   BOOTBOOT memory block : address : 0x%x ; length : %u | type : %u", 
             MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
+        // printf("   BOOTBOOT memory block : address : 0x%x ; length : %u | type : %u\n", 
+        //     MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
 
         if (!MMapEnt_IsFree(mmap_ent))
+            continue;
+        if (MMapEnt_Ptr(mmap_ent) == physical_null)
             continue;
 
         physical_address_t addr = MMapEnt_Ptr(mmap_ent);
@@ -56,6 +58,7 @@ void pfa_detect_usable_memory()
         usable_memory_blocks++;
 
         LOG(INFO, "   Memory block : address : 0x%x ; length : %u", addr, len);
+        // printf("   Memory block : address : 0x%x ; length : %u\n", addr, len);
     }
 
     first_alloc_block = 0;
@@ -73,6 +76,8 @@ void pfa_detect_usable_memory()
 
     bitmap = (uint8_t*)usable_memory_map[first_alloc_block].address;
 
+    printf("pfa: bitmap address: 0x%x\n", bitmap);
+
     if (usable_memory == 0 || first_alloc_block >= usable_memory_blocks) 
         goto no_memory;
 
@@ -84,7 +89,7 @@ void pfa_detect_usable_memory()
     if (first_alloc_block >= usable_memory_blocks)
         goto no_memory;
 
-    memset(bitmap, 0, 8 * bitmap_size);
+    memset(bitmap, 0, bitmap_size);
 
     for (uint8_t i = first_alloc_block; i < usable_memory_blocks; i++)
         allocatable_memory += usable_memory_map[i].length;
@@ -101,13 +106,13 @@ static inline physical_address_t pfa_allocate_physical_page()
 {
     if (memory_allocated + 0x1000 > allocatable_memory) 
     {
-        LOG(CRITICAL, "Out of memory!");
+        LOG(CRITICAL, "pfa_allocate_physical_page: Out of memory at start!");
         return physical_null;
     }
 
     acquire_spinlock(&pfa_spinlock);
 
-    for (uint64_t i = first_free_page_index_hint; i < bitmap_size; i += 8) 
+    for (uint64_t i = first_free_page_index_hint / 8; i < bitmap_size; i += 8) 
     {
         uint64_t* qword = (uint64_t*)&bitmap[i];
         if (*qword == 0xffffffffffffffff) continue;
@@ -126,7 +131,7 @@ static inline physical_address_t pfa_allocate_physical_page()
             if (remaining < block_pages) 
             {
                 physical_address_t addr = usable_memory_map[j].address + remaining * 0x1000;
-                first_free_page_index_hint = i;
+                first_free_page_index_hint = 8 * i + bit;
                 LOG_MEM_ALLOCATED();
                 release_spinlock(&pfa_spinlock);
                 return addr;
@@ -135,7 +140,73 @@ static inline physical_address_t pfa_allocate_physical_page()
         }
     }
 
-    LOG(CRITICAL, "Out of memory!");
+    LOG(CRITICAL, "pfa_allocate_physical_page: Out of memory at end!");
+    release_spinlock(&pfa_spinlock);
+    return physical_null;
+}
+
+static inline physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages)
+{
+    if (pages == 0) return physical_null;
+
+    uint64_t bytes_needed = (uint64_t)pages * 0x1000;
+    if (memory_allocated + bytes_needed > allocatable_memory) 
+    {
+        LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at start!");
+        return physical_null;
+    }
+
+    acquire_spinlock(&pfa_spinlock);
+
+    uint64_t total_pages = bitmap_size * 8;
+    uint64_t page_index_base = 0;
+    for (uint32_t b = first_alloc_block; b < usable_memory_blocks; b++) 
+    {
+        uint64_t block_pages = usable_memory_map[b].length / 0x1000;
+        if (block_pages < pages) 
+        {
+            page_index_base += block_pages;
+            continue;
+        }
+
+        for (uint64_t offset = 0; offset + pages <= block_pages; offset++) 
+        {
+            uint64_t candidate_page_index = page_index_base + offset;
+            if (candidate_page_index + pages > total_pages)
+                break;
+
+            bool ok = true;
+            uint64_t end = candidate_page_index + pages;
+            for (uint64_t pi = candidate_page_index; pi < end; ++pi) 
+            {
+                uint64_t byte = pi / 8;
+                uint8_t bit = pi & 0x7;
+                if (byte >= bitmap_size) { ok = false; break; }
+                if (bitmap[byte] & (1 << bit)) { ok = false; break; }
+            }
+
+            if (!ok) continue;
+
+            for (uint64_t pi = candidate_page_index; pi < end; pi++) 
+            {
+                uint64_t byte = pi / 8;
+                uint8_t bit = pi & 0x7;
+                bitmap[byte] |= (1 << bit);
+            }
+
+            memory_allocated += bytes_needed;
+            first_free_page_index_hint = candidate_page_index;
+
+            physical_address_t addr = usable_memory_map[b].address + offset * 0x1000;
+            LOG_MEM_ALLOCATED();
+            release_spinlock(&pfa_spinlock);
+            return addr;
+        }
+
+        page_index_base += block_pages;
+    }
+
+    LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at end!");
     release_spinlock(&pfa_spinlock);
     return physical_null;
 }
@@ -180,13 +251,19 @@ static inline void pfa_free_physical_page(physical_address_t address)
 }
 
 // * 1st TB will always be identity mapped
-void* pfa_allocate_page()
+static inline void* pfa_allocate_page()
 {
     return (void*)pfa_allocate_physical_page();
 }
 
 // * same
-void pfa_free_page(void* ptr)
+static inline void pfa_free_page(void* ptr)
 {
     pfa_free_physical_page((physical_address_t)ptr);
+}
+
+// * same
+static inline void* pfa_allocate_contiguous_pages(uint32_t pages)
+{
+    return (void*)pfa_allocate_physical_contiguous_pages(pages);
 }

@@ -1,49 +1,50 @@
 #pragma once
 
 #include "fpu.h"
+#include "sse.h"
 
-static fpu_state_t default_state __attribute__((aligned(16)));
+#include "../memalloc/page_frame_allocator.h"
 
-void fpu_init_defaults()
+static inline void fpu_init_defaults()
 {
-    assert(((virtual_address_t)&default_state & 0xf) == 0);
+    xsave_area_size = get_xsave_area_size();
+    xsave_area_pages = (xsave_area_size + 0xfff) / 0x1000;
+
+    fpu_default_state = pfa_allocate_contiguous_pages(xsave_area_pages);
     fpu_init();
-    fpu_save_state(&default_state);
+    fpu_save_state(fpu_default_state);
 }
 
-void fpu_init(void)
+static inline void fpu_init()
 {
     if (!has_fpu) return;
     asm volatile("fninit" ::: "memory");
 }
 
-static inline void fpu_save_state(fpu_state_t* s)
+static inline void fpu_save_state(uint8_t* s)
 {
     if (!has_fpu) return;
     
-    asm volatile("fxsave %0" : "=m" (*(fpu_state_t*)(((uintptr_t)s & 0xfffffff0) + 16)) :: "memory");
+    asm volatile("xsaves [rbx]" :: "a"(0xffffffffffffffff), "b"(s), "c"(0xffffffffffffffff));
 }
 
-static inline void fpu_restore_state(fpu_state_t* s)
+static inline void fpu_restore_state(uint8_t* s)
 {
     if (!has_fpu) return;
-    asm volatile("fxrstor %0" :: "m" (*(fpu_state_t*)(((uintptr_t)s & 0xfffffff0) + 16)) : "memory");
+
+    asm volatile("xrstors [rbx]" :: "a"(0xffffffffffffffff), "b" (s), "c"(0xffffffffffffffff) : "memory");
 }
 
-static inline void fpu_state_init(fpu_state_t* s)
+static inline void fpu_state_init(uint8_t* s)
 {
     if (!has_fpu) return;
     
-    int32_t offset = ((uintptr_t)&s) & 0xf;
-    memcpy((void*)((uintptr_t)s->data + offset), &default_state, 512);
+    memcpy(s, fpu_default_state, xsave_area_size);
 }
 
-static inline void copy_fpu_state(fpu_state_t* from, fpu_state_t* to)
+static inline uint8_t* fpu_state_create()
 {
-    if (!has_fpu) return;
-
-    int32_t offset_from = ((uintptr_t)&from) & 0xf;
-    int32_t offset_to = ((uintptr_t)&to) & 0xf;
-
-    memcpy((void*)((uintptr_t)to->data + offset_to), (void*)((uintptr_t)from->data + offset_from), 512);
+    uint8_t* data = pfa_allocate_contiguous_pages(xsave_area_pages);
+    fpu_state_init(data);
+    return data;
 }

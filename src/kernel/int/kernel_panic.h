@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../multitasking/task.h"
+#include "../cpu/memory.h"
 
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
@@ -147,6 +148,19 @@ void kernel_panic(interrupt_registers_t* registers)
         //     LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         // }
     }
+
+    LOG(DEBUG, "RSP=0x%x RBP=0x%x RAX=0x%x RBX=0x%x RCX=0x%x RDX=0x%x R8=0x%x",
+    registers->rsp, registers->rbp, registers->rax, registers->rbx, registers->rcx, registers->rdx, 
+    registers->r8);
+    LOG(DEBUG, "R9=0x%x R10=0x%x R11=0x%x R12=0x%x R13=0x%x R14=0x%x R15=0x%x",
+    registers->r9, registers->r10, registers->r11, registers->r12, registers->r13, registers->r14, registers->r15);
+
+    printf("RSP=0x%x RBP=0x%x\n",
+    registers->rsp, registers->rbp);
+    printf("RAX=0x%x RBX=0x%x RCX=0x%x RDX=0x%x\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
+    printf("R8=0x%x R9=0x%x R10=0x%x R11=0x%x\n",
+    registers->r8, registers->r9, registers->r10, registers->r11);
+    printf("R12=0x%x R13=0x%x R14=0x%x R15=0x%x\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
 
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");

@@ -29,7 +29,10 @@ thread_t task_create_empty()
     task.pid = current_pid++;
     task.system_task = true;
 
-    fpu_state_init(&task.fpu_state);
+    task.fpu_state = fpu_state_create();
+
+    // for (int i = 0; i < 512; i++)
+    //     LOG(DEBUG, "0x%x", task.fpu_state.data[i]);
 
     task.current_cpu_ticks = 0;
     task.stored_cpu_ticks = 0;
@@ -58,6 +61,7 @@ void task_destroy(thread_t* task)
     //         vfs_remove_global_file(task->file_table[i]);
     // }
     abort();
+    // fpu_state_destroy
 }
 
 void multitasking_init()
@@ -155,6 +159,9 @@ void switch_task()
         abort();
     }
 
+    // ! Should never log anything here
+    LOG(TRACE, "Switching task");
+
     lock_task_queue();
 
     bool was_first_task_switch = first_task_switch;
@@ -205,7 +212,6 @@ void task_kill(uint16_t index)
     for (uint16_t i = index; i < task_count - 1; i++)
     {
         tasks[i] = tasks[i + 1];
-        copy_fpu_state(&tasks[i + 1].fpu_state, &tasks[i].fpu_state);
     }
     if (current_task_index > index)
         current_task_index--;

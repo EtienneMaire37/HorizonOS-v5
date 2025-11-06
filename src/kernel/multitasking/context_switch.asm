@@ -10,6 +10,7 @@ context_switch:
 ; * RDI, RSI, RDX, RCX, R8 are arguments (they are caller saved so no need to push them)
     push rax
     push rbx
+    push rdx
     push r9
     push r10
     push r11
@@ -19,13 +20,20 @@ context_switch:
     push r15
     push rbp
 
+    mov rax, -1
+    mov rdx, -1
+
+; * The implicit EDX:EAX register pair specifies a 64-bit instruction mask. 
+; * The specific state components saved correspond to the bits set in the requested-feature bitmap (RFBM), 
+; * the logicalAND of EDX:EAX and the logical-OR of XCR0 with the IA32_XSS MSR. 
+
     ; $rcx = old_fpu_state
-    fxsave [rcx]
+    ; xsaves [rcx]
 
     ; $r8 = next_fpu_state
-    fxrstor [r8]
+    ; xrstors [r8]
 
-    mov rbx, [task_rsp_offset]
+    mov rbx, qword [rel task_rsp_offset]
     ; $rdi = (uint64_t)old_tcb
     mov [rdi + rbx], rsp                ; rdi->rsp = $rsp
 
@@ -35,7 +43,7 @@ context_switch:
 
     mov rsp, [rsi + rbx]                ; $rsp = rsi->rsp
 
-    mov rbx, [task_cr3_offset]
+    mov rbx, qword [rel task_cr3_offset]
 
     mov rcx, cr3
     mov [rdi + rbx], rcx
@@ -47,8 +55,6 @@ context_switch:
 
 .end:
     pop rbp
-    pop rbx
-    pop rax
     pop r15
     pop r14
     pop r13
@@ -56,6 +62,9 @@ context_switch:
     pop r11
     pop r10
     pop r9
+    pop rdx
+    pop rbx
+    pop rax
 
     mov ds, dx
     mov es, dx

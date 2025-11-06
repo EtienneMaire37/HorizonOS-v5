@@ -85,7 +85,6 @@ interrupt_table:
     %endrep
 
 extern interrupt_handler
-; extern putchar
 _interrupt_handler:
     push rax
     push rcx

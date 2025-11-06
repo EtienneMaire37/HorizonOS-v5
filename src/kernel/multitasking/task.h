@@ -28,7 +28,7 @@ typedef struct thread
     pid_t pid;
     bool system_task;    // system_task: cause kernel panics
 
-    fpu_state_t fpu_state;
+    uint8_t* fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
 
@@ -37,8 +37,8 @@ typedef struct thread
 
 uint8_t global_cpu_ticks = 0;
 
-const int task_rsp_offset = offsetof(thread_t, rsp);
-const int task_cr3_offset = offsetof(thread_t, cr3);
+const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
+const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
 
 #define TASK_STACK_PAGES        0x100       // 1MB
 #define TASK_KERNEL_STACK_PAGES 32          // 128KB
@@ -56,6 +56,8 @@ uint16_t task_count;
 #define TASK_SWITCH_DELAY 40 // ms
 #define TASK_SWITCHES_PER_SECOND (1000 / TASK_SWITCH_DELAY)
 
+uint64_t multitasking_counter = TASK_SWITCH_DELAY;
+
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
@@ -64,19 +66,21 @@ uint64_t current_pid;
 extern void iretq_instruction();
 void task_kill(uint16_t index);
 
-void pic_enable();
-void pic_disable();
+void apic_enable();
+void apic_disable();
+
+atomic_flag task_queue_spinlock;
 
 void lock_task_queue()
 {
-    // disable_interrupts();
-    pic_disable();
+    // lapic_disable();
+    // acquire_spinlock(&task_queue_spinlock);
 }
 
 void unlock_task_queue()
 {
-    // enable_interrupts();
-    pic_enable();
+    // lapic_enable();
+    // release_spinlock(&task_queue_spinlock);
 }
 
 int vfs_allocate_thread_file(int index)
@@ -90,16 +94,15 @@ int vfs_allocate_thread_file(int index)
 }
 
 extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
-extern void fork_context_switch(thread_t* next_tcb);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
     current_task_index = next_task_index;
     TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    uint8_t* old_fpu_state = (uint8_t*)(((uintptr_t)&tasks[last_index].fpu_state.data[0] & 0xfffffff0) + 16);
-    uint8_t* new_fpu_state = (uint8_t*)(((uintptr_t)&tasks[current_task_index].fpu_state.data[0] & 0xfffffff0) + 16);
+    // dump_xsave_header(tasks[last_index].fpu_state, true);
+    // dump_xsave_header(tasks[current_task_index].fpu_state, true);
     context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
-    old_fpu_state, new_fpu_state);
+    tasks[last_index].fpu_state, tasks[current_task_index].fpu_state);
 }
 
 bool task_is_blocked(uint16_t index)

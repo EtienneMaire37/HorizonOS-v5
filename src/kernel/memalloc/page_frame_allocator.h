@@ -1,5 +1,7 @@
 #pragma once
 
+#define MAX_MEMORY (1 * TB)
+
 uint64_t usable_memory;
 
 struct mem_block
@@ -32,6 +34,9 @@ atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
 #endif
 
 void pfa_detect_usable_memory();
-void pfa_bitmap_init();
-static inline physical_address_t pfa_allocate_physical_page();
+static inline physical_address_t pfa_allocate_physical_page() ;
+static inline physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages);
 static inline void pfa_free_physical_page(physical_address_t address);
+static inline void* pfa_allocate_page();
+static inline void pfa_free_page(void* ptr);
+static inline void* pfa_allocate_contiguous_pages(uint32_t pages);

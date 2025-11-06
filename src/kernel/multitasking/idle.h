@@ -2,6 +2,10 @@
 
 void idle_main()
 {
-    while(true) hlt();
+    while(true) 
+    {
+        printf("Hello from idle task!!!!\n");
+        // hlt();
+    }
     __builtin_unreachable();
 }

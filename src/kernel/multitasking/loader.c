@@ -18,7 +18,7 @@ void multitasking_add_task_from_function(char* name, void (*func)())
     task_stack_push(&task, KERNEL_DATA_SEGMENT);
     task_stack_push(&task, task.rsp);
 
-    task_stack_push(&task, 0x200);
+    task_stack_push(&task, 0x200);  // get_rflags()
     task_stack_push(&task, KERNEL_CODE_SEGMENT);
     task_stack_push(&task, (uint64_t)func);
 
@@ -26,6 +26,7 @@ void multitasking_add_task_from_function(char* name, void (*func)())
 
     task_stack_push(&task, 0);      // rax
     task_stack_push(&task, 0);      // rbx
+    task_stack_push(&task, KERNEL_CODE_SEGMENT);      // rdx
     task_stack_push(&task, 0);      // r9
     task_stack_push(&task, 0);      // r10
     task_stack_push(&task, 0);      // r11

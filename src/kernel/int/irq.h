@@ -4,6 +4,7 @@
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
+    bool ts = false;
     switch (registers->interrupt_number)
     {
     case 0x80:  // * APIC Timer
@@ -26,6 +27,16 @@ void handle_apic_irq(interrupt_registers_t* registers)
                 tty_render_character(tty_cursor, data, data >> 8);
             }
         }
+        if (multitasking_enabled)
+        {
+            if (multitasking_counter <= TASK_SWITCH_DELAY)
+            {
+                multitasking_counter = TASK_SWITCH_DELAY;
+
+                ts = true;
+            }
+            multitasking_counter -= precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
+        }
         break;
     }
 
@@ -34,4 +45,7 @@ void handle_apic_irq(interrupt_registers_t* registers)
     }
 
     lapic_send_eoi();
+
+    if (ts)
+        switch_task();
 }
