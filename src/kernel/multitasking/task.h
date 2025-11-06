@@ -74,13 +74,13 @@ atomic_flag task_queue_spinlock;
 void lock_task_queue()
 {
     // lapic_disable();
-    // acquire_spinlock(&task_queue_spinlock);
+    acquire_spinlock(&task_queue_spinlock);
 }
 
 void unlock_task_queue()
 {
     // lapic_enable();
-    // release_spinlock(&task_queue_spinlock);
+    release_spinlock(&task_queue_spinlock);
 }
 
 int vfs_allocate_thread_file(int index)

@@ -24,6 +24,8 @@ void multitasking_add_task_from_function(char* name, void (*func)())
 
     task_stack_push(&task, (uint64_t)iretq_instruction);
 
+    task_stack_push(&task, (uint64_t)unlock_task_queue);
+
     task_stack_push(&task, 0);      // rax
     task_stack_push(&task, 0);      // rbx
     task_stack_push(&task, KERNEL_CODE_SEGMENT);      // rdx
