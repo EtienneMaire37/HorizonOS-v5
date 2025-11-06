@@ -99,8 +99,7 @@ void full_context_switch(uint16_t next_task_index)
     int last_index = current_task_index;
     current_task_index = next_task_index;
     TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    // dump_xsave_header(tasks[last_index].fpu_state, true);
-    // dump_xsave_header(tasks[current_task_index].fpu_state, true);
+    
     context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
     tasks[last_index].fpu_state, tasks[current_task_index].fpu_state);
 }

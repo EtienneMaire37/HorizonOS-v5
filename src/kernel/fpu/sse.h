@@ -1,5 +1,19 @@
 #pragma once
 
+const uint64_t STATE_COMPONENT_BITMAP = 0b111;
+
+uint64_t get_xcr0()
+{
+    uint64_t eax, edx;
+    asm volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+    return (edx << 32) | (eax & 0xffffffff);
+}
+
+void load_xcr0(uint64_t xcr0)
+{
+    asm volatile("xsetbv" :: "a"(xcr0 & 0xffffffff), "c"(0), "d"(xcr0 >> 32));
+}
+
 void enable_sse()
 {
     uint32_t cr0 = get_cr0();
@@ -9,29 +23,19 @@ void enable_sse()
     load_cr0(cr0);
 
     uint32_t cr4 = get_cr4();
-    cr4 |= (1 << 9);    // * OSFXSR
-    cr4 |= (1 << 10);   // * OSXMMEXCPT
+    // cr4 |= (1 << 9);    // * OSFXSR
+    // cr4 |= (1 << 10);   // * OSXMMEXCPT
     cr4 &= ~(1 << 11);  // * !UMIP
     load_cr4(cr4);
 }
 
-void dump_xsave_header(uint8_t* s, bool print) 
+void enable_avx()
 {
-    uint64_t xstate_bv = *(uint64_t*)(s + 512);       // XSTATE_BV
-    uint64_t xcomp_bv  = *(uint64_t*)(s + 520);       // XCOMP_BV
-    if (print)
-    {
-        printf("XSTATE_BV = 0x%x\n", (uint64_t)xstate_bv);
-        printf("XCOMP_BV  = 0x%x\n", (uint64_t)xcomp_bv);
-    }
-    LOG(DEBUG, "XSTATE_BV = 0x%x", (uint64_t)xstate_bv);
-    LOG(DEBUG, "XCOMP_BV  = 0x%x", (uint64_t)xcomp_bv);
-    for (int i = 16; i < 64; i++) 
-    {
-        if (s[i] != 0)
-            printf("Header byte %d != 0 (value 0x%02x)\n", i, s[i]);
-    }
+    uint64_t cr4 = get_cr4();
+    cr4 |= (1 << 18);   // * OSXSAVE
+    load_cr4(cr4);
+
+    load_xcr0(STATE_COMPONENT_BITMAP); // * AVX | SSE | X87
 }
 
-extern void enable_avx();
 extern uint32_t get_xsave_area_size();

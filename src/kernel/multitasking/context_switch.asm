@@ -4,6 +4,8 @@ bits 64
 extern task_rsp_offset
 extern task_cr3_offset
 
+extern STATE_COMPONENT_BITMAP
+
 ; void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state)
 global context_switch
 context_switch:
@@ -20,18 +22,19 @@ context_switch:
     push r15
     push rbp
 
-    mov rax, -1
-    mov rdx, -1
+    mov rax, [STATE_COMPONENT_BITMAP]
+    mov rdx, 0
+    ; $edx:$eax = all currently supported features
 
 ; * The implicit EDX:EAX register pair specifies a 64-bit instruction mask. 
 ; * The specific state components saved correspond to the bits set in the requested-feature bitmap (RFBM), 
 ; * the logicalAND of EDX:EAX and the logical-OR of XCR0 with the IA32_XSS MSR. 
 
     ; $rcx = old_fpu_state
-    ; xsaves [rcx]
+    xsave [rcx]
 
     ; $r8 = next_fpu_state
-    ; xrstors [r8]
+    xrstor [r8]
 
     mov rbx, qword [rel task_rsp_offset]
     ; $rdi = (uint64_t)old_tcb

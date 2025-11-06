@@ -13,6 +13,9 @@ static inline void fpu_init_defaults()
     fpu_default_state = pfa_allocate_contiguous_pages(xsave_area_pages);
     fpu_init();
     fpu_save_state(fpu_default_state);
+
+// !!! The XSAVE instruction does not write any part of the XSAVE header other than the XSTATE_BV field; in particular,
+// !!! it does *not* write to the XCOMP_BV field.
 }
 
 static inline void fpu_init()
@@ -25,14 +28,14 @@ static inline void fpu_save_state(uint8_t* s)
 {
     if (!has_fpu) return;
     
-    asm volatile("xsaves [rbx]" :: "a"(0xffffffffffffffff), "b"(s), "c"(0xffffffffffffffff));
+    asm volatile("xsave [rbx]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "b"(s), "c"(STATE_COMPONENT_BITMAP >> 32));
 }
 
 static inline void fpu_restore_state(uint8_t* s)
 {
     if (!has_fpu) return;
 
-    asm volatile("xrstors [rbx]" :: "a"(0xffffffffffffffff), "b" (s), "c"(0xffffffffffffffff) : "memory");
+    asm volatile("xrstor [rbx]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "b" (s), "c"(STATE_COMPONENT_BITMAP >> 32) : "memory");
 }
 
 static inline void fpu_state_init(uint8_t* s)

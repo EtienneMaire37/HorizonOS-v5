@@ -1,6 +1,8 @@
+#ifndef BUILDING_KERNEL
 #include "../include/math.h"
 #include "math_float_util.h"
 #include "math_fmod.c"
+#endif
 #include "../include/fcntl.h"
 
 int putchar(int c)
@@ -114,6 +116,22 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             }
         }
     }
+    void printf_X(uint64_t val, uint8_t padding)
+    {
+        bool first0 = true;
+        for(uint8_t i = 0; i < 16; i++)
+        {
+            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
+            first0 &= digit == 0;
+            first0 &= i < 16 - padding;
+            if(!first0)
+            {
+                func(HEX[digit]);
+                length++;
+            }
+        }
+    }
+    #ifndef BUILDING_KERNEL
     void printf_fld(long double val)
     {
         if(val < 0)
@@ -176,21 +194,6 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 length++;
             }
             div /= 10;
-        }
-    }
-    void printf_X(uint64_t val, uint8_t padding)
-    {
-        bool first0 = true;
-        for(uint8_t i = 0; i < 16; i++)
-        {
-            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
-            first0 &= digit == 0;
-            first0 &= i < 16 - padding;
-            if(!first0)
-            {
-                func(HEX[digit]);
-                length++;
-            }
         }
     }
     void printf_lf(long double val)
@@ -284,6 +287,7 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
             digits++;
         }
     }
+    #endif
 
     bool na64_set = false;
     bool next_arg_64 = false;
@@ -323,10 +327,14 @@ int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_li
                 printf_X(va_arg(args, uint64_t), 1);
                 break;
             case 'f':
+                #ifndef BUILDING_KERNEL
                 if (next_arg_64)
                     printf_lf(va_arg(args, long double));
                 else
                     printf_f(va_arg(args, double));
+                #else
+                func_s("(floating point value)");
+                #endif
                 break;
             case 'c':
                 func((char)va_arg(args, uint64_t));
