@@ -14,7 +14,7 @@ void pfa_detect_usable_memory()
 
     for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++) 
     {
-        LOG(INFO, "   BOOTBOOT memory block : address : 0x%llx ; length : %llu | type : %u", 
+        LOG(DEBUG, "   BOOTBOOT memory block : address : 0x%llx ; length : %llu | type : %u", 
             MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
         // printf("   BOOTBOOT memory block : address : 0x%llx ; length : %llu | type : %u\n", 
         //     MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));

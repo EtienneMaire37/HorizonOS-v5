@@ -310,8 +310,6 @@ void _start()
 
         init_pat();
 
-        LOG(DEBUG, "Initrd size: %llu bytes", bootboot.initrd_size);
-
         atomic_store(&did_init_std, true);
     }
 
@@ -567,10 +565,12 @@ void _start()
     printf("Done.\n");
     LOG(INFO, "Done parsing ACPI tables.");
 
-    LOG(DEBUG, "Scanning PCI buses...");
+    LOG(INFO, "Scanning PCI buses...");
     printf("Scanning PCI buses...\n");
 
     pci_scan_buses();
+
+    LOG(INFO, "Done scanning PCI buses.");
 
     // {
     //     LOG(INFO, "Detecting PS/2 devices");

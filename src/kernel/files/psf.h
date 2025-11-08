@@ -127,7 +127,7 @@ psf_font_t psf_font_load_from_initrd(const char* path)
         return font;
     }
 
-    LOG(DEBUG, "Loaded psf font \"%s\":", path);
+    LOG(INFO, "Loaded psf font \"%s\":", path);
     LOG(DEBUG, "\tchar width: %u", psf_get_glyph_width(&font));
     LOG(DEBUG, "\tchar height: %u", psf_get_glyph_height(&font));
     LOG(DEBUG, "\tbytes per glyph: %u", psf_get_bytes_per_glyph(&font));

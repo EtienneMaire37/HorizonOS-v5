@@ -32,7 +32,7 @@ make all
 To build without logs. 
 Or:
 ```bash
-make all USER_CFLAGS=-DLOGLEVEL=TRACE
+make all USER_CFLAGS=-DLOGLEVEL=INFO
 ```
 To build with E9 port logs. 
 A `horizonos.iso` disk image file will be created in the root of the repository.
