@@ -40,8 +40,8 @@ uint8_t global_cpu_ticks = 0;
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
 const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
 
-#define TASK_STACK_PAGES        0x100       // 1MB
-#define TASK_KERNEL_STACK_PAGES 32          // 128KB
+#define TASK_STACK_PAGES            0x400       // * 4MB
+#define TASK_KERNEL_STACK_PAGES     0x20        // * 128KB
 
 #define TASK_STACK_TOP_ADDRESS              0x800000000000 // 0x7fffffffffff
 #define TASK_STACK_BOTTOM_ADDRESS           (TASK_STACK_TOP_ADDRESS - 0x1000 * TASK_STACK_PAGES)

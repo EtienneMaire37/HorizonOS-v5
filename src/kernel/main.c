@@ -150,6 +150,7 @@ initrd_file_t* commit_file;
 #include "pci/pci.c"
 #include "disk/ata.c"
 #include "multitasking/loader.c"
+#include "../libc/src/startup_data.c"
 
 static inline int64_t minint(int64_t a, int64_t b)
 {
@@ -383,6 +384,9 @@ void _start()
 
     printf("LAPIC base: %p\n", lapic);
 
+    printf("%u core%s running\n", bootboot.numcores, bootboot.numcores == 1 ? "" : "s");
+    LOG(INFO, "%u core%s running\n", bootboot.numcores, bootboot.numcores == 1 ? "" : "s");
+
     printf("CPU manufacturer id : ");
     tty_set_color(FG_LIGHTRED, BG_BLACK);
     printf("\"%s\"\n", manufacturer_id_string);
@@ -408,7 +412,7 @@ void _start()
     setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xF2, 0xC);    // User mode data segment
 
     memset(&TSS, 0, sizeof(struct tss_entry));
-    TSS.rsp0 = 0;
+    TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
     setup_ssd_gdt_entry(&GDT[5], (physical_address_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
 
     install_gdt();
@@ -619,14 +623,24 @@ void _start()
 
     multitasking_init();
 
-    // startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/start.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
-    // if (!multitasking_add_task_from_vfs("start", "/initrd/bin/start.elf", 0, true, &data))
     // {
-    //     LOG(CRITICAL, "Kernel task couldn't start");
-    //     abort();
+    //     uint64_t rsp;
+    //     asm volatile("mov rax, rsp" : "=a"(rsp));
+    //     LOG(DEBUG, "rsp: %#llx", rsp);
+    //     LOG(DEBUG, "%llu bytes left", 1024 + rsp);
+    //     while (true);
     // }
 
-    multitasking_add_task_from_function("test", test_func);
+    startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/init.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
+    if (!multitasking_add_task_from_vfs("init", "/initrd/bin/init.elf", 0, true, &data))
+    {
+        LOG(CRITICAL, "init task couldn't start");
+        abort();
+    }
+
+    while (true);
+
+    // multitasking_add_task_from_function("test", test_func);
 
     multitasking_start();
 

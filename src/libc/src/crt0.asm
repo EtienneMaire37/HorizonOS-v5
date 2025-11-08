@@ -2,44 +2,35 @@ bits 64
 section .text
 
 global kernel_data
-kernel_data: dd 0
+kernel_data: dq 0
 
 extern _main
 global _start
 _start:
-    mov [kernel_data], esp
-    mov ebp, 0
+    mov [kernel_data], rsp
+    mov rbp, 0
     call .start ; stack frame
     jmp .halt
 .start:
-    push ebp
-    mov ebp, esp
+    push rbp
+    mov rbp, rsp
 
     call _main
 
-    pop ebp
-    mov esp, ebp
-.halt:
-    hlt
-    jmp .halt
+    pop rbp
+    mov rsp, rbp
+
+    jmp $
 
 extern main
 extern exit
 
 global call_main_exit
 call_main_exit:
-    push ebp
-    mov ebp, esp
-
-    push dword [esp + 12]   ; argv
-    push dword [esp + 12]   ; argc
+    ; ? arguments are passed as registers, no need to set them up
     call main
-    add esp, 8
 
-    push eax        ; main return code
+    mov rdi, rax ; * main return value
     call exit
-    add esp, 4
 
-    pop ebp
-    mov esp, ebp
     ret

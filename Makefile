@@ -23,7 +23,7 @@ run:
 	-smp 8 \
 	-d cpu
 
-	// src/tasks/bin/start.elf
+	// src/tasks/bin/init.elf
 horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
 	mkdir bin -p
 
@@ -69,12 +69,12 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	qemu-img convert -O vdi horizonos.iso horizonos.vdi
 
-src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+src/tasks/bin/init.elf: src/tasks/src/init/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/start/main.c" -o "src/tasks/bin/start.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/init/main.c" -o "src/tasks/bin/init.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
-    -o "src/tasks/bin/start.elf" \
-    "src/tasks/bin/start.o" \
+    -o "src/tasks/bin/init.elf" \
+    "src/tasks/bin/init.o" \
     "src/libc/lib/libc.a" \
     "src/libc/lib/libm.a" \
 	-ffreestanding -nostdlib \
@@ -82,7 +82,7 @@ src/tasks/bin/start.elf: src/tasks/src/start/* src/tasks/bin/shell src/tasks/bin
 
 src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/echo/main.c" -o "src/tasks/bin/echo.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/echo/main.c" -o "src/tasks/bin/echo.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/echo" \
     "src/tasks/bin/echo.o" \
@@ -92,7 +92,7 @@ src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a s
 
 src/tasks/bin/ls: src/tasks/src/ls/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/ls/main.c" -o "src/tasks/bin/ls.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/ls/main.c" -o "src/tasks/bin/ls.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/ls" \
     "src/tasks/bin/ls.o" \
@@ -102,7 +102,7 @@ src/tasks/bin/ls: src/tasks/src/ls/* src/tasks/link.ld src/libc/lib/libc.a src/l
 
 src/tasks/bin/cat: src/tasks/src/cat/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/cat/main.c" -o "src/tasks/bin/cat.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/cat/main.c" -o "src/tasks/bin/cat.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/cat" \
     "src/tasks/bin/cat.o" \
@@ -112,7 +112,7 @@ src/tasks/bin/cat: src/tasks/src/cat/* src/tasks/link.ld src/libc/lib/libc.a src
 
 src/tasks/bin/clear: src/tasks/src/clear/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/clear/main.c" -o "src/tasks/bin/clear.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/clear/main.c" -o "src/tasks/bin/clear.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/clear" \
     "src/tasks/bin/clear.o" \
@@ -122,7 +122,7 @@ src/tasks/bin/clear: src/tasks/src/clear/* src/tasks/link.ld src/libc/lib/libc.a
 
 src/tasks/bin/printenv: src/tasks/src/printenv/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/printenv/main.c" -o "src/tasks/bin/printenv.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/printenv/main.c" -o "src/tasks/bin/printenv.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/printenv" \
     "src/tasks/bin/printenv.o" \
@@ -132,7 +132,7 @@ src/tasks/bin/printenv: src/tasks/src/printenv/* src/tasks/link.ld src/libc/lib/
 
 src/tasks/bin/shell: src/tasks/src/shell/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/shell/main.c" -o "src/tasks/bin/shell.o" $(CFLAGS) -I"src/libc/include" -O2
+	$(CROSSGCC) -c "src/tasks/src/shell/main.c" -o "src/tasks/bin/shell.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
     -o "src/tasks/bin/shell" \
     "src/tasks/bin/shell.o" \
@@ -143,12 +143,12 @@ src/tasks/bin/shell: src/tasks/src/shell/* src/tasks/link.ld src/libc/lib/libc.a
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	nasm -f elf64 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
-	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O3 $(CFLAGS)
+	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/clibc.o" -O2 $(CFLAGS)
 	$(CROSSGCC) "src/libc/lib/crt0.o" "src/libc/lib/clibc.o" -o "src/libc/lib/libc.o" -r
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O3 $(CFLAGS) -malign-double
+	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O2 $(CFLAGS) -malign-double
 	$(CROSSAR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 $(CROSSGCC):

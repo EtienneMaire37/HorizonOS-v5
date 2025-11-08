@@ -28,7 +28,7 @@ int toupper(int c);
 int atoi(const char* str);
 #ifdef BUILDING_KERNEL
 void __attribute__((noreturn)) abort_core(int line, const char* file, const char* function);
-#define abort() abort_core(__LINE__, __CURRENT_FUNC__, __FILE__)
+#define abort() abort_core(__LINE__, __FILE__, __CURRENT_FUNC__)
 #else
 void __attribute__((noreturn)) abort();
 #endif

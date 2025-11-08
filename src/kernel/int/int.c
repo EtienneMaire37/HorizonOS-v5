@@ -17,7 +17,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
-    if (registers->interrupt_number < 32)            // Fault
+    if (registers->interrupt_number < 32)       // * Fault
     {
         LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = 0x%llx ; cr2 = 0x%llx ; cr3 = 0x%llx ; rip = 0x%llx", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
         registers->error_code, registers->cr2, registers->cr3, registers->rip);
@@ -40,7 +40,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         return_from_isr();
     }
 
-    if (registers->interrupt_number < 32 + 16)  // IRQ
+    if (registers->interrupt_number < 32 + 16)  // * IRQ
     {
         uint8_t irq_number = registers->interrupt_number - 32;
 
@@ -57,11 +57,14 @@ void interrupt_handler(interrupt_registers_t* registers)
 
         return_from_isr();
     }
-    if (registers->interrupt_number == 0xf0)  // System call
+    if (registers->interrupt_number == 0xf0)    // * System call
+    // TODO: Switch to using the syscall/sysret instructions
     {
         if (!multitasking_enabled || first_task_switch) return_from_isr();
 
         handle_syscall(registers);
+
+        return_from_isr();
     }
 
     // * APIC interrupt (probably)
