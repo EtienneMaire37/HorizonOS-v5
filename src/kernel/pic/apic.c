@@ -4,9 +4,10 @@
 
 void apic_init()
 {
-    uint64_t apic_base_msr = rdmsr(IA32_APIC_BASE_MSR);
-    uint64_t apic_base_address = apic_base_msr & 0xffffff000;
-    lapic = (volatile local_apic_registers_t*)apic_base_address;
+    // uint64_t apic_base_msr = rdmsr(IA32_APIC_BASE_MSR);
+    // uint64_t apic_base_address = apic_base_msr & 0xffffff000;
+    // lapic = (volatile local_apic_registers_t*)apic_base_address;
+    // * Will always be mapped at the same address anyways
 }
 
 uint8_t apic_get_cpu_id()

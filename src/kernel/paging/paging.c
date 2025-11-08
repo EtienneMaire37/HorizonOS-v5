@@ -56,7 +56,7 @@ static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t pri
     uint64_t masked_address = (address & 0xfffffffffffff000) & get_physical_address_mask();
     if (masked_address != address)
     {
-        LOG(CRITICAL, "Kernel tried to map physical address 0x%x but it doesn't fit in %u bits", address, physical_address_width);
+        LOG(CRITICAL, "Kernel tried to map physical address 0x%llx but it doesn't fit in %u bits", address, physical_address_width);
         abort();
     }
 
@@ -275,7 +275,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
 
 // void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
 // {
-//     LOG(DEBUG, "Virtual address space 0x%x:", cr3);
+//     LOG(DEBUG, "Virtual address space 0x%llx:", cr3);
 
 //     for (int i = 0; i < 512; i++)
 //     {
@@ -293,7 +293,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
 
 //             uint64_t vaddr = i * ((uint64_t)1 << (12 + 3 * 9)) + j * ((uint64_t)1 << (12 + 2 * 9));
 
-//             // LOG(DEBUG, "\tpd: 0x%x-0x%x", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
+//             // LOG(DEBUG, "\tpd: 0x%llx-0x%llx", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
 
 //             for (int k = 0; k < 512; k++)
 //             {
@@ -314,7 +314,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
 //                     vaddr += l * ((uint64_t)1 << 12);
 
 //                     if (vaddr >= start && vaddr < end)
-//                         LOG(DEBUG, "\tpage: 0x%x-0x%x", vaddr, vaddr + 0x1000);
+//                         LOG(DEBUG, "\tpage: 0x%llx-0x%llx", vaddr, vaddr + 0x1000);
 //                 }
 //             }
 //         }

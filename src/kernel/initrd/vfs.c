@@ -166,7 +166,7 @@ int vfs_initrd_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* by
         return 0;
     }
     ssize_t bytes_to_read = minint(f->data.initrd_data.file->size - f->position, num_bytes);
-    // LOG(DEBUG, "initrd read file entry 0x%x in to buffer 0x%x [file position %lu] reading %d bytes", f, buffer, f->position, bytes_to_read);
+   
     if (bytes_to_read <= 0)
     {
         *bytes_read = 0;

@@ -38,7 +38,7 @@ static inline uint64_t get_physical_address_mask()
 {
     if (physical_address_width == 0)
         abort();
-    return ((uint64_t)1 << physical_address_width) - 1;
+    return physical_address_width == 64 ? 0xffffffffffffffff : ((uint64_t)1 << (physical_address_width + 1)) - 1;
 }
 
 static inline void init_pat()

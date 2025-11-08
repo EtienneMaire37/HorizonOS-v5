@@ -17,7 +17,7 @@ bool acpi_table_valid(physical_address_t table_address)
 
 void map_table_in_current_vas(uint64_t address, uint8_t privilege, uint8_t read_write)
 {
-    LOG(DEBUG, "Mapping table at address 0x%x in memory", address);
+    LOG(DEBUG, "Mapping table at address 0x%llx in memory", address);
 
     uint64_t* current_cr3 = (uint64_t*)get_cr3();
 
@@ -100,7 +100,7 @@ void acpi_find_tables()
     for (uint32_t i = 0; i < sdt_count; i++)
     {
         physical_address_t address = read_rsdt_ptr(i);
-        LOG(INFO, "\tFound table at address 0x%lx", address);
+        LOG(INFO, "\tFound table at address 0x%llx", address);
         map_table_in_current_vas(address, PG_SUPERVISOR, PG_READ_ONLY);
 
         {
@@ -187,14 +187,4 @@ void fadt_extract_data()
     LOG(INFO, "Preferred power management profile : %s (%u)", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
     // if (preferred_power_management_profile != 0)
     printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
-
-    // uint32_t _dsdt_address = fadt->dsdt_address;
-    // // LOG(DEBUG, "_dsdt_address : 0x%x", _dsdt_address);
-    // if (_dsdt_address != 0)
-    // {
-    //     if (acpi_table_valid(_dsdt_address))
-    //     {
-    //         dsdt_address = _dsdt_address;
-    //     }
-    // }
 }

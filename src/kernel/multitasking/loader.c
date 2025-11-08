@@ -92,7 +92,7 @@ void multitasking_add_task_from_function(char* name, void (*func)())
 
 //     task.system_task = system;
 
-//     LOG(DEBUG, "Entry point : 0x%x", header->entry);
+//     LOG(DEBUG, "Entry point : 0x%llx", header->entry);
 
 //     uint8_t code_segment = ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT;
 
@@ -149,10 +149,10 @@ void multitasking_add_task_from_function(char* name, void (*func)())
 
 //         LOG(DEBUG, "Program header %d : ", i);
 //         LOG(DEBUG, "├── Type : \"%s\"", ph->type >= sizeof(elf_program_header_type_string) / sizeof(char*) ? "UNKNOWN" : elf_program_header_type_string[ph->type]);
-//         LOG(DEBUG, "├── Virtual address : 0x%x", ph->p_vaddr);
-//         LOG(DEBUG, "├── File offset : 0x%x", ph->p_offset);
-//         LOG(DEBUG, "├── Memory size : %u bytes", ph->p_memsz);
-//         LOG(DEBUG, "└── File size : %u bytes", ph->p_filesz);
+//         LOG(DEBUG, "├── Virtual address : 0x%llx", ph->p_vaddr);
+//         LOG(DEBUG, "├── File offset : 0x%llx", ph->p_offset);
+//         LOG(DEBUG, "├── Memory size : %llu bytes", ph->p_memsz);
+//         LOG(DEBUG, "└── File size : %llu bytes", ph->p_filesz);
 
 //         virtual_address_t start_address = ph->p_vaddr & ~0xfff;
 //         virtual_address_t end_address = ph->p_vaddr + ph->p_memsz;
@@ -164,7 +164,7 @@ void multitasking_add_task_from_function(char* name, void (*func)())
 //         //     abort();
 //         // }
 
-//         // LOG(DEBUG, "0x%x : %u pages", start_address, num_pages);
+//         // LOG(DEBUG, "0x%llx : %llu pages", start_address, num_pages);
 
 //         uint32_t address = start_address;
 //         for (uint32_t j = 0; j < num_pages; j++)

@@ -17,11 +17,9 @@ void handle_syscall(interrupt_registers_t* registers)
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
-    // LOG(DEBUG, "Interrupt number : %u", registers->interrupt_number);
-
     if (registers->interrupt_number < 32)            // Fault
     {
-        LOG(WARNING, "Fault : Exception number : %u ; Error : %s ; Error code = 0x%x ; cr2 = 0x%x ; cr3 = 0x%x ; rip = 0x%x", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
+        LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = 0x%llx ; cr2 = 0x%llx ; cr3 = 0x%llx ; rip = 0x%llx", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
         registers->error_code, registers->cr2, registers->cr3, registers->rip);
         
         if (tasks[current_task_index].system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)

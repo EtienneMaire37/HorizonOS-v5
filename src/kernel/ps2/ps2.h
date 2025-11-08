@@ -41,7 +41,7 @@
 #define PS2_DEVICE_KEYBOARD     1
 #define PS2_DEVICE_MOUSE        2
 
-#define ps2_print_read_buffer() // { printf("PS/2 read buffer : "); for (uint8_t i = 0; i < ps2_data_bytes_received; i++) printf("0x%x ", ps2_data_buffer[i]); putchar('\n'); }
+#define ps2_print_read_buffer() // { printf("PS/2 read buffer : "); for (uint8_t i = 0; i < ps2_data_bytes_received; i++) printf("0x%llx ", ps2_data_buffer[i]); putchar('\n'); }
 
 uint8_t ps2_device_1_type;
 uint8_t ps2_device_2_type;

@@ -77,4 +77,5 @@ typedef struct __attribute__((packed)) local_apic_registers
     uint32_t divide_configuration_register;
 } local_apic_registers_t;
 
-volatile struct local_apic_registers* lapic;
+// * page 0xFEE00xxx
+volatile struct local_apic_registers* lapic = (volatile struct local_apic_registers*)0xfee00000;

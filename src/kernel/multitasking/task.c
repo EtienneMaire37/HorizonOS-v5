@@ -31,9 +31,6 @@ thread_t task_create_empty()
 
     task.fpu_state = fpu_state_create();
 
-    // for (int i = 0; i < 512; i++)
-    //     LOG(DEBUG, "0x%x", task.fpu_state.data[i]);
-
     task.current_cpu_ticks = 0;
     task.stored_cpu_ticks = 0;
 
@@ -52,7 +49,7 @@ thread_t task_create_empty()
 
 void task_destroy(thread_t* task)
 {
-    // LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %u)", task->name, task->pid, task->ring);
+    // LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %llu)", task->name, task->pid, task->ring);
     // vas_free(task->cr3);
     // utf32_buffer_destroy(&task->input_buffer);
     // for (int i = 0; i < OPEN_MAX; i++)
@@ -112,7 +109,7 @@ void task_stack_push(thread_t* task, uint64_t value)
     task->rsp -= 8;
 
     if (!is_address_canonical(task->rsp))
-        LOG(ERROR, "rsp: 0x%x is not canonical!!", task->rsp);
+        LOG(ERROR, "rsp: 0x%llx is not canonical!!", task->rsp);
 
     task_write_at_address_1b(task, (physical_address_t)task->rsp + 0, (value >> 0)  & 0xff);
     task_write_at_address_1b(task, (physical_address_t)task->rsp + 1, (value >> 8)  & 0xff);
@@ -147,7 +144,7 @@ static inline void task_write_at_address_1b(thread_t* task, uint64_t address, ui
     }
     
     uint8_t* ptr = (uint8_t*)virtual_to_physical((uint64_t*)task->cr3, address);
-    // LOG(DEBUG, "ptr: 0x%x", ptr);
+    
     *ptr = value;
 }
 
@@ -160,7 +157,7 @@ void switch_task()
     }
 
     // ! Should never log anything here
-    LOG(TRACE, "Switching task");
+    // LOG(TRACE, "Switching task");
 
     lock_task_queue();
 
@@ -199,7 +196,7 @@ void task_kill(uint16_t index)
     }
     if (index >= task_count || index == 0)
     {
-        LOG(CRITICAL, "Invalid task index %u", index);
+        LOG(CRITICAL, "Invalid task index %llu", index);
         abort();
     }
     if (task_count == 1)
@@ -239,7 +236,7 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 // {
 //     if (index >= task_count || index == 0)
 //     {
-//         LOG(CRITICAL, "Invalid task index %u", index);
+//         LOG(CRITICAL, "Invalid task index %llu", index);
 //         abort();
 //         return;
 //     }
@@ -286,8 +283,8 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 //     //         physical_init_page_table(new_pt_address);
 //     //         write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
 //     //     }
-//     //     // LOG(TRACE, "%u : old_pt_address : 0x%lx", i, old_pt_address);
-//     //     // LOG(TRACE, "%u : new_pt_address : 0x%lx", i, new_pt_address);
+//     //     // LOG(TRACE, "%llu : old_pt_address : 0x%llx", i, old_pt_address);
+//     //     // LOG(TRACE, "%llu : new_pt_address : 0x%llx", i, new_pt_address);
 //     //     for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
 //     //     {
 //     //         uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
@@ -301,8 +298,8 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 //     //                 new_page_address = pfa_allocate_physical_page();
 //     //                 write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
 //     //             }
-//     //             // LOG(TRACE, "%u.%u : old_page_address : 0x%lx", i, j, old_page_address);
-//     //             // LOG(TRACE, "%u.%u : new_page_address : 0x%lx", i, j, new_page_address);
+//     //             // LOG(TRACE, "%llu.%llu : old_page_address : 0x%llx", i, j, old_page_address);
+//     //             // LOG(TRACE, "%llu.%llu : new_page_address : 0x%llx", i, j, new_page_address);
 //     //             copy_page(old_page_address, new_page_address);
 //     //         }
 //     //     }

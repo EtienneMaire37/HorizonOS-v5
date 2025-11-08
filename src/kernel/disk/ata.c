@@ -137,16 +137,16 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
                 }
                 if (magnitude_value >= 1024)
                     magnitude++;
-                LOG(INFO, "Found drive \"%s\" (%lu bytes) [%lu.%lu%lu %s]", 
+                LOG(INFO, "Found drive \"%s\" (%llu bytes) [%llu.%llu%llu %s]", 
                     pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model, 
                    bytes, magnitude_value / 1024, (magnitude_value * 10 / 1024) % 10, (magnitude_value * 100 / 1024) % 10, magnitude_text[magnitude]);
                 printf("Found drive ");
                 tty_set_color(FG_LIGHTGREEN, BG_BLACK);
                 printf("\"%s\" ", pci_ide_controller[connected_pci_ide_controllers].channels[i].devices[j].model);
                 tty_set_color(FG_WHITE, BG_BLACK);
-                printf("(%lu bytes) [", bytes);
+                printf("(%llu bytes) [", bytes);
                 tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-                printf("%lu.%lu%lu ", magnitude_value / 1024, (magnitude_value * 10 / 1024) % 10, (magnitude_value * 100 / 1024) % 10);
+                printf("%llu.%llu%llu ", magnitude_value / 1024, (magnitude_value * 10 / 1024) % 10, (magnitude_value * 100 / 1024) % 10);
                 tty_set_color(FG_WHITE, BG_BLACK);
                 printf("%s]\n", magnitude_text[magnitude]);
             }
@@ -192,7 +192,7 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
                 {
                     if (data->partition_table[k].partition_type != 0)
                     {
-                        LOG(INFO, "    Partition %u: Type 0x%x | Start LBA : %u | Size : %luB%s", 
+                        LOG(INFO, "    Partition %u: Type 0x%x | Start LBA : %u | Size : %lluB%s", 
                             k + 1, 
                             data->partition_table[k].partition_type, data->partition_table[k].start_lba, data->partition_table[k].size_in_sectors * 512ULL,
                             data->partition_table[k].drive_attributes & 0x80 ? " [Bootable]" : "");
@@ -200,7 +200,7 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
                             k + 1, 
                             data->partition_table[k].partition_type, data->partition_table[k].start_lba);
                         tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-                        printf("%lu", data->partition_table[k].size_in_sectors * 512ULL);
+                        printf("%u", data->partition_table[k].size_in_sectors * 512ULL);
                         tty_set_color(FG_WHITE, BG_BLACK);
                         printf("B");
                         if (data->partition_table[k].drive_attributes & 0x80)

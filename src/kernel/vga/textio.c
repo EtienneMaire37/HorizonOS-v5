@@ -229,7 +229,7 @@ static inline void tty_outc(char c)
 	if (tty_cursor_blink)
 		tty_render_cursor(tty_cursor);
 
-	if (tty_cursor / TTY_RES_X >= TTY_RES_Y)
+	while (tty_cursor / TTY_RES_X >= TTY_RES_Y)
 	{
 		uint32_t rows_to_scroll = tty_cursor / TTY_RES_X - TTY_RES_Y + 1;
 
@@ -239,7 +239,8 @@ static inline void tty_outc(char c)
 		{
 			memset(&tty_data, 0x0f, sizeof(tty_data));
 			tty_refresh_screen();
-			return;
+			tty_cursor = (TTY_RES_Y - 1) * TTY_RES_X;
+			break;
 		}
 
 		for (uint32_t i = 0; i < TTY_RES_Y - rows_to_scroll; i++)

@@ -3,6 +3,7 @@
 #include "math_float_util.h"
 #include "math_fmod.c"
 #endif
+
 #include "../include/fcntl.h"
 
 int putchar(int c)
@@ -35,356 +36,140 @@ int fputs(const char* s, FILE* stream)
     return 0;
 }
 
-#define DOUBLE_PRINT_MAX_DIGITS         34      // 18
-#define LONG_DOUBLE_PRINT_MAX_DIGITS    308     // 18
+#define LM_NONE 0
+#define LM_L    1
+#define LM_LL   2
+#define LM_Z    3
 
-#define DOUBLE_PRINT_LIMIT      1e-10
-#define LONG_DOUBLE_PRINT_LIMIT 1e-15
-
-int _printf(void (*func)(char), void (*func_s)(char*), const char* format, va_list args)
+int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format, va_list args)
 {
-    // 17 just so the compiler doesnt complain about the missing NUL terminator
-    char hex[17] = "0123456789abcdef";
-    char HEX[17] = "0123456789ABCDEF";
-
-    uint32_t length = 0;
-
-    void printf_d(int64_t val)
+    int len = 0;
+    void print_string(const char* str)
     {
-        if(val < 0)
-        {
-            func('-');
-            length++;
-            val = -val;
-        }
-        if(val == 0)
-        {
-            func('0');
-            length++;
-            return;
-        }
-        int64_t div = 1000000000000000000ULL;
-        bool first0 = true;
-        while(div > 0)
-        {
-            uint8_t digit = (val / div) % 10;
-            if(digit || div == 1)
-                first0 = false;
-            if(!first0)
-            {
-                func('0' + digit);
-                length++;
-            }
-            div /= 10;
-        }
+        len += func_s(str);
     }
-    void printf_u(uint64_t val)
+    void print_char(char ch)
     {
-        if(val == 0)
-        {
-            func('0');
-            length++;
-            return;
-        }
-        uint64_t div = 10000000000000000000ULL;
-        bool first0 = true;
-        while(div > 0)
-        {
-            uint8_t digit = (val / div) % 10;
-            if(digit || div == 1)
-                first0 = false;
-            if(!first0)
-            {
-                func('0' + digit);
-                length++;
-            }
-            div /= 10;
-        }
+        len += func_c(ch);
     }
-    void printf_x(uint64_t val, uint8_t padding)
+    void parse_specifier(size_t* i)
     {
-        bool first0 = true;
-        for(uint8_t i = 0; i < 16; i++)
+        unsigned int length_modifier = LM_NONE;
+        size_t start_i = *i;
+        size_t num_chars = 0;
+    parse:
+        num_chars++;
+        switch (format[*i])
         {
-            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
-            first0 &= digit == 0;
-            first0 &= i < 16 - padding;
-            if(!first0)
+        case 0:
+            return;
+    // * -------------------- Length modifiers
+        case 'l':
+            length_modifier = length_modifier == LM_L ? LM_LL : LM_L;
+            (*i)++;
+            goto parse;
+        case 'Z':
+        case 'z':
+            length_modifier = LM_Z;
+            (*i)++;
+            goto parse;
+    // * -------------------- Conversion specifiers
+        case 'c':
+            print_char(va_arg(args, int));
+            (*i)++;
+            break;
+        case 's':
+            print_string(va_arg(args, const char*));
+            (*i)++;
+            break;
+        case 'p':
+        {
+            volatile void* p = va_arg(args, void*);
+            (*i)++;
+            break;
+        }
+        case '%':
+            print_char('%');
+            (*i)++;
+            break;
+        case 'u':
+        {
+            switch (length_modifier)
             {
-                func(hex[digit]);
-                length++;
-            }
-        }
-    }
-    void printf_X(uint64_t val, uint8_t padding)
-    {
-        bool first0 = true;
-        for(uint8_t i = 0; i < 16; i++)
-        {
-            uint8_t digit = (val >> ((uint16_t)(15 - i) * 4)) & 0xf;
-            first0 &= digit == 0;
-            first0 &= i < 16 - padding;
-            if(!first0)
-            {
-                func(HEX[digit]);
-                length++;
-            }
-        }
-    }
-    #ifndef BUILDING_KERNEL
-    void printf_fld(long double val)
-    {
-        if(val < 0)
-        {
-            func('-');
-            length++;
-            val = -val;
-        }
-        if(val == 0)
-        {
-            func('0');
-            length++;
-            return;
-        }
-        bool first0 = true;
-        // uint16_t digits = 0;
-        long double div = 1;
-        while (val / div >= 1) div *= 10;
-        div /= 10;
-        while(div >= 1)
-        {
-            uint8_t digit = (uint8_t)fmodl(floorl(val / div), 10.L);
-            if (digit || div == 1)
-                first0 = false;
-            if (!first0)
-            {
-                func('0' + digit);
-                length++;
-            }
-            div /= 10;
-        }
-    }
-    void printf_fd(double val)
-    {
-        if(val < 0)
-        {
-            func('-');
-            length++;
-            val = -val;
-        }
-        if(val == 0)
-        {
-            func('0');
-            length++;
-            return;
-        }
-        bool first0 = true;
-        // uint16_t digits = 0;
-        double div = 1;
-        while (val / div >= 1) div *= 10;
-        div /= 10;
-        while(div >= 1)
-        {
-            uint8_t digit = (uint8_t)fmod(floor(val / div), 10.);
-            if(digit || div == 1)
-                first0 = false;
-            if(!first0)
-            {
-                func('0' + digit);
-                length++;
-            }
-            div /= 10;
-        }
-    }
-    void printf_lf(long double val)
-    {
-        if (val < 0)
-        {
-            func('-');
-            length++;
-            val *= -1;
-        }
-        
-        switch(fpclassify(val))
-        {
-        case FP_INFINITE:
-        {
-            func_s("inf");
-            length += 3;
-            return;
-        }
-        case FP_NAN:
-        {
-            func_s("nan");
-            length += 3;
-            return;
-        }
-        }
-
-        long double k = floorl(val);
-        long double p = val - k;
-        printf_fld(k);
-        if (p < LONG_DOUBLE_PRINT_LIMIT)
-            return;
-        func('.');
-        length++;
-        uint64_t mul = 10;
-        // uint64_t max_mul = 10;
-        long double _p = p;
-        uint16_t digits = 0;
-        while (_p > LONG_DOUBLE_PRINT_LIMIT && digits < LONG_DOUBLE_PRINT_MAX_DIGITS)
-        {
-            uint8_t digit = (((uint8_t)floorl(_p * mul)) % 10);
-            func('0' + digit);
-            length++;
-            _p -= digit / (long double)mul;
-            mul *= 10;
-            digits++;
-        }
-    }
-    void printf_f(double val)
-    {
-        if (val < 0)
-        {
-            func('-');
-            length++;
-            val *= -1;
-        }
-
-        switch(fpclassify(val))
-        {
-        case FP_INFINITE:
-        {
-            func_s("inf");
-            length += 3;
-            return;
-        }
-        case FP_NAN:
-        {
-            func_s("nan");
-            length += 3;
-            return;
-        }
-        }
-
-        double k = floor(val);
-        double p = val - k;
-        printf_fd(k);
-        if (p < DOUBLE_PRINT_LIMIT)
-            return;
-        func('.');
-        length++;
-        uint64_t mul = 10;
-        double _p = p;
-        uint8_t digits = 0;
-        while (_p > DOUBLE_PRINT_LIMIT && digits < DOUBLE_PRINT_MAX_DIGITS)
-        {
-            uint8_t digit = (((uint8_t)floor(_p * mul)) % 10);
-            func('0' + digit);
-            length++;
-            _p -= digit / (double)mul;
-            mul *= 10;
-            digits++;
-        }
-    }
-    #endif
-
-    bool na64_set = false;
-    bool next_arg_64 = false;
-    bool next_formatted = false;
-    while (*format)
-    {
-        if (*format == '%')
-        {
-            if (next_formatted)
-            {
-                func('%');
-                next_formatted = false;
-            }
-            else
-                next_formatted = true;
-            format++;
-            continue;
-        }
-        if (next_formatted)
-        {
-            switch (*format)
-            {
-            case 'd':
-                printf_d(va_arg(args, int64_t));
+            case LM_L:
+                volatile unsigned long num_l = va_arg(args, unsigned long);
                 break;
-            case 'u':
-                printf_u(va_arg(args, uint64_t));
+            case LM_LL:
+                volatile unsigned long long num_ll = va_arg(args, unsigned long long);
                 break;
-            case 'x':
-                printf_x(va_arg(args, uint64_t), 1);
+            case LM_Z:
+                volatile size_t num_z = va_arg(args, size_t);
                 break;
-            case 'p':
-                func_s("0x");
-                printf_x((uintptr_t)va_arg(args, void*), 1);
-                break;
-            case 'X':
-                printf_X(va_arg(args, uint64_t), 1);
-                break;
-            case 'f':
-                #ifndef BUILDING_KERNEL
-                if (next_arg_64)
-                    printf_lf(va_arg(args, long double));
-                else
-                    printf_f(va_arg(args, double));
-                #else
-                func_s("(floating point value)");
-                #endif
-                break;
-            case 'c':
-                func((char)va_arg(args, uint64_t));
-                length++;
-                break;
-            case 'l':
-                na64_set = true;
-                break;
-            case 's':
-            {
-                char* s = va_arg(args, char*);
-                if (s == NULL)
-                    func_s("(null)");
-                else
-                {
-                    while(*s)
-                    {
-                        func(*s++);
-                        length++;
-                    }
-                }
-                break;
-            }
-                
             default:
-                break;
+                volatile unsigned int num = va_arg(args, unsigned int);
             }
-            if (na64_set)
-            {
-                na64_set = false;
-                next_arg_64 = true;
-                next_formatted = true;
-            }
-            else
-            {
-                next_arg_64 = false;
-                next_formatted = false;
-            }
-            format++;
-            continue;
+            (*i)++;
+            break;
         }
-        else
+        case 'd':
         {
-            func(*format);
-            length++;
+            switch (length_modifier)
+            {
+            case LM_L:
+                volatile long num_l = va_arg(args, long);
+                break;
+            case LM_LL:
+                volatile long long num_ll = va_arg(args, long long);
+                break;
+            case LM_Z:
+                volatile ssize_t num_z = va_arg(args, ssize_t);
+                break;
+            default:
+                volatile int num = va_arg(args, int);
+            }
+            (*i)++;
+            break;
         }
-        format++;
+        case 'x':
+        {
+            switch (length_modifier)
+            {
+            case LM_L:
+                volatile unsigned long num_l = va_arg(args, unsigned long);
+                break;
+            case LM_LL:
+                volatile unsigned long long num_ll = va_arg(args, unsigned long long);
+                break;
+            case LM_Z:
+                volatile size_t num_z = va_arg(args, size_t);
+                break;
+            default:
+                volatile unsigned int num = va_arg(args, unsigned int);
+            }
+            (*i)++;
+            break;
+        }
+        default:
+            print_char('%');
+            (*i)++;
+            while (start_i < *i)
+                print_char(format[start_i++]);
+        }
     }
-
-    return length;
+    size_t i = 0;
+    char ch;
+    while ((ch = format[i++]))
+    {
+        switch (ch)
+        {
+        case '%':
+            parse_specifier(&i);
+            break;
+        default:
+            print_char(ch);
+        }
+    }
+    return len;
 }
 
 int sprintf(char* buffer, const char* format, ...)
@@ -408,17 +193,21 @@ int snprintf(char* buffer, size_t bufsz, const char* format, ...)
 int vsprintf(char* buffer, const char* format, va_list args)
 {
     uint32_t index = 0;
-    void _putc(char c)
+    int _putc(char c)
     {
         buffer[index++] = c;
+        return 1;
     }
-    void _puts(char* s)
+    int _puts(const char* s)
     {
+        int tot = 0;
         while (*s)
         {
             _putc(*s);
             s++;
+            tot++;
         }
+        return tot;
     }
 
     int length = _printf(_putc, _puts, format, args);
@@ -431,18 +220,22 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args)
     if (bufsz == 0) return 0;
 
     uint32_t index = 0;
-    void _putc(char c)
+    int _putc(char c)
     {
         if (index < bufsz - 1)
             buffer[index++] = c;
+        return 1;
     }
-    void _puts(char* s)
+    int _puts(const char* s)
     {
+        int tot = 0;
         while (*s)
         {
             _putc(*s);
             s++;
+            tot++;
         }
+        return tot;
     }
 
     _printf(_putc, _puts, format, args);
@@ -452,17 +245,21 @@ int vsnprintf(char* buffer, size_t bufsz, const char* format, va_list args)
 
 int vprintf(const char* format, va_list args)
 {
-    void _putc(char c)
+    int _putc(char c)
     {
         putchar(c);
+        return 1;
     }
-    void _puts(char* s)
+    int _puts(const char* s)
     {
+        int tot = 0;
         while (*s)
         {
             _putc(*s);
             s++;
+            tot++;
         }
+        return tot;
     }
 
     return _printf(_putc, _puts, format, args);
@@ -479,13 +276,16 @@ int dprintf(int fd, const char*format, ...)
 
 int vdprintf(int fd, const char*format, va_list args)
 {
-    void _putc(char c)
+    int _putc(char c)
     {
         write(fd, &c, 1);
+        return 1;
     }
-    void _puts(char* s)
+    int _puts(const char* s)
     {
-        write(fd, s, strlen(s));
+        size_t len = strlen(s);
+        write(fd, s, len);
+        return (int)len;
     }
 
     return _printf(_putc, _puts, format, args);
@@ -502,13 +302,16 @@ int fprintf(FILE* stream, const char*format, ...)
 
 int vfprintf(FILE* stream, const char*format, va_list args)
 {
-    void _putc(char c)
+    int _putc(char c)
     {
         fwrite(&c, 1, 1, stream);
+        return 1;
     }
-    void _puts(char* s)
+    int _puts(const char* s)
     {
-        fwrite(s, strlen(s), 1, stream);
+        size_t len = strlen(s);
+        fwrite(s, len, 1, stream);
+        return (int)len;
     }
 
     return _printf(_putc, _puts, format, args);

@@ -14,9 +14,9 @@ void pfa_detect_usable_memory()
 
     for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++) 
     {
-        LOG(INFO, "   BOOTBOOT memory block : address : 0x%x ; length : %u | type : %u", 
+        LOG(INFO, "   BOOTBOOT memory block : address : 0x%llx ; length : %llu | type : %u", 
             MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
-        // printf("   BOOTBOOT memory block : address : 0x%x ; length : %u | type : %u\n", 
+        // printf("   BOOTBOOT memory block : address : 0x%llx ; length : %llu | type : %u\n", 
         //     MMapEnt_Ptr(mmap_ent), MMapEnt_Size(mmap_ent), MMapEnt_Type(mmap_ent));
 
         if (!MMapEnt_IsFree(mmap_ent))
@@ -57,8 +57,8 @@ void pfa_detect_usable_memory()
         usable_memory += len;
         usable_memory_blocks++;
 
-        LOG(INFO, "   Memory block : address : 0x%x ; length : %u", addr, len);
-        // printf("   Memory block : address : 0x%x ; length : %u\n", addr, len);
+        LOG(INFO, "   Memory block : address : 0x%llx ; length : %llu", addr, len);
+        // printf("   Memory block : address : 0x%llx ; length : %llu\n", addr, len);
     }
 
     first_alloc_block = 0;
@@ -76,7 +76,7 @@ void pfa_detect_usable_memory()
 
     bitmap = (uint8_t*)usable_memory_map[first_alloc_block].address;
 
-    printf("pfa: bitmap address: 0x%x\n", bitmap);
+    printf("pfa: bitmap address: 0x%llx\n", bitmap);
 
     if (usable_memory == 0 || first_alloc_block >= usable_memory_blocks) 
         goto no_memory;
@@ -94,7 +94,7 @@ void pfa_detect_usable_memory()
     for (uint8_t i = first_alloc_block; i < usable_memory_blocks; i++)
         allocatable_memory += usable_memory_map[i].length;
 
-    LOG(INFO, "Detected %u bytes of allocatable memory", allocatable_memory);
+    LOG(INFO, "Detected %llu bytes of allocatable memory", allocatable_memory);
     return;
 
 no_memory:
@@ -221,7 +221,7 @@ static inline void pfa_free_physical_page(physical_address_t address)
 
     if (address & 0xfff) 
     {
-        LOG(CRITICAL, "Unaligned address (0x%lx)", address);
+        LOG(CRITICAL, "Unaligned address (0x%llx)", address);
         abort();
     }
 

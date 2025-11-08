@@ -117,18 +117,18 @@ void kernel_panic(interrupt_registers_t* registers)
 
     const char* error_message = get_error_message(registers->interrupt_number, registers->error_code);
 
-    printf("Exception number: %u\n", registers->interrupt_number);
+    printf("Exception number: %llu\n", registers->interrupt_number);
     printf("Error:       ");
     tty_set_color(FG_YELLOW, BG_BLACK);
     puts(error_message);
     tty_set_color(FG_WHITE, BG_BLACK);
-    printf("Error code:  0x%x\n\n", registers->error_code);
+    printf("Error code:  0x%llx\n\n", registers->error_code);
 
     if (registers->interrupt_number == 14)
     {
         if (registers->cr2)
         {
-            printf("cr2:  0x%x (pml4e %u pdpte %u pde %u pte %u offset 0x%x)\n", registers->cr2, (registers->cr2 >> 39) & 0x1ff, (registers->cr2 >> 30) & 0x1ff, (registers->cr2 >> 21) & 0x1ff, (registers->cr2 >> 12) & 0x1ff, registers->cr2 & 0xfff);
+            printf("cr2:  0x%llx (pml4e %llu pdpte %llu pde %llu pte %llu offset 0x%llx)\n", registers->cr2, (registers->cr2 >> 39) & 0x1ff, (registers->cr2 >> 30) & 0x1ff, (registers->cr2 >> 21) & 0x1ff, (registers->cr2 >> 12) & 0x1ff, registers->cr2 & 0xfff);
         }
         else
         {
@@ -137,44 +137,33 @@ void kernel_panic(interrupt_registers_t* registers)
             printf("NULL\n");
             tty_set_color(FG_WHITE, BG_BLACK);
         }
-        printf("cr3: 0x%x\n\n", registers->cr3);
+        printf("cr3: 0x%llx\n\n", registers->cr3);
 
         // uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
         
-        // LOG(DEBUG, "Page directory entry : 0x%x", pde);
+        // LOG(DEBUG, "Page directory entry : 0x%llx", pde);
 
         // if (pde & 1)
         // {
-        //     LOG(DEBUG, "Page table entry : 0x%x", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
+        //     LOG(DEBUG, "Page table entry : 0x%llx", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         // }
     }
 
-    LOG(DEBUG, "RSP=0x%x RBP=0x%x RAX=0x%x RBX=0x%x RCX=0x%x RDX=0x%x",
+    LOG(DEBUG, "RSP=0x%llx RBP=0x%llx RAX=0x%llx RBX=0x%llx RCX=0x%llx RDX=0x%llx",
     registers->rsp, registers->rbp, registers->rax, registers->rbx, registers->rcx, registers->rdx);
-    LOG(DEBUG, "R8=0x%x R9=0x%x R10=0x%x R11=0x%x R12=0x%x R13=0x%x R14=0x%x R15=0x%x",
+    LOG(DEBUG, "R8=0x%llx R9=0x%llx R10=0x%llx R11=0x%llx R12=0x%llx R13=0x%llx R14=0x%llx R15=0x%llx",
     registers->r8, registers->r9, registers->r10, registers->r11, registers->r12, registers->r13, registers->r14, registers->r15);
 
-    printf("RSP=0x%x RBP=0x%x\n",
+    printf("RSP=0x%llx RBP=0x%llx\n",
     registers->rsp, registers->rbp);
-    printf("RAX=0x%x RBX=0x%x RCX=0x%x RDX=0x%x\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
-    printf("R8=0x%x R9=0x%x R10=0x%x R11=0x%x\n",
+    printf("RAX=0x%llx RBX=0x%llx RCX=0x%llx RDX=0x%llx\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
+    printf("R8=0x%llx R9=0x%llx R10=0x%llx R11=0x%llx\n",
     registers->r8, registers->r9, registers->r10, registers->r11);
-    printf("R12=0x%x R13=0x%x R14=0x%x R15=0x%x\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
+    printf("R12=0x%llx R13=0x%llx R14=0x%llx R15=0x%llx\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
 
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
 
-    #define TRACE_FUNCTIONS
-    #ifndef TRACE_FUNCTIONS
-    for (int i = 0; i < 8; i++)
-    {
-        uint32_t* ptr = !(tasks[current_task_index].ring != 0 && multitasking_enabled && !first_task_switch) ? 
-            &((uint32_t*)&registers[1])[i] : 
-            &((uint32_t*)((privilege_switch_interrupt_registers_t*)registers)->rsp)[i];
-
-        printf("rsp + %u (0x%x) : 0x%x\n", i * 4, ptr, *ptr);
-    }
-    #else
     typedef struct __attribute__((packed)) call_frame
     {
         uintptr_t rbp;
@@ -187,11 +176,11 @@ void kernel_panic(interrupt_registers_t* registers)
     // ~ Log the last function (the one the exception happened in)
     printf("rip : 0x");
     tty_set_color(FG_YELLOW, BG_BLACK);
-    printf("%x", registers->rip);
+    printf("%llx", registers->rip);
     tty_set_color(FG_WHITE, BG_BLACK);
     putchar(' ');
 
-    LOG(DEBUG, "rip : 0x%x ", registers->rip);
+    LOG(DEBUG, "rip : 0x%llx ", registers->rip);
     print_kernel_symbol_name(registers->rip, (uintptr_t)rbp);
     putchar('\n');
 
@@ -212,34 +201,14 @@ void kernel_panic(interrupt_registers_t* registers)
         }
         else
         {
-            printf("rip : 0x%x | rbp : 0x%x ", rbp->rip, rbp);
-            LOG(DEBUG, "rip : 0x%x | rbp : 0x%x ", rbp->rip, rbp);
+            printf("rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
+            LOG(DEBUG, "rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
             print_kernel_symbol_name(rbp->rip - 1, (uintptr_t)rbp);
             putchar('\n');
             rbp = (call_frame_t*)rbp->rbp;
         }
         i++;
     }
-    #endif
-
-    // LOG(DEBUG, "VAS:");
-    // LOG(DEBUG, "...");
-    // for (int i = 0; i < 768; i++)
-    // {
-    //     uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * i);
-    //     if (!(pde & 1)) 
-    //         continue;
-    //     for (int j = (i == 0 ? 256 : 0); j < 1024; j++)
-    //     {
-    //         uint32_t pte = read_physical_address_4b((pde & 0xfffff000) + 4 * j);
-    //         if (pte & 1)
-    //         {
-    //             uint32_t address = pte & 0xfffff000;
-    //             LOG(DEBUG, "0x%x - 0x%x", address, address + 0x1000);
-    //         }
-    //     }
-    // }
-    // LOG(DEBUG, "...");
 
     halt();
 }

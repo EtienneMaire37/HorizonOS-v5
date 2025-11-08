@@ -57,8 +57,8 @@ bool first_log = true;
 
 #ifndef ANSI_COLORS
 #define LOG_FMT         "\
-%u-%u%u-%u%u \
-%u%u:%u%u:%u%u.%u%u%u\
+%llu-%llu%llu-%llu%llu \
+%llu%llu:%llu%llu:%llu%llu.%llu%llu%llu\
  - %s%s \t"
 
 #define LOG_FMT_NOTIME  "\
@@ -66,8 +66,8 @@ bool first_log = true;
  - %s%s \t"
 #else
 #define LOG_FMT         "\
-\x1b[38;2;200;200;200m\x1b[48;2;40;40;40m%u-%u%u-%u%u \x1b[0m\
-\x1b[38;2;150;200;255m\x1b[48;2;40;40;40m%u%u:%u%u:%u%u.%u%u%u\x1b[0m\
+\x1b[38;2;200;200;200m\x1b[48;2;40;40;40m%llu-%llu%llu-%llu%llu \x1b[0m\
+\x1b[38;2;150;200;255m\x1b[48;2;40;40;40m%llu%llu:%llu%llu:%llu%llu.%llu%llu%llu\x1b[0m\
  - %s%s\x1b[0m \t"
 
 #define LOG_FMT_NOTIME  "\
@@ -77,12 +77,12 @@ bool first_log = true;
 
 // void LOG_SET_ANSI_TEXT_COLOR(uint8_t r, uint8_t g, uint8_t b)
 // {
-//     fprintf(stderr, "\x1b[38;2;%u;%u;%um", r, g, b);
+//     fprintf(stderr, "\x1b[38;2;%llu;%llu;%llum", r, g, b);
 // } 
 
 // void LOG_SET_ANSI_BACKGROUND_COLOR(uint8_t r, uint8_t g, uint8_t b)
 // {
-//     fprintf(stderr, "\x1b[48;2;%u;%u;%um", r, g, b);
+//     fprintf(stderr, "\x1b[48;2;%llu;%llu;%llum", r, g, b);
 // } 
 
 // void LOG_ANSI_RESET_STYLING()

@@ -24,15 +24,13 @@ typedef struct initrd_file
 initrd_file_t initrd_files[MAX_INITRD_FILES];
 uint8_t initrd_files_count = 0;
 
-void initrd_parse(uintptr_t initrd_start, uintptr_t initrd_end)
+void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
 {
     LOG(INFO, "Parsing initrd");
 
-    intptr_t initrd_size = initrd_end - initrd_start;
+    LOG(INFO, "Initrd size : %llu bytes", initrd_size);
 
-    LOG(INFO, "Initrd size : %u bytes", initrd_size);
-
-    intptr_t initrd_offset = 0;
+    uint64_t initrd_offset = 0;
 
     while (initrd_offset < initrd_size)
     {
@@ -43,7 +41,7 @@ void initrd_parse(uintptr_t initrd_start, uintptr_t initrd_end)
 
         if (!USTAR_IS_VALID_HEADER(*header))
         {
-            LOG(WARNING, "Invalid USTAR header at offset %u", initrd_offset);
+            LOG(WARNING, "Invalid USTAR header at offset %llu", initrd_offset);
             break;
         }
 
@@ -87,7 +85,7 @@ void initrd_parse(uintptr_t initrd_start, uintptr_t initrd_end)
             {
             case USTAR_TYPE_FILE_1:
             case USTAR_TYPE_FILE_2:
-                LOG(INFO, "%s── File : \"%s\" ; Size : %u bytes", tree_inter, initrd_files[i].name, initrd_files[i].size);
+                LOG(INFO, "%s── File : \"%s\" ; Size : %llu bytes", tree_inter, initrd_files[i].name, initrd_files[i].size);
                 break;
             case USTAR_TYPE_HARD_LINK:
                 LOG(INFO, "%s── Hard link : \"%s\" pointing to \"%s\"", tree_inter, initrd_files[i].name, initrd_files[i].link);

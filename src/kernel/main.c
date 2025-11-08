@@ -165,7 +165,7 @@ static inline int imod(int a, int b)
 {
     if (b <= 0) 
     {
-        LOG(WARNING, "Kernel tried to compute %d %% %d", a, b);
+        LOG(WARNING, "Kernel tried to compute %lld %% %lld", a, b);
         return 0;
     }
     int ret = a - (a / b) * b;
@@ -266,9 +266,9 @@ void _start()
         kernel_start_phys = (physical_address_t)&kernel_start;
         kernel_end_phys = (physical_address_t)&kernel_end;
 
-        LOG(INFO, "Kernel booted successfully with BOOTBOOT (0x%x-0x%x)", kernel_start_phys, kernel_end_phys);
-        LOG(INFO, "Kernel is %u bytes long", kernel_end_phys - kernel_start_phys);
-        LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%x", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
+        LOG(INFO, "Kernel booted successfully with BOOTBOOT (0x%llx-0x%llx)", kernel_start_phys, kernel_end_phys);
+        LOG(INFO, "Kernel is %llu bytes long", kernel_end_phys - kernel_start_phys);
+        LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%llx", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
         LOG(INFO, "Type: %s", fb_type_string[bootboot.fb_type]);
 
         framebuffer.width = bootboot.fb_width;
@@ -306,12 +306,9 @@ void _start()
 
         LOG(INFO, "Physical address is %u bits long", physical_address_width);
 
-        // for (int i = 0; i < 512; i++)
-        //     LOG(DEBUG, "0x%x", fpu_default_state.data[i]);
-
         init_pat();
 
-        LOG(DEBUG, "Initrd size: %u bytes", bootboot.initrd_size);
+        LOG(DEBUG, "Initrd size: %llu bytes", bootboot.initrd_size);
 
         atomic_store(&did_init_std, true);
     }
@@ -324,10 +321,13 @@ void _start()
 
     release_spinlock(&print_spinlock);
 
-    initrd_parse(bootboot.initrd_ptr, bootboot.initrd_ptr + bootboot.initrd_size);
+    initrd_parse(bootboot.initrd_ptr, bootboot.initrd_size);
     kernel_symbols_file = initrd_find_file("symbols.txt");
 
-    tty_font = psf_font_load_from_initrd("iso06.f14.psf");
+    tty_font = psf_font_load_from_initrd("ka8x16thin-1.psf");
+
+    if(!tty_font.f)
+        abort();
 
 // * vvv Now we can use printf
 
@@ -337,7 +337,7 @@ void _start()
 
     printf("Detected ");
     tty_set_color(FG_LIGHTBLUE, BG_BLACK);
-    printf("%u ", allocatable_memory);
+    printf("%llu ", allocatable_memory);
     tty_set_color(FG_WHITE, BG_BLACK);
     printf("bytes of allocatable memory\n");
     
@@ -463,7 +463,7 @@ void _start()
     printf("Time: ");
 
     tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-    printf("%u-%u-%u %u:%u:%u\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
+    printf("%llu-%llu-%llu %llu:%llu:%llu\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
     tty_set_color(FG_WHITE, BG_BLACK);
 
     enable_interrupts(); 
@@ -502,10 +502,10 @@ void _start()
     // *    0-16G       RAM identity mapped   (0x0000000400000000)
 
     // * bootboot + environment + code segment + stack
-        printf("Copying mapping of range 0x%x-0x%x from bootboot\n", 0xFFFFFFFFFFE00000, 0);
+        printf("Copying mapping of range 0x%llx-0x%llx from bootboot\n", 0xFFFFFFFFFFE00000, 0ULL);
 
-        LOG(DEBUG, "Copying mapping of range 0x%x-0x%x from bootboot", 0xFFFFFFFFFFE00000, 0);
-        copy_mapping(bootboot_cr3, global_cr3, 0xFFFFFFFFFFE00000, (-0xFFFFFFFFFFE00000) >> 12);
+        LOG(DEBUG, "Copying mapping of range 0x%llx-0x%llx from bootboot", 0xFFFFFFFFFFE00000, 0ULL);
+        copy_mapping(bootboot_cr3, global_cr3, 0xFFFFFFFFFFE00000, (uint64_t)(-0xFFFFFFFFFFE00000) >> 12);
 
         for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
         {
@@ -520,43 +520,33 @@ void _start()
             if (ptr + len >= 1 * TB)
                 len = 1 * TB - ptr;
                 
-            LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
-            printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
+            LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", ptr, ptr + len);
+            printf("Identity mapping range 0x%llx-0x%llx\n", ptr, ptr + len);
             remap_range(global_cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
         }
 
-        // for (uint32_t i = 0; i < usable_memory_blocks; i++)
-        // {
-        //     uint64_t ptr = usable_memory_map[i].address;
-        //     uint64_t len = usable_memory_map[i].length;
-                
-        //     LOG(DEBUG, "Identity mapping range 0x%x-0x%x", ptr, ptr + len);
-        //     printf("Identity mapping range 0x%x-0x%x\n", ptr, ptr + len);
-        //     remap_range(global_cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
-        // }
-
     // * LAPIC registers
-        printf("Identity mapping range 0x%x-0x%x\n", lapic, (uint64_t)lapic + 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", lapic, (uint64_t)lapic + 0x1000);
+        printf("Identity mapping range 0x%llx-0x%llx\n", lapic, (uint64_t)lapic + 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", lapic, (uint64_t)lapic + 0x1000);
         remap_range(global_cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
 
     // * Framebuffer
-        printf("Identity mapping range 0x%x-0x%x\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        printf("Identity mapping range 0x%llx-0x%llx\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         
     // ? Write-combining cache
         remap_range(global_cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
             PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
     // * initrd
-        printf("Identity mapping range 0x%x-0x%x\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%x-0x%x", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        printf("Identity mapping range 0x%llx-0x%llx\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         remap_range(global_cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
     }
 
-    uint32_t paging_milliseconds = precise_time_to_milliseconds(global_timer - paging_start_time);
+    uint64_t paging_milliseconds = precise_time_to_milliseconds(global_timer - paging_start_time);
 
-    printf("Paging setup done in %u.%u%u%u seconds\n", paging_milliseconds / 1000, (paging_milliseconds / 100) % 10, (paging_milliseconds / 10) % 10, paging_milliseconds % 10);
+    printf("Paging setup done in %llu.%llu%llu%llu seconds\n", paging_milliseconds / 1000, (paging_milliseconds / 100) % 10, (paging_milliseconds / 10) % 10, paging_milliseconds % 10);
     LOG(INFO, "Set up paging");
 
     load_cr3((uint64_t)global_cr3);

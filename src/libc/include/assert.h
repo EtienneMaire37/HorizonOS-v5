@@ -22,5 +22,5 @@ void __attribute__((noreturn)) abort_core(int line, const char* file, const char
 void __attribute__((noreturn)) abort();
 #endif
 int dprintf(int fd, const char*format, ...);
-#define assert(val) ((val) ? (void)0 : (dprintf(STDERR_FILENO, "%s:%u: %s: Assertion `%s` failed.\n", __FILE__, __LINE__, __CURRENT_FUNC__, #val), abort()))
+#define assert(val) ((val) ? (void)0 : (dprintf(STDERR_FILENO, "%s:%u: %s: Assertion `%s` failed.\n", __FILE__, (int)__LINE__, __CURRENT_FUNC__, #val), abort()))
 #endif

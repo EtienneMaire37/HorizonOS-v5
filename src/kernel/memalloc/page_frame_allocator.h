@@ -28,7 +28,7 @@ atomic_flag pfa_spinlock = ATOMIC_FLAG_INIT;
 // #define LOG_MEMORY
 
 #ifdef LOG_MEMORY
-#define LOG_MEM_ALLOCATED() { float percentage = 100.f * memory_allocated / allocatable_memory; LOG(TRACE, "Used memory : %u / %u bytes (%f% %)", memory_allocated, allocatable_memory, percentage); }
+#define LOG_MEM_ALLOCATED() { float percentage = 100.f * memory_allocated / allocatable_memory; LOG(TRACE, "Used memory : %llu / %llu bytes (%.3f %%)", memory_allocated, allocatable_memory, percentage); }
 #else
 #define LOG_MEM_ALLOCATED()
 #endif
