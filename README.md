@@ -29,7 +29,7 @@ Simply run:
 ```bash
 make all
 ```
-To build without logs.
+To build without logs. 
 Or:
 ```bash
 make all CLOGLEVEL=-DLOGLEVEL=TRACE
@@ -44,7 +44,15 @@ To run HorizonOS in QEMU:
 make run
 ```
 
-## Memory map (when multitasking)
+## Third-Party Code
+
+HorizonOS uses the following third-party libraries and resources:
+
+- [liballoc](https://github.com/blanham/liballoc) - For libc memory allocation (Public domain)
+- [BOOTBOOT](https://gitlab.com/bztsrc/bootboot) - A UEFI bootloader (MIT license)
+- [pci.ids](https://raw.githubusercontent.com/pciutils/pciids/refs/heads/master/pci.ids) - List of PCI IDs (GPLv3)
+
+## Memory map
 
 | Range     | Mapping         |
 | --------- | --------------- |
@@ -55,7 +63,6 @@ make run
 | [-512GB]-[-128MB] | Hole |
 | [-128MB]-0 | mmio, framebuffer, bootboot data and kernel code segment |
 
-
 ## Contributing
 
 You can submit issues [here](https://github.com/EtienneMaire37/HorizonOS-v5/issues).
@@ -64,3 +71,4 @@ Feel free to contribute and submit pull requests !
 ## License
 
 HorizonOS is licensed under the GNU GPLv3 License. See the `LICENSE` file for more details.
+BOOTBOOT (downloaded upon build) is licensed under the MIT license. See the `bootboot/LICENSE` file for more details.
