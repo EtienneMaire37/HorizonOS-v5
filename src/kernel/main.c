@@ -25,7 +25,7 @@ physical_address_t kernel_start_phys, kernel_end_phys;
 
 void halt();
 
-void _halt()
+void __attribute__((noreturn)) _halt()
 {
     while (true)
     {
@@ -173,7 +173,7 @@ static inline int imod(int a, int b)
     return ret;
 }
 
-void cause_halt(const char* func, const char* file, int line)
+void __attribute__((noreturn)) cause_halt(const char* func, const char* file, int line)
 {
     disable_interrupts();
     // LOG(ERROR, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
@@ -187,7 +187,7 @@ void simple_cause_halt()
     _halt();
 }
 
-void halt()
+void __attribute__((noreturn)) halt()
 {
     // fflush(stdout);
     cause_halt(__CURRENT_FUNC__, __FILE__, __LINE__);

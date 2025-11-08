@@ -5,7 +5,7 @@
 
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
-void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
+static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
 {
     initrd_file_t* file = kernel_symbols_file;
     if (file == NULL) return;
@@ -93,7 +93,7 @@ void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
     }
 }
 
-void kernel_panic(interrupt_registers_t* registers)
+void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
 {
     disable_interrupts();
 
@@ -149,17 +149,17 @@ void kernel_panic(interrupt_registers_t* registers)
         // }
     }
 
-    LOG(DEBUG, "RSP=0x%llx RBP=0x%llx RAX=0x%llx RBX=0x%llx RCX=0x%llx RDX=0x%llx",
+    LOG(DEBUG, "RSP=%#.16llx RBP=%#.16llx RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx",
     registers->rsp, registers->rbp, registers->rax, registers->rbx, registers->rcx, registers->rdx);
-    LOG(DEBUG, "R8=0x%llx R9=0x%llx R10=0x%llx R11=0x%llx R12=0x%llx R13=0x%llx R14=0x%llx R15=0x%llx",
+    LOG(DEBUG, "R8=%#.16llx R9=%#.16llx R10=%#.16llx R11=%#.16llx R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx",
     registers->r8, registers->r9, registers->r10, registers->r11, registers->r12, registers->r13, registers->r14, registers->r15);
 
-    printf("RSP=0x%llx RBP=0x%llx\n",
+    printf("RSP=%#.16llx RBP=%#.16llx\n",
     registers->rsp, registers->rbp);
-    printf("RAX=0x%llx RBX=0x%llx RCX=0x%llx RDX=0x%llx\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
-    printf("R8=0x%llx R9=0x%llx R10=0x%llx R11=0x%llx\n",
+    printf("RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
+    printf("R8=%#.16llx R9=%#.16llx R10=%#.16llx R11=%#.16llx\n",
     registers->r8, registers->r9, registers->r10, registers->r11);
-    printf("R12=0x%llx R13=0x%llx R14=0x%llx R15=0x%llx\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
+    printf("R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
 
     printf("Stack trace : \n");
     LOG(DEBUG, "Stack trace : ");
@@ -184,14 +184,19 @@ void kernel_panic(interrupt_registers_t* registers)
     print_kernel_symbol_name(registers->rip, (uintptr_t)rbp);
     putchar('\n');
 
-    int i = 0;
-    const int max_stack_frames = 10;
+    // while (rbp != NULL && rbp->rip != 0 && i <= max_stack_frames && is_address_canonical((uintptr_t)rbp) && is_address_canonical((uintptr_t)rbp->rip) && (uintptr_t)rbp != 0 && (uintptr_t)rbp->rip != 0 && 
+    // (((!multitasking_enabled || (multitasking_enabled && first_task_switch)) &&
+    //         (((uintptr_t)rbp > 0xffffffffffffffff - 1024 * bootboot.numcores) && ((uintptr_t)rbp <= 0xffffffffffffffff))) || 
+    //     (((uintptr_t)rbp < TASK_STACK_TOP_ADDRESS) && ((uintptr_t)rbp >= TASK_STACK_BOTTOM_ADDRESS))))
 
-    while (i <= max_stack_frames && is_address_canonical((uintptr_t)rbp) && is_address_canonical((uintptr_t)rbp->rip) && (uintptr_t)rbp != 0 && (uintptr_t)rbp->rip != 0 && 
-    (((!multitasking_enabled || (multitasking_enabled && first_task_switch)) &&
-            (((uintptr_t)rbp > 0xffffffffffffffff - 1024 * bootboot.numcores) && ((uintptr_t)rbp <= 0xffffffffffffffff))) || 
-        (((uintptr_t)rbp < TASK_STACK_TOP_ADDRESS) && ((uintptr_t)rbp >= TASK_STACK_BOTTOM_ADDRESS))))
+    const int max_stack_frames = 16;
+
+    for (int i = 0; i <= max_stack_frames; i++)
     {
+        if (rbp == NULL || (uint64_t)rbp == 0xfffffffffffffff8)
+            break;
+        if (rbp->rip == 0)
+            break;
         if (i == max_stack_frames)
         {
             tty_set_color(FG_RED, BG_BLACK);
@@ -207,7 +212,6 @@ void kernel_panic(interrupt_registers_t* registers)
             putchar('\n');
             rbp = (call_frame_t*)rbp->rbp;
         }
-        i++;
     }
 
     halt();
