@@ -4,53 +4,62 @@
 
 void utf32_buffer_init(utf32_buffer_t* buffer)
 {
+    if (!buffer) return;
     buffer->characters = (utf32_char_t*)pfa_allocate_page();
-    buffer->size = 1024; // 4096 / sizeof(utf32_char_t)
+    buffer->size = 4096 / sizeof(utf32_char_t);
+    assert(buffer->size == 1024);
     buffer->put_index = buffer->get_index = 0;
 }
 
-// void utf32_buffer_destroy(utf32_buffer_t* buffer)
-// {
-//     if (buffer->characters)
-//         pfa_free_page(buffer->characters);
-//     buffer->characters = 0;
-//     buffer->size = 0;
-//     buffer->put_index = buffer->get_index = 0;
-// }
+void utf32_buffer_destroy(utf32_buffer_t* buffer)
+{
+    if (!buffer) return;
+    if (buffer->characters)
+        pfa_free_page(buffer->characters);
+    buffer->characters = NULL;
+    buffer->characters = 0;
+    buffer->size = 0;
+    buffer->put_index = buffer->get_index = 0;
+}
 
-// void utf32_buffer_copy(utf32_buffer_t* from, utf32_buffer_t* to)
-// {
-//     utf32_buffer_init(to);
-//     memcpy(to->characters, from->characters, 4096);
-//     to->put_index = from->put_index;
-// }
+void utf32_buffer_create_and_copy(const utf32_buffer_t* from, utf32_buffer_t* to)
+{
+    if (!from || !to) return;
+    utf32_buffer_init(to);
+    memcpy(to->characters, from->characters, 4096);
+    to->put_index = from->put_index;
+    to->get_index = from->get_index;
+}
 
-// void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character)
-// {
-//     if (!buffer->characters) return;
-//     if (get_buffered_characters(*buffer) >= buffer->size - 1) return;     // No space to put characters
+void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character)
+{
+    if (!buffer) return;
+    if (!buffer->characters) return;
+    if (get_buffered_characters(*buffer) >= buffer->size - 1) return;     // No space to put characters
 
-//     buffer->characters[buffer->put_index] = character;
-//     buffer->put_index = (buffer->put_index + 1) % buffer->size;
-// }
+    buffer->characters[buffer->put_index] = character;
+    buffer->put_index = (buffer->put_index + 1) % buffer->size;
+}
 
-// void utf32_buffer_unputchar(utf32_buffer_t* buffer)
-// {
-//     if (!buffer->characters) return;
-//     if (no_buffered_characters(*buffer)) return;
+void utf32_buffer_unputchar(utf32_buffer_t* buffer)
+{
+    if (!buffer) return;
+    if (!buffer->characters) return;
+    if (no_buffered_characters(*buffer)) return;
 
-//     buffer->put_index = imod(buffer->put_index - 1, buffer->size);
-// }
+    buffer->put_index = imod(buffer->put_index - 1, buffer->size);
+}
 
-// utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer)
-// {
-//     if (!buffer->characters) return 0;
-//     if (no_buffered_characters(*buffer)) return 0;     // No characters to get
+utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer)
+{
+    if (!buffer) return 0;
+    if (!buffer->characters) return 0;
+    if (no_buffered_characters(*buffer)) return 0;     // No characters to get
 
-//     utf32_char_t ch = buffer->characters[buffer->get_index];
-//     buffer->get_index = (buffer->get_index + 1) % buffer->size;
-//     return ch;
-// }
+    utf32_char_t ch = buffer->characters[buffer->get_index];
+    buffer->get_index = (buffer->get_index + 1) % buffer->size;
+    return ch;
+}
 
 // void utf32_buffer_clear(utf32_buffer_t* buffer)
 // {

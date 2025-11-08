@@ -3,40 +3,15 @@
 #include "loader.h"
 #include "vas.h"
 
-void multitasking_add_task_from_function(char* name, void (*func)())
+void multitasking_add_task_from_function(const char* name, void (*func)())
 {
     LOG(DEBUG, "Adding task \"%s\" from function", name);
 
     thread_t task = task_create_empty();
-    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
-    memcpy(task.name, name, name_bytes);
-    task.name[name_bytes] = 0;
+    task_set_name(&task, name);
     task.cr3 = task_create_empty_vas(PG_SUPERVISOR);
 
-    task.rsp = TASK_STACK_TOP_ADDRESS - 8; // make_address_canonical(TASK_STACK_TOP_ADDRESS);
-
-    task_stack_push(&task, KERNEL_DATA_SEGMENT);
-    task_stack_push(&task, task.rsp);
-
-    task_stack_push(&task, 0x200);  // get_rflags()
-    task_stack_push(&task, KERNEL_CODE_SEGMENT);
-    task_stack_push(&task, (uint64_t)func);
-
-    task_stack_push(&task, (uint64_t)iretq_instruction);
-
-    task_stack_push(&task, (uint64_t)unlock_task_queue);
-
-    task_stack_push(&task, 0);      // rax
-    task_stack_push(&task, 0);      // rbx
-    task_stack_push(&task, KERNEL_CODE_SEGMENT);      // rdx
-    task_stack_push(&task, 0);      // r9
-    task_stack_push(&task, 0);      // r10
-    task_stack_push(&task, 0);      // r11
-    task_stack_push(&task, 0);      // r12
-    task_stack_push(&task, 0);      // r13
-    task_stack_push(&task, 0);      // r14
-    task_stack_push(&task, 0);      // r15
-    task_stack_push(&task, 0);      // rbp
+    task_setup_stack(&task, (uint64_t)func, KERNEL_CODE_SEGMENT, KERNEL_DATA_SEGMENT);
 
     tasks[task_count++] = task;
 

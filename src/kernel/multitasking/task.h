@@ -126,6 +126,9 @@ uint16_t find_next_task_index()
 
 static inline void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
 
+void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg);
+void task_set_name(thread_t* task, const char* name);
+
 void task_destroy(thread_t* task);
 void switch_task();
 void multitasking_init();

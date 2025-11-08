@@ -18,3 +18,8 @@ physical_address_t task_create_empty_vas(uint8_t privilege)
 
     return (physical_address_t)cr3;
 }
+
+void task_free_vas(physical_address_t pml4_address)
+{
+    
+}

@@ -250,6 +250,12 @@ static inline void pfa_free_physical_page(physical_address_t address)
     LOG_MEM_ALLOCATED();
 }
 
+static inline void pfa_free_physical_contiguous_pages(physical_address_t address, uint32_t pages)
+{
+    for (uint32_t i = 0; i < pages; i++)
+        pfa_free_physical_page(address + 0x1000ULL * pages);
+}
+
 // * 1st TB will always be identity mapped
 static inline void* pfa_allocate_page()
 {
@@ -257,7 +263,7 @@ static inline void* pfa_allocate_page()
 }
 
 // * same
-static inline void pfa_free_page(void* ptr)
+static inline void pfa_free_page(const void* ptr)
 {
     pfa_free_physical_page((physical_address_t)ptr);
 }
@@ -266,4 +272,10 @@ static inline void pfa_free_page(void* ptr)
 static inline void* pfa_allocate_contiguous_pages(uint32_t pages)
 {
     return (void*)pfa_allocate_physical_contiguous_pages(pages);
+}
+
+// * same
+static inline void pfa_free_contiguous_pages(const void* ptr, uint32_t pages)
+{
+    pfa_free_physical_contiguous_pages((physical_address_t)ptr, pages);
 }

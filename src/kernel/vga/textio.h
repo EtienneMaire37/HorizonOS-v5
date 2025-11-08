@@ -59,7 +59,7 @@ const uint32_t tty_padding = 2;	// pixels
 
 static inline bool is_printable_character(char c)
 {
-    return c >= 32;
+    return ((unsigned char)c) >= 32 && ((unsigned char)c) < 128;
 }
 
 static inline void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);

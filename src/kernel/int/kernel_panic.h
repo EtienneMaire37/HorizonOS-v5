@@ -193,7 +193,10 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
 
     for (int i = 0; i <= max_stack_frames; i++)
     {
-        if (rbp == NULL || (uint64_t)rbp == 0xfffffffffffffff8)
+        if (rbp == NULL)
+            break;
+        // * &rbp->rip == NULL
+        if ((uint64_t)rbp == 0xfffffffffffffff8)
             break;
         if (rbp->rip == 0)
             break;

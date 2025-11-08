@@ -51,3 +51,12 @@ static inline uint8_t* fpu_state_create()
     fpu_state_init(data);
     return data;
 }
+
+static inline void fpu_state_destroy(uint8_t** data)
+{
+    if (!data) return;
+    if (!(*data)) return;
+
+    pfa_free_contiguous_pages(*data, xsave_area_pages);
+    (*data) = NULL;
+}

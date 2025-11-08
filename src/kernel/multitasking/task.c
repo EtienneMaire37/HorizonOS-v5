@@ -49,16 +49,51 @@ thread_t task_create_empty()
 
 void task_destroy(thread_t* task)
 {
-    // LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %llu)", task->name, task->pid, task->ring);
-    // vas_free(task->cr3);
-    // utf32_buffer_destroy(&task->input_buffer);
-    // for (int i = 0; i < OPEN_MAX; i++)
-    // {
-    //     if (task->file_table[i] != invalid_fd)
-    //         vfs_remove_global_file(task->file_table[i]);
-    // }
-    abort();
-    // fpu_state_destroy
+    LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %llu)", task->name, task->pid, task->ring);
+    task_free_vas((physical_address_t)task->cr3);
+    utf32_buffer_destroy(&task->input_buffer);
+    for (int i = 0; i < OPEN_MAX; i++)
+    {
+        if (task->file_table[i] != invalid_fd)
+            vfs_remove_global_file(task->file_table[i]);
+    }
+    fpu_state_destroy(&task->fpu_state);
+}
+
+void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg)
+{
+    task->rsp = TASK_STACK_TOP_ADDRESS - 8; // make_address_canonical(TASK_STACK_TOP_ADDRESS);
+
+    task_stack_push(task, data_seg);
+    task_stack_push(task, task->rsp);
+
+    task_stack_push(task, 0x200);  // get_rflags()
+    task_stack_push(task, code_seg);
+    task_stack_push(task, entry_point);
+
+    task_stack_push(task, (uint64_t)iretq_instruction);
+
+    task_stack_push(task, (uint64_t)unlock_task_queue);
+    task_stack_push(task, (uint64_t)cleanup_tasks);
+
+    task_stack_push(task, 0);           // rax
+    task_stack_push(task, 0);           // rbx
+    task_stack_push(task, code_seg);    // rdx
+    task_stack_push(task, 0);           // r9
+    task_stack_push(task, 0);           // r10
+    task_stack_push(task, 0);           // r11
+    task_stack_push(task, 0);           // r12
+    task_stack_push(task, 0);           // r13
+    task_stack_push(task, 0);           // r14
+    task_stack_push(task, 0);           // r15
+    task_stack_push(task, 0);           // rbp
+}
+
+void task_set_name(thread_t* task, const char* name)
+{
+    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
+    memcpy(task->name, name, name_bytes);
+    task->name[name_bytes] = 0;
 }
 
 void multitasking_init()
@@ -96,9 +131,7 @@ void multitasking_add_idle_task(char* name)
     }
 
     thread_t task = task_create_empty();
-    int name_bytes = minint(strlen(name), THREAD_NAME_MAX - 1);
-    memcpy(task.name, name, name_bytes);
-    task.name[name_bytes] = 0;
+    task_set_name(&task, name);
     task.cr3 = get_cr3();
 
     tasks[task_count++] = task;
@@ -108,8 +141,9 @@ void task_stack_push(thread_t* task, uint64_t value)
 {
     task->rsp -= 8;
 
-    if (!is_address_canonical(task->rsp))
-        LOG(ERROR, "rsp: 0x%llx is not canonical!!", task->rsp);
+    // * not needed
+    // if (!is_address_canonical(task->rsp))
+    //     LOG(ERROR, "rsp: 0x%llx is not canonical!!", task->rsp);
 
     task_write_at_address_1b(task, (physical_address_t)task->rsp + 0, (value >> 0)  & 0xff);
     task_write_at_address_1b(task, (physical_address_t)task->rsp + 1, (value >> 8)  & 0xff);
@@ -152,12 +186,11 @@ void switch_task()
 {
     if (task_count == 0)
     {
-        LOG(CRITICAL, "No task to switch to");
+        LOG(CRITICAL, "No tasks!");
         abort();
     }
 
     // ! Should never log anything here
-    // LOG(TRACE, "Switching task");
 
     lock_task_queue();
 
@@ -166,20 +199,14 @@ void switch_task()
 
     uint16_t next_task_index = find_next_task_index();
     if (tasks[current_task_index].pid != tasks[next_task_index].pid)
-    {
-        // fpu_save_state(&tasks[current_task_index].fpu_state);
-
         full_context_switch(next_task_index);
-
-        // fpu_restore_state(&tasks[current_task_index].fpu_state);
-    }
 
     cleanup_tasks();
 
     unlock_task_queue();
 }
 
-thread_t* find_task_by_pid(pid_t pid)
+static inline thread_t* find_task_by_pid(pid_t pid)
 {
     for (uint16_t i = 0; i < task_count; i++)
         if (tasks[i].pid == pid)
@@ -196,7 +223,7 @@ void task_kill(uint16_t index)
     }
     if (index >= task_count || index == 0)
     {
-        LOG(CRITICAL, "Invalid task index %llu", index);
+        LOG(CRITICAL, "Invalid task index %u", index);
         abort();
     }
     if (task_count == 1)
@@ -206,10 +233,10 @@ void task_kill(uint16_t index)
     }
 
     task_destroy(&tasks[index]);
+
     for (uint16_t i = index; i < task_count - 1; i++)
-    {
         tasks[i] = tasks[i + 1];
-    }
+
     if (current_task_index > index)
         current_task_index--;
     task_count--;
@@ -308,7 +335,7 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 
 void cleanup_tasks()
 {
-    // if (current_task_index != 0) return;
+    if (current_task_index != 0) return;
 
     // for (uint16_t i = 0; i < task_count; i++)
     // {
@@ -320,34 +347,34 @@ void cleanup_tasks()
     //     }
     // }
 
-    // for (uint16_t i = 0; i < task_count; i++)
-    // {
-    //     if (!tasks[i].is_dead) continue;
-    //     thread_t* parent = find_task_by_pid(tasks[i].parent);
-    //     if (parent)
-    //     {
-    //         if (parent->wait_pid != -1)
-    //         {
-    //             if (parent->wait_pid == 0 || absint(parent->wait_pid) == tasks[i].pid)
-    //             {
-    //                 tasks[i].to_reap = true;
-    //                 parent->wait_pid = -1;
-    //                 parent->wstatus = tasks[i].return_value;
-    //             }
-    //         }
-    //     }
-    //     else
-    //         tasks[i].to_reap = true;
-    // }
+    for (uint16_t i = 0; i < task_count; i++)
+    {
+        if (!tasks[i].is_dead) continue;
+        thread_t* parent = find_task_by_pid(tasks[i].parent);
+        if (parent)
+        {
+            if (parent->wait_pid != -1)
+            {
+                if (parent->wait_pid == 0 || absint(parent->wait_pid) == tasks[i].pid)
+                {
+                    tasks[i].to_reap = true;
+                    parent->wait_pid = -1;
+                    parent->wstatus = tasks[i].return_value;
+                }
+            }
+        }
+        else
+            tasks[i].to_reap = true;
+    }
 
-    // for (uint16_t i = 0; i < task_count; i++)
-    // {
-    //     if (i == current_task_index) continue;
-    //     if (tasks[i].to_reap)
-    //     {
-    //         task_kill(i);
-    //         i--;
-    //         continue;
-    //     }
-    // }
+    for (uint16_t i = 0; i < task_count; i++)
+    {
+        if (i == current_task_index) continue;
+        if (tasks[i].to_reap)
+        {
+            task_kill(i);
+            i--;
+            continue;
+        }
+    }
 }
