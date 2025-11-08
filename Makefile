@@ -57,6 +57,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	cp src/tasks/bin/ ./bin/initrd/ -r
 	cp resources/* ./bin/initrd/
 	$(CROSSNM) -n --defined-only -C bin/kernel.elf > ./bin/initrd/symbols.txt
+	git log -n 1 --pretty=format:'%H' > ./bin/initrd/commit.txt
 
 	mkdir -p ./root
 	

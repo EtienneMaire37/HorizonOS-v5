@@ -189,7 +189,7 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     //         (((uintptr_t)rbp > 0xffffffffffffffff - 1024 * bootboot.numcores) && ((uintptr_t)rbp <= 0xffffffffffffffff))) || 
     //     (((uintptr_t)rbp < TASK_STACK_TOP_ADDRESS) && ((uintptr_t)rbp >= TASK_STACK_BOTTOM_ADDRESS))))
 
-    const int max_stack_frames = 16;
+    const int max_stack_frames = 12;
 
     for (int i = 0; i <= max_stack_frames; i++)
     {
@@ -213,6 +213,15 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
             rbp = (call_frame_t*)rbp->rbp;
         }
     }
+
+    putchar('\n');
+
+    printf("commit hash: ");
+    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+    puts((const char*)commit_file->data);
+    tty_set_color(FG_WHITE, BG_BLACK);
+
+    LOG(INFO, "commit hash: %s", commit_file->data);
 
     halt();
 }

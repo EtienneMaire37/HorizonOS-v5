@@ -126,6 +126,8 @@ bool time_initialized = false;
 #include "time/time.h"
 #include "cmos/rtc.h"
 
+initrd_file_t* commit_file;
+
 #include "vga/textio.c"
 #include "pic/apic.c"
 #include "fpu/fpu.c"
@@ -332,6 +334,14 @@ void _start()
 // * vvv Now we can use printf
 
     tty_clear_screen(' ');
+
+    commit_file = initrd_find_file("commit.txt");
+
+    LOG(INFO, "commit hash: %s", commit_file->data);
+    printf("commit hash: ");
+    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+    puts((const char*)commit_file->data);
+    tty_set_color(FG_WHITE, BG_BLACK);
 
     pfa_detect_usable_memory();
 
