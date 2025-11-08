@@ -1,15 +1,23 @@
-void* memset(void* ptr, int value, size_t num)
+void* memset(void* dst, int value, size_t n)
 {
-    uint8_t* p = (uint8_t*)ptr;
-    for (size_t i = 0; i < num; i++)
-        p[i] = value;
-    return ptr;
+    uint8_t val8 = (uint8_t)value;
+    uint64_t val64 = (uint64_t)val8 * 0x0101010101010101ULL;
+
+    asm volatile(
+        "rep stosq\n"     // store 8 bytes at a time
+        "mov %3, %%rcx\n" // bytes remaining
+        "rep stosb"
+        : "=D"(dst), "=c"(n)
+        : "0"(dst), "r"(n & 7), "1"(n >> 3), "a"(val64)
+        : "memory"
+    );
+    return dst;
 }
 
 void* memcpy(void* dst, const void* src, size_t n) 
 {
     asm volatile(
-        "rep movsb"
+        "rep movsb" // copy byte by byte
         : "=D"(dst), "=S"(src), "=c"(n)
         : "0"(dst), "1"(src), "2"(n)
         : "memory"
@@ -38,11 +46,31 @@ int memcmp(const void* str1, const void* str2, size_t n)
     return 0; 
 }
 
-size_t strlen(const char* s)
+size_t strlen(const char* str)
 {
-    size_t ret = 0;
-    while (s[ret++]);
-    return ret - 1;
+    size_t s = 0;
+    while ((unsigned long long)str & 3)
+    {
+        str++;
+        s++;
+    }
+
+    unsigned int dword;
+    while (true)
+    {
+        dword = *(unsigned int*)str;
+        if (!(dword & 0xff))
+            return s;
+        if (!(dword & 0xff00))
+            return s + 1;
+        if (!(dword & 0xff0000))
+            return s + 2;
+        if (!(dword & 0xff000000))
+            return s + 3;
+
+        str += 4;
+        s += 4;
+    }
 }
 
 int strcmp(const char* str1, const char* str2)
