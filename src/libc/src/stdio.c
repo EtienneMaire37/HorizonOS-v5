@@ -52,11 +52,53 @@ int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format,
     {
         len += func_c(ch);
     }
+    void print_unsigned(uint64_t num)
+    {
+        uint64_t div = 10000000000000000000ULL; // * max is 1.8446744e+19 
+        bool do_print = false;
+        while (div >= 1)
+        {
+            uint8_t digit = num / div;
+            if (digit != 0 || div == 1)
+                do_print = true;
+            if (do_print)
+                print_char('0' + digit);
+            num -= ((uint64_t)digit * div);
+            div /= 10;
+        }
+    }
+    void print_hex(uint64_t num, bool caps)
+    {
+        const char* hex = "0123456789abcdef";
+        const char* HEX = "0123456789ABCDEF";
+
+        int8_t offset = 60;
+        bool do_print = false;
+        while (offset >= 0)
+        {
+            uint8_t digit = (num >> offset) & 0xf;
+            if (digit != 0 || offset == 0)
+                do_print = true;
+            if (do_print)
+                print_char(caps ? HEX[digit] : hex[digit]);
+            offset -= 4;
+        }
+    }
+    void print_signed(int64_t num)
+    {
+        if (num < 0)
+        {
+            print_char('-');
+            num = -num;
+        }
+        print_unsigned((uint64_t)num);
+    }
     void parse_specifier(size_t* i)
     {
         unsigned int length_modifier = LM_NONE;
         size_t start_i = *i;
         size_t num_chars = 0;
+        bool caps = false;
     parse:
         num_chars++;
         switch (format[*i])
@@ -84,7 +126,9 @@ int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format,
             break;
         case 'p':
         {
-            volatile void* p = va_arg(args, void*);
+            void* p = va_arg(args, void*);
+            print_string("0x");
+            print_hex((uint64_t)p, false);
             (*i)++;
             break;
         }
@@ -97,54 +141,69 @@ int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format,
             switch (length_modifier)
             {
             case LM_L:
-                volatile unsigned long num_l = va_arg(args, unsigned long);
+                unsigned long num_l = va_arg(args, unsigned long);
+                print_unsigned(num_l);
                 break;
             case LM_LL:
-                volatile unsigned long long num_ll = va_arg(args, unsigned long long);
+                unsigned long long num_ll = va_arg(args, unsigned long long);
+                print_unsigned(num_ll);
                 break;
             case LM_Z:
-                volatile size_t num_z = va_arg(args, size_t);
+                size_t num_z = va_arg(args, size_t);
+                print_unsigned(num_z);
                 break;
             default:
-                volatile unsigned int num = va_arg(args, unsigned int);
+                unsigned int num = va_arg(args, unsigned int);
+                print_unsigned(num);
             }
             (*i)++;
             break;
         }
+        case 'i':
         case 'd':
         {
             switch (length_modifier)
             {
             case LM_L:
-                volatile long num_l = va_arg(args, long);
+                long num_l = va_arg(args, long);
+                print_signed(num_l);
                 break;
             case LM_LL:
-                volatile long long num_ll = va_arg(args, long long);
+                long long num_ll = va_arg(args, long long);
+                print_signed(num_ll);
                 break;
             case LM_Z:
-                volatile ssize_t num_z = va_arg(args, ssize_t);
+                ssize_t num_z = va_arg(args, ssize_t);
+                print_signed(num_z);
                 break;
             default:
-                volatile int num = va_arg(args, int);
+                int num = va_arg(args, int);
+                print_signed(num);
             }
             (*i)++;
             break;
         }
+        case 'X':
+            caps = true;
         case 'x':
         {
             switch (length_modifier)
             {
             case LM_L:
-                volatile unsigned long num_l = va_arg(args, unsigned long);
+                unsigned long num_l = va_arg(args, unsigned long);
+                print_hex(num_l, caps);
                 break;
             case LM_LL:
-                volatile unsigned long long num_ll = va_arg(args, unsigned long long);
+                unsigned long long num_ll = va_arg(args, unsigned long long);
+                print_hex(num_ll, caps);
                 break;
             case LM_Z:
-                volatile size_t num_z = va_arg(args, size_t);
+                size_t num_z = va_arg(args, size_t);
+                print_hex(num_z, caps);
                 break;
             default:
-                volatile unsigned int num = va_arg(args, unsigned int);
+                unsigned int num = va_arg(args, unsigned int);
+                print_hex(num, caps);
             }
             (*i)++;
             break;

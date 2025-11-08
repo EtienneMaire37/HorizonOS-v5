@@ -35,8 +35,8 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
 	-Wall -Werror -Wno-address-of-packed-member -fpic $(CFLAGS) -I./bootboot/dist/ \
-	-Ofast \
-	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable \
+	-O2 \
+	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
 	-mno-80387 -mno-mmx -mno-sse -mno-avx \
 	$(CLOGLEVEL)
 
