@@ -7,7 +7,7 @@ CROSSAR := ./crossgcc/bin/x86_64-elf-ar
 CROSSSTRIP := ./crossgcc/bin/x86_64-elf-strip
 DIR2FAT32 := ./dir2fat32/dir2fat32.sh
 USERGCC := 
-CLOGLEVEL := 
+USER_CFLAGS := 
 MKBOOTIMG := ./bootboot/mkbootimg/mkbootimg
 
 all: horizonos.iso
@@ -38,7 +38,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	-O2 \
 	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
 	-mno-80387 -mno-mmx -mno-sse -mno-avx \
-	$(CLOGLEVEL)
+	$(USER_CFLAGS)
 
 	$(CROSSGCC) -nostdlib -n -T src/kernel/link.ld -o bin/kernel.elf -ffreestanding \
 	bin/kernel.o \
