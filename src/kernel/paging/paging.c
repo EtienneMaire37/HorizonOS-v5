@@ -273,54 +273,6 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
     }
 }
 
-// void log_virtual_address_space(uint64_t* cr3, uint64_t start, uint64_t end)
-// {
-//     LOG(DEBUG, "Virtual address space 0x%llx:", cr3);
-
-//     for (int i = 0; i < 512; i++)
-//     {
-//         if (!is_pdpt_entry_present(&cr3[i]))
-//             continue;
-        
-//         uint64_t* pdpt = get_pdpt_entry_address(&cr3[i]);
-        
-//         for (int j = 0; j < 512; j++)
-//         {
-//             if (!is_pdpt_entry_present(&pdpt[j]))
-//                 continue;
-            
-//             uint64_t* pd = get_pdpt_entry_address(&pdpt[j]);
-
-//             uint64_t vaddr = i * ((uint64_t)1 << (12 + 3 * 9)) + j * ((uint64_t)1 << (12 + 2 * 9));
-
-//             // LOG(DEBUG, "\tpd: 0x%llx-0x%llx", vaddr, vaddr + ((uint64_t)1 << (12 + 2 * 9)));
-
-//             for (int k = 0; k < 512; k++)
-//             {
-//                 if (!is_pdpt_entry_present(&pd[k]))
-//                     continue;
-                
-//                 uint64_t* pt = get_pdpt_entry_address(&pd[k]);
-
-//                 vaddr += k * ((uint64_t)1 << (12 + 1 * 9));
-
-//                 for (int l = 0; l < 512; l++)
-//                 {
-//                     if (!is_pdpt_entry_present(&pt[l]))
-//                         continue;
-                    
-//                     uint64_t* page = get_pdpt_entry_address(&pt[l]);
-
-//                     vaddr += l * ((uint64_t)1 << 12);
-
-//                     if (vaddr >= start && vaddr < end)
-//                         LOG(DEBUG, "\tpage: 0x%llx-0x%llx", vaddr, vaddr + 0x1000);
-//                 }
-//             }
-//         }
-//     }
-// }
-
 void* virtual_to_physical(uint64_t* cr3, uint64_t vaddr)
 {
     if (!cr3)

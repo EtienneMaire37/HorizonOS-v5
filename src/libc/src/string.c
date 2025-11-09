@@ -49,16 +49,18 @@ int memcmp(const void* str1, const void* str2, size_t n)
 size_t strlen(const char* str)
 {
     size_t s = 0;
-    while ((unsigned long long)str & 3)
+    while ((uint64_t)str & 3)
     {
+        if (!(*str))
+            return s;
         str++;
         s++;
     }
 
-    unsigned int dword;
+    uint32_t dword;
     while (true)
     {
-        dword = *(unsigned int*)str;
+        dword = *(uint32_t*)str;
         if (!(dword & 0xff))
             return s;
         if (!(dword & 0xff00))

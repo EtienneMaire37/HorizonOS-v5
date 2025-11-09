@@ -62,6 +62,8 @@ void interrupt_handler(interrupt_registers_t* registers)
     {
         if (!multitasking_enabled || first_task_switch) return_from_isr();
 
+        // LOG(DEBUG, "Received syscall!!");
+
         handle_syscall(registers);
 
         return_from_isr();

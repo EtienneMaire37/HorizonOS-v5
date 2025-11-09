@@ -23,8 +23,7 @@ run:
 	-smp 8 \
 	-d cpu
 
-	// src/tasks/bin/init.elf
-horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids
+horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/pci.ids src/tasks/bin/init.elf
 	mkdir bin -p
 
 	nasm -f elf64 -o "bin/gdt.o" "src/kernel/gdt/gdt.asm"
@@ -69,16 +68,21 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	qemu-img convert -O vdi horizonos.iso horizonos.vdi
 
-src/tasks/bin/init.elf: src/tasks/src/init/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
-	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/init/main.c" -o "src/tasks/bin/init.o" $(CFLAGS) -I"src/libc/include" -O3
+src/tasks/bin/init.elf: # src/tasks/src/init/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+	# 	mkdir -p ./src/tasks/bin
+	# 	$(CROSSGCC) -c "src/tasks/src/init/main.c" -o "src/tasks/bin/init.o" $(CFLAGS) -I"src/libc/include" -O3
+	# 	$(CROSSGCC) -T src/tasks/link.ld \
+	#     -o "src/tasks/bin/init.elf" \
+	#     "src/tasks/bin/init.o" \
+	#     "src/libc/lib/libc.a" \
+	#     "src/libc/lib/libm.a" \
+	# 	-ffreestanding -nostdlib \
+	# 	-lgcc
+	nasm -f elf64 ./src/libc/src/crt0.asm -o ./src/tasks/bin/init.o	
 	$(CROSSGCC) -T src/tasks/link.ld \
-    -o "src/tasks/bin/init.elf" \
-    "src/tasks/bin/init.o" \
-    "src/libc/lib/libc.a" \
-    "src/libc/lib/libm.a" \
-	-ffreestanding -nostdlib \
-	-lgcc
+	-o "src/tasks/bin/init.elf" \
+	"src/tasks/bin/init.o" \
+	-ffreestanding -nostdlib
 
 src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin

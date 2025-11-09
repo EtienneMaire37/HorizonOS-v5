@@ -52,13 +52,13 @@ typedef struct __attribute__((packed)) elf64_header
 typedef struct __attribute__((packed)) elf64_program_header
 {
     elf64_word_t    type;
+    elf64_word_t    flags;
     elf64_off_t     p_offset;
     elf64_addr_t    p_vaddr;
     elf64_addr_t    p_paddr;
-    elf64_word_t    p_filesz;
-    elf64_word_t    p_memsz;
-    elf64_word_t    flags;
-    elf64_word_t    align;
+    elf64_off_t     p_filesz;
+    elf64_off_t     p_memsz;
+    elf64_off_t     align;
 } elf64_program_header_t;
 
 #define ELF_PROGRAM_TYPE_NULL       0

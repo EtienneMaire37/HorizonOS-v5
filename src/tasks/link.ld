@@ -1,6 +1,6 @@
 ENTRY(_start)
 
-OUTPUT_FORMAT(elf32-i386)
+OUTPUT_FORMAT(elf64-x86-64)
 
 PHDRS 
 {
@@ -11,7 +11,7 @@ PHDRS
 
 SECTIONS 
 {
-    . = 0x100000;
+    . = 0x10000000000;  /* 1 TB */
 
     .text ALIGN(0x1000) : 
     {

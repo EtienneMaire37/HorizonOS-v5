@@ -70,7 +70,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
     LOG(DEBUG, "Entry point : 0x%llx", header->entry);
 
-    // !!! TODO: Pass the startup data struct to the program
+    // !!! TODO: Pass the startup data struct to the program on the stack
 
     const int n_ph = header->phnum;
 
@@ -97,7 +97,38 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
         // LOG(DEBUG, "0x%llx : %llu pages", start_address, num_pages);
 
-        // TODO: allocate_range, find physical addresses and copy_page them
+        allocate_range((uint64_t*)task.cr3, 
+                    start_address, num_pages, 
+                    ring == 0 ? PG_SUPERVISOR : PG_USER, 
+                    ph->flags & ELF_FLAG_WRITABLE ? PG_READ_WRITE : PG_READ_ONLY, 
+                    CACHE_WB);
+
+        uint64_t file_offset = ph->p_offset;
+        uint64_t remaining_file = ph->p_filesz;
+        uint64_t remaining_zero = ph->p_memsz;
+
+        for (uint64_t page = 0; page < num_pages; page++)
+        {
+            uint64_t page_vaddr = start_address + page * 0x1000;
+            uint8_t* phys = (uint8_t*)virtual_to_physical((uint64_t*)task.cr3, page_vaddr);
+
+            if (!phys)
+                continue;
+
+            size_t offset_in_page = (page == 0) ? (ph->p_vaddr & 0xfff) : 0;
+            size_t bytes_in_page = 0x1000 - offset_in_page;
+
+            size_t to_copy = (remaining_file < bytes_in_page) ? remaining_file : bytes_in_page;
+
+            memcpy(phys + offset_in_page, &file->data[file_offset], to_copy);
+
+            size_t to_zero = bytes_in_page - to_copy;
+            memset(phys + offset_in_page + to_copy, 0, to_zero);
+
+            remaining_file -= to_copy;
+            remaining_zero -= bytes_in_page;
+            file_offset += to_copy;
+        }
     }
 
     tasks[task_count++] = task;

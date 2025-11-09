@@ -385,7 +385,7 @@ void _start()
     printf("LAPIC base: %p\n", lapic);
 
     printf("%u core%s running\n", bootboot.numcores, bootboot.numcores == 1 ? "" : "s");
-    LOG(INFO, "%u core%s running\n", bootboot.numcores, bootboot.numcores == 1 ? "" : "s");
+    LOG(INFO, "%u core%s running", bootboot.numcores, bootboot.numcores == 1 ? "" : "s");
 
     printf("CPU manufacturer id : ");
     tty_set_color(FG_LIGHTRED, BG_BLACK);
@@ -637,8 +637,6 @@ void _start()
         LOG(CRITICAL, "init task couldn't start");
         abort();
     }
-
-    while (true);
 
     // multitasking_add_task_from_function("test", test_func);
 
