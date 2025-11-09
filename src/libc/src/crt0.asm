@@ -40,5 +40,6 @@ bits 64
 section .text
 
 _start:
-    int 0xf0
+    ; int 0xf0
+    hlt 
     jmp _start

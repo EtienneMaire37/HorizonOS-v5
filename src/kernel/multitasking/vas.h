@@ -15,6 +15,9 @@ physical_address_t task_create_empty_vas(uint8_t privilege)
 
     allocate_range(cr3, TASK_STACK_BOTTOM_ADDRESS, TASK_STACK_PAGES,
             privilege, PG_READ_WRITE, CACHE_WB);
+    if (privilege != PG_SUPERVISOR)
+        allocate_range(cr3, TASK_KERNEL_STACK_BOTTOM_ADDRESS, TASK_KERNEL_STACK_PAGES,
+            PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
 
     return (physical_address_t)cr3;
 }
