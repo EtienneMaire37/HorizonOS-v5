@@ -1,7 +1,7 @@
 #pragma once
 
 typedef int pid_t;
-typedef long unsigned int size_t;
+typedef unsigned long long size_t;
 
 typedef int ssize_t;
 typedef int off_t;

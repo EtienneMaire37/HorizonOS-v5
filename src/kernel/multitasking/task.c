@@ -62,8 +62,6 @@ void task_destroy(thread_t* task)
 
 void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg)
 {
-    task->rsp = TASK_STACK_TOP_ADDRESS - 8; // make_address_canonical(TASK_STACK_TOP_ADDRESS);
-
     task_stack_push(task, data_seg);
     task_stack_push(task, task->rsp);
 
@@ -145,15 +143,7 @@ void task_stack_push(thread_t* task, uint64_t value)
     // if (!is_address_canonical(task->rsp))
     //     LOG(ERROR, "rsp: 0x%llx is not canonical!!", task->rsp);
 
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 0, (value >> 0)  & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 1, (value >> 8)  & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 2, (value >> 16) & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 3, (value >> 24) & 0xff);
-
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 4, (value >> 32) & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 5, (value >> 40) & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 6, (value >> 48) & 0xff);
-    task_write_at_address_1b(task, (physical_address_t)task->rsp + 7, (value >> 56) & 0xff);
+    task_write_at_address_8b(task, (physical_address_t)task->rsp, value);
 }
 
 void task_stack_push_data(thread_t* task, void* data, size_t bytes)
@@ -180,6 +170,43 @@ static inline void task_write_at_address_1b(thread_t* task, uint64_t address, ui
     uint8_t* ptr = (uint8_t*)virtual_to_physical((uint64_t*)task->cr3, address);
     
     *ptr = value;
+}
+
+static inline void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value)
+{
+    if (task->cr3 == physical_null)
+    {
+        LOG(WARNING, "task_write_at_aligned_address_8b: Kernel tried to write into a null vas");
+        return;
+    }
+    if (address & 7)    // ! Not aligned
+    {
+        LOG(CRITICAL, "task_write_at_aligned_address_8b: Address %#.16llx not aligned", address);
+        abort();
+    }
+
+    uint64_t* ptr = (uint64_t*)virtual_to_physical((uint64_t*)task->cr3, address);
+    
+    *ptr = value;
+}
+
+static inline void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value)
+{
+    if (task->cr3 == physical_null)
+    {
+        LOG(WARNING, "Kernel tried to write into a null vas");
+        return;
+    }
+
+    task_write_at_address_1b(task, address + 0, (value >> 0)  & 0xff);
+    task_write_at_address_1b(task, address + 1, (value >> 8)  & 0xff);
+    task_write_at_address_1b(task, address + 2, (value >> 16) & 0xff);
+    task_write_at_address_1b(task, address + 3, (value >> 24) & 0xff);
+
+    task_write_at_address_1b(task, address + 4, (value >> 32) & 0xff);
+    task_write_at_address_1b(task, address + 5, (value >> 40) & 0xff);
+    task_write_at_address_1b(task, address + 6, (value >> 48) & 0xff);
+    task_write_at_address_1b(task, address + 7, (value >> 56) & 0xff);
 }
 
 void switch_task()

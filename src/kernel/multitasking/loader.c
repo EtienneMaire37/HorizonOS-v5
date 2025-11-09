@@ -13,6 +13,7 @@ void multitasking_add_task_from_function(const char* name, void (*func)())
     task_set_name(&task, name);
     task.cr3 = task_create_empty_vas(PG_SUPERVISOR);
 
+    task.rsp = TASK_STACK_TOP_ADDRESS - 8;
     task_setup_stack(&task, (uint64_t)func, KERNEL_CODE_SEGMENT, KERNEL_DATA_SEGMENT);
 
     tasks[task_count++] = task;
@@ -20,7 +21,7 @@ void multitasking_add_task_from_function(const char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, startup_data_struct_t* data)
+bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
     LOG(INFO, "Loading ELF file \"/initrd/%s\"", path);
 
@@ -60,6 +61,36 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     task_set_name(&task, name);
     task.cr3 = task_create_empty_vas(ring == 0 ? PG_SUPERVISOR : PG_USER);
 
+    task.rsp = TASK_STACK_TOP_ADDRESS - 8; // make_address_canonical(TASK_STACK_TOP_ADDRESS);
+
+    startup_data_struct_t data_cpy;
+
+    task_stack_push_string(&task, data->cmd_line);
+    data_cpy.cmd_line = (char*)task.rsp;
+    task_stack_push_string(&task, data->pwd);
+    data_cpy.pwd = (char*)task.rsp;
+
+    int num_environ = 0;
+    while (data->environ[num_environ++]);
+
+    for (int i = 0; i <= num_environ; i++)
+        task_stack_push(&task, (uint64_t)data->environ[num_environ - i]);
+
+    data_cpy.environ = (char**)task.rsp;
+
+    for (int i = 0; i <= num_environ; i++)
+    {
+        if (data->environ[i])
+        {
+            task_stack_push_string(&task, data->environ[i]);
+            task_write_at_address_8b(&task, (uint64_t)&data_cpy.environ[i], task.rsp);
+        }
+        else
+            task_write_at_address_8b(&task, (uint64_t)&data_cpy.environ[i], 0);
+    }
+
+    task_stack_push_data(&task, &data_cpy, sizeof(data_cpy));
+
     task_setup_stack(&task, header->entry, 
         ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT, 
         ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
@@ -69,8 +100,6 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     task.system_task = system;
 
     LOG(DEBUG, "Entry point : 0x%llx", header->entry);
-
-    // !!! TODO: Pass the startup data struct to the program on the stack
 
     const int n_ph = header->phnum;
 
@@ -138,7 +167,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     return true;
 }
 
-bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, startup_data_struct_t* data)
+bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
 {
     if (!name) return false;
     if (!data) abort();

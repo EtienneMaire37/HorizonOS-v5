@@ -1,18 +1,20 @@
 extern void* _break_address;
 extern void call_main_exit(int argc, char** argv);
 
-extern uint32_t kernel_data;
+extern uint64_t kernel_data;
 
 void _main()
 {
-    memset(atexit_stack, 0, 32);
+    dprintf(STDOUT_FILENO, "Hello 64bit World!\n");
+    while (true);
+    __builtin_memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
 
     errno = 0;
     fd_creation_mask = S_IWGRP | S_IWOTH;
 
     heap_size = 0;
-    break_address = (uint32_t)&_break_address;
+    break_address = (uint64_t)&_break_address;
     break_address = ((break_address + 4095) / 4096) * 4096;
     heap_address = break_address;
     alloc_break_address = break_address;
@@ -30,10 +32,10 @@ void _main()
     {
         for (int i = 0; i < environ_num; i++)
         {
-            _environ[i] = malloc((strlen(environ[i]) + 1));
+            _environ[i] = malloc((__builtin_strlen(environ[i]) + 1));
             if (!_environ[i])
                 abort();
-            strcpy(_environ[i], environ[i]);
+            __builtin_strcpy(_environ[i], environ[i]);
         }
         num_environ = environ_num;
         environ = _environ;
@@ -64,7 +66,7 @@ void _main()
     create_b64_decoding_table();
 
     bool string = false;
-    for (int i = 0; i < 4096; i++)
+    for (int i = 0; i < __builtin_strlen(data->cmd_line); i++)
     {
         if (data->cmd_line[i] == ' ' && !string) data->cmd_line[i] = 0;
         if (data->cmd_line[i] == '\"') 
@@ -76,7 +78,7 @@ void _main()
 
     int argc = 0;
     char** argv = NULL;
-    int bytes_left = sizeof(data->cmd_line) - 1;
+    int bytes_left = __builtin_strlen(data->cmd_line) - 1;
     char* arg = data->cmd_line;
     if (*arg)
         argc++;
@@ -99,7 +101,7 @@ void _main()
 
     // printf("argc : %d\n", argc);
 
-    __builtin_memcpy(cwd, data->pwd, PATH_MAX);
+    __builtin_strncpy(cwd, data->pwd, PATH_MAX);
     realpath(cwd, cwd);
 
     call_main_exit(argc, argv);

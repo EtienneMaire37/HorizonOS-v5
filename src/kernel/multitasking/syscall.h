@@ -1,7 +1,67 @@
-// #pragma once
+#pragma once
 
-// // #define LOG_SYSCALLS
-// #define USE_IVLPG
+#include "../int/int.h"
+#include "../../libc/src/syscall_defines.h"
+
+void handle_syscall(interrupt_registers_t* registers)
+{
+    switch (registers->rax) // !! some of the path resolution is handled in libc
+    {
+    case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
+        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, (int)registers->rbx);
+        lock_task_queue();
+        tasks[current_task_index].is_dead = true;
+        tasks[current_task_index].return_value = registers->rbx & 0xff;
+        unlock_task_queue();
+        switch_task();
+        break;
+
+    case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_written, $ebx = errno
+    {
+        int fd = *(int*)&registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = 0xffffffffffffffff;
+            registers->rbx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        {
+            registers->rax = 0xffffffffffffffff;
+            registers->rbx = EBADF;
+            break;
+        }
+        if (tasks[current_task_index].file_table[fd] > 2)   // ! Only default fds are supported for now
+        {
+            registers->rax = 0;
+            registers->rbx = 0;
+        }
+        else
+        {
+            if (registers->rbx == STDOUT_FILENO || registers->rbx == STDERR_FILENO)
+            {
+                for (uint32_t i = 0; i < registers->rdx; i++)
+                    tty_outc(((char*)registers->rcx)[i]);
+                tty_update_cursor();
+                registers->rax = registers->rdx;    // bytes_written
+            }
+            else    // ! cant write to STDIN_FILENO
+            {
+                registers->rax = 0xffffffffffffffff;
+                registers->rbx = EBADF;
+            }
+        }
+        break;
+    }
+
+    default:
+        LOG(ERROR, "Undefined system call (0x%llx)", registers->rax);
+        
+        tasks[current_task_index].is_dead = true;
+        tasks[current_task_index].return_value = 0x80000000;
+        switch_task();
+    }
+}
 
 // void handle_syscall(interrupt_registers_t* registers)
 // {
@@ -9,7 +69,7 @@
 //     LOG(DEBUG, "Task \"%s\" (pid = %d) sent system call %llu", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
 //     #endif
 
-//     switch (registers->eax) // !! for some of these path resolution is handled in libc
+//     switch (registers->eax) // !! some of these path resolution is handled in libc
 //     {
 //     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
 //         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);

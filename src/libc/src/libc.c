@@ -21,12 +21,14 @@ int64_t maxint(int64_t a, int64_t b)
 #include "../../kernel/multicore/spinlock.h"
 #include "syscall_defines.h"
 #include "../include/limits.h"
+#include "../include/sys/types.h"
 
 static char cwd[PATH_MAX] = {0};
 
+#include "../include/errno.h"
+#include "string.c"
 #include "../include/string.h"
 #include "../include/fcntl.h"
-#include "../include/errno.h"
 #include "../include/unistd.h"
 #include "../include/stdio.h"
 #include "../include/sys/wait.h"
@@ -67,7 +69,6 @@ FILE* FILE_create()
 #include "stdio.c"
 #include "stdlib.c"
 #include "time.c"
-#include "string.c"
 #include "dirent.c"
 
 #include "liballoc.h"

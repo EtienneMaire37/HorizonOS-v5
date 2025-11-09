@@ -1,17 +1,11 @@
 #pragma once
 
 #include "../multitasking/vas.h"
-// #include "../multitasking/task.c"
-// #include "../multitasking/syscall.h"
+#include "../multitasking/syscall.h"
 #include "int.h"
 #include "irq.h"
 
 #include "kernel_panic.h"
-
-void handle_syscall(interrupt_registers_t* registers)
-{
-    ;
-}
 
 #define return_from_isr() return
 
@@ -61,8 +55,6 @@ void interrupt_handler(interrupt_registers_t* registers)
     // TODO: Switch to using the syscall/sysret instructions
     {
         if (!multitasking_enabled || first_task_switch) return_from_isr();
-
-        // LOG(DEBUG, "Received syscall!!");
 
         handle_syscall(registers);
 

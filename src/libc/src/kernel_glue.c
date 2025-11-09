@@ -60,55 +60,55 @@ pid_t fork()
 
 int brk(void* addr)
 {
-    if ((uint32_t)addr == break_address) return 0;
-    if ((uint32_t)addr < heap_address)
+    if ((uint64_t)addr == break_address) return 0;
+    if ((uint64_t)addr < heap_address)
     {
         errno = ENOMEM;
         return -1;
     }
-    if ((uint32_t)addr < break_address)
+    if ((uint64_t)addr < break_address)
     {
-        uint32_t aligned_target = ((uint32_t)addr + 4095) & ~0xfff;
-        uint32_t pages_to_free = (alloc_break_address - aligned_target) / 4096;
+        uint64_t aligned_target = ((uint64_t)addr + 0xfff) & ~0xfffULL;
+        uint64_t pages_to_free = (alloc_break_address - aligned_target) / 0x1000;
 
-        for (uint32_t i = 0; i < pages_to_free; i++)
+        for (uint64_t i = 0; i < pages_to_free; i++)
         {
-            uint32_t ret;
+            uint64_t ret;
             asm volatile("int 0xf0" : "=a" (ret)
-                : "a" (SYSCALL_BRK_FREE), "b" ((uint32_t)alloc_break_address - 4096 - 4096 * (uint32_t)i));
+                : "a" (SYSCALL_BRK_FREE), "b" ((uint64_t)alloc_break_address - 0x1000 - 0x1000 * i));
             if (ret == 0)
             {
                 errno = ENOMEM;
                 return -1;
             }
         }
-        break_address = (uint32_t)addr;
-        alloc_break_address -= 4096 * (uint32_t)pages_to_free;
+        break_address = (uint64_t)addr;
+        alloc_break_address -= 0x1000 * (uint64_t)pages_to_free;
         // alloc_break_address = break_address;
         return 0;
     }
 
     // ~ (uint32_t)addr > break_address
 
-    uint32_t aligned_alloc_break = (alloc_break_address + 4095) & ~4095;
-    uint32_t aligned_target = ((uint32_t)addr + 4095) & ~4095;
-    uint32_t pages_to_allocate = (aligned_target - aligned_alloc_break) / 4096;
+    uint64_t aligned_alloc_break = (alloc_break_address + 0xfff) & ~0xfffULL;
+    uint64_t aligned_target = ((uint64_t)addr + 0xfff) & ~0xfffULL;
+    uint64_t pages_to_allocate = (aligned_target - aligned_alloc_break) / 0x1000;
 
-    for (uint32_t i = 0; i < pages_to_allocate; i++)
+    for (uint64_t i = 0; i < pages_to_allocate; i++)
     {
-        uint32_t ret;
+        uint64_t ret;
         asm volatile("int 0xf0" : "=a" (ret)
-            : "a" (SYSCALL_BRK_ALLOC), "b" ((uint32_t)alloc_break_address + 4096 * (uint32_t)i));
+            : "a" (SYSCALL_BRK_ALLOC), "b" ((uint64_t)alloc_break_address + 0x1000 * i));
         if (ret == 0)
         {
             errno = ENOMEM;
-            break_address = (uint32_t)alloc_break_address + 4096 * (uint32_t)i;
+            break_address = (uint64_t)alloc_break_address + 0x1000 * i;
             // alloc_break_address = break_address;
             return -1;
         }
     }
-    break_address = (uint32_t)addr;
-    alloc_break_address += 4096 * (uint32_t)pages_to_allocate;
+    break_address = (uint64_t)addr;
+    alloc_break_address += 0x1000 * (uint64_t)pages_to_allocate;
     return 0;
 }
 
@@ -181,7 +181,7 @@ int stat(const char* path, struct stat* statbuf)
 {
     char* _path = realpath(path, NULL);
     int ret;
-    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(_path), "c"((uint32_t)statbuf) : "memory");
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(_path), "c"((uint64_t)statbuf) : "memory");
     if (ret != 0)
     {
         free(_path);
@@ -225,9 +225,9 @@ struct dirent* readdir(DIR* dirp)
             }
         }
     }
-    uint32_t return_address;
+    uint64_t return_address;
     int _errno;
-    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint32_t)&dirent_entry), "c"((uint32_t)dirp) : "memory");
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint64_t)&dirent_entry), "c"((uint64_t)dirp) : "memory");
     if (_errno != 0)
         errno = _errno;
     return (struct dirent*)return_address;

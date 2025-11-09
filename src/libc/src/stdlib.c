@@ -249,8 +249,8 @@ void __attribute__((noreturn)) abort()
 #endif
 
 void malloc_bitmap_init();
-bool malloc_bitmap_get_page(uint32_t page);
-void malloc_bitmap_set_page(uint32_t page, bool state);
+bool malloc_bitmap_get_page(uint64_t page);
+void malloc_bitmap_set_page(uint64_t page, bool state);
 
 char* getenv(const char* name)
 {

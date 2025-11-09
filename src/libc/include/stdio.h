@@ -6,7 +6,7 @@
 #define NULL ((void*)0)
 #endif
 
-typedef long unsigned int size_t;
+typedef unsigned long long size_t;
 
 #define EOF (-1)
 
