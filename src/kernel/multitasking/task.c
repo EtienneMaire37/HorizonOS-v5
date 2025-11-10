@@ -149,6 +149,10 @@ void task_stack_push(thread_t* task, uint64_t value)
 void task_stack_push_data(thread_t* task, void* data, size_t bytes)
 {
     task->rsp -= bytes;
+
+    // * Also align!
+    task->rsp = task->rsp & ~7ULL;
+
     for (size_t i = 0; i < bytes; i++)
         task_write_at_address_1b(task, (physical_address_t)task->rsp + i, ((uint8_t*)data)[i]);
 }
