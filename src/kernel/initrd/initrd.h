@@ -116,7 +116,7 @@ void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
 
 initrd_file_t* initrd_find_file(const char* name)
 {
-    LOG(INFO, "Opening file \"%s\" from initrd", name);
+    LOG(DEBUG, "Opening file \"%s\" from initrd", name);
 
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
@@ -127,14 +127,14 @@ initrd_file_t* initrd_find_file(const char* name)
         }
     }
 
-    LOG(INFO, "Error opening file \"%s\"", name);
+    LOG(WARNING, "Error opening file \"%s\"", name);
 
     return NULL;
 }
 
 initrd_file_t* initrd_find_file_entry(const char* name)
 {
-    LOG(INFO, "Opening file entry \"%s\" from initrd", name);
+    LOG(DEBUG, "Opening file entry \"%s\" from initrd", name);
 
     for (uint8_t i = 0; i < initrd_files_count; i++)
     {
@@ -145,7 +145,7 @@ initrd_file_t* initrd_find_file_entry(const char* name)
         }
     }
 
-    LOG(INFO, "Error opening file \"%s\"", name);
+    LOG(WARNING, "Error opening file entry \"%s\"", name);
 
     return NULL;
 }
