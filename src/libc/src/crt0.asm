@@ -9,7 +9,7 @@ kernel_data: dq 0
 extern _main
 global _start
 _start:
-    mov [kernel_data], rsp
+    pop qword [kernel_data]
     mov rbp, 0
     call .start ; stack frame
     jmp .halt

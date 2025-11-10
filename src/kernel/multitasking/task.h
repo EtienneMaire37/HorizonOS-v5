@@ -35,6 +35,8 @@ typedef struct thread
     file_table_index_t file_table[OPEN_MAX];
 } thread_t;
 
+#define __CURRENT_TASK      tasks[current_task_index]
+
 uint8_t global_cpu_ticks = 0;
 
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
@@ -100,8 +102,8 @@ void full_context_switch(uint16_t next_task_index)
     current_task_index = next_task_index;
     TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
     
-    context_switch(&tasks[last_index], &tasks[current_task_index], tasks[current_task_index].ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
-    tasks[last_index].fpu_state, tasks[current_task_index].fpu_state);
+    context_switch(&tasks[last_index], &__CURRENT_TASK, __CURRENT_TASK.ring == 0 ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT,
+    tasks[last_index].fpu_state, __CURRENT_TASK.fpu_state);
 }
 
 bool task_is_blocked(uint16_t index)

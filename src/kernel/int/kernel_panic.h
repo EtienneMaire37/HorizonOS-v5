@@ -24,7 +24,7 @@ static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
             if (last_symbol_address <= rip && symbol_address > rip && is_a_valid_function(found_symbol_type))
             {
                 putchar(file == kernel_symbols_file ? '[' : '(');
-                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "[" : "(");
+                CONTINUE_LOG(INFO, file == kernel_symbols_file ? "[" : "(");
                 
                 if (found_symbol_type == 'T' || found_symbol_type == 't')
                     tty_set_color(FG_LIGHTCYAN, BG_BLACK);
@@ -44,7 +44,7 @@ static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
                         subfunction = true;
                     }
                     putchar(last_symbol_buffer[i]);
-                    CONTINUE_LOG(DEBUG, "%c", last_symbol_buffer[i]);
+                    CONTINUE_LOG(INFO, "%c", last_symbol_buffer[i]);
                     if (subfunction)
                     {
                         tty_set_color(light_tty_color & 0x07, light_tty_color & 0x70);
@@ -53,7 +53,7 @@ static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
                 }
                 tty_set_color(FG_WHITE, BG_BLACK);
                 putchar(file == kernel_symbols_file ? ']' : ')');
-                CONTINUE_LOG(DEBUG, file == kernel_symbols_file ? "]" : ")");
+                CONTINUE_LOG(INFO, file == kernel_symbols_file ? "]" : ")");
                 return;
             }
             else if (is_a_valid_function(current_symbol_type))
@@ -111,7 +111,7 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_LIGHTGREEN, BG_BLACK);
 
     if (multitasking_enabled)
-        printf("Task : \"%s\" (pid = %d) | ring = %u\n\n", tasks[current_task_index].name, tasks[current_task_index].pid, tasks[current_task_index].ring);
+        printf("Task : \"%s\" (pid = %d) | ring = %u\n\n", __CURRENT_TASK.name, __CURRENT_TASK.pid, __CURRENT_TASK.ring);
 
     tty_set_color(FG_WHITE, BG_BLACK);
 
@@ -141,28 +141,30 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
 
         // uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
         
-        // LOG(DEBUG, "Page directory entry : 0x%llx", pde);
+        // LOG(INFO, "Page directory entry : 0x%llx", pde);
 
         // if (pde & 1)
         // {
-        //     LOG(DEBUG, "Page table entry : 0x%llx", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
+        //     LOG(INFO, "Page table entry : 0x%llx", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
         // }
     }
 
-    LOG(DEBUG, "RSP=%#.16llx RBP=%#.16llx RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx",
+    LOG(INFO, "RSP=%#.16llx RBP=%#.16llx RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx",
     registers->rsp, registers->rbp, registers->rax, registers->rbx, registers->rcx, registers->rdx);
-    LOG(DEBUG, "R8=%#.16llx R9=%#.16llx R10=%#.16llx R11=%#.16llx R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx",
+    LOG(INFO, "R8=%#.16llx R9=%#.16llx R10=%#.16llx R11=%#.16llx R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx",
     registers->r8, registers->r9, registers->r10, registers->r11, registers->r12, registers->r13, registers->r14, registers->r15);
+    LOG(INFO, "RDI=%#.16llx RSI=%#.16llx", registers->rdi, registers->rsi);
 
     printf("RSP=%#.16llx RBP=%#.16llx\n",
     registers->rsp, registers->rbp);
     printf("RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx\n", registers->rax, registers->rbx, registers->rcx, registers->rdx);
     printf("R8=%#.16llx R9=%#.16llx R10=%#.16llx R11=%#.16llx\n",
     registers->r8, registers->r9, registers->r10, registers->r11);
-    printf("R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx\n\n", registers->r12, registers->r13, registers->r14, registers->r15);
+    printf("R12=%#.16llx R13=%#.16llx R14=%#.16llx R15=%#.16llx\n", registers->r12, registers->r13, registers->r14, registers->r15);
+    printf("RDI=%#.16llx RSI=%#.16llx\n\n", registers->rdi, registers->rsi);
 
     printf("Stack trace : \n");
-    LOG(DEBUG, "Stack trace : ");
+    LOG(INFO, "Stack trace : ");
 
     typedef struct __attribute__((packed)) call_frame
     {
@@ -180,7 +182,7 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     putchar(' ');
 
-    LOG(DEBUG, "rip : 0x%llx ", registers->rip);
+    LOG(INFO, "rip : 0x%llx ", registers->rip);
     print_kernel_symbol_name(registers->rip, (uintptr_t)rbp);
     putchar('\n');
 
@@ -205,12 +207,12 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
             tty_set_color(FG_RED, BG_BLACK);
             printf("...");
             tty_set_color(FG_WHITE, BG_BLACK);
-            LOG(DEBUG, "...");
+            LOG(INFO, "...");
         }
         else
         {
             printf("rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
-            LOG(DEBUG, "rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
+            LOG(INFO, "rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
             print_kernel_symbol_name(rbp->rip - 1, (uintptr_t)rbp);
             putchar('\n');
             rbp = (call_frame_t*)rbp->rbp;

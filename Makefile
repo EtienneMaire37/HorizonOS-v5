@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fno-omit-frame-pointer -mstackrealign -mcmodel=large -march=x86-64 # -v4
+CFLAGS := -std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fno-omit-frame-pointer -mcmodel=large -mstackrealign -march=x86-64 # -v4
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./crossgcc/bin/x86_64-elf-gcc
 CROSSLD := ./crossgcc/bin/x86_64-elf-ld
@@ -35,7 +35,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
 	-Wall -Werror -Wno-address-of-packed-member -fpic $(CFLAGS) -I./bootboot/dist/ \
 	-O2 -mno-red-zone \
-	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-strict-aliasing \
+	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
 	-mno-80387 -mno-mmx -mno-sse -mno-avx \
 	$(USER_CFLAGS)
 

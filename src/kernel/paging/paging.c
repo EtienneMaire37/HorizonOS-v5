@@ -183,6 +183,71 @@ void allocate_range(uint64_t* pml4,
     }
 }
 
+void free_range(uint64_t* pml4, 
+    uint64_t start_virtual_address, 
+    uint64_t pages)
+{
+    if (!pml4)
+    {
+        LOG(ERROR, "free_range: NULL virtual address space");
+        return;
+    }
+
+    if (start_virtual_address & 0xfff)
+    {
+        LOG(CRITICAL, "free_range: Kernel tried to free non page aligned addresses");
+        abort();
+    }
+
+    // * "uncanonize"
+    start_virtual_address &= 0xffffffffffff;
+
+    for (uint64_t i = 0; i < pages; i++)
+    {
+        uint64_t vaddr = start_virtual_address + 0x1000 * i;
+
+        uint64_t pte = (vaddr >> 12) & 0x1ff;
+        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
+        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
+        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
+
+        uint64_t* pml4_entry = &pml4[pml4e];
+        if (!is_pdpt_entry_present(pml4_entry))
+        {
+            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* pdpt = get_pdpt_entry_address(pml4_entry);
+        
+        uint64_t* pdpt_entry = &pdpt[pdpte];
+        if (!is_pdpt_entry_present(pdpt_entry))
+        {
+            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* pd = get_pdpt_entry_address(pdpt_entry);
+
+        uint64_t* pd_entry = &pd[pde];
+        if (!is_pdpt_entry_present(pd_entry))
+        {
+            i += ((uint64_t)1 << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* pt = get_pdpt_entry_address(pd_entry);
+
+        uint64_t* pt_entry = &pt[pte];
+        if (is_pdpt_entry_present(pt_entry))
+            continue;
+
+        uint64_t address = (uint64_t)get_pdpt_entry_address(pt_entry);
+        remove_pdpt_entry(pt_entry);
+        pfa_free_physical_page(address);
+    }
+}
+
 void copy_mapping(uint64_t* src, uint64_t* dst, 
     uint64_t start_virtual_address, 
     uint64_t pages)

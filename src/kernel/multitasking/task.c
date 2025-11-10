@@ -63,7 +63,7 @@ void task_destroy(thread_t* task)
 void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg)
 {
     task_stack_push(task, data_seg);
-    task_stack_push(task, task->rsp);
+    task_stack_push(task, task->rsp + 8);
 
     task_stack_push(task, 0x200);  // get_rflags()
     task_stack_push(task, code_seg);
@@ -225,7 +225,7 @@ void switch_task()
     first_task_switch = false;
 
     uint16_t next_task_index = find_next_task_index();
-    if (tasks[current_task_index].pid != tasks[next_task_index].pid)
+    if (__CURRENT_TASK.pid != tasks[next_task_index].pid)
         full_context_switch(next_task_index);
 
     cleanup_tasks();

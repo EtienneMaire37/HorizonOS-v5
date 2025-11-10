@@ -71,7 +71,8 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     data_cpy.pwd = (char*)task.rsp;
 
     int num_environ = 0;
-    while (data->environ[num_environ++]);
+    while (data->environ[num_environ])
+        num_environ++;
 
     for (int i = 0; i <= num_environ; i++)
         task_stack_push(&task, (uint64_t)data->environ[num_environ - i]);
@@ -80,6 +81,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
     for (int i = 0; i <= num_environ; i++)
     {
+        // printf("address: %#llx\n", (uint64_t)&data_cpy.environ[i]);
         if (data->environ[i])
         {
             task_stack_push_string(&task, data->environ[i]);
@@ -90,6 +92,10 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     }
 
     task_stack_push_data(&task, &data_cpy, sizeof(data_cpy));
+
+    task_stack_push(&task, task.rsp);
+
+    // printf("struct address: %#llx\n", task.rsp);
 
     task_setup_stack(&task, header->entry, 
         ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT, 

@@ -46,7 +46,10 @@ static inline int _printf(int (*func_c)(char), int (*func_s)(const char*), const
     int len = 0;
     void print_string(const char* str)
     {
-        len += func_s(str);
+        if (!str)
+            len += func_s("(null)");
+        else
+            len += func_s(str);
     }
     void print_char(char ch)
     {

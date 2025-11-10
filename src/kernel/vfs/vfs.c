@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../initrd/vfs.c"
+
 int vfs_root_stat(struct stat* st)
 {
     st->st_dev = -1;
@@ -31,7 +33,7 @@ int vfs_stat(const char* path, struct stat* st)
     switch (get_drive_type(path))
     {
     case DT_INITRD:
-        return vfs_initrd_stat((char*)((uint32_t)path + strlen("/initrd") + 1), st);
+        return vfs_initrd_stat((char*)((uintptr_t)path + strlen("/initrd") + 1), st);
     default:
         return ENOENT;
     }
@@ -95,9 +97,9 @@ struct dirent* vfs_root_readdir(struct dirent* dirent, DIR* dirp)
         return NULL;
     }
 
-    strncpy(dirp->current_entry, directories[i + 1], PATH_MAX);
-    strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
-    strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
+    snprintf(dirp->current_entry, sizeof(dirp->current_entry), "%s", directories[i + 1]);
+    snprintf(dirp->current_path, sizeof(dirp->current_path), "%s", dirp->current_entry);
+    snprintf(dirent->d_name, sizeof(dirent->d_name), "%s", dirp->current_path);
     dirent->d_ino = -1;
     return dirent;
 }

@@ -5,8 +5,6 @@ extern uint64_t kernel_data;
 
 void _main()
 {
-    dprintf(STDOUT_FILENO, "Hello 64bit World!\n");
-    while (true);
     __builtin_memset(atexit_stack, 0, 32);
     atexit_stack_length = 0;
 
@@ -27,6 +25,11 @@ void _main()
     int environ_num = 0;
     while (environ[environ_num])
         environ_num++;
+
+    // for (int i = 0; i < environ_num; i++)
+    //     dprintf(STDOUT_FILENO, "\"%s\"\n", environ[i]);
+
+    // while (true);
     char** _environ = malloc((environ_num + 1) * sizeof(char*));
     if (_environ)
     {

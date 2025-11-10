@@ -140,9 +140,9 @@ struct dirent* vfs_initrd_readdir(struct dirent* dirent, DIR* dirp)
             if (found_last_entry)
             {
                 dirent->d_ino = -1;
-                strncpy(dirent->d_name, entry, PATH_MAX);
-                strncpy(dirp->current_path, dirent->d_name, PATH_MAX);
-                strncpy(dirp->current_entry, dirent->d_name, PATH_MAX);
+                snprintf(dirent->d_name, sizeof(dirent->d_name), "%s", entry);
+                snprintf(dirp->current_path, sizeof(dirp->current_path), "%s", dirent->d_name);
+                snprintf(dirp->current_entry, sizeof(dirp->current_entry), "%s", dirent->d_name);
                 return dirent;
             }
 

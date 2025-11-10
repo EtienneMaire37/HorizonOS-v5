@@ -61,54 +61,19 @@ pid_t fork()
 int brk(void* addr)
 {
     if ((uint64_t)addr == break_address) return 0;
-    if ((uint64_t)addr < heap_address)
+    if ((uint64_t)addr < heap_address) 
     {
         errno = ENOMEM;
         return -1;
     }
-    if ((uint64_t)addr < break_address)
+    int _errno;
+    asm volatile("int 0xf0" : "=a" (_errno), "=b"(break_address)
+                : "a" (SYSCALL_BRK), "b" (addr), "c"(break_address));
+    if (_errno)
     {
-        uint64_t aligned_target = ((uint64_t)addr + 0xfff) & ~0xfffULL;
-        uint64_t pages_to_free = (alloc_break_address - aligned_target) / 0x1000;
-
-        for (uint64_t i = 0; i < pages_to_free; i++)
-        {
-            uint64_t ret;
-            asm volatile("int 0xf0" : "=a" (ret)
-                : "a" (SYSCALL_BRK_FREE), "b" ((uint64_t)alloc_break_address - 0x1000 - 0x1000 * i));
-            if (ret == 0)
-            {
-                errno = ENOMEM;
-                return -1;
-            }
-        }
-        break_address = (uint64_t)addr;
-        alloc_break_address -= 0x1000 * (uint64_t)pages_to_free;
-        // alloc_break_address = break_address;
-        return 0;
+        errno = _errno;
+        return -1;
     }
-
-    // ~ (uint32_t)addr > break_address
-
-    uint64_t aligned_alloc_break = (alloc_break_address + 0xfff) & ~0xfffULL;
-    uint64_t aligned_target = ((uint64_t)addr + 0xfff) & ~0xfffULL;
-    uint64_t pages_to_allocate = (aligned_target - aligned_alloc_break) / 0x1000;
-
-    for (uint64_t i = 0; i < pages_to_allocate; i++)
-    {
-        uint64_t ret;
-        asm volatile("int 0xf0" : "=a" (ret)
-            : "a" (SYSCALL_BRK_ALLOC), "b" ((uint64_t)alloc_break_address + 0x1000 * i));
-        if (ret == 0)
-        {
-            errno = ENOMEM;
-            break_address = (uint64_t)alloc_break_address + 0x1000 * i;
-            // alloc_break_address = break_address;
-            return -1;
-        }
-    }
-    break_address = (uint64_t)addr;
-    alloc_break_address += 0x1000 * (uint64_t)pages_to_allocate;
     return 0;
 }
 

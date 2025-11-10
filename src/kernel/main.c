@@ -151,6 +151,7 @@ initrd_file_t* commit_file;
 #include "disk/ata.c"
 #include "multitasking/loader.c"
 #include "../libc/src/startup_data.c"
+#include "vfs/vfs.c"
 
 static inline int64_t minint(int64_t a, int64_t b)
 {

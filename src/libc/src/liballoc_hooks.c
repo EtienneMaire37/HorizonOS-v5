@@ -3,6 +3,8 @@ atomic_flag malloc_spinlock_state = ATOMIC_FLAG_INIT;
 #define MALLOC_BITMAP_SIZE      0x100000
 #define MALLOC_BITMAP_SIZE_4    0x40000
 
+#define MAX_PAGE_INDEX          (MALLOC_BITMAP_SIZE * 8)
+
 uint8_t malloc_pages_bitmap[MALLOC_BITMAP_SIZE];
 uint64_t malloc_last_allocated_page_index;
 uint64_t malloc_allocated_pages;
@@ -75,13 +77,12 @@ int liballoc_unlock()
 
 void* liballoc_alloc(size_t pages)
 {
-    // write(STDERR_FILENO, "liballoc_alloc call\n", 20);
-
 	uint64_t page_number = 0;
     uint64_t contiguous_pages = 0;
 
     while (true)
     {
+        if (page_number >= MAX_PAGE_INDEX) return NULL;
         if (malloc_bitmap_get_page(page_number + contiguous_pages))
         {
             page_number += contiguous_pages + 1;
@@ -110,8 +111,7 @@ void* liballoc_alloc(size_t pages)
 }
 
 int liballoc_free(void* ptr, size_t pages)
-{
-    // write(STDERR_FILENO, "liballoc_free call\n", 19);
+{    
     if (ptr == NULL) return 1;
     uint64_t page_number = ((uint64_t)ptr - heap_address) / 4096;
 	for (uint64_t i = page_number; i < page_number + pages; i++)

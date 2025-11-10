@@ -7,31 +7,121 @@ void handle_syscall(interrupt_registers_t* registers)
 {
     switch (registers->rax) // !! some of the path resolution is handled in libc
     {
-    case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
-        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, (int)registers->rbx);
+    case SYSCALL_EXIT:     // * exit | exit_code = $rbx |
+        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, (int)registers->rbx);
         lock_task_queue();
-        tasks[current_task_index].is_dead = true;
-        tasks[current_task_index].return_value = registers->rbx & 0xff;
+        __CURRENT_TASK.is_dead = true;
+        __CURRENT_TASK.return_value = registers->rbx & 0xff;
         unlock_task_queue();
         switch_task();
         break;
 
-    case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_written, $ebx = errno
+    case SYSCALL_OPEN:      // * open | path = $rbx, oflag = $rcx, mode = $rdx | $rax = errno, $rbx = fd
     {
-        int fd = *(int*)&registers->rbx;
+        const char* path = (const char*)registers->rbx;
+
+        int fd = vfs_allocate_global_file();
+        file_table[fd].type = get_drive_type(path);
+        file_table[fd].flags = ((int)registers->rcx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
+        file_table[fd].position = 0;
+
+        if (file_table[fd].flags != (int)registers->rcx)
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EINVAL;
+            break;
+        }
+
+        struct stat st;
+        int stat_ret = vfs_stat(path, &st);
+        if (stat_ret != 0)
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = stat_ret;
+            break;
+        }
+
+        if ((!(st.st_mode & S_IRUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_RDONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EACCES;
+            break;
+        }
+
+        if ((!(st.st_mode & S_IWUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_WRONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EACCES;
+            break;
+        }
+
+        file_table[fd].flags &= ~(O_APPEND | O_CREAT);
+        switch (file_table[fd].type)
+        {
+        case DT_INITRD:
+            file_table[fd].data.initrd_data.file = initrd_find_file_entry((char*)path + 
+                            strlen("/initrd") + (strlen(path) > strlen("/initrd") ? 1 : 0));
+            break;
+        default:
+            file_table[fd].type = DT_INVALID;
+        }
+        int ret = vfs_allocate_thread_file(current_task_index);
+        // LOG(DEBUG, "global fd : %d", fd);
+        // LOG(DEBUG, "fd : %d", ret);
+        if (ret == -1)
+        {
+            vfs_remove_global_file(fd);
+
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = ENOMEM;
+        }
+        else
+        {
+            __CURRENT_TASK.file_table[ret] = fd;
+            registers->rbx = *(uint32_t*)&ret;
+            registers->rax = 0;
+        }
+        break;
+    }
+
+    case SYSCALL_CLOSE:     // * close | fildes = $rbx | $rax = errno, $rbx = ret
+        int fd = (int)registers->rbx;
         if (fd < 0 || fd >= OPEN_MAX)
         {
-            registers->rax = 0xffffffffffffffff;
-            registers->rbx = EBADF;
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EBADF;
             break;
         }
-        if (tasks[current_task_index].file_table[fd] == invalid_fd)
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
         {
-            registers->rax = 0xffffffffffffffff;
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EBADF;
+            break;
+        }
+        vfs_remove_global_file(__CURRENT_TASK.file_table[fd]);
+        __CURRENT_TASK.file_table[fd] = invalid_fd;
+        break;
+
+    case SYSCALL_WRITE:     // * write | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_written, $rbx = errno
+    {
+        int fd = registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = (uint64_t)(-1);
             registers->rbx = EBADF;
             break;
         }
-        if (tasks[current_task_index].file_table[fd] > 2)   // ! Only default fds are supported for now
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = (uint64_t)(-1);
+            registers->rbx = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] > 2)   // ! Only default fds are supported for now
         {
             registers->rax = 0;
             registers->rbx = 0;
@@ -47,18 +137,61 @@ void handle_syscall(interrupt_registers_t* registers)
             }
             else    // ! cant write to STDIN_FILENO
             {
-                registers->rax = 0xffffffffffffffff;
+                registers->rax = (uint64_t)(-1);
                 registers->rbx = EBADF;
             }
         }
         break;
     }
 
+    case SYSCALL_BRK:   // * brk | addr = $rbx, break_address = $rcx | $rax = errno, $rbx = break_address
+    {
+        uint64_t addr = registers->rdx;
+        uint64_t break_address = registers->rcx;
+
+        if (addr < break_address)
+        {
+            free_range((uint64_t*)__CURRENT_TASK.cr3, ((break_address + 0xfff) & ~0xfffULL), (break_address - addr + 0xfff) / 0x1000);
+        }
+        else
+        {
+            allocate_range((uint64_t*)__CURRENT_TASK.cr3, 
+                    break_address & ~0xfffULL, (addr - break_address + 0xfff) / 0x1000, 
+                    __CURRENT_TASK.ring == 3 ? PG_USER : PG_SUPERVISOR, 
+                    PG_READ_WRITE, CACHE_WB);
+        }
+
+        registers->rbx = break_address;
+        registers->rax = break_address == addr ? 0 : ENOMEM;
+        break;
+    }
+
+    case SYSCALL_ISATTY:    // * isatty | fd = $rbx | $rax = errno, $rbx = ret
+    {
+        int fd = (int)registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = EBADF;
+            registers->rbx = 0;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = EBADF;
+            registers->rbx = 0;
+            break;
+        }
+        registers->rbx = __CURRENT_TASK.file_table[fd] < 3;
+        if (!registers->rbx)
+            registers->rax = ENOTTY;
+        break;
+    }
+
     default:
         LOG(ERROR, "Undefined system call (0x%llx)", registers->rax);
         
-        tasks[current_task_index].is_dead = true;
-        tasks[current_task_index].return_value = 0x80000000;
+        __CURRENT_TASK.is_dead = true;
+        __CURRENT_TASK.return_value = 0x80000000;
         switch_task();
     }
 }
@@ -66,16 +199,16 @@ void handle_syscall(interrupt_registers_t* registers)
 // void handle_syscall(interrupt_registers_t* registers)
 // {
 //     #ifdef LOG_SYSCALLS
-//     LOG(DEBUG, "Task \"%s\" (pid = %d) sent system call %llu", tasks[current_task_index].name, tasks[current_task_index].pid, registers->eax);
+//     LOG(DEBUG, "Task \"%s\" (pid = %d) sent system call %llu", __CURRENT_TASK.name, __CURRENT_TASK.pid, registers->eax);
 //     #endif
 
 //     switch (registers->eax) // !! some of these path resolution is handled in libc
 //     {
 //     case SYSCALL_EXIT:     // * exit | exit_code = $ebx |
-//         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", tasks[current_task_index].name, tasks[current_task_index].pid, registers->ebx);
+//         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, registers->ebx);
 //         lock_task_queue();
-//         tasks[current_task_index].is_dead = true;
-//         tasks[current_task_index].return_value = registers->ebx & 0xff;
+//         __CURRENT_TASK.is_dead = true;
+//         __CURRENT_TASK.return_value = registers->ebx & 0xff;
 //         unlock_task_queue();
 //         switch_task();
 //         break;
@@ -148,7 +281,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //         }
 //         else
 //         {
-//             tasks[current_task_index].file_table[ret] = fd;
+//             __CURRENT_TASK.file_table[ret] = fd;
 //             registers->ebx = *(uint32_t*)&ret;
 //             registers->eax = 0;
 //         }
@@ -163,14 +296,14 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->ebx = 0xffffffff;
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         vfs_remove_global_file(tasks[current_task_index].file_table[fd]);
-//         tasks[current_task_index].file_table[fd] = invalid_fd;
+//         vfs_remove_global_file(__CURRENT_TASK.file_table[fd]);
+//         __CURRENT_TASK.file_table[fd] = invalid_fd;
 //         break;
 
 //     case SYSCALL_READ:      // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
@@ -182,15 +315,15 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->ebx = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->eax = 0xffffffff;
 //             registers->ebx = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] > 2)
+//         if (__CURRENT_TASK.file_table[fd] > 2)
 //         {
-//             file_entry_t* entry = &file_table[tasks[current_task_index].file_table[fd]];
+//             file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
 //             ssize_t bytes_read;
 //             registers->ebx = vfs_read(entry, (void*)registers->ecx, registers->edx, &bytes_read);
 //             registers->eax = *(uint32_t*)&bytes_read;
@@ -205,16 +338,16 @@ void handle_syscall(interrupt_registers_t* registers)
 //                     registers->eax = 0;
 //                     break;
 //                 }
-//                 if (no_buffered_characters(tasks[current_task_index].input_buffer))
+//                 if (no_buffered_characters(__CURRENT_TASK.input_buffer))
 //                 {
-//                     tasks[current_task_index].reading_stdin = true;
+//                     __CURRENT_TASK.reading_stdin = true;
 //                     switch_task();
 //                 }
-//                 registers->eax = minint(get_buffered_characters(tasks[current_task_index].input_buffer), registers->edx);
+//                 registers->eax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->edx);
 //                 for (uint32_t i = 0; i < registers->eax; i++)
 //                 {
 //                     // *** Only ASCII for now ***
-//                     ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&tasks[current_task_index].input_buffer));
+//                     ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&__CURRENT_TASK.input_buffer));
 //                 }
 //             }
 //             else
@@ -234,13 +367,13 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->ebx = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->eax = 0xffffffff;
 //             registers->ebx = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] > 2)   // ! Only default fds are supported for now
+//         if (__CURRENT_TASK.file_table[fd] > 2)   // ! Only default fds are supported for now
 //         {
 //             registers->eax = 0;
 //             registers->ebx = 0;
@@ -264,7 +397,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //     }
 //     case SYSCALL_GETPID:     // * getpid || $eax = pid
 //         lock_task_queue();
-//         registers->eax = tasks[current_task_index].pid;
+//         registers->eax = __CURRENT_TASK.pid;
 //         unlock_task_queue();
 //         break;
 //     case SYSCALL_FORK:     // * fork
@@ -275,11 +408,11 @@ void handle_syscall(interrupt_registers_t* registers)
 //         else
 //         {
 //             lock_task_queue();
-//             tasks[current_task_index].forked_pid = current_pid++;
-//             pid_t forked_pid = tasks[current_task_index].forked_pid;
+//             __CURRENT_TASK.forked_pid = current_pid++;
+//             pid_t forked_pid = __CURRENT_TASK.forked_pid;
 //             unlock_task_queue();
 //             switch_task();
-//             if (tasks[current_task_index].pid == forked_pid)
+//             if (__CURRENT_TASK.pid == forked_pid)
 //                 registers->eax = 0;
 //             else
 //             {
@@ -306,11 +439,11 @@ void handle_syscall(interrupt_registers_t* registers)
 //         else
 //         {
 //             uint16_t new_task_index = task_count - 1;
-//             pid_t old_pid = tasks[current_task_index].pid;
-//             tasks[current_task_index].is_dead = tasks[current_task_index].to_reap = true;
-//             tasks[new_task_index].parent = tasks[current_task_index].parent;
-//             tasks[current_task_index].parent = -1;
-//             tasks[current_task_index].pid = tasks[new_task_index].pid;
+//             pid_t old_pid = __CURRENT_TASK.pid;
+//             __CURRENT_TASK.is_dead = __CURRENT_TASK.to_reap = true;
+//             tasks[new_task_index].parent = __CURRENT_TASK.parent;
+//             __CURRENT_TASK.parent = -1;
+//             __CURRENT_TASK.pid = tasks[new_task_index].pid;
 //             tasks[new_task_index].pid = old_pid;
 
 //             task_copy_file_table(current_task_index, new_task_index, true);
@@ -325,11 +458,11 @@ void handle_syscall(interrupt_registers_t* registers)
 //     {
 //         pid_t pid = registers->ecx;
 //         lock_task_queue();
-//         tasks[current_task_index].wait_pid = registers->ebx;
+//         __CURRENT_TASK.wait_pid = registers->ebx;
 //         unlock_task_queue();
 //         switch_task();
 //         registers->ecx = pid;
-//         registers->ebx = tasks[current_task_index].wstatus;
+//         registers->ebx = __CURRENT_TASK.wstatus;
 //         break;
 //     }
 
@@ -366,13 +499,13 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->ebx = 0;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->eax = EBADF;
 //             registers->ebx = 0;
 //             break;
 //         }
-//         registers->ebx = tasks[current_task_index].file_table[fd] < 3;
+//         registers->ebx = __CURRENT_TASK.file_table[fd] < 3;
 //         if (!registers->ebx)
 //             registers->eax = ENOTTY;
 //         break;
@@ -392,17 +525,17 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         if (file_table[tasks[current_task_index].file_table[fd]].type != DT_TERMINAL)  // ! not a tty
+//         if (file_table[__CURRENT_TASK.file_table[fd]].type != DT_TERMINAL)  // ! not a tty
 //         {
 //             registers->eax = ENOTTY;
 //             break;
 //         }
-//         *termios_p = file_table[tasks[current_task_index].file_table[fd]].data.terminal_data.ts;
+//         *termios_p = file_table[__CURRENT_TASK.file_table[fd]].data.terminal_data.ts;
 //         registers->eax = 0;
 //         break;
 //     }
@@ -421,27 +554,27 @@ void handle_syscall(interrupt_registers_t* registers)
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         if (tasks[current_task_index].file_table[fd] == invalid_fd)
+//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
 //         {
 //             registers->eax = EBADF;
 //             break;
 //         }
-//         if (file_table[tasks[current_task_index].file_table[fd]].type != DT_TERMINAL)  // ! not a tty
+//         if (file_table[__CURRENT_TASK.file_table[fd]].type != DT_TERMINAL)  // ! not a tty
 //         {
 //             registers->eax = ENOTTY;
 //             break;
 //         }
-//         file_table[tasks[current_task_index].file_table[fd]].data.terminal_data.ts = *termios_p;
+//         file_table[__CURRENT_TASK.file_table[fd]].data.terminal_data.ts = *termios_p;
 //         registers->eax = 0;
 //         break;
 //     }
 
 //     case SYSCALL_FLUSH_INPUT_BUFFER:
-//         utf32_buffer_clear(&(tasks[current_task_index].input_buffer));
+//         utf32_buffer_clear(&(__CURRENT_TASK.input_buffer));
 //         break;
 
 //     case SYSCALL_SET_KB_LAYOUT:
-//         if (tasks[current_task_index].ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
+//         if (__CURRENT_TASK.ring == 0 && registers->ebx >= 1 && registers->ebx <= NUM_KB_LAYOUTS)
 //         {
 //             current_keyboard_layout = keyboard_layouts[registers->ebx - 1];
 //             registers->eax = 1;
@@ -460,7 +593,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //                 break;
 //             }
             
-//             uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * (registers->ebx >> 22));
+//             uint32_t pde = read_physical_address_4b(__CURRENT_TASK.cr3 + 4 * (registers->ebx >> 22));
 //             physical_address_t pt_address = (physical_address_t)pde & 0xfffff000;
 //             if (!(pde & 1))
 //             {
@@ -471,7 +604,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //                     break;
 //                 }
 //                 physical_init_page_table(pt_address);
-//                 physical_add_page_table(tasks[current_task_index].cr3, 
+//                 physical_add_page_table(__CURRENT_TASK.cr3, 
 //                                         registers->ebx >> 22, 
 //                                         pt_address, 
 //                                         PAGING_USER_LEVEL, 
@@ -500,7 +633,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //                 invlpg((uint32_t)recursive_paging_pte);
 //                 invlpg(4096 * (uint32_t)((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff)));
 //                 #else
-//                 load_pd_by_physaddr(tasks[current_task_index].cr3);
+//                 load_pd_by_physaddr(__CURRENT_TASK.cr3);
 //                 #endif
                 
 //                 registers->eax = 1;
@@ -521,7 +654,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //                 registers->eax = 0;
 //                 break;
 //             }
-//             uint32_t pde = read_physical_address_4b(tasks[current_task_index].cr3 + 4 * (registers->ebx >> 22));
+//             uint32_t pde = read_physical_address_4b(__CURRENT_TASK.cr3 + 4 * (registers->ebx >> 22));
 //             if (!(pde & 1))
 //             {
 //                 registers->eax = 0;
@@ -543,7 +676,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //                 invlpg((uint32_t)recursive_paging_pte);
 //                 invlpg(4096 * (uint32_t)((registers->ebx >> 22) * 1024 + ((registers->ebx >> 12) & 0x3ff)));
 //                 #else
-//                 load_pd_by_physaddr(tasks[current_task_index].cr3);
+//                 load_pd_by_physaddr(__CURRENT_TASK.cr3);
 //                 #endif
 
 //                 registers->eax = 1;
@@ -555,8 +688,8 @@ void handle_syscall(interrupt_registers_t* registers)
 //         LOG(ERROR, "Undefined system call (0x%llx)", registers->eax);
 //     // #define DEBUG_SYSCALLS
 //     #ifndef DEBUG_SYSCALLS
-//         tasks[current_task_index].is_dead = true;
-//         tasks[current_task_index].return_value = 0x80000000;
+//         __CURRENT_TASK.is_dead = true;
+//         __CURRENT_TASK.return_value = 0x80000000;
 //         switch_task();
 //     #else
 //         abort();
