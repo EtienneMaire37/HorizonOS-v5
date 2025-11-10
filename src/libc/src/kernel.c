@@ -111,18 +111,6 @@ int close(int fildes)
     return -1;
 }
 
-void* malloc(size_t bytes)
-{
-    abort();
-    errno = ENOMEM;
-    return NULL;
-}
-
-void free(void* ptr)
-{
-    abort();
-}
-
 int execve(const char* path, char* const argv[], char* const envp[])
 {
     abort();

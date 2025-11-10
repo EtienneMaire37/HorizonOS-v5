@@ -1,4 +1,4 @@
-atomic_flag malloc_spinlock_state = ATOMIC_FLAG_INIT;
+atomic_flag liballoc_spinlock_state = ATOMIC_FLAG_INIT;
 
 #define MALLOC_BITMAP_SIZE      0x100000
 #define MALLOC_BITMAP_SIZE_4    0x40000
@@ -65,13 +65,13 @@ void malloc_bitmap_set_page(uint64_t page, bool state)
 
 int liballoc_lock()
 {
-	acquire_spinlock(&malloc_spinlock_state);
+	acquire_spinlock(&liballoc_spinlock_state);
 	return 0;
 }
 
 int liballoc_unlock()
 {
-	release_spinlock(&malloc_spinlock_state);
+	release_spinlock(&liballoc_spinlock_state);
 	return 0;
 }
 

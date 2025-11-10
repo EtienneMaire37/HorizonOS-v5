@@ -144,6 +144,59 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
     }
 
+    case SYSCALL_READ:      // * read | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_read, $rbx = errno
+    {
+        int fd = (int)registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = (uint64_t)-1;
+            registers->rbx = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = (uint64_t)-1;
+            registers->rbx = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] > 2)
+        {
+            file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
+            ssize_t bytes_read;
+            registers->rbx = vfs_read(entry, (void*)registers->rcx, registers->rdx, &bytes_read);
+            registers->rax = (uint32_t)bytes_read;
+        } 
+        else
+        {
+            if (registers->rbx == STDIN_FILENO)
+            {
+                registers->rbx = 0;
+                if (registers->rdx == 0)
+                {
+                    registers->rax = 0;
+                    break;
+                }
+                if (no_buffered_characters(__CURRENT_TASK.input_buffer))
+                {
+                    __CURRENT_TASK.reading_stdin = true;
+                    switch_task();
+                }
+                registers->rax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->r12);
+                for (uint32_t i = 0; i < registers->rax; i++)
+                {
+                    // *** Only ASCII for now ***
+                    ((char*)registers->rcx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&__CURRENT_TASK.input_buffer));
+                }
+            }
+            else
+            {
+                registers->rax = (uint64_t)-1;
+                registers->rbx = EBADF;
+            }
+        }
+        break;
+    }
+
     case SYSCALL_BRK:   // * brk | addr = $rbx, break_address = $rcx | $rax = errno, $rbx = break_address
     {
         uint64_t addr = registers->rdx;
@@ -305,59 +358,6 @@ void handle_syscall(interrupt_registers_t* registers)
 //         vfs_remove_global_file(__CURRENT_TASK.file_table[fd]);
 //         __CURRENT_TASK.file_table[fd] = invalid_fd;
 //         break;
-
-//     case SYSCALL_READ:      // * read | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_read, $ebx = errno
-//     {
-//         int fd = *(int*)&registers->ebx;
-//         if (fd < 0 || fd >= OPEN_MAX)
-//         {
-//             registers->eax = 0xffffffff;
-//             registers->ebx = EBADF;
-//             break;
-//         }
-//         if (__CURRENT_TASK.file_table[fd] == invalid_fd)
-//         {
-//             registers->eax = 0xffffffff;
-//             registers->ebx = EBADF;
-//             break;
-//         }
-//         if (__CURRENT_TASK.file_table[fd] > 2)
-//         {
-//             file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
-//             ssize_t bytes_read;
-//             registers->ebx = vfs_read(entry, (void*)registers->ecx, registers->edx, &bytes_read);
-//             registers->eax = *(uint32_t*)&bytes_read;
-//         } 
-//         else
-//         {
-//             if (registers->ebx == STDIN_FILENO)
-//             {
-//                 registers->ebx = 0;
-//                 if (registers->edx == 0)
-//                 {
-//                     registers->eax = 0;
-//                     break;
-//                 }
-//                 if (no_buffered_characters(__CURRENT_TASK.input_buffer))
-//                 {
-//                     __CURRENT_TASK.reading_stdin = true;
-//                     switch_task();
-//                 }
-//                 registers->eax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->edx);
-//                 for (uint32_t i = 0; i < registers->eax; i++)
-//                 {
-//                     // *** Only ASCII for now ***
-//                     ((char*)registers->ecx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&__CURRENT_TASK.input_buffer));
-//                 }
-//             }
-//             else
-//             {
-//                 registers->eax = 0xffffffff;   // -1
-//                 registers->ebx = EBADF;
-//             }
-//         }
-//         break;
-//     }
 //     case SYSCALL_WRITE:     // * write | fildes = $ebx, buf = $ecx, nbyte = $edx | $eax = bytes_written, $ebx = errno
 //     {
 //         int fd = *(int*)&registers->ebx;

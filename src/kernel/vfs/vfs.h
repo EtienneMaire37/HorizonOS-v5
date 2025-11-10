@@ -146,3 +146,5 @@ int vfs_root_stat(struct stat* st);
 int vfs_stat(const char* path, struct stat* st);
 int vfs_access(const char* path, mode_t mode);
 struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp);
+
+int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read);

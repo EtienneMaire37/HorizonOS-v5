@@ -71,9 +71,9 @@ FILE* FILE_create()
 #include "time.c"
 #include "dirent.c"
 
-#include "liballoc.h"
+#include "../../liballoc/liballoc.h"
 #include "liballoc_hooks.c"
-#include "liballoc.c"
+#include "../../liballoc/liballoc.c"
 
 #include "kernel_glue.c"
 #include "horizonos.c"
