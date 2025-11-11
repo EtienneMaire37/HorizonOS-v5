@@ -7,7 +7,7 @@ void handle_apic_irq(interrupt_registers_t* registers)
     bool ts = false;
     switch (registers->interrupt_number)
     {
-    case 0x80:  // * APIC Timer
+    case APIC_TIMER_INT:
     {
         uint64_t increment = precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
         global_timer += GLOBAL_TIMER_INCREMENT;
@@ -39,6 +39,14 @@ void handle_apic_irq(interrupt_registers_t* registers)
         }
         break;
     }
+
+    case APIC_PS2_1_INT:
+        LOG(DEBUG, "PS/2 IRQ 1");
+        break;
+
+    case APIC_PS2_2_INT:
+        LOG(DEBUG, "PS/2 IRQ 12");
+        break;
 
     default:    // * Spurious interrupt
         return;

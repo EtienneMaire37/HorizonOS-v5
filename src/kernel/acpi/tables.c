@@ -17,7 +17,7 @@ bool acpi_table_valid(physical_address_t table_address)
 
 void map_table_in_current_vas(uint64_t address, uint8_t privilege, uint8_t read_write)
 {
-    LOG(DEBUG, "Mapping table at address 0x%llx in memory", address);
+    LOG(DEBUG, "Mapping table at address %#llx in memory", address);
 
     uint64_t* current_cr3 = (uint64_t*)get_cr3();
 
@@ -117,10 +117,10 @@ void acpi_find_tables()
                     LOG(INFO, "\t\tValid FADT");
                     fadt = (struct fadt_table*)address;
                     break;
-                // case 0x43495041:    // APIC : MADT
-                //     LOG(INFO, "\t\tValid MADT");
-                //     // madt_address = address;
-                //     break;
+                case 0x43495041:    // APIC : MADT
+                    LOG(INFO, "\t\tValid MADT");
+                    madt = (struct madt_table*)address;
+                    break;
                 // case 0x54445344:    // DSDT : DSDT
                 //     LOG(INFO, "\t\tValid DSDT");
                 //     // dsdt_address = address;
@@ -135,8 +135,6 @@ void acpi_find_tables()
             }
         }
     }
-
-    fadt_extract_data();
 }
 
 physical_address_t read_rsdt_ptr(uint32_t index)

@@ -465,7 +465,7 @@ void _start()
 
         uint32_t ticks_in_1_sec = 0xffffffff - lapic->current_count_register;
 
-        lapic->lvt_timer_register = 0x80 | 0x20000; // 0x80 | PERIODIC
+        lapic->lvt_timer_register = APIC_TIMER_INT | 0x20000; // APIC_TIMER_INT | PERIODIC
         lapic->divide_configuration_register = 3;
         lapic->initial_count_register = ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY;
 
@@ -569,6 +569,8 @@ void _start()
     LOG(INFO, "Parsing ACPI tables..");
     printf("Parsing ACPI tables...\n");
     acpi_find_tables();
+    fadt_extract_data();
+    madt_extract_data();
     printf("Done.\n");
     LOG(INFO, "Done parsing ACPI tables.");
 

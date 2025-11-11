@@ -30,12 +30,14 @@ struct sdt_header
 struct rsdt_table
 {
     struct sdt_header header;
+
     // uint32_t ptrs_to_sdt[(header.length - sizeof(header)) / 4];
 } __attribute__((packed));
 
 struct xsdt_table
 {
     struct sdt_header header;
+
     // uint64_t ptrs_to_sdt[(header.length - sizeof(header)) / 8];
 } __attribute__((packed));
 
@@ -51,6 +53,7 @@ struct generic_address_structure
 struct fadt_table
 {
     struct   sdt_header header;
+
     uint32_t firmware_control;
     uint32_t dsdt_address;
 
@@ -116,6 +119,40 @@ struct fadt_table
     struct generic_address_structure x_GPE0_block;
     struct generic_address_structure x_GPE1_block;
 } __attribute__((packed));
+
+struct madt_table
+{
+    struct sdt_header header;
+
+    uint32_t lapic_address;
+    uint32_t flags;
+} __attribute__((packed));
+
+struct madt_entry_header
+{
+    uint8_t entry_type;
+    uint8_t record_length;
+} __attribute__((packed));
+
+struct madt_ioapic_interrupt_source_override_entry
+{
+    struct madt_entry_header header;
+
+    uint8_t bus_source;
+    uint8_t irq_source;
+    uint32_t gsi;
+    uint16_t flags;
+} __attribute__((packed));
+
+struct madt_ioapic_entry
+{
+    struct madt_entry_header header;
+
+    uint8_t ioapic_id;
+    uint8_t reserved;
+    uint32_t ioapic_address;
+    uint32_t gsi_base;
+} __attribute__((packed));
   
 struct rsdt_table* rsdt;
 struct xsdt_table* xsdt;
@@ -125,6 +162,7 @@ physical_address_t rsdt_address;
 // physical_address_t fadt_address, madt_address, ssdt_address, dsdt_address;
 
 struct fadt_table* fadt;
+struct madt_table* madt;
 
 uint8_t preferred_power_management_profile;
 
