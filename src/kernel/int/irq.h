@@ -41,11 +41,11 @@ void handle_apic_irq(interrupt_registers_t* registers)
     }
 
     case APIC_PS2_1_INT:
-        LOG(DEBUG, "PS/2 IRQ 1");
+        handle_irq_1();
         break;
 
     case APIC_PS2_2_INT:
-        LOG(DEBUG, "PS/2 IRQ 12");
+        handle_irq_12();
         break;
 
     default:    // * Spurious interrupt

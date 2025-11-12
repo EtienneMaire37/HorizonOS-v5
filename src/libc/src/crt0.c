@@ -68,38 +68,12 @@ void _main()
 
     create_b64_decoding_table();
 
-    bool string = false;
-    for (int i = 0; i < __builtin_strlen(data->cmd_line); i++)
-    {
-        if (data->cmd_line[i] == ' ' && !string) data->cmd_line[i] = 0;
-        if (data->cmd_line[i] == '\"') 
-        {
-            string ^= true;
-            data->cmd_line[i] = 0;
-        }
-    }
-
+    char** argv = data->cmd_line;
     int argc = 0;
-    char** argv = NULL;
-    int bytes_left = __builtin_strlen(data->cmd_line) - 1;
-    char* arg = data->cmd_line;
-    if (*arg)
-        argc++;
-    while (arg = find_next_contiguous_string(arg, &bytes_left))
-        argc++;
-
-    int i = 0;
-    argv = malloc((1 + argc) * sizeof(char*));
     if (argv)
     {
-        bytes_left = sizeof(data->cmd_line) - 1;
-        arg = data->cmd_line;
-        if (*arg)
-            argv[i++] = arg;
-        while (arg = find_next_contiguous_string(arg, &bytes_left))
-            argv[i++] = arg;
-
-        argv[i] = 0;
+        while (argv[argc])
+            argc++;
     }
 
     // printf("argc : %d\n", argc);

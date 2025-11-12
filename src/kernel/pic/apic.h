@@ -100,7 +100,7 @@ typedef struct __attribute__((packed)) io_apic_registers
 #define APIC_MASK_ENABLED           (0ULL << 16)
 
 // * page 0xFEE00xxx
-volatile struct local_apic_registers* lapic = (volatile struct local_apic_registers*)0xfee00000;
+volatile local_apic_registers_t* lapic = (volatile local_apic_registers_t*)0xfee00000;
 
 #define APIC_TIMER_INT  0x80
 #define APIC_PS2_1_INT  0x81

@@ -140,6 +140,8 @@ void multitasking_start();
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 
+void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec);
+
 void task_stack_push(thread_t*, uint64_t);
 
 void cleanup_tasks();

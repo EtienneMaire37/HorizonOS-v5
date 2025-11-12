@@ -65,8 +65,6 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
     startup_data_struct_t data_cpy;
 
-    task_stack_push_string(&task, data->cmd_line);
-    data_cpy.cmd_line = (char*)task.rsp;
     task_stack_push_string(&task, data->pwd);
     data_cpy.pwd = (char*)task.rsp;
 
@@ -81,7 +79,6 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
     for (int i = 0; i <= num_environ; i++)
     {
-        // printf("address: %#llx\n", (uint64_t)&data_cpy.environ[i]);
         if (data->environ[i])
         {
             task_stack_push_string(&task, data->environ[i]);
@@ -91,11 +88,29 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
             task_write_at_address_8b(&task, (uint64_t)&data_cpy.environ[i], 0);
     }
 
+    int argc = 0;
+    while (data->cmd_line[argc])
+        argc++;
+
+    for (int i = 0; i <= argc; i++)
+        task_stack_push(&task, (uint64_t)data->cmd_line[argc - i]);
+
+    data_cpy.cmd_line = (char**)task.rsp;
+
+    for (int i = 0; i <= argc; i++)
+    {
+        if (data->cmd_line[i])
+        {
+            task_stack_push_string(&task, data->cmd_line[i]);
+            task_write_at_address_8b(&task, (uint64_t)&data_cpy.cmd_line[i], task.rsp);
+        }
+        else
+            task_write_at_address_8b(&task, (uint64_t)&data_cpy.cmd_line[i], 0);
+    }
+
     task_stack_push_data(&task, &data_cpy, sizeof(data_cpy));
 
     task_stack_push(&task, task.rsp);
-
-    // printf("struct address: %#llx\n", task.rsp);
 
     task_setup_stack(&task, header->entry, 
         ring == 0 ? KERNEL_CODE_SEGMENT : USER_CODE_SEGMENT, 

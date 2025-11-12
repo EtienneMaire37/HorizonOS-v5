@@ -1,6 +1,6 @@
 #pragma once
 
-startup_data_struct_t startup_data_init_from_command(char* cmd, char** envp, char* pwd)
+startup_data_struct_t startup_data_init_from_command(char** cmd, char** envp, char* pwd)
 {
     startup_data_struct_t data;
 

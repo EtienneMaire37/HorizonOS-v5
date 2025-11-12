@@ -73,8 +73,6 @@ static const uint8_t extended_numlock_map[256] =
     [0x71] = 0x71,   // Delete → Numpad .
 };
 
-keyboard_layout_t* current_keyboard_layout;  // TODO: Make it so we can have one layout per keyboard
-
 #define NUM_KB_LAYOUTS  2
 
 keyboard_layout_t us_qwerty = 
@@ -294,6 +292,8 @@ keyboard_layout_t* keyboard_layouts[NUM_KB_LAYOUTS] =
     &fr_azerty
 };
 
+keyboard_layout_t* current_keyboard_layout = &us_qwerty;  // TODO: Make it so we can have one layout per keyboard
+
 #define get_buffered_characters(buffer) ((size_t)imod(((int)(buffer).put_index - (buffer).get_index), (buffer).size))
 #define no_buffered_characters(buffer)  ((buffer).put_index == (buffer).get_index)
 
@@ -306,6 +306,7 @@ char utf32_to_bios_oem(utf32_char_t ch)
 }
 
 void utf32_buffer_init(utf32_buffer_t* buffer);
+void utf32_buffer_clear(utf32_buffer_t* buffer);
 void utf32_buffer_destroy(utf32_buffer_t* buffer);
 void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character);
 utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer);

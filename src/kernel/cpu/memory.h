@@ -16,3 +16,5 @@ static inline uint64_t get_cr3()
     asm volatile("mov rax, cr3" : "=a"(val));
     return val;
 }
+
+#define memory_barrier()    asm volatile("" ::: "memory")

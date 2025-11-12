@@ -242,14 +242,6 @@ const char* fb_type_string[] =
     "FB_BGRA"
 };
 
-void test_func()
-{
-    while (true)
-    {
-        printf("Hello from test func!!\n");
-    }
-}
-
 void _start()
 {
     disable_interrupts();
@@ -482,7 +474,6 @@ void _start()
     tty_set_color(FG_WHITE, BG_BLACK);
 
     enable_interrupts(); 
-    LOG(INFO, "Enabled interrupts");
 
     if (pat_enabled)
     {
@@ -570,7 +561,11 @@ void _start()
     printf("Parsing ACPI tables...\n");
     acpi_find_tables();
     fadt_extract_data();
-    madt_extract_data();
+
+    disable_interrupts();
+        madt_extract_data();
+    enable_interrupts(); 
+
     printf("Done.\n");
     LOG(INFO, "Done parsing ACPI tables.");
 
@@ -581,43 +576,46 @@ void _start()
 
     LOG(INFO, "Done scanning PCI buses.");
 
-    // {
-    //     LOG(INFO, "Detecting PS/2 devices");
-    //     printf("Detecting PS/2 devices\n");
+    if (ps2_controller_connected)
+    {
+        LOG(INFO, "Detecting PS/2 devices");
+        printf("Detecting PS/2 devices\n");
 
-    //     ps2_device_1_interrupt = ps2_device_2_interrupt = false;
+        ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
-    //     ps2_flush_buffer();
+        ps2_flush_buffer();
 
-    //     ksleep(10 * PRECISE_MILLISECONDS);
+        ksleep(10 * PRECISE_MILLISECONDS);
 
-    //     ps2_controller_init();
-    //     ps2_detect_keyboards();
+        ps2_controller_init();
+        ps2_detect_keyboards();
 
-    //     ps2_init_keyboards();
+        ps2_init_keyboards();
 
-    //     ksleep(10 * PRECISE_MILLISECONDS);
+        ksleep(10 * PRECISE_MILLISECONDS);
         
-    //     ps2_enable_interrupts();
+        ps2_enable_interrupts();
         
-    //     if (ps2_device_1_connected)
-    //     {
-    //         LOG(INFO, "PS/2 device 1 connected");
-    //         printf("PS/2 device 1 connected\n");
-    //     }
-    //     if (ps2_device_2_connected)
-    //     {
-    //         LOG(INFO, "PS/2 device 2 connected");
-    //         printf("PS/2 device 2 connected\n");
-    //     }
-    //     if (!(ps2_device_1_connected || ps2_device_2_connected))
-    //     {
-    //         LOG(INFO, "No PS/2 devices detected");
-    //         printf("No PS/2 devices detected\n");
-    //     }
+        if (ps2_device_1_connected)
+        {
+            LOG(INFO, "PS/2 device 1 connected");
+            printf("PS/2 device 1 connected\n");
+        }
+        if (ps2_device_2_connected)
+        {
+            LOG(INFO, "PS/2 device 2 connected");
+            printf("PS/2 device 2 connected\n");
+        }
+        if (!(ps2_device_1_connected || ps2_device_2_connected))
+        {
+            LOG(INFO, "No PS/2 devices detected");
+            printf("No PS/2 devices detected\n");
+        }
 
-    //     putchar('\n');
-    // }
+        ps2_flush_buffer();
+
+        putchar('\n');
+    }
 
     // TODO: Find out what efi_ptr points to and if it can be used to use runtime uefi functions
     // * (it could allow for an easy shutdown mechanism)
@@ -636,7 +634,7 @@ void _start()
     //     while (true);
     // }
 
-    startup_data_struct_t data = startup_data_init_from_command("/initrd/bin/init.elf", (char*[]){"PATH=/initrd/bin/", NULL}, "/");
+    startup_data_struct_t data = startup_data_init_from_command((char*[]){"/initrd/bin/init.elf", NULL}, (char*[]){"PATH=/initrd/bin/", NULL}, "/");
     if (!multitasking_add_task_from_vfs("init", "/initrd/bin/init.elf", 0, true, &data))
     {
         LOG(CRITICAL, "init task couldn't start");

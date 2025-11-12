@@ -13,8 +13,10 @@ void interrupt_handler(interrupt_registers_t* registers)
 {
     if (registers->interrupt_number < 32)       // * Fault
     {
-        LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = 0x%llx ; cr2 = 0x%llx ; cr3 = 0x%llx ; rip = 0x%llx", registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
-        registers->error_code, registers->cr2, registers->cr3, registers->rip);
+        LOG(WARNING, multitasking_enabled ? "[task \"%s\" (pid %u)]: " : "", __CURRENT_TASK.name, __CURRENT_TASK.pid);
+        CONTINUE_LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = 0x%llx ; cr2 = 0x%llx ; cr3 = 0x%llx ; rip = 0x%llx", 
+            registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
+            registers->error_code, registers->cr2, registers->cr3, registers->rip);
         
         if (__CURRENT_TASK.system_task || task_count == 1 || !multitasking_enabled || registers->interrupt_number == 8 || registers->interrupt_number == 18)
         // System task or last task or multitasking not enabled or Double Fault or Machine Check
@@ -24,8 +26,9 @@ void interrupt_handler(interrupt_registers_t* registers)
         }
         else
         {
-            if (registers->interrupt_number == 14)  // * Page fault
-                printf("Segmentation fault\n");
+            // !! Should send a signal
+            // if (registers->interrupt_number == 14)  // * Page fault
+            //     printf("Segmentation fault\n");
             __CURRENT_TASK.is_dead = true;
             __CURRENT_TASK.return_value = 0x80000000;
             switch_task();
@@ -36,18 +39,20 @@ void interrupt_handler(interrupt_registers_t* registers)
 
     if (registers->interrupt_number < 32 + 16)  // * IRQ
     {
-        uint8_t irq_number = registers->interrupt_number - 32;
+        // uint8_t irq_number = registers->interrupt_number - 32;
 
-        if (irq_number == 7 && !(pic_get_isr() >> 7))
-            return_from_isr();
-        if (irq_number == 15 && !(pic_get_isr() >> 15))
-        {
-            outb(PIC1_CMD, PIC_EOI);
-	        io_wait();
-            return_from_isr();
-        }
+        // if (irq_number == 7 && !(pic_get_isr() >> 7))
+        //     return_from_isr();
+        // if (irq_number == 15 && !(pic_get_isr() >> 15))
+        // {
+        //     outb(PIC1_CMD, PIC_EOI);
+	    //     io_wait();
+        //     return_from_isr();
+        // }
 
-        pic_send_eoi(irq_number);
+        // pic_send_eoi(irq_number);
+
+        // * Already disabled the PIC so only spurious interrupts can happen
 
         return_from_isr();
     }

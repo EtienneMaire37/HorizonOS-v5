@@ -5,6 +5,7 @@
 #include "../paging/paging.h"
 #include "../cpu/memory.h"
 #include "../ps2/ps2.h"
+#include "../cpu/msr.h"
 
 void apic_init()
 {
@@ -12,6 +13,20 @@ void apic_init()
     // uint64_t apic_base_address = apic_base_msr & 0xffffff000;
     // lapic = (volatile local_apic_registers_t*)apic_base_address;
     // * Will always be mapped at the same address anyways
+
+    uint64_t apic_base_msr = rdmsr(IA32_APIC_BASE_MSR);
+    // if (apic_base_msr & (1ULL << 11))   // Enabled
+    // {
+    //     apic_base_msr &= ~(1ULL << 11);
+    //     wrmsr(IA32_APIC_BASE_MSR, apic_base_msr); // Disable
+    // }
+
+    // * Disable x2APIC and enable
+    apic_base_msr &= ~(1ULL << 10);
+    wrmsr(IA32_APIC_BASE_MSR, apic_base_msr);
+
+    // apic_base_msr |= (1ULL << 11);
+    // wrmsr(IA32_APIC_BASE_MSR, apic_base_msr);
 }
 
 uint8_t apic_get_cpu_id()
@@ -53,13 +68,17 @@ void lapic_set_tpr(uint8_t p)
 uint32_t ioapic_read_register(volatile io_apic_registers_t* ioapic, uint8_t reg)
 {
     ioapic->IOREGSEL = reg;
+    memory_barrier();
     return ioapic->IOWIN;
 }
 
 void ioapic_write_register(volatile io_apic_registers_t* ioapic, uint8_t reg, uint32_t val)
 {
     ioapic->IOREGSEL = reg;
+    memory_barrier();
     ioapic->IOWIN = val;
+    memory_barrier();
+    (void)ioapic->IOWIN;
 }
 
 uint8_t ioapic_get_max_redirection_entry(volatile io_apic_registers_t* ioapic)
@@ -67,7 +86,7 @@ uint8_t ioapic_get_max_redirection_entry(volatile io_apic_registers_t* ioapic)
     return (ioapic_read_register(ioapic, IOAPICVER) >> 16) & 0xff;
 }
 
-uint64_t ioapic_read_redirection_entry(volatile io_apic_registers_t* ioapic, uint8_t entry)
+uint64_t ioapic_read_redirection_entry(volatile io_apic_registers_t* ioapic, uint32_t entry)
 {
     if (entry > ioapic_get_max_redirection_entry(ioapic)) 
     {
@@ -81,7 +100,7 @@ uint64_t ioapic_read_redirection_entry(volatile io_apic_registers_t* ioapic, uin
     return ((uint64_t)high << 32) | low;
 }
 
-void ioapic_write_redirection_entry(volatile io_apic_registers_t* ioapic, uint8_t entry, uint64_t value)
+void ioapic_write_redirection_entry(volatile io_apic_registers_t* ioapic, uint32_t entry, uint64_t value)
 {
     if (entry > ioapic_get_max_redirection_entry(ioapic)) 
     {
@@ -111,14 +130,14 @@ struct madt_entry_header* find_entry_in_madt(bool (*test_func)(struct madt_entry
     uint32_t offset = 0x2c;
     while (offset < madt->header.length)
     {
-        if (header->record_length + offset >= madt->header.length) break;
+        if (header->record_length + offset > madt->header.length) break;
 
         if (test_func(header))
             return header;
 
-        header = (struct madt_entry_header*)((uint64_t)header + header->record_length);
         if (offset > 0xffffffff - header->record_length) break;
         offset += header->record_length;
+        header = (struct madt_entry_header*)((uint64_t)header + header->record_length);
     }
 
     return NULL;
@@ -206,29 +225,33 @@ void madt_extract_data()
 
         if (ps2_1_ioapic_entry)
         {
+            LOG(DEBUG, "Found I/O APIC entry able to handle GSI %u", ps2_1_gsi);
             volatile io_apic_registers_t* ps2_1_ioapic = (volatile io_apic_registers_t*)(uint64_t)ps2_1_ioapic_entry->ioapic_address;
             uint64_t redirection_entry = ioapic_read_redirection_entry(ps2_1_ioapic, ps2_1_gsi - ps2_1_ioapic_entry->gsi_base);
             ioapic_write_redirection_entry(ps2_1_ioapic, ps2_1_gsi - ps2_1_ioapic_entry->gsi_base, 
-                (redirection_entry & ((1ULL << 12) | (1ULL << 14) | 0x00FFFFFFFFFF0000)) |
+                (redirection_entry & (0x00FFFFFFFFFE0000)) |
                 APIC_PS2_1_INT |
                 APIC_DELIVERY_FIXED |
                 APIC_DESTINATION_PHYSICAL |
                 APIC_POLARITY_ACTIVE_HIGH |
+                APIC_TRIGGER_EDGE |
                 APIC_MASK_ENABLED |
-                ((uint64_t)bootboot.bspid << 56));
+                ((uint64_t)apic_get_cpu_id() << 56));
         }
         if (ps2_12_ioapic_entry)
         {
+            LOG(DEBUG, "Found I/O APIC entry able to handle GSI %u", ps2_12_gsi);
             volatile io_apic_registers_t* ps2_12_ioapic = (volatile io_apic_registers_t*)(uint64_t)ps2_12_ioapic_entry->ioapic_address;
             uint64_t redirection_entry = ioapic_read_redirection_entry(ps2_12_ioapic, ps2_12_gsi - ps2_12_ioapic_entry->gsi_base);
             ioapic_write_redirection_entry(ps2_12_ioapic, ps2_12_gsi - ps2_12_ioapic_entry->gsi_base, 
-                (redirection_entry & ((1ULL << 12) | (1ULL << 14) | 0x00FFFFFFFFFF0000)) |
+                (redirection_entry & (0x00FFFFFFFFFE0000)) |
                 APIC_PS2_2_INT |
                 APIC_DELIVERY_FIXED |
                 APIC_DESTINATION_PHYSICAL |
                 APIC_POLARITY_ACTIVE_HIGH |
+                APIC_TRIGGER_EDGE |
                 APIC_MASK_ENABLED |
-                ((uint64_t)bootboot.bspid << 56));
+                ((uint64_t)apic_get_cpu_id() << 56));
         }
     }
 }
