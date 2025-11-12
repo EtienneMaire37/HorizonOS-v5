@@ -3,9 +3,6 @@ section .text
 
 default rel
 
-global kernel_data
-kernel_data: dq 0
-
 extern _main
 global _start
 _start:
@@ -37,3 +34,8 @@ call_main_exit:
     call exit
 
     ret
+
+section .data
+
+global kernel_data
+kernel_data: dq 0

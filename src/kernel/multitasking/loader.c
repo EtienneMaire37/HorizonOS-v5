@@ -120,7 +120,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
     task.system_task = system;
 
-    LOG(DEBUG, "Entry point : 0x%llx", header->entry);
+    LOG(DEBUG, "Entry point : %#llx", header->entry);
 
     const int n_ph = header->phnum;
 
@@ -136,8 +136,8 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
 
         LOG(DEBUG, "Program header %u : ", i);
         LOG(DEBUG, "├── Type : \"%s\"", ph->type >= sizeof(elf_program_header_type_string) / sizeof(char*) ? "UNKNOWN" : elf_program_header_type_string[ph->type]);
-        LOG(DEBUG, "├── Virtual address : 0x%llx", ph->p_vaddr);
-        LOG(DEBUG, "├── File offset : 0x%llx", ph->p_offset);
+        LOG(DEBUG, "├── Virtual address : %#llx", ph->p_vaddr);
+        LOG(DEBUG, "├── File offset : %#llx", ph->p_offset);
         LOG(DEBUG, "├── Memory size : %u bytes", ph->p_memsz);
         LOG(DEBUG, "└── File size : %u bytes", ph->p_filesz);
 
@@ -145,11 +145,11 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
         virtual_address_t end_address = ph->p_vaddr + ph->p_memsz;
         uint64_t num_pages = (end_address - start_address + 0xfff) >> 12;
 
-        // LOG(DEBUG, "0x%llx : %llu pages", start_address, num_pages);
+        // LOG(DEBUG, "%#llx : %llu pages", start_address, num_pages);
 
         allocate_range((uint64_t*)task.cr3, 
                     start_address, num_pages, 
-                    ring == 0 ? PG_SUPERVISOR : PG_USER, 
+                    ring == 0 ? PG_SUPERVISOR : PG_USER,
                     ph->flags & ELF_FLAG_WRITABLE ? PG_READ_WRITE : PG_READ_ONLY, 
                     CACHE_WB);
 

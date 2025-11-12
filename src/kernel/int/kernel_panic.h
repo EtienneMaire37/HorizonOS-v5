@@ -122,13 +122,17 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_YELLOW, BG_BLACK);
     puts(error_message);
     tty_set_color(FG_WHITE, BG_BLACK);
-    printf("Error code:  0x%llx\n\n", registers->error_code);
+    printf("Error code:  %#llx\n\n", registers->error_code);
 
-    if (registers->interrupt_number == 14)
+    if (registers->interrupt_number == 14)  // * Page fault
     {
+        uint16_t pml4e =    (registers->cr2 >> 39) & 0x1ff;
+        uint16_t pdpte =    (registers->cr2 >> 30) & 0x1ff;
+        uint16_t pde =      (registers->cr2 >> 21) & 0x1ff;
+        uint16_t pte =      ((registers->cr2 >> 12) & 0x1ff);
         if (registers->cr2)
         {
-            printf("cr2:  0x%llx (pml4e %llu pdpte %llu pde %llu pte %llu offset 0x%llx)\n", registers->cr2, (registers->cr2 >> 39) & 0x1ff, (registers->cr2 >> 30) & 0x1ff, (registers->cr2 >> 21) & 0x1ff, (registers->cr2 >> 12) & 0x1ff, registers->cr2 & 0xfff);
+            printf("cr2:  %#llx (pml4e %llu pdpte %llu pde %llu pte %llu offset %#llx)\n", registers->cr2, pml4e, pdpte, pde, pte, registers->cr2 & 0xfff);
         }
         else
         {
@@ -137,16 +141,38 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
             printf("NULL\n");
             tty_set_color(FG_WHITE, BG_BLACK);
         }
-        printf("cr3: 0x%llx\n\n", registers->cr3);
+        printf("cr3: %#llx\n\n", registers->cr3);
 
-        // uint32_t pde = read_physical_address_4b(registers->cr3 + 4 * (registers->cr2 >> 22));
-        
-        // LOG(INFO, "Page directory entry : 0x%llx", pde);
+        uint64_t* pml4 = (uint64_t*)registers->cr3;
 
-        // if (pde & 1)
-        // {
-        //     LOG(INFO, "Page table entry : 0x%llx", read_physical_address_4b((pde & 0xfffff000) + 4 * ((registers->cr2 >> 12) & 0x3ff)));
-        // }
+        uint64_t* pml4_entry = &pml4[pml4e];
+        printf("pml4 entry: %#.16llx\n", *pml4_entry);
+        LOG(INFO, "pml4 entry: %#.16llx", *pml4_entry);
+
+        if (is_pdpt_entry_present(pml4_entry))
+        {
+            uint64_t* pdpt = get_pdpt_entry_address(pml4_entry);
+            uint64_t* pdpt_entry = &pdpt[pdpte];
+            printf("pdpt entry: %#.16llx\n", *pdpt_entry);
+            LOG(INFO, "pdpt entry: %#.16llx", *pdpt_entry);
+
+            if (is_pdpt_entry_present(pdpt_entry))
+            {
+                uint64_t* pd = get_pdpt_entry_address(pdpt_entry);
+                uint64_t* pd_entry = &pd[pde];
+                printf("pd entry: %#.16llx\n", *pd_entry);
+                LOG(INFO, "pd entry: %#.16llx", *pd_entry);
+
+                if (is_pdpt_entry_present(pd_entry))
+                {
+                    uint64_t* pt = get_pdpt_entry_address(pd_entry);
+                    uint64_t* pt_entry = &pt[pte];
+                    printf("pt entry: %#.16llx\n", *pt_entry);
+                    LOG(INFO, "pt entry: %#.16llx", *pt_entry);
+                }
+            }
+        }
+        putchar('\n');
     }
 
     LOG(INFO, "RSP=%#.16llx RBP=%#.16llx RAX=%#.16llx RBX=%#.16llx RCX=%#.16llx RDX=%#.16llx",
@@ -182,7 +208,7 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     putchar(' ');
 
-    LOG(INFO, "rip : 0x%llx ", registers->rip);
+    LOG(INFO, "rip : %#llx ", registers->rip);
     print_kernel_symbol_name(registers->rip, (uintptr_t)rbp);
     putchar('\n');
 
@@ -211,8 +237,8 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
         }
         else
         {
-            printf("rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
-            LOG(INFO, "rip : 0x%llx | rbp : 0x%llx ", rbp->rip, rbp);
+            printf("rip : %#llx | rbp : %#llx ", rbp->rip, rbp);
+            LOG(INFO, "rip : %#llx | rbp : %#llx ", rbp->rip, rbp);
             print_kernel_symbol_name(rbp->rip - 1, (uintptr_t)rbp);
             putchar('\n');
             rbp = (call_frame_t*)rbp->rbp;

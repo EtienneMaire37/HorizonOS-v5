@@ -14,7 +14,7 @@ void interrupt_handler(interrupt_registers_t* registers)
     if (registers->interrupt_number < 32)       // * Fault
     {
         LOG(WARNING, multitasking_enabled ? "[task \"%s\" (pid %u)]: " : "", __CURRENT_TASK.name, __CURRENT_TASK.pid);
-        CONTINUE_LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = 0x%llx ; cr2 = 0x%llx ; cr3 = 0x%llx ; rip = 0x%llx", 
+        CONTINUE_LOG(WARNING, "Fault : Exception number : %llu ; Error : %s ; Error code = %#llx ; cr2 = %#llx ; cr3 = %#llx ; rip = %#llx", 
             registers->interrupt_number, get_error_message(registers->interrupt_number, registers->error_code), 
             registers->error_code, registers->cr2, registers->cr3, registers->rip);
         

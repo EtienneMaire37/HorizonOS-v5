@@ -100,7 +100,7 @@ void acpi_find_tables()
     for (uint32_t i = 0; i < sdt_count; i++)
     {
         physical_address_t address = read_rsdt_ptr(i);
-        LOG(INFO, "\tFound table at address 0x%llx", address);
+        LOG(INFO, "\tFound table at address %#llx", address);
         map_table_in_current_vas(address, PG_SUPERVISOR, PG_READ_ONLY);
 
         {

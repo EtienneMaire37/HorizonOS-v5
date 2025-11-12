@@ -264,9 +264,9 @@ void _start()
         kernel_start_phys = (physical_address_t)&kernel_start;
         kernel_end_phys = (physical_address_t)&kernel_end;
 
-        LOG(INFO, "Kernel booted successfully with BOOTBOOT (0x%llx-0x%llx)", kernel_start_phys, kernel_end_phys);
+        LOG(INFO, "Kernel booted successfully with BOOTBOOT (%#llx-%#llx)", kernel_start_phys, kernel_end_phys);
         LOG(INFO, "Kernel is %llu bytes long", kernel_end_phys - kernel_start_phys);
-        LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at 0x%llx", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
+        LOG(INFO, "Framebuffer : (%u, %u) (scanline %u bytes) at %#llx", bootboot.fb_width, bootboot.fb_height, bootboot.fb_scanline, bootboot.fb_ptr);
         LOG(INFO, "Type: %s", fb_type_string[bootboot.fb_type]);
 
         framebuffer.width = bootboot.fb_width;
@@ -508,9 +508,9 @@ void _start()
     // *    0-16G       RAM identity mapped   (0x0000000400000000)
 
     // * bootboot + environment + code segment + stack
-        printf("Copying mapping of range 0x%llx-0x%llx from bootboot\n", 0xFFFFFFFFFFE00000, 0ULL);
+        printf("Copying mapping of range %#llx-%#llx from bootboot\n", 0xFFFFFFFFFFE00000, 0ULL);
 
-        LOG(DEBUG, "Copying mapping of range 0x%llx-0x%llx from bootboot", 0xFFFFFFFFFFE00000, 0ULL);
+        LOG(DEBUG, "Copying mapping of range %#llx-%#llx from bootboot", 0xFFFFFFFFFFE00000, 0ULL);
         copy_mapping(bootboot_cr3, global_cr3, 0xFFFFFFFFFFE00000, (uint64_t)(-0xFFFFFFFFFFE00000) >> 12);
 
         for (MMapEnt* mmap_ent = &bootboot.mmap; (uintptr_t)mmap_ent < (uintptr_t)&bootboot + (uintptr_t)bootboot.size; mmap_ent++)
@@ -526,27 +526,27 @@ void _start()
             if (ptr + len >= 1 * TB)
                 len = 1 * TB - ptr;
                 
-            LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", ptr, ptr + len);
-            printf("Identity mapping range 0x%llx-0x%llx\n", ptr, ptr + len);
+            LOG(DEBUG, "Identity mapping range %#llx-%#llx", ptr, ptr + len);
+            printf("Identity mapping range %#llx-%#llx\n", ptr, ptr + len);
             remap_range(global_cr3, ptr, ptr, len >> 12, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
         }
 
     // * LAPIC registers
-        printf("Identity mapping range 0x%llx-0x%llx\n", lapic, (uint64_t)lapic + 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", lapic, (uint64_t)lapic + 0x1000);
+        printf("Identity mapping range %#llx-%#llx\n", lapic, (uint64_t)lapic + 0x1000);
+        LOG(DEBUG, "Identity mapping range %#llx-%#llx", lapic, (uint64_t)lapic + 0x1000);
         remap_range(global_cr3, (uint64_t)lapic, (uint64_t)lapic, 1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WT);
 
     // * Framebuffer
-        printf("Identity mapping range 0x%llx-0x%llx\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        printf("Identity mapping range %#llx-%#llx\n", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range %#llx-%#llx", framebuffer.address, ((framebuffer.address + framebuffer.stride * framebuffer.height + 0xfff) / 0x1000) * 0x1000);
         
     // ? Write-combining cache
         remap_range(global_cr3, (uint64_t)framebuffer.address, (uint64_t)framebuffer.address, (framebuffer.stride * framebuffer.height + 0xfff) / 0x1000, 
             PG_SUPERVISOR, PG_READ_WRITE, CACHE_WC);
 
     // * initrd
-        printf("Identity mapping range 0x%llx-0x%llx\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
-        LOG(DEBUG, "Identity mapping range 0x%llx-0x%llx", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        printf("Identity mapping range %#llx-%#llx\n", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
+        LOG(DEBUG, "Identity mapping range %#llx-%#llx", bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_ptr & 0xfffffffffffff000) + ((bootboot.initrd_size + 0x1fff) / 0x1000) * 0x1000);
         remap_range(global_cr3, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (uint64_t)bootboot.initrd_ptr & 0xfffffffffffff000, (bootboot.initrd_size + 0x1fff) / 0x1000, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
     }
 

@@ -56,7 +56,7 @@ static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t pri
     uint64_t masked_address = (address & 0xfffffffffffff000) & get_physical_address_mask();
     if (masked_address != address)
     {
-        LOG(CRITICAL, "Kernel tried to map physical address 0x%llx but it doesn't fit in %u bits", address, physical_address_width);
+        LOG(CRITICAL, "Kernel tried to map physical address %#llx but it doesn't fit in %u bits", address, physical_address_width);
         abort();
     }
 

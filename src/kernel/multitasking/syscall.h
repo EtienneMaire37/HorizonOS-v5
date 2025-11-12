@@ -7,8 +7,8 @@
 
 void handle_syscall(interrupt_registers_t* registers)
 {
-    switch (registers->rax) // !! some of the path resolution is handled in libc
-    {
+    switch (registers->rax)     // !! some of the path resolution is handled in libc
+    {                           // TODO: Implement a hierarchichal VFS
     case SYSCALL_EXIT:     // * exit | exit_code = $rbx |
         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, (int)registers->rbx);
         lock_task_queue();
@@ -291,7 +291,7 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
 
     default:
-        LOG(ERROR, "Undefined system call (0x%llx)", registers->rax);
+        LOG(ERROR, "Undefined system call (%#llx)", registers->rax);
         
         __CURRENT_TASK.is_dead = true;
         __CURRENT_TASK.return_value = 0x80000000;
@@ -635,7 +635,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
 //     case SYSCALL_BRK_ALLOC: // * brk_alloc | address = $rbx | $rax = num_pages_allocated
 //         {
-//             // LOG(DEBUG, "alloc 0x%llx", registers->rbx);
+//             // LOG(DEBUG, "alloc %#llx", registers->rbx);
 
 //             if (registers->rbx & 0xfff) // ! address not page aligned
 //             {
@@ -688,7 +688,7 @@ void handle_syscall(interrupt_registers_t* registers)
                 
 //                 registers->rax = 1;
 
-//                 // LOG(DEBUG, "Allocated page at address : 0x%llx", registers->rbx);
+//                 // LOG(DEBUG, "Allocated page at address : %#llx", registers->rbx);
 //             }
 //             else
 //                 registers->rax = 0;
@@ -697,7 +697,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
 //     case SYSCALL_BRK_FREE: // * brk_free | address = $rbx | $rax = num_pages_freed
 //         {
-//             // LOG(DEBUG, "free 0x%llx", registers->rbx);
+//             // LOG(DEBUG, "free %#llx", registers->rbx);
 
 //             if (registers->rbx & 0xfff)
 //             {
@@ -735,7 +735,7 @@ void handle_syscall(interrupt_registers_t* registers)
 //         break;
 
 //     default:
-//         LOG(ERROR, "Undefined system call (0x%llx)", registers->rax);
+//         LOG(ERROR, "Undefined system call (%#llx)", registers->rax);
 //     // #define DEBUG_SYSCALLS
 //     #ifndef DEBUG_SYSCALLS
 //         __CURRENT_TASK.is_dead = true;

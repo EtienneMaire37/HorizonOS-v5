@@ -141,7 +141,7 @@ void task_stack_push(thread_t* task, uint64_t value)
 
     // * not needed
     // if (!is_address_canonical(task->rsp))
-    //     LOG(ERROR, "rsp: 0x%llx is not canonical!!", task->rsp);
+    //     LOG(ERROR, "rsp: %#llx is not canonical!!", task->rsp);
 
     task_write_at_address_8b(task, (physical_address_t)task->rsp, value);
 }
@@ -341,8 +341,8 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 //     //         physical_init_page_table(new_pt_address);
 //     //         write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
 //     //     }
-//     //     // LOG(TRACE, "%llu : old_pt_address : 0x%llx", i, old_pt_address);
-//     //     // LOG(TRACE, "%llu : new_pt_address : 0x%llx", i, new_pt_address);
+//     //     // LOG(TRACE, "%llu : old_pt_address : %#llx", i, old_pt_address);
+//     //     // LOG(TRACE, "%llu : new_pt_address : %#llx", i, new_pt_address);
 //     //     for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
 //     //     {
 //     //         uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
@@ -356,8 +356,8 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
 //     //                 new_page_address = pfa_allocate_physical_page();
 //     //                 write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
 //     //             }
-//     //             // LOG(TRACE, "%llu.%llu : old_page_address : 0x%llx", i, j, old_page_address);
-//     //             // LOG(TRACE, "%llu.%llu : new_page_address : 0x%llx", i, j, new_page_address);
+//     //             // LOG(TRACE, "%llu.%llu : old_page_address : %#llx", i, j, old_page_address);
+//     //             // LOG(TRACE, "%llu.%llu : new_page_address : %#llx", i, j, new_page_address);
 //     //             copy_page(old_page_address, new_page_address);
 //     //         }
 //     //     }
