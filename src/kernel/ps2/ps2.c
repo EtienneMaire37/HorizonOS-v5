@@ -249,7 +249,9 @@ void ps2_controller_init()
 
     LOG(DEBUG, "Setting up the Controller Configuration Byte");
 
-    uint8_t config = 0b00000100;    // * System passed POST
+    uint8_t config = ps2_send_command(PS2_GET_CONFIGURATION);
+    config |=  0b00000100;
+    config &= ~0b00000011;
     ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
     LOG(DEBUG, "Testing the controller");
@@ -275,7 +277,7 @@ void ps2_controller_init()
     ps2_send_command_no_response(PS2_DISABLE_DEVICE_2);
     ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
-    ps2_flush_buffer();
+    // ps2_flush_buffer();
 
     ps2_device_1_connected = (ps2_send_command(PS2_TEST_DEVICE_1) == PS2_DEVICE_TEST_PASS);
     ps2_device_2_connected = dual_channel && 
@@ -286,11 +288,10 @@ void ps2_controller_init()
     if (ps2_device_1_connected) 
     {
         ps2_send_device_full_command(1, PS2_DISABLE_SCANNING, 0);
-        ps2_flush_buffer();
         ps2_send_command_no_response(PS2_ENABLE_DEVICE_1);
         if (ps2_send_device_full_command(1, PS2_RESET, 2))
         {
-            if (ps2_data_bytes_received >= 2 && 
+            if (ps2_data_bytes_received == 2 && 
                 ps2_data_buffer[1] == PS2_DEVICE_BAT_OK) 
             {
                 LOG(INFO, "Device 1 basic assurance test passed");
@@ -305,11 +306,10 @@ void ps2_controller_init()
     if (ps2_device_2_connected) 
     {
         ps2_send_device_full_command(2, PS2_DISABLE_SCANNING, 0);
-        ps2_flush_buffer();
         ps2_send_command_no_response(PS2_ENABLE_DEVICE_2);
         if (ps2_send_device_full_command(2, PS2_RESET, 2))
         {
-            if (ps2_data_bytes_received >= 2 && 
+            if (ps2_data_bytes_received == 2 && 
                 ps2_data_buffer[1] == PS2_DEVICE_BAT_OK) 
             {
                 LOG(INFO, "Device 2 basic assurance test passed");
@@ -323,8 +323,8 @@ void ps2_controller_init()
 
     LOG(DEBUG, "Setting up the ccb without irqs");
 
-    // config = ps2_send_command(PS2_GET_CONFIGURATION);
-    // config &= ~0b01000000;   // Disable translation
+    config = ps2_send_command(PS2_GET_CONFIGURATION);
+    config &= ~0b01000000;   // Disable translation
     // if (ps2_device_1_connected) config &= ~0b00000001; // Disable interrupts
     // if (ps2_device_2_connected) config &= ~0b00000010;
     ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
@@ -340,10 +340,10 @@ void ps2_detect_keyboards()
 
     LOG(INFO, "Detecting PS/2 keyboards");
 
-    ps2_send_device_full_command(1, PS2_DISABLE_SCANNING, 1);
-    ps2_send_device_full_command(2, PS2_DISABLE_SCANNING, 1);
-
-    ps2_flush_buffer();
+    if (ps2_device_1_connected) 
+        ps2_send_device_full_command(1, PS2_DISABLE_SCANNING, 1);
+    if (ps2_device_2_connected)
+        ps2_send_device_full_command(2, PS2_DISABLE_SCANNING, 1);
     
     if (ps2_device_1_connected) 
     {
@@ -416,6 +416,8 @@ void ps2_enable_interrupts()
     ps2_send_command_with_data_no_response(PS2_SET_CONFIGURATION, config);
 
     ksleep(10 * PRECISE_MILLISECONDS);
+    
+    ps2_flush_buffer();
 
     enable_ps2_kb_input = true;
 }

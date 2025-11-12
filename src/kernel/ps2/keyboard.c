@@ -42,19 +42,19 @@ void ps2_kb_set_typematic()
 
 void ps2_init_keyboards()
 {
+    LOG(DEBUG, "Initializing PS/2 keyboards");
+
     ps2_kb_get_scancode_set();
     ps2_kb_set_typematic();
 
     if (PS2_DEVICE_1_KB)
     {
         LOG(DEBUG, "Keyboard 1 scancode set : %u", ps2_kb_1_scancode_set);
-        // printf("Keyboard 1 scancode set : %u\n", ps2_kb_1_scancode_set);
     }
 
     if (PS2_DEVICE_2_KB)
     {
         LOG(DEBUG, "Keyboard 2 scancode set : %u", ps2_kb_2_scancode_set);
-        // printf("Keyboard 2 scancode set : %u\n", ps2_kb_2_scancode_set);
     }
 }
 

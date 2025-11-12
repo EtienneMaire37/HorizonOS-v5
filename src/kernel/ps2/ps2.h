@@ -4,7 +4,7 @@
 #define PS2_STATUS_REGISTER     0x64
 #define PS2_COMMAND_REGISTER    0x64
 
-#define PS2_WAIT_TIME           1000    // ms
+#define PS2_WAIT_TIME           20    // ms
 #define PS2_MAX_RESEND          5
 #define PS2_READ_BUFFER_SIZE    8     // 5 should work though
 
@@ -43,8 +43,8 @@
 
 #define ps2_print_read_buffer() // { printf("PS/2 read buffer : "); for (uint8_t i = 0; i < ps2_data_bytes_received; i++) printf("%#llx ", ps2_data_buffer[i]); putchar('\n'); }
 
-uint8_t ps2_device_1_type;
-uint8_t ps2_device_2_type;
+uint8_t ps2_device_1_type = PS2_DEVICE_UNKNOWN;
+uint8_t ps2_device_2_type = PS2_DEVICE_UNKNOWN;
 
 bool ps2_device_1_interrupt = true, ps2_device_2_interrupt = true;
 

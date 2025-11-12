@@ -583,13 +583,10 @@ void _start()
 
         ps2_device_1_interrupt = ps2_device_2_interrupt = false;
 
-        ps2_flush_buffer();
-
         ksleep(10 * PRECISE_MILLISECONDS);
 
         ps2_controller_init();
         ps2_detect_keyboards();
-
         ps2_init_keyboards();
 
         ksleep(10 * PRECISE_MILLISECONDS);
