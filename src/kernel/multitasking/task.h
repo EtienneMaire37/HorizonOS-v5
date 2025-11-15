@@ -28,7 +28,7 @@ typedef struct thread
     pid_t pid;
     bool system_task;    // system_task: cause kernel panics
 
-    uint8_t* fpu_state;
+    volatile uint8_t* fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
 
@@ -95,7 +95,7 @@ int vfs_allocate_thread_file(int index)
     return -1;
 }
 
-extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
+extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, volatile uint8_t* old_fpu_state, volatile uint8_t* next_fpu_state);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;

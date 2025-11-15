@@ -55,3 +55,102 @@ void task_free_vas(physical_address_t pml4_address)
     }
     pfa_free_physical_page(pml4_address);
 }
+
+void tas_vas_copy(uint64_t* src, uint64_t* dst, 
+    uint64_t start_virtual_address, 
+    uint64_t pages)
+{
+    if (!src)
+    {
+        LOG(ERROR, "tas_vas_copy: NULL source virtual address space");
+        return;
+    }
+
+    if (!dst)
+    {
+        LOG(ERROR, "tas_vas_copy: NULL destination virtual address space");
+        return;
+    }
+
+    if (start_virtual_address & 0xfff)
+    {
+        LOG(CRITICAL, "tas_vas_copy: Kernel tried to map non page aligned addresses");
+        abort();
+    }
+
+    // * "uncanonize"
+    start_virtual_address &= 0xffffffffffff;
+
+    for (uint64_t i = 0; i < pages; i++)
+    {
+        uint64_t vaddr = start_virtual_address + 0x1000 * i;
+
+        if (vaddr < start_virtual_address)
+            break;
+
+        uint64_t pte = (vaddr >> 12) & 0x1ff;
+        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
+        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
+        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
+
+        uint64_t* old_pml4_entry = &src[pml4e];
+        if (!is_pdpt_entry_present(old_pml4_entry))
+        {
+            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* new_pml4_entry = &dst[pml4e];
+
+        if (!is_pdpt_entry_present(new_pml4_entry))
+            set_pdpt_entry(new_pml4_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* old_pdpt = get_pdpt_entry_address(old_pml4_entry);
+        
+        uint64_t* old_pdpt_entry = &old_pdpt[pdpte];
+        if (!is_pdpt_entry_present(old_pdpt_entry))
+        {
+            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* new_pdpt = get_pdpt_entry_address(new_pml4_entry);
+
+        uint64_t* new_pdpt_entry = &new_pdpt[pdpte];
+
+        if (!is_pdpt_entry_present(new_pdpt_entry))
+            set_pdpt_entry(new_pdpt_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* old_pd = get_pdpt_entry_address(old_pdpt_entry);
+
+        uint64_t* old_pd_entry = &old_pd[pde];
+        if (!is_pdpt_entry_present(old_pd_entry))
+        {
+            i += ((uint64_t)1 << 9) - pte - 1;
+            continue;
+        }
+
+        uint64_t* new_pd = get_pdpt_entry_address(new_pdpt_entry);
+
+        uint64_t* new_pd_entry = &new_pd[pde];
+
+        if (!is_pdpt_entry_present(new_pd_entry))
+            set_pdpt_entry(new_pd_entry, (uintptr_t)create_empty_pdpt(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        // * !!!
+        uint64_t* old_pt = get_pdpt_entry_address(old_pd_entry);
+
+        uint64_t* old_pt_entry = &old_pt[pte];
+        if (!is_pdpt_entry_present(old_pt_entry))
+            continue;
+
+        uint64_t* new_pt = get_pdpt_entry_address(new_pd_entry);
+
+        uint64_t* new_pt_entry = &new_pt[pte];
+
+        if (!is_pdpt_entry_present(new_pt_entry))
+            set_pdpt_entry(new_pt_entry, (uintptr_t)pfa_allocate_page(), get_pdpt_entry_privilege(old_pt_entry), get_pdpt_entry_read_write(old_pt_entry), CACHE_WB);
+        
+        memcpy(get_pdpt_entry_address(new_pt_entry), get_pdpt_entry_address(old_pt_entry), 4096);
+    }
+}

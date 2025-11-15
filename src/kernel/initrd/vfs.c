@@ -119,6 +119,9 @@ struct dirent* vfs_initrd_readdir(struct dirent* dirent, DIR* dirp)
     }
     bool found_last_entry = strcmp(dirp->current_entry, "..") == 0 ? true : false;
     int initrd_len = strlen("/initrd"), path_len = strlen(dirp->path);
+    // LOG(DEBUG, "PATH: %s", dirp->path);
+    // LOG(DEBUG, "CURRENT: %s", dirp->current_entry);
+    // LOG(DEBUG, "CURRENTP: %s", dirp->current_path);
     if (path_len < initrd_len)
         return NULL;
     int offset = path_len == initrd_len ? 0 : 1;

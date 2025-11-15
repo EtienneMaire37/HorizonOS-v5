@@ -17,12 +17,12 @@ bool ps2_wait_for_output()
     return true;
 }
 
-bool ps2_wait_for_input()
+bool ps2_wait_for_input_with_timeout(uint64_t timeout)
 {
     if (!ps2_controller_connected)
         return true;
     uint64_t start = precise_time_to_milliseconds(global_timer);
-    while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
+    while (precise_time_to_milliseconds(global_timer) - start < timeout)
     { 
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         if (reg & PS2_STATUS_OUTPUT_FULL)   // * Device has data to send
@@ -30,6 +30,11 @@ bool ps2_wait_for_input()
     }
     LOG(WARNING, "PS/2 wait for input timeout");
     return true;
+}
+
+bool ps2_wait_for_input()
+{
+    return ps2_wait_for_input_with_timeout(PS2_WAIT_TIME);
 }
 
 void ps2_flush_buffer() 
@@ -163,6 +168,8 @@ bool ps2_send_device_full_command(uint8_t device, uint8_t command, uint8_t expec
         tries++;
         if(!ps2_send_device_command(device, command))
             return false;
+        if (command == PS2_RESET)
+            ps2_wait_for_input_with_timeout(PS2_RESET_TIMEOUT);
         ps2_read_data(expected_bytes);
     } while ((ps2_data_bytes_received == 0 || ps2_data_buffer[0] == PS2_RESEND) && tries < PS2_MAX_RESEND);
     if (tries >= PS2_MAX_RESEND)

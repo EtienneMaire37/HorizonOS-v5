@@ -11,6 +11,7 @@ static inline void fpu_init_defaults()
     xsave_area_pages = (xsave_area_size + 0xfff) / 0x1000;
 
     fpu_default_state = pfa_allocate_contiguous_pages(xsave_area_pages);
+    memset((uint8_t*)fpu_default_state, 0, xsave_area_size);
     fpu_init();
     fpu_save_state(fpu_default_state);
 
@@ -24,39 +25,57 @@ static inline void fpu_init()
     asm volatile("fninit" ::: "memory");
 }
 
-static inline void fpu_save_state(uint8_t* s)
+static inline void fpu_save_state(volatile uint8_t* s)
+{
+    if (!has_fpu) return;
+
+    asm volatile("xsave [rdi]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "D"(s), "d"(STATE_COMPONENT_BITMAP >> 32) : "memory");
+}
+
+static inline void fpu_restore_state(volatile uint8_t* s)
+{
+    if (!has_fpu) return;
+
+    asm volatile("xrstor [rdi]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "D" (s), "d"(STATE_COMPONENT_BITMAP >> 32) : "memory");
+}
+
+static inline void fpu_state_init(volatile uint8_t* s)
 {
     if (!has_fpu) return;
     
-    asm volatile("xsave [rbx]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "b"(s), "c"(STATE_COMPONENT_BITMAP >> 32));
+    memcpy((uint8_t*)s, (uint8_t*)fpu_default_state, xsave_area_size);
 }
 
-static inline void fpu_restore_state(uint8_t* s)
+static inline volatile uint8_t* fpu_state_create_empty()
 {
-    if (!has_fpu) return;
-
-    asm volatile("xrstor [rbx]" :: "a"(STATE_COMPONENT_BITMAP & 0xffffffff), "b" (s), "c"(STATE_COMPONENT_BITMAP >> 32) : "memory");
+    // * Alignment is needed
+    volatile uint8_t* ptr = pfa_allocate_contiguous_pages(xsave_area_pages);
+    memset((uint8_t*)ptr, 0, xsave_area_size);
+    // LOG(DEBUG, "Allocated FPU state: %p", ptr);
+    return ptr;
 }
 
-static inline void fpu_state_init(uint8_t* s)
+static inline volatile uint8_t* fpu_state_create()
 {
-    if (!has_fpu) return;
-    
-    memcpy(s, fpu_default_state, xsave_area_size);
-}
-
-static inline uint8_t* fpu_state_create()
-{
-    uint8_t* data = pfa_allocate_contiguous_pages(xsave_area_pages);
+    volatile uint8_t* data = fpu_state_create_empty();
     fpu_state_init(data);
     return data;
 }
 
-static inline void fpu_state_destroy(uint8_t** data)
+static inline volatile uint8_t* fpu_state_create_copy(volatile uint8_t* state)
+{
+    volatile uint8_t* data = fpu_state_create_empty();
+    memcpy((uint8_t*)data, (uint8_t*)state, xsave_area_size);
+    return data;
+}
+
+static inline void fpu_state_destroy(volatile uint8_t** data)
 {
     if (!data) return;
     if (!(*data)) return;
 
-    pfa_free_contiguous_pages(*data, xsave_area_pages);
+    // LOG(DEBUG, "Freeing FPU state: %p", *data);
+
+    pfa_free_contiguous_pages((void*)*data, xsave_area_pages);
     (*data) = NULL;
 }

@@ -310,6 +310,6 @@ void utf32_buffer_clear(utf32_buffer_t* buffer);
 void utf32_buffer_destroy(utf32_buffer_t* buffer);
 void utf32_buffer_putchar(utf32_buffer_t* buffer, utf32_char_t character);
 utf32_char_t utf32_buffer_getchar(utf32_buffer_t* buffer);
-void utf32_buffer_copy(utf32_buffer_t* from, utf32_buffer_t* to);
+void utf32_buffer_create_and_copy(const utf32_buffer_t* from, utf32_buffer_t* to);
 
 bool keyboard_is_key_pressed(virtual_address_t vk);

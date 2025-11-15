@@ -26,6 +26,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         }
         else
         {
+            log_registers();
             // !! Should send a signal
             // if (registers->interrupt_number == 14)  // * Page fault
             //     printf("Segmentation fault\n");

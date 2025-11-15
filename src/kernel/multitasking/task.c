@@ -49,15 +49,20 @@ thread_t task_create_empty()
 
 void task_destroy(thread_t* task)
 {
-    LOG(DEBUG, "Destroying task \"%s\" (pid = %d, ring = %llu)", task->name, task->pid, task->ring);
+    LOG(TRACE, "Destroying task \"%s\" (pid = %d, ring = %u)", task->name, task->pid, task->ring);
+    LOG(TRACE, "Freeing VAS...");
     task_free_vas((physical_address_t)task->cr3);
+    LOG(TRACE, "Destroying the keyboard buffer...");
     utf32_buffer_destroy(&task->input_buffer);
+    LOG(TRACE, "Freeing tnodes...");
     for (int i = 0; i < OPEN_MAX; i++)
     {
         if (task->file_table[i] != invalid_fd)
             vfs_remove_global_file(task->file_table[i]);
     }
+    LOG(TRACE, "Destroying FPU state...");
     fpu_state_destroy(&task->fpu_state);
+    LOG(TRACE, "Done.");
 }
 
 void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg)
@@ -290,93 +295,58 @@ void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec)
     release_spinlock(&file_table_spinlock);
 }
 
-// void copy_task(uint16_t index)
-// {
-//     if (index >= task_count || index == 0)
-//     {
-//         LOG(CRITICAL, "Invalid task index %llu", index);
-//         abort();
-//         return;
-//     }
+void copy_task(uint16_t index)
+{
+    if (index >= task_count || index == 0)
+    {
+        LOG(CRITICAL, "Invalid task index %u", index);
+        abort();
+        return;
+    }
 
-//     task_count++;
+    task_count++;
 
-//     const uint16_t new_task_index = task_count - 1;
+    const uint16_t new_task_index = task_count - 1;
 
-//     tasks[new_task_index] = tasks[index];
+    tasks[new_task_index] = tasks[index];
 
-//     // tasks[new_task_index].name = tasks[index].name;
-//     memcpy(tasks[new_task_index].name, tasks[index].name, THREAD_NAME_MAX);
-//     tasks[new_task_index].ring = tasks[index].ring;
-//     tasks[new_task_index].pid = tasks[index].forked_pid;
-//     tasks[new_task_index].system_task = tasks[index].system_task;
-//     tasks[new_task_index].reading_stdin = false;
-//     utf32_buffer_copy(&tasks[index].input_buffer, &tasks[new_task_index].input_buffer);
-
-//     tasks[new_task_index].cr3 = (uint64_t)task_create_empty_vas();
-//     tasks[new_task_index].rsp = tasks[index].rsp;
-
-//     copy_fpu_state(&tasks[index].fpu_state, &tasks[new_task_index].fpu_state);
-
-//     task_copy_file_table(index, new_task_index, false);
-
-//     tasks[new_task_index].forked_pid = 0;
-//     tasks[new_task_index].is_dead = false;
-
-//     tasks[new_task_index].parent = tasks[index].pid;
-//     tasks[new_task_index].wait_pid = -1;
-
-//     abort();
+    memcpy(tasks[new_task_index].name, tasks[index].name, THREAD_NAME_MAX);
+    tasks[new_task_index].ring = tasks[index].ring;
+    tasks[new_task_index].pid = tasks[index].forked_pid;
+    tasks[new_task_index].system_task = tasks[index].system_task;
+    tasks[new_task_index].reading_stdin = false;
     
-//     // for (uint16_t i = 0; i < 768; i++)
-//     // {
-//     //     uint32_t old_pde = read_physical_address_4b(tasks[index].cr3 + 4 * i);
-//     //     if (!(old_pde & 1)) continue;
-//     //     uint32_t new_pde = read_physical_address_4b(tasks[new_task_index].cr3 + 4 * i);
-//     //     physical_address_t old_pt_address = old_pde & 0xfffff000;
-//     //     physical_address_t new_pt_address = new_pde & 0xfffff000;
-//     //     if (!(new_pde & 1))
-//     //     {
-//     //         new_pt_address = pfa_allocate_physical_page();
-//     //         physical_init_page_table(new_pt_address);
-//     //         write_physical_address_4b(tasks[new_task_index].cr3 + 4 * i, new_pt_address | (old_pde & 0xfff));
-//     //     }
-//     //     // LOG(TRACE, "%llu : old_pt_address : %#llx", i, old_pt_address);
-//     //     // LOG(TRACE, "%llu : new_pt_address : %#llx", i, new_pt_address);
-//     //     for (uint16_t j = (i == 0 ? 256 : 0); j < 1024; j++)
-//     //     {
-//     //         uint32_t old_pte = read_physical_address_4b(old_pt_address + 4 * j);
-//     //         physical_address_t old_page_address = old_pte & 0xfffff000;
-//     //         if (old_pte & 1)
-//     //         {
-//     //             uint32_t new_pte = read_physical_address_4b(new_pt_address + 4 * j);
-//     //             physical_address_t new_page_address = new_pte & 0xfffff000;
-//     //             if (!(new_pte & 1))
-//     //             {
-//     //                 new_page_address = pfa_allocate_physical_page();
-//     //                 write_physical_address_4b(new_pt_address + 4 * j, new_page_address | (old_pte & 0xfff));
-//     //             }
-//     //             // LOG(TRACE, "%llu.%llu : old_page_address : %#llx", i, j, old_page_address);
-//     //             // LOG(TRACE, "%llu.%llu : new_page_address : %#llx", i, j, new_page_address);
-//     //             copy_page(old_page_address, new_page_address);
-//     //         }
-//     //     }
-//     // }
-// }
+    utf32_buffer_create_and_copy(&tasks[index].input_buffer, &tasks[new_task_index].input_buffer);
+
+    tasks[new_task_index].cr3 = (uint64_t)task_create_empty_vas(tasks[new_task_index].ring == 0 ? PG_SUPERVISOR : PG_USER);
+    tasks[new_task_index].rsp = tasks[index].rsp;
+
+    tasks[new_task_index].fpu_state = fpu_state_create_copy(tasks[index].fpu_state);
+
+    task_copy_file_table(index, new_task_index, false);
+
+    tasks[new_task_index].forked_pid = 0;
+    tasks[new_task_index].is_dead = false;
+
+    tasks[new_task_index].parent = tasks[index].pid;
+    tasks[new_task_index].wait_pid = -1;
+
+    tas_vas_copy((uint64_t*)tasks[index].cr3, (uint64_t*)tasks[new_task_index].cr3, 0x10000000000, (0x8000000000 * 511 - 0x10000000000) / 0x1000);
+}
 
 void cleanup_tasks()
 {
     if (current_task_index != 0) return;
 
-    // for (uint16_t i = 0; i < task_count; i++)
-    // {
-    //     if (i == current_task_index) continue;
-    //     if (tasks[i].forked_pid)
-    //     {
-    //         copy_task(i);
-    //         tasks[i].forked_pid = 0;
-    //     }
-    // }
+    for (uint16_t i = 0; i < task_count; i++)
+    {
+        if (i == current_task_index) continue;
+        if (tasks[i].forked_pid)
+        {
+            copy_task(i);
+            tasks[i].forked_pid = 0;
+        }
+    }
 
     for (uint16_t i = 0; i < task_count; i++)
     {

@@ -362,6 +362,7 @@ void _start()
         {
             LOG(INFO, "Enabling AVX");
             enable_avx();
+            LOG(DEBUG, "Setting up FPU support");
             fpu_init_defaults();
         }
         else
@@ -614,8 +615,7 @@ void _start()
         putchar('\n');
     }
 
-    // TODO: Find out what efi_ptr points to and if it can be used to use runtime uefi functions
-    // * (it could allow for an easy shutdown mechanism)
+    // TODO: Find out how to use efi_ptr (System Table) to get access runtime uefi functions
 
     // asm volatile("div rcx" :: "c"(0));
 

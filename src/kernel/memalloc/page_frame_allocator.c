@@ -66,9 +66,7 @@ void pfa_detect_usable_memory()
     for (uint64_t i = 0; i < usable_memory_blocks; i++)
         total_pages += usable_memory_map[i].length / 0x1000;
     
-    bitmap_size = (total_pages + 7) / 8;
-    bitmap_size /= 8;
-    bitmap_size *= 8;   // * Align to qwords
+    bitmap_size = ((total_pages + 7) / 8 + 7) & ~7ULL; // * Align to qwords
     uint64_t bitmap_pages = (bitmap_size + 0xfff) / 0x1000;
 
     while (first_alloc_block < usable_memory_blocks && (usable_memory_map[first_alloc_block].length / 0x1000) < bitmap_pages)
@@ -110,6 +108,9 @@ static inline physical_address_t pfa_allocate_physical_page()
         return physical_null;
     }
 
+    if (memory_allocated + 0x1000 > allocatable_memory * 9 / 10) 
+        LOG(WARNING, "pfa_allocate_physical_page: Over 90%% of memory used!");
+
     acquire_spinlock(&pfa_spinlock);
 
     for (uint64_t i = first_free_page_index_hint / 8; i < bitmap_size; i += 8) 
@@ -134,6 +135,7 @@ static inline physical_address_t pfa_allocate_physical_page()
                 first_free_page_index_hint = 8 * i + bit;
                 LOG_MEM_ALLOCATED();
                 release_spinlock(&pfa_spinlock);
+                // LOG(TRACE, "Allocated page: %#llx", addr);
                 return addr;
             }
             remaining -= block_pages;
@@ -147,81 +149,21 @@ static inline physical_address_t pfa_allocate_physical_page()
 
 static inline physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages)
 {
-    if (pages == 0) return physical_null;
-
-    uint64_t bytes_needed = (uint64_t)pages * 0x1000;
-    if (memory_allocated + bytes_needed > allocatable_memory) 
-    {
-        LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at start!");
-        return physical_null;
-    }
-
-    acquire_spinlock(&pfa_spinlock);
-
-    uint64_t total_pages = bitmap_size * 8;
-    uint64_t page_index_base = 0;
-    for (uint32_t b = first_alloc_block; b < usable_memory_blocks; b++) 
-    {
-        uint64_t block_pages = usable_memory_map[b].length / 0x1000;
-        if (block_pages < pages) 
-        {
-            page_index_base += block_pages;
-            continue;
-        }
-
-        for (uint64_t offset = 0; offset + pages <= block_pages; offset++) 
-        {
-            uint64_t candidate_page_index = page_index_base + offset;
-            if (candidate_page_index + pages > total_pages)
-                break;
-
-            bool ok = true;
-            uint64_t end = candidate_page_index + pages;
-            for (uint64_t pi = candidate_page_index; pi < end; ++pi) 
-            {
-                uint64_t byte = pi / 8;
-                uint8_t bit = pi & 0x7;
-                if (byte >= bitmap_size) { ok = false; break; }
-                if (bitmap[byte] & (1 << bit)) { ok = false; break; }
-            }
-
-            if (!ok) continue;
-
-            for (uint64_t pi = candidate_page_index; pi < end; pi++) 
-            {
-                uint64_t byte = pi / 8;
-                uint8_t bit = pi & 0x7;
-                bitmap[byte] |= (1 << bit);
-            }
-
-            memory_allocated += bytes_needed;
-            first_free_page_index_hint = candidate_page_index;
-
-            physical_address_t addr = usable_memory_map[b].address + offset * 0x1000;
-            LOG_MEM_ALLOCATED();
-            release_spinlock(&pfa_spinlock);
-            return addr;
-        }
-
-        page_index_base += block_pages;
-    }
-
-    LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at end!");
-    release_spinlock(&pfa_spinlock);
-    return physical_null;
+    if (pages != 1) abort();
+    return pfa_allocate_physical_page();
 }
 
 static inline void pfa_free_physical_page(physical_address_t address) 
 {
     if (address == physical_null) 
     {
-        LOG(WARNING, "Kernel tried to free NULL");
+        LOG(WARNING, "pfa_free_physical_page: Kernel tried to free NULL");
         return;
     }
 
     if (address & 0xfff) 
     {
-        LOG(CRITICAL, "Unaligned address (%#llx)", address);
+        LOG(CRITICAL, "pfa_free_physical_page: Unaligned address (%#llx)", address);
         abort();
     }
 
@@ -247,13 +189,15 @@ static inline void pfa_free_physical_page(physical_address_t address)
 
     memory_allocated -= 0x1000;
     release_spinlock(&pfa_spinlock);
+    // LOG(TRACE, "Freed page: %#llx", address);
     LOG_MEM_ALLOCATED();
 }
 
 static inline void pfa_free_physical_contiguous_pages(physical_address_t address, uint32_t pages)
 {
+    if (pages != 1) abort();
     for (uint32_t i = 0; i < pages; i++)
-        pfa_free_physical_page(address + 0x1000ULL * pages);
+        pfa_free_physical_page(address + 0x1000ULL * i);
 }
 
 // * 1st TB will always be identity mapped

@@ -47,30 +47,34 @@ void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
 
         uint64_t file_size = ustar_get_number(header->size, 12);
 
-        // if (header->type != USTAR_TYPE_FILE_1 && header->type != USTAR_TYPE_FILE_2 && header->type != USTAR_TYPE_DIRECTORY)
-        //     continue;
-
         initrd_files[initrd_files_count].name = &header->name[0];
         size_t len = strlen(initrd_files[initrd_files_count].name);
-        if (len >= 1 && initrd_files[initrd_files_count].name[len - 1] == '/')
-            initrd_files[initrd_files_count].name[len - 1] = 0;
-        if (strcmp(initrd_files[initrd_files_count].name, ".") != 0)
+        if (len >= 1)
         {
-            initrd_files[initrd_files_count].size = file_size;
-            initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
-            if (header->type == 0) header->type = '0';
-
-            initrd_files[initrd_files_count].type = header->type;
-            initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
-
-            uint64_t mode = ustar_get_number((char*)header->mode, 8);
-            initrd_files[initrd_files_count].mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
-            ((mode & TUREAD) ? S_IRUSR : 0) | ((mode & TUEXEC) ? S_IXUSR : 0) | // * | ((mode & TUWRITE) ? S_IWUSR : 0)
-            ((mode & TGREAD) ? S_IRGRP : 0) | ((mode & TGEXEC) ? S_IXGRP : 0) | // * | ((mode & TGWRITE) ? S_IWGRP : 0)
-            ((mode & TOREAD) ? S_IROTH : 0) | ((mode & TOEXEC) ? S_IXOTH : 0);  // * | ((mode & TOWRITE) ? S_IWOTH : 0)
-
-            initrd_files_count++;
+            if (initrd_files[initrd_files_count].name[len - 1] == '.')
+                goto do_loop;
+            if (initrd_files[initrd_files_count].name[len - 1] == '/')
+                initrd_files[initrd_files_count].name[len - 1] = 0;
         }
+        else
+            goto do_loop;
+            
+        initrd_files[initrd_files_count].size = file_size;
+        initrd_files[initrd_files_count].data = (uint8_t*)(header + 1); // 512 bytes after the header
+        if (header->type == 0) header->type = '0';
+
+        initrd_files[initrd_files_count].type = header->type;
+        initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
+
+        uint64_t mode = ustar_get_number((char*)header->mode, 8);
+        initrd_files[initrd_files_count].mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
+        ((mode & TUREAD) ? S_IRUSR : 0) | ((mode & TUEXEC) ? S_IXUSR : 0) | // * | ((mode & TUWRITE) ? S_IWUSR : 0)
+        ((mode & TGREAD) ? S_IRGRP : 0) | ((mode & TGEXEC) ? S_IXGRP : 0) | // * | ((mode & TGWRITE) ? S_IWGRP : 0)
+        ((mode & TOREAD) ? S_IROTH : 0) | ((mode & TOEXEC) ? S_IXOTH : 0);  // * | ((mode & TOWRITE) ? S_IWOTH : 0)
+
+        initrd_files_count++;
+        
+    do_loop:
         initrd_offset += (file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;
     }
 

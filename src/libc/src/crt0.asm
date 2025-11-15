@@ -11,13 +11,12 @@ _start:
     call .start ; stack frame
     jmp .halt
 .start:
-    push rbp
-    mov rbp, rsp
+    push 0
+    mov rbp, 0
+
+    and rsp, 0xfffffffffffffff0
 
     call _main
-
-    pop rbp
-    mov rsp, rbp
 
 .halt:
     jmp $
@@ -27,13 +26,18 @@ extern exit
 
 global call_main_exit
 call_main_exit:
+    mov rbp, 0
+    push rbp
+
+    and rsp, 0xfffffffffffffff0
+
     ; ? arguments are passed as registers, no need to set them up
     call main
 
     mov rdi, rax ; * main return value
     call exit
 
-    ret
+    jmp .halt
 
 section .data
 

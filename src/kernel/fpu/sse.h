@@ -1,6 +1,9 @@
 #pragma once
 
-const uint64_t STATE_COMPONENT_BITMAP = 0b111;
+uint64_t STATE_COMPONENT_BITMAP = 0;
+
+extern uint64_t get_supported_xcr0();
+extern uint32_t get_xsave_area_size();
 
 uint64_t get_xcr0()
 {
@@ -35,7 +38,7 @@ void enable_avx()
     cr4 |= (1 << 18);   // * OSXSAVE
     load_cr4(cr4);
 
-    load_xcr0(STATE_COMPONENT_BITMAP); // * AVX | SSE | X87
+    STATE_COMPONENT_BITMAP = get_supported_xcr0();
+    LOG(DEBUG, "XCR0: %#llx", STATE_COMPONENT_BITMAP);
+    load_xcr0(STATE_COMPONENT_BITMAP);
 }
-
-extern uint32_t get_xsave_area_size();
