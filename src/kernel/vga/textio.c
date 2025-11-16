@@ -242,14 +242,11 @@ static inline void tty_outc(char c)
 			break;
 		}
 
-		// for (uint32_t i = 0; i < TTY_RES_Y - rows_to_scroll; i++)
-		// 	memcpy(&tty_data[i * TTY_RES_X], &tty_data[(i + rows_to_scroll) * TTY_RES_X], TTY_RES_X * sizeof(uint16_t));
-
 		for (uint32_t i = 0; i < TTY_RES_Y - rows_to_scroll; i++)
 		{
 			for (uint32_t j = 0; j < TTY_RES_X; j++)
 			{
-				if (is_printable_character(tty_data[i * TTY_RES_X + j]) || is_printable_character(tty_data[(i + 1) * TTY_RES_X + j]))
+				if (is_printable_character(tty_data[i * TTY_RES_X + j]) || is_printable_character(tty_data[(i + 1) * TTY_RES_X + j]) || ((tty_data[(i + 1) * TTY_RES_X + j] & 0xff) == 0x0f))
 				{
 					uint16_t data = tty_data[(i + 1) * TTY_RES_X + j];
 					tty_render_character(i * TTY_RES_X + j, data, data >> 8);
@@ -261,7 +258,5 @@ static inline void tty_outc(char c)
 		memset(&tty_data[(TTY_RES_Y - rows_to_scroll) * TTY_RES_X], 0x0f, TTY_RES_X * sizeof(uint16_t));
 
 		framebuffer_fill_rect(&framebuffer, 0, tty_get_character_pos_y((TTY_RES_Y - rows_to_scroll) * TTY_RES_X), framebuffer.width, tty_get_character_height(), 0, 0, 0, 0);
-		
-		// tty_refresh_screen();
 	}
 }
