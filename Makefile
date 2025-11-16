@@ -171,10 +171,7 @@ $(MKBOOTIMG):
 
 $(DIR2FAT32):
 	git clone https://github.com/Othernet-Project/dir2fat32.git dir2fat32
-	cd dir2fat32 
-	make
-	chmod +x dir2fat32.sh
-	cd ..
+	chmod +x dir2fat32/dir2fat32.sh
 
 resources/pci.ids:
 	mkdir -p resources
