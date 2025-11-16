@@ -70,7 +70,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 
 	qemu-img convert -O vdi horizonos.iso horizonos.vdi
 
-src/tasks/bin/init.elf: src/tasks/src/init/* src/tasks/bin/shell src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+src/tasks/bin/init.elf: src/tasks/src/init/* src/tasks/bin/term src/tasks/bin/echo src/tasks/bin/ls src/tasks/bin/cat src/tasks/bin/clear src/tasks/bin/printenv src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/init/main.c" -o "src/tasks/bin/init.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
@@ -137,13 +137,13 @@ src/tasks/bin/printenv: src/tasks/src/printenv/* src/tasks/link.ld src/libc/lib/
 	-ffreestanding -nostdlib \
 	-lgcc
 
-src/tasks/bin/shell: src/tasks/src/shell/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
+src/tasks/bin/term: src/tasks/src/term/* src/tasks/link.ld src/libc/lib/libc.a src/libc/lib/libm.a
 	mkdir -p ./src/tasks/bin
-	$(CROSSGCC) -c "src/tasks/src/shell/main.c" -o "src/tasks/bin/shell.o" $(CFLAGS) -I"src/libc/include" -O3
+	$(CROSSGCC) -c "src/tasks/src/term/main.c" -o "src/tasks/bin/term.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
-    -o "src/tasks/bin/shell" \
+    -o "src/tasks/bin/term" \
 	"src/libc/lib/crt0.o" \
-    "src/tasks/bin/shell.o" \
+    "src/tasks/bin/term.o" \
     "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc

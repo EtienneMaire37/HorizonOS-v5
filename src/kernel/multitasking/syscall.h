@@ -183,7 +183,7 @@ void handle_syscall(interrupt_registers_t* registers)
                     __CURRENT_TASK.reading_stdin = true;
                     switch_task();
                 }
-                registers->rax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->r12);
+                registers->rax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->rdx);
                 for (uint32_t i = 0; i < registers->rax; i++)
                 {
                     // *** Only ASCII for now ***

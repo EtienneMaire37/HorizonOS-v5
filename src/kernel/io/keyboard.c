@@ -76,11 +76,12 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, bool ec
     if (!multitasking_enabled) return;
     
     char ascii = utf32_to_bios_oem(character);
-    if (ascii == 0
+    if (!is_printable_character(ascii)
         && vk != VK_UP && vk != VK_RIGHT && vk != VK_DOWN && vk != VK_LEFT
         && vk != VK_HOME && vk != VK_END
         && vk != VK_INSERT && vk != VK_DELETE
         && vk != VK_PAGEUP && vk != VK_PAGEDOWN
+        && ascii != '\n' && ascii != '\t' && ascii != '\b'
         ) 
         return;
     for (uint16_t i = 0; i < task_count; i++)

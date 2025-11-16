@@ -9,7 +9,7 @@ _start:
     pop qword [kernel_data]
     mov rbp, 0
     call .start ; stack frame
-    jmp .halt
+    jmp $
 .start:
     push 0
     mov rbp, 0
@@ -18,7 +18,6 @@ _start:
 
     call _main
 
-.halt:
     jmp $
 
 extern main
@@ -37,7 +36,7 @@ call_main_exit:
     mov rdi, rax ; * main return value
     call exit
 
-    jmp .halt
+    jmp $
 
 section .data
 
