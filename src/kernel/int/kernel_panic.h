@@ -108,8 +108,7 @@ void __attribute__((noreturn)) kernel_panic(interrupt_registers_t* registers)
     tty_set_color(FG_WHITE, BG_BLACK);
     tty_clear_screen(' ');
 
-    tty_update_cursor();
-    // tty_hide_cursor();
+    tty_cursor_blink = false;
 
     tty_set_color(FG_LIGHTRED, BG_BLACK);
     printf("Kernel panic\n\n");

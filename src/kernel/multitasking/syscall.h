@@ -134,7 +134,6 @@ void handle_syscall(interrupt_registers_t* registers)
             {
                 for (uint32_t i = 0; i < registers->rdx; i++)
                     tty_outc(((char*)registers->rcx)[i]);
-                tty_update_cursor();
                 registers->rax = registers->rdx;    // bytes_written
             }
             else    // ! cant write to STDIN_FILENO

@@ -62,10 +62,12 @@ static inline bool is_printable_character(char c)
     return ((unsigned char)c >= 32) && ((unsigned char)c < 128);
 }
 
-static inline void tty_show_cursor(uint8_t scanlineStart, uint8_t scanlineEnd);
-static inline void tty_hide_cursor();
-static inline void tty_reset_cursor();
-static inline void tty_set_cursor_pos(uint16_t pos);
+#define TTY_ANSI_BUFFER     32
+
+uint8_t tty_control_sequence_buffer[TTY_ANSI_BUFFER] = {0};
+uint8_t tty_escape_sequence_index = 0;
+bool tty_reading_escape_sequence = false, tty_reading_control_sequence = false;
+
 static inline void tty_clear_screen(char c);
 static inline void tty_set_color(uint8_t fg_color, uint8_t bg_color);
 static inline void tty_outc(char c);

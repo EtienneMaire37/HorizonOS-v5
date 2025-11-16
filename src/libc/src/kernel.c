@@ -22,7 +22,6 @@ ssize_t write(int fildes, const void* buf, size_t nbyte)
     case STDOUT_FILENO:
         for (size_t i = 0; i < nbyte; i++)
             tty_outc(*((char*)buf + i));
-        tty_update_cursor();
         return nbyte;
     }
 
