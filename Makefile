@@ -162,7 +162,6 @@ $(CROSSGCC):
 	sh install-cross-compiler.sh
 
 $(USERGCC):
-	rm -rf build-area horizonos-toolchain
 	sh install-custom-toolchain.sh
 
 $(MKBOOTIMG):
