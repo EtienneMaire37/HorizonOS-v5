@@ -33,6 +33,50 @@ typedef struct file_entry
     } data;
 } file_entry_t;
 
+// * VFS data
+
+#define VFS_NODE_EXPLORED   1
+#define VFS_NODE_LOADING    2
+
+typedef struct vfs_file_tnode vfs_file_tnode_t;
+typedef struct vfs_folder_tnode vfs_folder_tnode_t;
+
+// * i-nodes
+typedef struct 
+{
+    struct stat st;
+
+    vfs_folder_tnode_t* parent;
+} vfs_file_inode_t;
+
+typedef struct
+{
+    vfs_file_tnode_t* files;
+    vfs_folder_tnode_t* folders;
+    ino_t inode_number;
+
+    uint8_t flags;
+
+    vfs_folder_tnode_t* parent;
+} vfs_folder_inode_t;
+
+// * t-nodes
+typedef struct vfs_file_tnode
+{
+    char* name;
+    vfs_file_inode_t* inode;
+
+    struct vfs_file_tnode* next;
+} vfs_file_tnode_t;
+
+typedef struct vfs_folder_tnode
+{
+    char* name;
+    vfs_folder_inode_t* inode;
+
+    struct vfs_folder_tnode* next;
+} vfs_folder_tnode_t;
+
 #define MAX_FILE_TABLE_ENTRIES  256
 
 file_entry_t file_table[MAX_FILE_TABLE_ENTRIES];
