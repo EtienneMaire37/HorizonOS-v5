@@ -42,6 +42,8 @@ thread_t task_create_empty()
 
     task.to_reap = false;
 
+    task.cwd = vfs_root;
+
     task_init_file_table(&task);
 
     return task;

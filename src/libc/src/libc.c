@@ -23,8 +23,6 @@ int64_t maxint(int64_t a, int64_t b)
 #include "../include/limits.h"
 #include "../include/sys/types.h"
 
-static char cwd[PATH_MAX] = {0};
-
 #include "../include/errno.h"
 #include "string.c"
 #include "../include/string.h"

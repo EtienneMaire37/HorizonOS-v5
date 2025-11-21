@@ -12,6 +12,9 @@
 
 #define SYSCALL_BRK         6
 
+#define SYSCALL_CHDIR       7
+#define SYSCALL_GETCWD      18
+
 #define SYSCALL_EXECVE      8
 #define SYSCALL_WAITPID     9
 

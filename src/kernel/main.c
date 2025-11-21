@@ -82,8 +82,6 @@ static inline int imod(int a, int b);
 
 #define bcd_to_binary(bcd) (((bcd) & 0x0f) + (((bcd) >> 4) & 0x0f) * 10 + (((bcd) >> 8) & 0x0f) * 100 + (((bcd) >> 12) & 0x0f) * 1000)
 
-char cwd[PATH_MAX] = {0};
-
 char** environ = NULL;
 static int num_environ = 0;
 
@@ -616,7 +614,12 @@ void _start()
     }
 
     LOG(INFO, "Setting up the VFS...");
-    vfs_root = vfs_create_empty_folder_inode(NULL);
+    vfs_root = vfs_create_empty_folder_inode(NULL, 0, 0, 
+        S_IFDIR | 
+        S_IRUSR | S_IXUSR |
+        S_IRGRP | S_IXGRP |
+        S_IROTH | S_IXOTH, 
+        0, 0);
     if (!vfs_root) abort();
     LOG(INFO, "Set up the VFS.");
 
@@ -636,8 +639,8 @@ void _start()
     //     while (true);
     // }
 
-    startup_data_struct_t data = startup_data_init_from_command((char*[]){"/initrd/bin/init.elf", NULL}, (char*[]){"PATH=/initrd/bin/", NULL}, "/");
-    if (!multitasking_add_task_from_vfs("init", "/initrd/bin/init.elf", 0, true, &data))
+    startup_data_struct_t data = startup_data_init_from_command((char*[]){"/initrd/bin/init.elf", NULL}, (char*[]){"PATH=/initrd/bin/", NULL});
+    if (!multitasking_add_task_from_vfs("init", "/initrd/bin/init.elf", 0, true, &data, vfs_root))
     {
         LOG(CRITICAL, "init task couldn't start");
         abort();

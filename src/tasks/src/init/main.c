@@ -45,5 +45,5 @@ int main(int argc, char** argv)
 
     execvp("term", (char*[]){"term", (char*)NULL});
 
-    perror("fatal error");
+    perror("init: Couldn't run `term`");
 }

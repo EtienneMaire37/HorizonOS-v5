@@ -53,9 +53,10 @@ typedef struct
 
 typedef struct
 {
+    struct stat st;
+
     vfs_file_tnode_t* files;
     vfs_folder_tnode_t* folders;
-    ino_t inode_number;
 
     uint8_t flags;
 
@@ -196,7 +197,8 @@ ino_t vfs_generate_inode_number()
     return current_inode_number++;
 }
 
-vfs_folder_inode_t* vfs_create_empty_folder_inode(vfs_folder_tnode_t* parent)
+vfs_folder_inode_t* vfs_create_empty_folder_inode(vfs_folder_tnode_t* parent, 
+    dev_t device_id, dev_t special_device_id, mode_t mode, uid_t uid, gid_t gid)
 {
     vfs_folder_inode_t* inode = malloc(sizeof(vfs_folder_inode_t));
 
@@ -205,7 +207,19 @@ vfs_folder_inode_t* vfs_create_empty_folder_inode(vfs_folder_tnode_t* parent)
 
     inode->flags = VFS_NODE_INIT;
 
-    inode->inode_number = vfs_generate_inode_number();
+    inode->st.st_dev = device_id;
+    inode->st.st_ino = vfs_generate_inode_number();
+    inode->st.st_mode = mode;
+    inode->st.st_nlink = 1;
+    inode->st.st_uid = uid;
+    inode->st.st_gid = gid;
+    inode->st.st_rdev = special_device_id;
+    inode->st.st_size = 0;
+    inode->st.st_blksize = 0;
+    inode->st.st_blocks = 0;
+    inode->st.st_atime = 0;
+    inode->st.st_mtime = 0;
+    inode->st.st_ctime = 0;
 
     inode->parent = parent;
 

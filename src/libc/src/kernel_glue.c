@@ -106,7 +106,7 @@ int close(int fildes)
 int execve(const char* path, char* const argv[], char* const envp[])
 {
     int _errno;
-    asm volatile ("int 0xf0" : "=a"(_errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp), "S"(cwd));
+    asm volatile ("int 0xf0" : "=a"(_errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp));
     if (_errno != 0)
         errno = _errno;
     return -1;
@@ -219,4 +219,30 @@ int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
         return -1;
     }
     return 0;
+}
+
+int chdir(const char* path)
+{
+    if (!path) 
+    {
+        errno = EFAULT;
+        return -1;
+    }
+
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_CHDIR), "b"(path));
+    if (ret)
+    {
+        errno = ret;
+        return -1;
+    }
+    return 0;
+}
+
+char* getcwd(char* buffer, size_t size)
+{
+    if (!buffer) return NULL;
+    char* ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_GETCWD), "b"(buffer), "c"(size));
+    return ret;
 }

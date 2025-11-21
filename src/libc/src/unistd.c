@@ -27,50 +27,6 @@ int gethostname(char* name, size_t namelen)
     return 0;
 }
 
-int chdir(const char* path)
-{
-    if (!path) 
-    {
-        errno = EFAULT;
-        return -1;
-    }
-
-    char* new_cwd = realpath(path, NULL);
-    if (!new_cwd)
-        return -1;
-
-    struct stat st;
-    if (stat(new_cwd, &st) == 0) 
-    {
-        if (S_ISDIR(st.st_mode))
-        {
-            if (access(new_cwd, F_OK | X_OK) == 0) 
-            {
-                strncpy(cwd, new_cwd, PATH_MAX - 1);
-                cwd[PATH_MAX - 1] = '\0';
-                free(new_cwd);
-                return 0;
-            }
-        }
-        else
-            errno = ENOTDIR;
-    }
-
-    int err = errno;
-    free(new_cwd);
-    errno = err;
-    return -1;
-}
-
-
-char* getcwd(char* buffer, size_t size)
-{
-    if (!buffer || size <= 0) return NULL;
-    __builtin_memcpy(buffer, &cwd[0], minint(size, PATH_MAX) - 1);
-    buffer[size - 1] = 0;
-    return buffer;
-}
-
 int execv(const char* path, char* const argv[])
 {
     return execve(path, argv, environ);

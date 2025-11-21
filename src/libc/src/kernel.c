@@ -31,27 +31,6 @@ ssize_t write(int fildes, const void* buf, size_t nbyte)
 ssize_t read(int fildes, void* buf, size_t nbyte)
 {
     abort();
-
-    if (fildes > 2)
-    {
-        LOG(ERROR, "Invalid input stream");
-        errno = EBADF;
-        return -1;
-    }
-
-    if (nbyte == 0) return 0;
-
-    switch(fildes)
-    {
-    case STDIN_FILENO:
-        return 0;
-    case STDERR_FILENO:
-        return 0;
-    case STDOUT_FILENO:
-        return 0;
-    }
-
-    return 0;
 }
 
 void exit(int r)
@@ -73,54 +52,41 @@ void exit(int r)
 time_t time(time_t* t)
 {
     abort();
-    return ktime(t);
 }
 
 pid_t getpid()
 {
     abort();
-    return (pid_t)-1;
 }
 
 pid_t fork()
 {
     abort();
-    errno = ENOMEM; // ...
-    return (pid_t)-1;
 }
 
 int brk(void*addr)
 {
     abort();
-    errno = ENOMEM;
-    return -1;
 }
 
 int open(const char* path, int oflag, ...)
 {
     abort();
-    errno = ENOENT;
-    return -1;
 }
 
 int close(int fildes)
 {
     abort();
-    errno = EBADF;
-    return -1;
 }
 
 int execve(const char* path, char* const argv[], char* const envp[])
 {
     abort();
-    errno = EACCES;
-    return -1;
 }
 
 pid_t waitpid(pid_t pid, int* wstatus, int options)
 {
     abort();
-    while(true);
 }
 
 int access(const char* path, int mode)
@@ -131,23 +97,29 @@ int access(const char* path, int mode)
 int stat(const char* path, struct stat* statbuf)
 {
     abort();
-    return 0;
 }
 
 int isatty(int fd)
 {
     abort();
-    return 0;
 }
 
 int tcgetattr(int fildes, struct termios* termios_p)
 {
     abort();
-    return -1;
 }
 
 int tcsetattr(int fildes, int optional_actions, const struct termios* termios_p)
 {
     abort();
-    return -1;
+}
+
+int chdir(const char* path)
+{
+    abort();
+}
+
+char* getcwd(char* buffer, size_t size)
+{
+    abort();
 }

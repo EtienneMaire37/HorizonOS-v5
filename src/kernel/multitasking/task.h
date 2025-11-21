@@ -28,6 +28,8 @@ typedef struct thread
     pid_t pid;
     bool system_task;    // system_task: cause kernel panics
 
+    vfs_folder_inode_t* cwd;
+
     volatile uint8_t* fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds

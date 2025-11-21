@@ -241,16 +241,16 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
     }
 
-    case SYSCALL_EXECVE:    // * execve | path = $rbx, argv = $rcx, envp = $rdx, cwd = $rsi | $rax = errno
+    case SYSCALL_EXECVE:    // * execve | path = $rbx, argv = $rcx, envp = $rdx | $rax = errno
     {
         if (vfs_access((char*)registers->rbx, X_OK) != 0)
         {
             registers->rax = EACCES;
             break;
         }
-        startup_data_struct_t data = startup_data_init_from_command((char**)registers->rcx, (char**)registers->rdx, (char*)registers->rsi);
+        startup_data_struct_t data = startup_data_init_from_command((char**)registers->rcx, (char**)registers->rdx);
         lock_task_queue();
-        if (!multitasking_add_task_from_vfs((char*)registers->rbx, (char*)registers->rbx, 3, false, &data))
+        if (!multitasking_add_task_from_vfs((char*)registers->rbx, (char*)registers->rbx, 3, false, &data, __CURRENT_TASK.cwd))
         {
             unlock_task_queue();
             registers->rax = ENOENT;

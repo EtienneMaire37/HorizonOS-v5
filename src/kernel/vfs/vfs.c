@@ -22,39 +22,31 @@
 //     return 0;
 // }
 
-// int vfs_stat(const char* path, struct stat* st)
-// {
-//     if (!path || !st)
-//         return EFAULT;
+int vfs_stat(const char* path, struct stat* st)
+{
+    if (!path || !st)
+        return EFAULT;
 
-//     if (strcmp(path, "/") == 0)
-//         return vfs_root_stat(st);
+    // TODO: Implement this
+    return ENOENT;
+}
 
-//     switch (get_drive_type(path))
-//     {
-//     case DT_INITRD:
-//         return vfs_initrd_stat((char*)((uintptr_t)path + strlen("/initrd") + 1), st);
-//     default:
-//         return ENOENT;
-//     }
-// }
-
-// int vfs_access(const char* path, mode_t mode)
-// {
-//     if (mode == 0) return 0;
-//     struct stat st;
-//     int ret = vfs_stat(path, &st);
-//     if (ret)
-//         return ret;
-//     // * Assume we're the owner of every file
-//     if ((mode & R_OK) && ((st.st_mode & S_IRUSR) == 0))
-//         return EACCES;
-//     if ((mode & W_OK) && ((st.st_mode & S_IWUSR) == 0))
-//         return EACCES;
-//     if ((mode & X_OK) && ((st.st_mode & S_IXUSR) == 0))
-//         return EACCES;
-//     return 0;
-// }
+int vfs_access(const char* path, mode_t mode)
+{
+    if (mode == 0) return 0;
+    struct stat st;
+    int ret = vfs_stat(path, &st);
+    if (ret)
+        return ret;
+    // * Assume we're the owner of every file for now
+    if ((mode & R_OK) && ((st.st_mode & S_IRUSR) == 0))
+        return EACCES;
+    if ((mode & W_OK) && ((st.st_mode & S_IWUSR) == 0))
+        return EACCES;
+    if ((mode & X_OK) && ((st.st_mode & S_IXUSR) == 0))
+        return EACCES;
+    return 0;
+}
 
 // struct dirent* vfs_root_readdir(struct dirent* dirent, DIR* dirp)
 // {
@@ -104,62 +96,28 @@
 //     return dirent;
 // }
 
-// struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
-// {
-//     errno = 0;
-//     if (!dirent)
-//     {
-//         errno = EINVAL;
-//         return NULL;
-//     }
-//     if (!dirp)
-//     {
-//         errno = EBADF;
-//         return NULL;
-//     }
+struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
+{
+    errno = 0;
+    return NULL;
+}
 
-//     struct stat st;
-//     int ret = vfs_stat(dirp->path, &st);
-//     if (ret != 0) 
-//     {
-//         errno = ret;
-//         return NULL;
-//     }
+int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read)
+{
+    // if (!bytes_read) abort();
+    // if (!((f->flags & O_RDONLY) || (f->flags & O_RDWR))) 
+    // {
+    //     *bytes_read = -1;
+    //     return EBADF;
+    // }
 
-//     if (!(st.st_mode & S_IRUSR))    // * Assume we're the owner of every directory
-//     {
-//         errno = EACCES;
-//         return NULL;
-//     }
-
-//     if (strcmp(dirp->path, "/") == 0)
-//         return vfs_root_readdir(dirent, dirp);
-
-//     switch (get_drive_type(dirp->path))
-//     {
-//     case DT_INITRD:
-//         return vfs_initrd_readdir(dirent, dirp);
-//     default:
-//         errno = ENOENT;
-//         return NULL;
-//     }
-// }
-
-// int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read)
-// {
-//     if (!bytes_read) abort();
-//     if (!((f->flags & O_RDONLY) || (f->flags & O_RDWR))) 
-//     {
-//         *bytes_read = -1;
-//         return EBADF;
-//     }
-
-//     switch (f->type)
-//     {
-//     case DT_INITRD:
-//         return vfs_initrd_read(f, buffer, num_bytes, bytes_read);
-//     default:
-//         *bytes_read = -1;
-//         return EBADF;
-//     }
-// }
+    // switch (f->type)
+    // {
+    // case DT_INITRD:
+    //     return vfs_initrd_read(f, buffer, num_bytes, bytes_read);
+    // default:
+    //     *bytes_read = -1;
+    //     return EBADF;
+    // }
+    return EBADF;
+}

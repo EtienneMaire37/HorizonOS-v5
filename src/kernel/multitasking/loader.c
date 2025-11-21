@@ -21,7 +21,7 @@ void multitasking_add_task_from_function(const char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
+bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_inode_t* cwd)
 {
     LOG(INFO, "Loading ELF file \"/initrd/%s\"", path);
 
@@ -64,9 +64,6 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     task.rsp = TASK_STACK_TOP_ADDRESS - 8; // make_address_canonical(TASK_STACK_TOP_ADDRESS);
 
     startup_data_struct_t data_cpy;
-
-    task_stack_push_string(&task, data->pwd);
-    data_cpy.pwd = (char*)task.rsp;
 
     int num_environ = 0;
     while (data->environ[num_environ])
@@ -119,6 +116,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     task.ring = ring;
 
     task.system_task = system;
+    task.cwd = cwd;
 
     LOG(DEBUG, "Entry point : %#llx", header->entry);
 
@@ -188,7 +186,7 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     return true;
 }
 
-bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data)
+bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_inode_t* cwd)
 {
     if (!name) return false;
     if (!data) abort();
@@ -197,7 +195,7 @@ bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t 
     switch (get_drive_type(path))
     {
     case DT_INITRD:
-        return multitasking_add_task_from_initrd(name, &path[strlen("/initrd/")], ring, system, data);
+        return multitasking_add_task_from_initrd(name, &path[strlen("/initrd/")], ring, system, data, cwd);
     default:
         LOG(ERROR, "Invalid path");
         return false;
