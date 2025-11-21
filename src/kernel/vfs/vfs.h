@@ -35,6 +35,8 @@ typedef struct file_entry
 
 // * VFS data
 
+#define VFS_NODE_INIT       0
+
 #define VFS_NODE_EXPLORED   1
 #define VFS_NODE_LOADING    2
 
@@ -76,6 +78,8 @@ typedef struct vfs_folder_tnode
 
     struct vfs_folder_tnode* next;
 } vfs_folder_tnode_t;
+
+vfs_folder_inode_t* vfs_root = NULL;
 
 #define MAX_FILE_TABLE_ENTRIES  256
 
@@ -184,6 +188,28 @@ void vfs_remove_global_file(int fd)
         return;
     }
     release_spinlock(&file_table_spinlock);
+}
+
+ino_t vfs_generate_inode_number()
+{
+    static ino_t current_inode_number = 0;
+    return current_inode_number++;
+}
+
+vfs_folder_inode_t* vfs_create_empty_folder_inode(vfs_folder_tnode_t* parent)
+{
+    vfs_folder_inode_t* inode = malloc(sizeof(vfs_folder_inode_t));
+
+    inode->files = NULL;
+    inode->folders = NULL;
+
+    inode->flags = VFS_NODE_INIT;
+
+    inode->inode_number = vfs_generate_inode_number();
+
+    inode->parent = parent;
+
+    return inode;
 }
 
 int vfs_root_stat(struct stat* st);

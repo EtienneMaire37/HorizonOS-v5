@@ -153,6 +153,19 @@ static inline int _printf(int (*func_c)(char), int (*func_s)(const char*), const
             pad_with_zeroes = true;
             (*i)++;
             goto parse;
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            reading_precision = true;
+            precision = (format[*i] - '0');
+            (*i)++;
+            goto parse;
     // * -------------------- Precision
         case '.':
             reading_precision = true;

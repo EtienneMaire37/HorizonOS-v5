@@ -615,7 +615,12 @@ void _start()
         putchar('\n');
     }
 
-    // TODO: Find out how to use efi_ptr (System Table) to get access runtime uefi functions
+    LOG(INFO, "Setting up the VFS...");
+    vfs_root = vfs_create_empty_folder_inode(NULL);
+    if (!vfs_root) abort();
+    LOG(INFO, "Set up the VFS.");
+
+    // TODO: Find out how to use efi_ptr (System Table) to get access to runtime uefi functions
 
     // asm volatile("div rcx" :: "c"(0));
 

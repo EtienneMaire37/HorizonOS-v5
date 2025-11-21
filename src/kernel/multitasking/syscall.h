@@ -7,8 +7,8 @@
 
 void handle_syscall(interrupt_registers_t* registers)
 {
-    switch (registers->rax)     // !! some of the path resolution is handled in libc
-    {                           // TODO: Implement a hierarchichal VFS
+    switch (registers->rax)
+    {
     case SYSCALL_EXIT:     // * exit | exit_code = $rbx |
         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, (int)registers->rbx);
         lock_task_queue();

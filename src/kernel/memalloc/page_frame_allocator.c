@@ -149,7 +149,6 @@ static inline physical_address_t pfa_allocate_physical_page()
 
 static inline physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages)
 {
-    if (pages != 1) abort();
     return pfa_allocate_physical_page();
 }
 
@@ -195,7 +194,6 @@ static inline void pfa_free_physical_page(physical_address_t address)
 
 static inline void pfa_free_physical_contiguous_pages(physical_address_t address, uint32_t pages)
 {
-    if (pages != 1) abort();
     for (uint32_t i = 0; i < pages; i++)
         pfa_free_physical_page(address + 0x1000ULL * i);
 }

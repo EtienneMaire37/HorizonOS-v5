@@ -87,12 +87,10 @@ int open(const char* path, int oflag, ...)
         mode = va_arg(args, mode_t) & ~fd_creation_mask;
         va_end(args);
     }
-    char* _path = realpath(path, NULL);
     int fd, _errno;
-    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(fd) : "a"(SYSCALL_OPEN), "b"(_path), "c"(oflag), "d"(mode));
+    asm volatile ("int 0xf0" : "=a"(_errno), "=b"(fd) : "a"(SYSCALL_OPEN), "b"(path), "c"(oflag), "d"(mode));
     if (_errno != 0)
         errno = _errno;
-    free(_path);
     return fd;
 }
 
@@ -107,10 +105,8 @@ int close(int fildes)
 
 int execve(const char* path, char* const argv[], char* const envp[])
 {
-    char resolved_path[PATH_MAX] = {0};
-    realpath(path, resolved_path);
     int _errno;
-    asm volatile ("int 0xf0" : "=a"(_errno) : "a"(SYSCALL_EXECVE), "b"(resolved_path), "c"(argv), "d"(envp), "S"(cwd));
+    asm volatile ("int 0xf0" : "=a"(_errno) : "a"(SYSCALL_EXECVE), "b"(path), "c"(argv), "d"(envp), "S"(cwd));
     if (_errno != 0)
         errno = _errno;
     return -1;
@@ -129,31 +125,25 @@ pid_t waitpid(pid_t pid, int* wstatus, int options)
 
 int access(const char* path, int mode)
 {
-    char* _path = realpath(path, NULL);
     int ret;
-    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_ACCESS), "b"(_path), "c"(mode));
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_ACCESS), "b"(path), "c"(mode));
     if (ret != 0)
     {
-        free(_path);
         errno = ret;
         return -1;
     }
-    free(_path);
     return 0;
 }
 
 int stat(const char* path, struct stat* statbuf)
 {
-    char* _path = realpath(path, NULL);
     int ret;
-    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(_path), "c"((uint64_t)statbuf) : "memory");
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_STAT), "b"(path), "c"((uint64_t)statbuf) : "memory");
     if (ret != 0)
     {
-        free(_path);
         errno = ret;
         return -1;
     }
-    free(_path);
     return 0;
 }
 
