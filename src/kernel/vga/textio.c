@@ -3,7 +3,7 @@
 #include "textio.h"
 #include "vga.h"
 
-static inline void tty_clear_screen(char c)
+void tty_clear_screen(char c)
 {
 	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
 		tty_data[i] = ((uint16_t)tty_color << 8) | ' ';
@@ -74,34 +74,34 @@ uint8_t tty_ansi_to_vga_mask(uint8_t ansi_code)
     return 0xff;
 }
 
-static inline void tty_set_color(uint8_t fg_color, uint8_t bg_color)
+void tty_set_color(uint8_t fg_color, uint8_t bg_color)
 {
 	fflush(stdout);
 
 	tty_color = (fg_color & 0x0f) | (bg_color & 0xf0);
 }
 
-static inline uint32_t tty_get_character_width()
+uint32_t tty_get_character_width()
 {
 	return (framebuffer.width - 2 * tty_padding) / TTY_RES_X;
 }
 
-static inline uint32_t tty_get_character_height()
+uint32_t tty_get_character_height()
 {
 	return (framebuffer.height - 2 * tty_padding) * (psf_get_glyph_height(&tty_font) + psf_get_glyph_width(&tty_font) - 1) / psf_get_glyph_width(&tty_font) / TTY_RES_X;
 }
 
-static inline uint32_t tty_get_character_pos_x(uint32_t index)
+uint32_t tty_get_character_pos_x(uint32_t index)
 {
 	return tty_padding + tty_get_character_width() * (index % TTY_RES_X);
 }
 
-static inline uint32_t tty_get_character_pos_y(uint32_t index)
+uint32_t tty_get_character_pos_y(uint32_t index)
 {
 	return tty_padding + tty_get_character_height() * (index / TTY_RES_X);
 }
 
-static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
+void tty_render_character(uint32_t cursor, char c, uint8_t color)
 {
 	if (cursor >= TTY_RES_X * TTY_RES_Y) return;
 	
@@ -123,7 +123,7 @@ static inline void tty_render_character(uint32_t cursor, char c, uint8_t color)
 		fg_color.b);
 }
 
-static inline void tty_render_cursor(uint32_t cursor)
+void tty_render_cursor(uint32_t cursor)
 {
 	if (cursor >= TTY_RES_X * TTY_RES_Y) return;
 
@@ -136,7 +136,7 @@ static inline void tty_render_cursor(uint32_t cursor)
 	framebuffer_fill_rect(&framebuffer, x, y + (8 * height / 10), width, height / 5, 255, 255, 255, 0);
 }
 
-static inline void tty_refresh_screen()
+void tty_refresh_screen()
 {
 	for (uint32_t i = 0; i < TTY_RES_X * TTY_RES_Y; i++)
 		tty_render_character(i, tty_data[i], tty_data[i] >> 8);
@@ -144,7 +144,7 @@ static inline void tty_refresh_screen()
 		tty_render_cursor(tty_cursor);
 }
 
-static inline void tty_ansi_m_code(uint8_t code)
+void tty_ansi_m_code(uint8_t code)
 {
 	if (code == 0)
 	{
@@ -163,7 +163,7 @@ static inline void tty_ansi_m_code(uint8_t code)
 	return;
 }
 
-static inline void tty_ansi_J_code(uint8_t code)
+void tty_ansi_J_code(uint8_t code)
 {
 	if (code == 2)
 	{
@@ -175,7 +175,7 @@ static inline void tty_ansi_J_code(uint8_t code)
 	return;
 }
 
-static inline void tty_ansi_H_code(uint8_t code)
+void tty_ansi_H_code(uint8_t code)
 {
 	if (code == 0)
 	{
@@ -192,7 +192,7 @@ static inline void tty_ansi_H_code(uint8_t code)
 	return;
 }
 
-static inline void tty_outc(char c)
+void tty_outc(char c)
 {
 	if (c == 0)
 		return;

@@ -34,14 +34,14 @@ uint8_t pdpt_pat_bits[8] =
 uint8_t physical_address_width = 0; // M
 bool pat_enabled = false;
 
-static inline uint64_t get_physical_address_mask()
+uint64_t get_physical_address_mask()
 {
     if (physical_address_width == 0)
         abort();
     return physical_address_width == 64 ? 0xffffffffffffffff : ((uint64_t)1 << (physical_address_width + 1)) - 1;
 }
 
-static inline void init_pat()
+void init_pat()
 {
     uint32_t eax, ebx, ecx, edx = 0;
     cpuid(1, eax, ebx, ecx, edx);
@@ -63,14 +63,14 @@ static inline void init_pat()
         (CACHE_WC << 56));
 }
 
-static inline uint64_t* create_empty_pdpt();
+uint64_t* create_empty_pdpt();
 uint64_t* create_empty_virtual_address_space();
-static inline bool is_pdpt_entry_present(const uint64_t* entry);
-static inline uint64_t* get_pdpt_entry_address(const uint64_t* entry);
-static inline uint8_t get_pdpt_entry_privilege(const uint64_t* entry);
-static inline uint8_t get_pdpt_entry_read_write(const uint64_t* entry);
-static inline void remove_pdpt_entry(uint64_t* entry);
-static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write, uint8_t cache_type);
+bool is_pdpt_entry_present(const uint64_t* entry);
+uint64_t* get_pdpt_entry_address(const uint64_t* entry);
+uint8_t get_pdpt_entry_privilege(const uint64_t* entry);
+uint8_t get_pdpt_entry_read_write(const uint64_t* entry);
+void remove_pdpt_entry(uint64_t* entry);
+void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write, uint8_t cache_type);
 
 void remap_range(uint64_t* pml4, 
     uint64_t start_virtual_address, uint64_t start_physical_address, 

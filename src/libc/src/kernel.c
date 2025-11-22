@@ -123,3 +123,8 @@ char* getcwd(char* buffer, size_t size)
 {
     abort();
 }
+
+char* realpath(const char* path, char* resolved_path)
+{
+    abort();
+}

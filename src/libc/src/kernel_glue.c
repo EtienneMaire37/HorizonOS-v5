@@ -246,3 +246,28 @@ char* getcwd(char* buffer, size_t size)
     asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_GETCWD), "b"(buffer), "c"(size));
     return ret;
 }
+
+char* realpath(const char* path, char* resolved_path)
+{
+    if (!path) 
+    {
+        errno = EINVAL;
+        return NULL;
+    }
+
+    if (!resolved_path) resolved_path = malloc(PATH_MAX * sizeof(char));
+    if (!resolved_path)
+    {
+        errno = ENOMEM;
+        return NULL;
+    }
+
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_REALPATH), "b"(path), "c"(resolved_path));
+    if (ret)
+    {
+        errno = ret;
+        return NULL;
+    }
+    return resolved_path;
+}

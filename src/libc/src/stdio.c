@@ -41,7 +41,7 @@ int fputs(const char* s, FILE* stream)
 #define LM_LL   2
 #define LM_Z    3
 
-static inline int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format, va_list args)
+int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format, va_list args)
 {
     int len = 0;
     void print_string(const char* str)

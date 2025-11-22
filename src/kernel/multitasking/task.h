@@ -30,7 +30,7 @@ typedef struct thread
 
     vfs_folder_inode_t* cwd;
 
-    volatile uint8_t* fpu_state;
+    uint8_t* fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
 
@@ -97,7 +97,7 @@ int vfs_allocate_thread_file(int index)
     return -1;
 }
 
-extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, volatile uint8_t* old_fpu_state, volatile uint8_t* next_fpu_state);
+extern void __attribute__((sysv_abi)) context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds, uint8_t* old_fpu_state, uint8_t* next_fpu_state);
 void full_context_switch(uint16_t next_task_index)
 {
     int last_index = current_task_index;
@@ -128,9 +128,9 @@ uint16_t find_next_task_index()
     return index;
 }
 
-static inline void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
-static inline void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value);
-static inline void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value);
+void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
+void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value);
+void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value);
 
 void task_setup_stack(thread_t* task, uint64_t entry_point, uint16_t code_seg, uint16_t data_seg);
 void task_set_name(thread_t* task, const char* name);

@@ -32,10 +32,10 @@ void pfa_detect_usable_memory()
         if (addr + len > MAX_MEMORY)
             len = MAX_MEMORY - addr;
 
-        uint32_t align = addr & 0xfff;
+        uint64_t align = addr & 0xfff;
         if (align != 0) 
         {
-            uint32_t adjust = 0x1000 - align;
+            uint64_t adjust = 0x1000 - align;
             addr += adjust;
             if (len < adjust)
                 continue;
@@ -100,7 +100,7 @@ no_memory:
     abort();
 }
 
-static inline physical_address_t pfa_allocate_physical_page() 
+physical_address_t pfa_allocate_physical_page() 
 {
     if (memory_allocated + 0x1000 > allocatable_memory) 
     {
@@ -123,7 +123,7 @@ static inline physical_address_t pfa_allocate_physical_page()
         *qword |= ((uint64_t)1 << bit);
         memory_allocated += 0x1000;
 
-        uint64_t page_index = i * 8 + bit;
+        uint64_t page_index = 64 / 8 * i + bit;
 
         uint64_t remaining = page_index;
         for (uint32_t j = first_alloc_block; j < usable_memory_blocks; j++) 
@@ -147,12 +147,83 @@ static inline physical_address_t pfa_allocate_physical_page()
     return physical_null;
 }
 
-static inline physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages)
+physical_address_t pfa_allocate_physical_contiguous_pages(uint32_t pages)
 {
-    return pfa_allocate_physical_page();
+    if (memory_allocated + 0x1000 * pages > allocatable_memory) 
+    {
+        LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at start!");
+        return physical_null;
+    }
+
+    if (memory_allocated + 0x1000 * pages > allocatable_memory * 9 / 10) 
+        LOG(WARNING, "pfa_allocate_physical_contiguous_pages: Over 90%% of memory used!");
+
+    acquire_spinlock(&pfa_spinlock);
+
+    for (uint64_t i = first_free_page_index_hint / 8; i < bitmap_size; i += 8) 
+    {
+    loop_start:
+        uint64_t* qword = (uint64_t*)&bitmap[i];
+        if (*qword == 0xffffffffffffffff) continue;
+
+        uint8_t bit = __builtin_ffsll(~(*qword)) - 1;
+
+        for (uint64_t j = 0; j < pages; j++)
+        {
+            if (bit >= 64)
+            {
+                bit = 0;
+                qword = (uint64_t*)&bitmap[i + j];
+            }
+            if ((*qword) & (1ULL << bit))
+            {
+                i += j * 8 / 64 + 8;
+                goto loop_start;
+            }
+            bit++;
+        }
+
+        qword = (uint64_t*)&bitmap[i];
+
+        bit = __builtin_ffsll(~(*qword)) - 1;
+
+        uint64_t page_index = i * 8 + bit;
+
+        for (uint64_t j = 0; j < pages; j++)
+        {
+            if (bit >= 64)
+            {
+                bit = 0;
+                qword = (uint64_t*)&bitmap[i + j];
+            }
+            *qword |= ((uint64_t)1 << bit);
+            bit++;
+        }
+
+        uint64_t remaining = page_index;
+        for (uint32_t j = first_alloc_block; j < usable_memory_blocks; j++) 
+        {
+            uint64_t block_pages = usable_memory_map[j].length / 0x1000;
+            if (remaining < block_pages) 
+            {
+                physical_address_t addr = usable_memory_map[j].address + remaining * 0x1000;
+                first_free_page_index_hint = 64 / 8 * i + bit;
+                memory_allocated += 0x1000 * pages;
+                LOG_MEM_ALLOCATED();
+                release_spinlock(&pfa_spinlock);
+                // LOG(TRACE, "Allocated page: %#llx", addr);
+                return addr;
+            }
+            remaining -= block_pages;
+        }
+    }
+
+    LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at end!");
+    release_spinlock(&pfa_spinlock);
+    return physical_null;
 }
 
-static inline void pfa_free_physical_page(physical_address_t address) 
+void pfa_free_physical_page(physical_address_t address) 
 {
     if (address == physical_null) 
     {
@@ -192,32 +263,32 @@ static inline void pfa_free_physical_page(physical_address_t address)
     LOG_MEM_ALLOCATED();
 }
 
-static inline void pfa_free_physical_contiguous_pages(physical_address_t address, uint32_t pages)
+void pfa_free_physical_contiguous_pages(physical_address_t address, uint32_t pages)
 {
     for (uint32_t i = 0; i < pages; i++)
         pfa_free_physical_page(address + 0x1000ULL * i);
 }
 
 // * 1st TB will always be identity mapped
-static inline void* pfa_allocate_page()
+void* pfa_allocate_page()
 {
     return (void*)pfa_allocate_physical_page();
 }
 
 // * same
-static inline void pfa_free_page(const void* ptr)
+void pfa_free_page(const void* ptr)
 {
     pfa_free_physical_page((physical_address_t)ptr);
 }
 
 // * same
-static inline void* pfa_allocate_contiguous_pages(uint32_t pages)
+void* pfa_allocate_contiguous_pages(uint32_t pages)
 {
     return (void*)pfa_allocate_physical_contiguous_pages(pages);
 }
 
 // * same
-static inline void pfa_free_contiguous_pages(const void* ptr, uint32_t pages)
+void pfa_free_contiguous_pages(const void* ptr, uint32_t pages)
 {
     pfa_free_physical_contiguous_pages((physical_address_t)ptr, pages);
 }

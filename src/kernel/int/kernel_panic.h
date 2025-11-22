@@ -11,7 +11,7 @@
 
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')  
 
-static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
+void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp)
 {
     initrd_file_t* file = kernel_symbols_file;
     if (file == NULL) return;

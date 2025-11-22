@@ -170,7 +170,7 @@ void task_stack_push_string(thread_t* task, const char* str)
     task_stack_push_data(task, (void*)str, bytes);
 }
 
-static inline void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value)
+void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value)
 {
     if (task->cr3 == physical_null)
     {
@@ -183,7 +183,7 @@ static inline void task_write_at_address_1b(thread_t* task, uint64_t address, ui
     *ptr = value;
 }
 
-static inline void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value)
+void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value)
 {
     if (task->cr3 == physical_null)
     {
@@ -201,7 +201,7 @@ static inline void task_write_at_aligned_address_8b(thread_t* task, uint64_t add
     *ptr = value;
 }
 
-static inline void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value)
+void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value)
 {
     if (task->cr3 == physical_null)
     {
@@ -244,7 +244,7 @@ void switch_task()
     unlock_task_queue();
 }
 
-static inline thread_t* find_task_by_pid(pid_t pid)
+thread_t* find_task_by_pid(pid_t pid)
 {
     for (uint16_t i = 0; i < task_count; i++)
         if (tasks[i].pid == pid)

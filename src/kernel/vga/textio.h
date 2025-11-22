@@ -57,7 +57,7 @@ psf_font_t tty_font;
 
 const uint32_t tty_padding = 2;	// pixels
 
-static inline bool is_printable_character(char c)
+bool is_printable_character(char c)
 {
     return ((unsigned char)c >= 32) && ((unsigned char)c < 128);
 }
@@ -68,6 +68,6 @@ uint8_t tty_control_sequence_buffer[TTY_ANSI_BUFFER] = {0};
 uint8_t tty_escape_sequence_index = 0;
 bool tty_reading_escape_sequence = false, tty_reading_control_sequence = false;
 
-static inline void tty_clear_screen(char c);
-static inline void tty_set_color(uint8_t fg_color, uint8_t bg_color);
-static inline void tty_outc(char c);
+void tty_clear_screen(char c);
+void tty_set_color(uint8_t fg_color, uint8_t bg_color);
+void tty_outc(char c);

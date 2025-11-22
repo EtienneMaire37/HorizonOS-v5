@@ -1,16 +1,7 @@
 void* memset(void* dst, int value, size_t n)
 {
-    uint8_t val8 = (uint8_t)value;
-    uint64_t val64 = (uint64_t)val8 * 0x0101010101010101ULL;
-
-    asm volatile(
-        "rep stosq\n"     // store 8 bytes at a time
-        "mov %3, %%rcx\n" // bytes remaining
-        "rep stosb"
-        : "=D"(dst), "=c"(n)
-        : "0"(dst), "r"(n & 7), "1"(n >> 3), "a"(val64)
-        : "memory"
-    );
+    for (size_t i = 0; i < n; i++)
+        ((uint8_t*)dst)[i] = (uint8_t)value;
     return dst;
 }
 

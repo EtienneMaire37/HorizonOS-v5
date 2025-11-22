@@ -297,7 +297,7 @@ long double powl(long double a, long double b)
 
 #define SIN_TAYLOR_4(xx) ((xx) - ((xx) * (xx) * (xx)) / 6. + ((xx) * (xx) * (xx) * (xx) * (xx)) / 120.)
 
-static inline double _sin(double x) // -M_PI/4 <= x <= M_PI/4
+double _sin(double x) // -M_PI/4 <= x <= M_PI/4
 {
     double ax = fabs(x);
 
@@ -320,7 +320,7 @@ static inline double _sin(double x) // -M_PI/4 <= x <= M_PI/4
     }
 }
 
-static inline double _cos(double x) // -M_PI/4 <= x <= M_PI/4
+double _cos(double x) // -M_PI/4 <= x <= M_PI/4
 {
     double ax = fabs(x);
 

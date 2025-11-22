@@ -3,7 +3,7 @@
 #include "../cpu/memory.h"
 #include "paging.h"
 
-static inline uint64_t* create_empty_pdpt()
+uint64_t* create_empty_pdpt()
 {
     uint64_t* pdpt = pfa_allocate_page();
     if (!pdpt) 
@@ -25,28 +25,28 @@ uint64_t* create_empty_virtual_address_space()
     return create_empty_pdpt();
 }
 
-static inline bool is_pdpt_entry_present(const uint64_t* entry)
+bool is_pdpt_entry_present(const uint64_t* entry)
 {
     if (!entry) return false;
     return (*entry) & 1;
 }
 
-static inline uint64_t* get_pdpt_entry_address(const uint64_t* entry)
+uint64_t* get_pdpt_entry_address(const uint64_t* entry)
 {
     return is_pdpt_entry_present(entry) ? (uint64_t*)(((*entry) & 0xfffffffffffff000) & get_physical_address_mask()) : NULL;
 }
 
-static inline uint8_t get_pdpt_entry_privilege(const uint64_t* entry)
+uint8_t get_pdpt_entry_privilege(const uint64_t* entry)
 {
     return is_pdpt_entry_present(entry) ? (((*entry) >> 2) & 1) : 0x80;
 }
 
-static inline uint8_t get_pdpt_entry_read_write(const uint64_t* entry)
+uint8_t get_pdpt_entry_read_write(const uint64_t* entry)
 {
     return is_pdpt_entry_present(entry) ? (((*entry) >> 1) & 1) : 0x80;
 }
 
-static inline uint8_t get_pdpt_entry_cache_type(const uint64_t* entry)
+uint8_t get_pdpt_entry_cache_type(const uint64_t* entry)
 {
     if (!is_pdpt_entry_present(entry))
         return 0x80 | CACHE_WB;
@@ -56,12 +56,12 @@ static inline uint8_t get_pdpt_entry_cache_type(const uint64_t* entry)
     return pat >> (pat_index * 8);
 }
 
-static inline void remove_pdpt_entry(uint64_t* entry)
+void remove_pdpt_entry(uint64_t* entry)
 {
     *entry = 0;
 }
 
-static inline void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write, uint8_t cache_type)
+void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_t read_write, uint8_t cache_type)
 {
     if (address == 0)
     {

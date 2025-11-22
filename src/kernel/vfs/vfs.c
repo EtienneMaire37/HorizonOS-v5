@@ -2,6 +2,49 @@
 
 #include "../initrd/vfs.c"
 
+// bool file_string_cmp(const char* s1, const char* s2)
+// {
+//     if (s1 == s2) return true;
+//     if (s1 == NULL || s2 == NULL) return false;
+//     while (*s1 && *s2 && *s1 != '/' && *s2 != '/')
+//     {
+//         ;
+//     }
+// }
+
+// vfs_file_inode_t* vfs_get_file_inode(const char* path, vfs_folder_inode_t* pwd)
+// {
+//     if (!path) return NULL;
+//     size_t path_len = strlen(path);
+//     if (path_len == 0) return pwd;
+
+//     size_t i = 0;
+//     vfs_folder_inode_t* current_folder = path[0] == '/' ? (i++, vfs_root) : pwd;
+//     while (i < path_len)
+//     {
+//         vfs_folder_tnode_t* current_child = current_folder->folders;
+//         while (current_child)
+//         {
+//             bool match = true;
+//             size_t current_entry_len = strlen(current_child->name);
+//             for (ssize_t off = 0; off < current_entry_len; off++)
+//             {
+//                 if (current_child->name[off] != path[i + off])
+//                 {
+//                     match = false;
+//                     break;
+//                 }
+//             }
+//             if (match)
+//             {
+//                 current_folder = current_child->inode;
+//                 break;
+//             }
+//             current_child = current_child->next;
+//         }
+//     }
+// }
+
 // int vfs_root_stat(struct stat* st)
 // {
 //     st->st_dev = -1;

@@ -33,9 +33,9 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	nasm -f elf64 -o "bin/sse.o" "src/kernel/fpu/sse.asm"
 
 	$(CROSSGCC) -c "src/kernel/main.c" -o "bin/kernel.o" \
-	-Wall -Werror -Wno-address-of-packed-member -fpic $(CFLAGS) -I./bootboot/dist/ \
+	-Wall -Werror -Wno-address-of-packed-member -fpic -I./bootboot/dist/ \
 	-O2 \
-	-fno-caller-saves \
+	$(CFLAGS) \
 	-mno-red-zone \
 	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
 	-mno-80387 -mno-mmx -mno-sse -mno-avx \

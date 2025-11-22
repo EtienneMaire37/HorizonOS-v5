@@ -66,17 +66,17 @@ srgb_t vga_colors[16] =
     {0xFF, 0xFF, 0xFF}  // 15: White
 };
 
-static inline srgb_t vga_get_color(uint8_t vga_color_code)
+srgb_t vga_get_color(uint8_t vga_color_code)
 {
     return vga_colors[vga_color_code & 0x0f];
 }
 
-static inline srgb_t vga_get_bg_color(uint8_t vga_color_code)
+srgb_t vga_get_bg_color(uint8_t vga_color_code)
 {
     return vga_get_color(vga_color_code >> 4);
 }
 
-static inline srgb_t vga_get_fg_color(uint8_t vga_color_code)
+srgb_t vga_get_fg_color(uint8_t vga_color_code)
 {
     return vga_get_color(vga_color_code);
 }
