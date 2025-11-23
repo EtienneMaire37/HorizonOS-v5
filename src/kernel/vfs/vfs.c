@@ -344,10 +344,12 @@ int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_rea
 
 void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
 {
+    char access_str[11];
+
     LOG(DEBUG, "");
     for (int i = 0; i < depth; i++)
         CONTINUE_LOG(DEBUG, "    ");
-    CONTINUE_LOG(DEBUG, "`%s` (folder)%s", tnode->name, tnode->inode->flags & VFS_NODE_EXPLORED ? ":" : " (not explored)");
+    CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s)%s", tnode->name, tnode->inode->st.st_ino, get_access_string(tnode->inode->st.st_mode, access_str), tnode->inode->flags & VFS_NODE_EXPLORED ? ":" : " (not explored)");
     vfs_folder_tnode_t* current_folder = tnode->inode->folders;
     while (current_folder)
     {
@@ -360,7 +362,7 @@ void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
         LOG(DEBUG, "");
         for (int i = 0; i < depth + 1; i++)
             CONTINUE_LOG(DEBUG, "    ");
-        CONTINUE_LOG(DEBUG, "`%s` (file)", current_file->name);
+        CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s)", current_file->name, current_file->inode->st.st_ino, get_access_string(current_file->inode->st.st_mode, access_str));
         current_file = current_file->next;
     }
 }

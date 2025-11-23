@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "../../libc/src/misc.h"
+
 extern int errno;
 
 int main(int argc, char** argv)
@@ -74,51 +76,9 @@ int main(int argc, char** argv)
                 bool dir = S_ISDIR(st.st_mode);
                 if (l)
                 {
-                    if (dir)
-                        putchar('d');
-                    else    
-                        putchar('-');
+                    char access_str[11];
 
-                    if (st.st_mode & S_IRUSR)
-                        putchar('r');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IWUSR)
-                        putchar('w');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IXUSR)
-                        putchar('x');
-                    else    
-                        putchar('-');
-
-                    if (st.st_mode & S_IRGRP)
-                        putchar('r');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IWGRP)
-                        putchar('w');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IXGRP)
-                        putchar('x');
-                    else    
-                        putchar('-');
-
-                    if (st.st_mode & S_IROTH)
-                        putchar('r');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IWOTH)
-                        putchar('w');
-                    else    
-                        putchar('-');
-                    if (st.st_mode & S_IXOTH)
-                        putchar('x');
-                    else    
-                        putchar('-');
-
-                    putchar(' ');
+                    printf("%s ", get_access_string(st.st_mode, access_str));
                 }
                 if (dir)
                     printf("\x1b[94m");
