@@ -51,6 +51,8 @@ uint16_t tty_data[TTY_RES_X * TTY_RES_Y] = {0};
 uint32_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
 
+struct termios tty_ts;
+
 bool tty_cursor_blink = true;
 
 psf_font_t tty_font;

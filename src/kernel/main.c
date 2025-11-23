@@ -614,14 +614,54 @@ void _start()
     }
 
     LOG(INFO, "Setting up the VFS...");
-    vfs_root = vfs_create_empty_folder_inode(NULL, 0, 0, 
+    vfs_root = vfs_create_empty_folder_tnode("root", NULL, VFS_NODE_EXPLORED, 
+        0, 
         S_IFDIR | 
         S_IRUSR | S_IXUSR |
         S_IRGRP | S_IXGRP |
         S_IROTH | S_IXOTH, 
-        0, 0);
+        0, 0,
+        (drive_t){.type = DT_VIRTUAL});
+    vfs_root->inode->parent = vfs_root;
     if (!vfs_root) abort();
+    vfs_mount_device("initrd", (drive_t){.type = DT_INITRD}, 0, 0);
+    vfs_mount_device("devices", (drive_t){.type = DT_VIRTUAL}, 0, 0);
+    vfs_get_folder_tnode("/devices", NULL)->inode->flags |= VFS_NODE_EXPLORED;
+
+    vfs_add_chr("/devices", "stdin", task_chr_stdin, 0, 0);
+    vfs_add_chr("/devices", "stdout", task_chr_stdout, 0, 0);
+    vfs_add_chr("/devices", "stderr", task_chr_stderr, 0, 0);
     LOG(INFO, "Set up the VFS.");
+
+    LOG(DEBUG, "VFS TREE:");
+    vfs_log_tree(vfs_root, 0);
+
+    tty_ts = (struct termios)
+    {
+        .c_iflag = ICRNL | IXON,
+        .c_oflag = OPOST | ONLCR,
+        .c_cflag = B38400 | CS8 | CREAD | HUPCL,
+        .c_lflag = ISIG | ICANON | ECHO | ECHOE | ECHOK | IEXTEN,
+        .c_cc = 
+        {
+            [VINTR]    = 0x03,
+            [VQUIT]    = 0x1C,
+            [VERASE]   = 0x7F,
+            [VKILL]    = 0x15,
+            [VEOF]     = 0x04,
+            [VTIME]    = 0,
+            [VMIN]     = 1,
+            [VSTART]   = 0x11,
+            [VSTOP]    = 0x13,
+            [VSUSP]    = 0x1A,
+            [VEOL]     = 0,
+            [VREPRINT] = 0x12,
+            [VDISCARD] = 0x0F,
+            [VWERASE]  = 0x17,
+            [VLNEXT]   = 0x16,
+            [VEOL2]    = 0
+        }
+    };
 
     // TODO: Find out how to use efi_ptr (System Table) to get access to runtime uefi functions
 

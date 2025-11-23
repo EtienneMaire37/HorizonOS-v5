@@ -7,12 +7,8 @@ void* memset(void* dst, int value, size_t n)
 
 void* memcpy(void* dst, const void* src, size_t n) 
 {
-    asm volatile(
-        "rep movsb" // copy byte by byte
-        : "=D"(dst), "=S"(src), "=c"(n)
-        : "0"(dst), "1"(src), "2"(n)
-        : "memory"
-    );
+    for (size_t i = 0; i < n; i++)
+        ((uint8_t*)dst)[i] = ((uint8_t*)src)[i];
     return dst;
 }
 
@@ -152,4 +148,15 @@ char* strerror(int errnum)
         case EXDEV: return "Cross-device link";
         default: return "Unknown error";
     }
+}
+
+#include "../include/stdlib.h"
+
+char* strdup(const char* str)
+{
+    size_t len = strlen(str);
+    char* dup = malloc(len);
+    if (!dup) return NULL;
+    __builtin_memcpy(dup, str, len + 1);
+    return dup;
 }

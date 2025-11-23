@@ -185,9 +185,9 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
             utf32_char_t character = ps2_scancode_to_unicode(current_ps2_keyboard_scancodes[port_index], port);
             // LOG(DEBUG, "\'%c\'", character);
             keyboard_handle_character(character, vk, 
-                (file_table[STDIN_FILENO].data.terminal_data.ts.c_lflag & ECHO) != 0, 
-                (file_table[STDIN_FILENO].data.terminal_data.ts.c_lflag & ICANON) == 0, 
-                file_table[STDIN_FILENO].data.terminal_data.ts.c_cc[VMIN]);
+                (tty_ts.c_lflag & ECHO) != 0, 
+                (tty_ts.c_lflag & ICANON) == 0, 
+                tty_ts.c_cc[VMIN]);
         }
 
         current_ps2_keyboard_scancodes[port_index].release = current_ps2_keyboard_scancodes[port_index].extended = false;

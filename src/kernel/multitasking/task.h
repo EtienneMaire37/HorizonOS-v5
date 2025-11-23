@@ -28,7 +28,7 @@ typedef struct thread
     pid_t pid;
     bool system_task;    // system_task: cause kernel panics
 
-    vfs_folder_inode_t* cwd;
+    vfs_folder_tnode_t* cwd;
 
     uint8_t* fpu_state;
 

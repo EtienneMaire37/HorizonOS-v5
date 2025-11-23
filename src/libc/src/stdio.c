@@ -786,6 +786,12 @@ int ferror(FILE* stream)
     return (stream->current_flags & FILE_CFLAGS_ERR) != 0;
 }
 
+int fileno(FILE* stream)
+{
+    if (!stream) return (errno = EBADF, -1);
+    return stream->fd;
+}
+
 int fgetc(FILE* stream)
 {
     unsigned char c;

@@ -21,7 +21,7 @@ void multitasking_add_task_from_function(const char* name, void (*func)())
     LOG(DEBUG, "Done");
 }
 
-bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_inode_t* cwd)
+bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
 {
     LOG(INFO, "Loading ELF file \"/initrd/%s\"", path);
 
@@ -186,18 +186,17 @@ bool multitasking_add_task_from_initrd(const char* name, const char* path, uint8
     return true;
 }
 
-bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_inode_t* cwd)
+bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
 {
     if (!name) return false;
     if (!data) abort();
 
+    if (strlen(path) == 0) return false;
+
     LOG(DEBUG, "Loading file \"%s\"", path);
-    switch (get_drive_type(path))
-    {
-    case DT_INITRD:
+    if (file_string_cmp(path + 1, "initrd"))
         return multitasking_add_task_from_initrd(name, &path[strlen("/initrd/")], ring, system, data, cwd);
-    default:
-        LOG(ERROR, "Invalid path");
-        return false;
-    }
+        
+    LOG(ERROR, "Invalid path");
+    return false;
 }

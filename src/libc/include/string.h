@@ -36,4 +36,5 @@ typedef unsigned long long size_t;
 #define strcpy __builtin_strcpy
 #define strncpy __builtin_strncpy
 
+char* strdup(const char* str);
 char* strerror(int errnum);

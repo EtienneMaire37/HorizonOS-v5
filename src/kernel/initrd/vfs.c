@@ -1,5 +1,13 @@
 #pragma once
 
+#include "../vfs/vfs.h"
+
+void vfs_initrd_do_explore(vfs_folder_inode_t* inode)
+{
+    inode->files = NULL;
+    inode->folders = NULL;
+}
+
 // int vfs_initrd_root_stat(struct stat* st)
 // {
 //     st->st_dev = -1;
