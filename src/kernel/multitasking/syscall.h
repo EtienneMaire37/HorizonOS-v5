@@ -139,42 +139,43 @@ void handle_syscall(interrupt_registers_t* registers)
         __CURRENT_TASK.file_table[fd] = invalid_fd;
         break;
 
-    // case SYSCALL_WRITE:     // * write | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_written, $rbx = errno
-    // {
-    //     int fd = registers->rbx;
-    //     if (fd < 0 || fd >= OPEN_MAX)
-    //     {
-    //         registers->rax = (uint64_t)(-1);
-    //         registers->rbx = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] == invalid_fd)
-    //     {
-    //         registers->rax = (uint64_t)(-1);
-    //         registers->rbx = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] > 2)   // ! Only default fds are supported for now
-    //     {
-    //         registers->rax = 0;
-    //         registers->rbx = 0;
-    //     }
-    //     else
-    //     {
-    //         if (registers->rbx == STDOUT_FILENO || registers->rbx == STDERR_FILENO)
-    //         {
-    //             for (uint32_t i = 0; i < registers->rdx; i++)
-    //                 tty_outc(((char*)registers->rcx)[i]);
-    //             registers->rax = registers->rdx;    // bytes_written
-    //         }
-    //         else    // ! cant write to STDIN_FILENO
-    //         {
-    //             registers->rax = (uint64_t)(-1);
-    //             registers->rbx = EBADF;
-    //         }
-    //     }
-    //     break;
-    // }
+    case SYSCALL_WRITE:     // * write | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_written, $rbx = errno
+    {
+        int fd = registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = (uint64_t)(-1);
+            registers->rbx = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = (uint64_t)(-1);
+            registers->rbx = EBADF;
+            break;
+        }
+        registers->rbx = vfs_write(fd, (unsigned char*)registers->rcx, registers->rdx, &registers->rax);
+        // if (__CURRENT_TASK.file_table[fd] > 2)   // ! Only default fds are supported for now
+        // {
+        //     registers->rax = 0;
+        //     registers->rbx = 0;
+        // }
+        // else
+        // {
+        //     if (registers->rbx == STDOUT_FILENO || registers->rbx == STDERR_FILENO)
+        //     {
+        //         for (uint32_t i = 0; i < registers->rdx; i++)
+        //             tty_outc(((char*)registers->rcx)[i]);
+        //         registers->rax = registers->rdx;    // bytes_written
+        //     }
+        //     else    // ! cant write to STDIN_FILENO
+        //     {
+        //         registers->rax = (uint64_t)(-1);
+        //         registers->rbx = EBADF;
+        //     }
+        // }
+        break;
+    }
 
     // case SYSCALL_READ:      // * read | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_read, $rbx = errno
     // {
@@ -275,7 +276,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_EXECVE:    // * execve | path = $rbx, argv = $rcx, envp = $rdx | $rax = errno
     {
-        if (vfs_access((char*)registers->rbx, X_OK) != 0)
+        if (vfs_access((char*)registers->rbx, __CURRENT_TASK.cwd, X_OK) != 0)
         {
             registers->rax = EACCES;
             break;
@@ -422,14 +423,14 @@ void handle_syscall(interrupt_registers_t* registers)
     {
         struct stat* st = (struct stat*)registers->rcx;
         const char* path = (const char*)registers->rbx;
-        registers->rax = vfs_stat(path, st);
+        registers->rax = vfs_stat(path, __CURRENT_TASK.cwd, st);
         break;
     }
 
     case SYSCALL_ACCESS:  // * access | path = $rbx, mode = $rcx | $rax = ret
     {
         const char* path = (const char*)registers->rbx;
-        registers->rax = vfs_access(path, registers->rcx);
+        registers->rax = vfs_access(path, __CURRENT_TASK.cwd, registers->rcx);
         break;
     }
 

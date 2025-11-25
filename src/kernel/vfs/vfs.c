@@ -242,20 +242,35 @@ vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* p
 //     return 0;
 // }
 
-int vfs_stat(const char* path, struct stat* st)
+int vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st)
 {
     if (!path || !st)
         return EFAULT;
 
-    // TODO: Implement this
+    vfs_folder_tnode_t* folder_tnode = vfs_get_folder_tnode(path, pwd);
+
+    if (folder_tnode)
+    {
+        *st = folder_tnode->inode->st;
+        return 0;
+    }
+
+    vfs_file_tnode_t* file_tnode = vfs_get_file_tnode(path, pwd);
+
+    if (file_tnode)
+    {
+        *st = file_tnode->inode->st;
+        return 0;
+    }
+
     return ENOENT;
 }
 
-int vfs_access(const char* path, mode_t mode)
+int vfs_access(const char* path, vfs_folder_tnode_t* pwd, mode_t mode)
 {
     if (mode == 0) return 0;
     struct stat st;
-    int ret = vfs_stat(path, &st);
+    int ret = vfs_stat(path, pwd, &st);
     if (ret)
         return ret;
     // * Assume we're the owner of every file for now
@@ -339,6 +354,27 @@ int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_rea
     //     *bytes_read = -1;
     //     return EBADF;
     // }
+    return EBADF;
+}
+
+int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* bytes_written)
+{
+    if (__CURRENT_TASK.file_table[fd] < 0 || __CURRENT_TASK.file_table[fd] >= MAX_FILE_TABLE_ENTRIES)
+    {
+        *bytes_written = (uint64_t)-1;
+        return EBADF;
+    }
+    if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
+    {
+        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].inode.file->st.st_mode;
+        if (S_ISCHR(mode))
+        {
+            file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
+            *bytes_written = bytes_to_write;
+            return 0;
+        }
+    }
+    *bytes_written = (uint64_t)-1;
     return EBADF;
 }
 
