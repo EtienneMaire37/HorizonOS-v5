@@ -10,7 +10,18 @@ ssize_t task_chr_stdin(uint8_t* buf, size_t count, uint8_t direction)
     switch(direction)
     {
     case CHR_DIR_READ:
-        return 0;
+        if (count == 0)
+            return 0;
+        if (no_buffered_characters(__CURRENT_TASK.input_buffer))
+        {
+            __CURRENT_TASK.reading_stdin = true;
+            switch_task();
+        }
+        uint64_t ret = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), count);
+        for (uint32_t i = 0; i < count; i++)
+            // *** Only ASCII for now ***
+            buf[i] = utf32_to_bios_oem(utf32_buffer_getchar(&__CURRENT_TASK.input_buffer));
+        return ret;
     case CHR_DIR_WRITE:
         return 0;
     }
@@ -155,80 +166,29 @@ void handle_syscall(interrupt_registers_t* registers)
             break;
         }
         registers->rbx = vfs_write(fd, (unsigned char*)registers->rcx, registers->rdx, &registers->rax);
-        // if (__CURRENT_TASK.file_table[fd] > 2)   // ! Only default fds are supported for now
-        // {
-        //     registers->rax = 0;
-        //     registers->rbx = 0;
-        // }
-        // else
-        // {
-        //     if (registers->rbx == STDOUT_FILENO || registers->rbx == STDERR_FILENO)
-        //     {
-        //         for (uint32_t i = 0; i < registers->rdx; i++)
-        //             tty_outc(((char*)registers->rcx)[i]);
-        //         registers->rax = registers->rdx;    // bytes_written
-        //     }
-        //     else    // ! cant write to STDIN_FILENO
-        //     {
-        //         registers->rax = (uint64_t)(-1);
-        //         registers->rbx = EBADF;
-        //     }
-        // }
         break;
     }
 
-    // case SYSCALL_READ:      // * read | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_read, $rbx = errno
-    // {
-    //     int fd = (int)registers->rbx;
-    //     if (fd < 0 || fd >= OPEN_MAX)
-    //     {
-    //         registers->rax = (uint64_t)-1;
-    //         registers->rbx = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] == invalid_fd)
-    //     {
-    //         registers->rax = (uint64_t)-1;
-    //         registers->rbx = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] > 2)
-    //     {
-    //         file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
-    //         ssize_t bytes_read;
-    //         registers->rbx = vfs_read(entry, (void*)registers->rcx, registers->rdx, &bytes_read);
-    //         registers->rax = (uint32_t)bytes_read;
-    //     } 
-    //     else
-    //     {
-    //         if (registers->rbx == STDIN_FILENO)
-    //         {
-    //             registers->rbx = 0;
-    //             if (registers->rdx == 0)
-    //             {
-    //                 registers->rax = 0;
-    //                 break;
-    //             }
-    //             if (no_buffered_characters(__CURRENT_TASK.input_buffer))
-    //             {
-    //                 __CURRENT_TASK.reading_stdin = true;
-    //                 switch_task();
-    //             }
-    //             registers->rax = minint(get_buffered_characters(__CURRENT_TASK.input_buffer), registers->rdx);
-    //             for (uint32_t i = 0; i < registers->rax; i++)
-    //             {
-    //                 // *** Only ASCII for now ***
-    //                 ((char*)registers->rcx)[i] = utf32_to_bios_oem(utf32_buffer_getchar(&__CURRENT_TASK.input_buffer));
-    //             }
-    //         }
-    //         else
-    //         {
-    //             registers->rax = (uint64_t)-1;
-    //             registers->rbx = EBADF;
-    //         }
-    //     }
-    //     break;
-    // }
+    case SYSCALL_READ:      // * read | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_read, $rbx = errno
+    {
+        int fd = (int)registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = (uint64_t)-1;
+            registers->rbx = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = (uint64_t)-1;
+            registers->rbx = EBADF;
+            break;
+        }
+        ssize_t bytes_read;
+        registers->rbx = vfs_read(fd, (void*)registers->rcx, registers->rdx, &bytes_read);
+        registers->rax = (uint32_t)bytes_read;
+        break;
+    }
 
     case SYSCALL_BRK:   // * brk | addr = $rbx, break_address = $rcx | $rax = errno, $rbx = break_address
     {

@@ -354,7 +354,7 @@ int vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st);
 int vfs_access(const char* path, vfs_folder_tnode_t* pwd, mode_t mode);
 struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp);
 
-int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read);
+int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read);
 int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* bytes_written);
 
 void vfs_log_tree();

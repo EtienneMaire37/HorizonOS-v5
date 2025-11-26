@@ -337,31 +337,44 @@ struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
     return NULL;
 }
 
-int vfs_read(file_entry_t* f, void* buffer, size_t num_bytes, ssize_t* bytes_read)
+int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
 {
-    // if (!bytes_read) abort();
-    // if (!((f->flags & O_RDONLY) || (f->flags & O_RDWR))) 
-    // {
-    //     *bytes_read = -1;
-    //     return EBADF;
-    // }
+    if (!bytes_read) abort();
+    if (__CURRENT_TASK.file_table[fd] < 0 || __CURRENT_TASK.file_table[fd] >= MAX_FILE_TABLE_ENTRIES)
+    {
+        *bytes_read = (uint64_t)-1;
+        return EBADF;
+    }
+    if (!((file_table[__CURRENT_TASK.file_table[fd]].flags & O_RDONLY) || (file_table[__CURRENT_TASK.file_table[fd]].flags & O_RDWR))) 
+    {
+        *bytes_read = -1;
+        return EBADF;
+    }
 
-    // switch (f->type)
-    // {
-    // case DT_INITRD:
-    //     return vfs_initrd_read(f, buffer, num_bytes, bytes_read);
-    // default:
-    //     *bytes_read = -1;
-    //     return EBADF;
-    // }
-    return EBADF;
+    if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
+    {
+        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].inode.file->st.st_mode;
+        if (S_ISCHR(mode))
+        {
+            *bytes_read = file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, num_bytes, CHR_DIR_READ);
+            return 0;
+        }
+    }
+    *bytes_read = 0;
+    return 0;
 }
 
 int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* bytes_written)
 {
+    if (!bytes_written) abort();
     if (__CURRENT_TASK.file_table[fd] < 0 || __CURRENT_TASK.file_table[fd] >= MAX_FILE_TABLE_ENTRIES)
     {
         *bytes_written = (uint64_t)-1;
+        return EBADF;
+    }
+    if (!((file_table[__CURRENT_TASK.file_table[fd]].flags & O_WRONLY) || (file_table[__CURRENT_TASK.file_table[fd]].flags & O_RDWR))) 
+    {
+        *bytes_written = -1;
         return EBADF;
     }
     if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
@@ -369,13 +382,12 @@ int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* 
         mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].inode.file->st.st_mode;
         if (S_ISCHR(mode))
         {
-            file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
-            *bytes_written = bytes_to_write;
+            *bytes_written = file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
             return 0;
         }
     }
-    *bytes_written = (uint64_t)-1;
-    return EBADF;
+    *bytes_written = 0;
+    return 0;
 }
 
 void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
