@@ -66,7 +66,8 @@ int main(int argc, char** argv)
         {
             while ((ep = readdir(dp)) != NULL)
             {
-                if (!a && ep->d_name[0] == '.')
+                bool hidden = ep->d_name[0] == '.';
+                if (!a && hidden)
                     continue;
                 char full_path[PATH_MAX];
                 snprintf(full_path, sizeof(full_path), "%s/%s", path, ep->d_name);
@@ -81,9 +82,19 @@ int main(int argc, char** argv)
                     printf("%s ", get_access_string(st.st_mode, access_str));
                 }
                 if (dir)
-                    printf("\x1b[94m");
+                {
+                    if (hidden)
+                        printf("\x1b[94m");
+                    else
+                        printf("\x1b[93m");
+                }
                 else
-                    printf("\x1b[92m");
+                {
+                    if (hidden)
+                        printf("\x1b[95m");
+                    else
+                        printf("\x1b[92m");
+                }
                 printf("%s\x1b[0m\n", ep->d_name);
             }
 

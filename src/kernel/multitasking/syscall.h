@@ -5,7 +5,7 @@
 #include "../../libc/src/startup_data.h"
 #include "../multitasking/loader.h"
 
-ssize_t task_chr_stdin(uint8_t* buf, size_t count, uint8_t direction)
+ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
     switch(direction)
     {
@@ -28,7 +28,7 @@ ssize_t task_chr_stdin(uint8_t* buf, size_t count, uint8_t direction)
     return 0;
 }
 
-ssize_t task_chr_stdout(uint8_t* buf, size_t count, uint8_t direction)
+ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
     switch(direction)
     {
@@ -42,9 +42,9 @@ ssize_t task_chr_stdout(uint8_t* buf, size_t count, uint8_t direction)
     return 0;
 }
 
-ssize_t task_chr_stderr(uint8_t* buf, size_t count, uint8_t direction)
+ssize_t task_chr_stderr(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
-    return task_chr_stdout(buf, count, direction);
+    return task_chr_stdout(entry, buf, count, direction);
 }
 
 void handle_syscall(interrupt_registers_t* registers)

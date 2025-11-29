@@ -32,35 +32,24 @@ typedef struct
 #define VFS_NODE_EXPLORED   1
 #define VFS_NODE_LOADING    2
 
+typedef struct vfs_file_inode vfs_file_inode_t;
+
 typedef struct vfs_file_tnode vfs_file_tnode_t;
 typedef struct vfs_folder_tnode vfs_folder_tnode_t;
 
-typedef struct
-{
-    ;
-} regular_file_inode_data_t;
-
-typedef struct 
-{
-    ssize_t (*fun)(uint8_t*, size_t, uint8_t);
-} chr_special_file_inode_data_t;
-
-typedef struct 
-{
-    ;
-} blk_special_file_inode_data_t;
+typedef struct file_entry file_entry_t;
 
 // * i-nodes
-typedef struct 
+typedef struct vfs_file_inode
 {
     drive_t drive;
 
     union
     {
-        regular_file_inode_data_t regular;
-        chr_special_file_inode_data_t chr;
-        blk_special_file_inode_data_t blk;
+        initrd_file_t* initrd;
     } file_data;
+
+    ssize_t (*io_func)(file_entry_t*, uint8_t* buf, size_t count, uint8_t direction);
 
     struct stat st;
 
@@ -261,13 +250,13 @@ vfs_folder_tnode_t* vfs_create_empty_folder_tnode(const char* name, vfs_folder_t
     return tnode;
 }
 
-vfs_file_inode_t* vfs_create_chr_special_file_inode(vfs_folder_tnode_t* parent, ssize_t (*fun)(uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
+vfs_file_inode_t* vfs_create_chr_special_file_inode(vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
 {
     vfs_file_inode_t* inode = malloc(sizeof(vfs_file_inode_t));
     if (!inode) return NULL;
 
     inode->drive.type = DT_VIRTUAL;
-    inode->file_data.chr.fun = fun;
+    inode->io_func = fun;
     inode->parent = parent;
     
     inode->st.st_dev = 0;   // * root device
@@ -287,7 +276,7 @@ vfs_file_inode_t* vfs_create_chr_special_file_inode(vfs_folder_tnode_t* parent, 
     return inode;
 }
 
-vfs_file_tnode_t* vfs_create_chr_special_file_tnode(const char* name, vfs_folder_tnode_t* parent, ssize_t (*fun)(uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
+vfs_file_tnode_t* vfs_create_chr_special_file_tnode(const char* name, vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
 {
     vfs_file_tnode_t* tnode = malloc(sizeof(vfs_file_tnode_t));
     if (!tnode)
@@ -348,13 +337,15 @@ mount:
     return;
 }
 
-ssize_t task_chr_stdin(uint8_t* buf, size_t count, uint8_t direction);
-ssize_t task_chr_stdout(uint8_t* buf, size_t count, uint8_t direction);
-ssize_t task_chr_stderr(uint8_t* buf, size_t count, uint8_t direction);
+ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
+ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
+ssize_t task_chr_stderr(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
+
+ssize_t initrd_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
 
 bool vfs_isatty(file_entry_t* entry)
 {
-    return entry->entry_type == ET_FILE ? (S_ISCHR(entry->tnode.file->inode->st.st_mode) && (entry->tnode.file->inode->file_data.chr.fun == task_chr_stdin || entry->tnode.file->inode->file_data.chr.fun == task_chr_stdout || entry->tnode.file->inode->file_data.chr.fun == task_chr_stderr)) : false;
+    return entry->entry_type == ET_FILE ? (S_ISCHR(entry->tnode.file->inode->st.st_mode) && (entry->tnode.file->inode->io_func == task_chr_stdin || entry->tnode.file->inode->io_func == task_chr_stdout || entry->tnode.file->inode->io_func == task_chr_stderr)) : false;
 }
 
 void vfs_realpath_from_folder_tnode(vfs_folder_tnode_t* inode, char* res);

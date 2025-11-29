@@ -112,7 +112,7 @@ void vfs_explore(vfs_folder_tnode_t* tnode)
     tnode->inode->flags &= ~VFS_NODE_LOADING;
 }
 
-void vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(uint8_t*, size_t, uint8_t),
+void vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
     uid_t uid, gid_t gid)
 {
     if (!folder)
@@ -387,11 +387,10 @@ int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
     if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
     {
         mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->st.st_mode;
-        if (S_ISCHR(mode))
-        {
-            *bytes_read = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->file_data.chr.fun(buffer, num_bytes, CHR_DIR_READ);
-            return 0;
-        }
+        *bytes_read = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->io_func(&file_table[__CURRENT_TASK.file_table[fd]], buffer, num_bytes, CHR_DIR_READ);
+        if (*bytes_read > 0)
+            file_table[__CURRENT_TASK.file_table[fd]].position += *bytes_read;
+        return 0;
     }
     *bytes_read = 0;
     return 0;
@@ -413,11 +412,10 @@ int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* 
     if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
     {
         mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->st.st_mode;
-        if (S_ISCHR(mode))
-        {
-            *bytes_written = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
-            return 0;
-        }
+        *bytes_written = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->io_func(&file_table[__CURRENT_TASK.file_table[fd]], buffer, bytes_to_write, CHR_DIR_WRITE);
+        if (*bytes_written > 0)
+            file_table[__CURRENT_TASK.file_table[fd]].position += *bytes_written;
+        return 0;
     }
     *bytes_written = 0;
     return 0;

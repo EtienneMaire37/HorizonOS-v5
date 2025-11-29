@@ -72,23 +72,25 @@ void vfs_initrd_do_explore(vfs_folder_tnode_t* tnode)
                     continue;
                 }
             }
-            // LOG(DEBUG, "%s", name);
             switch (initrd_files[i].type)
             {
             case USTAR_TYPE_FILE_1:
                 *current_file_tnode = malloc(sizeof(vfs_file_tnode_t));
 
+                if (!*current_file_tnode)
+                    continue;
+
                 (*current_file_tnode)->name = malloc(strlen(name) + 1);
                 memcpy((*current_file_tnode)->name, name, strlen(name) + 1);
 
                 (*current_file_tnode)->inode = malloc(sizeof(vfs_file_inode_t));
+                (*current_file_tnode)->inode->io_func = initrd_iofunc;
+                (*current_file_tnode)->inode->file_data.initrd = &initrd_files[i];
                 (*current_file_tnode)->inode->drive.type = DT_INITRD;
                 (*current_file_tnode)->inode->st = initrd_files[i].st;
                 (*current_file_tnode)->inode->st.st_ino = vfs_generate_inode_number();
                 (*current_file_tnode)->inode->st.st_dev = tnode->inode->st.st_dev;
                 (*current_file_tnode)->inode->st.st_rdev = 0; // S_ISCHR(initrd_files[i].st.st_mode) || S_ISBLK(initrd_files[i].st.st_mode) ? vfs_generate_device_id() : 0;
-                // !!! TODO: Make it so each file inode has a pointer to a func for doing io (not just special files)
-                // !!! Also refactor this to use an empty inode helper function
                 
                 (*current_file_tnode)->next = NULL;
                 (*current_file_tnode)->inode->parent = tnode;
@@ -97,6 +99,9 @@ void vfs_initrd_do_explore(vfs_folder_tnode_t* tnode)
 
             case USTAR_TYPE_DIRECTORY:
                 *current_folder_tnode = malloc(sizeof(vfs_folder_tnode_t));
+
+                if (!*current_folder_tnode)
+                    continue;
 
                 (*current_folder_tnode)->name = malloc(strlen(name) + 1);
                 memcpy((*current_folder_tnode)->name, name, strlen(name) + 1);
@@ -119,6 +124,17 @@ void vfs_initrd_do_explore(vfs_folder_tnode_t* tnode)
             }
         }
     }
+}
+
+ssize_t initrd_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
+{
+    initrd_file_t* file = entry->tnode.file->inode->file_data.initrd;
+    if (entry->position + count > file->size)
+        count = file->size - entry->position;
+
+    memcpy(buf, &file->data[entry->position], count);
+
+    return count;
 }
 
 // int vfs_initrd_root_stat(struct stat* st)
