@@ -113,9 +113,9 @@ typedef struct file_entry
     uint8_t entry_type;
     union
     {
-        vfs_file_inode_t* file;
+        vfs_file_tnode_t* file;
         vfs_folder_tnode_t* folder;
-    } inode;
+    } tnode;
 } file_entry_t;
 
 #define MAX_FILE_TABLE_ENTRIES  256
@@ -128,6 +128,7 @@ atomic_flag file_table_spinlock = ATOMIC_FLAG_INIT;
 #define CHR_DIR_WRITE   2
 
 vfs_file_inode_t* vfs_get_file_inode(const char* path, vfs_folder_tnode_t* pwd);
+vfs_file_tnode_t* vfs_get_file_tnode(const char* path, vfs_folder_tnode_t* pwd);
 vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* pwd);
 
 void vfs_init_file_table()
@@ -140,17 +141,17 @@ void vfs_init_file_table()
     }
     
     file_table[0].entry_type = ET_FILE;
-    file_table[0].inode.file = vfs_get_file_inode("/devices/stdin", NULL);
+    file_table[0].tnode.file = vfs_get_file_tnode("/devices/stdin", NULL);
     file_table[0].position = 0;
     file_table[0].flags = O_RDONLY;
 
     file_table[1].entry_type = ET_FILE;
-    file_table[1].inode.file = vfs_get_file_inode("/devices/stdout", NULL);
+    file_table[1].tnode.file = vfs_get_file_tnode("/devices/stdout", NULL);
     file_table[1].position = 0;
     file_table[1].flags = O_WRONLY;
 
     file_table[2].entry_type = ET_FILE;
-    file_table[2].inode.file = vfs_get_file_inode("/devices/stderr", NULL);
+    file_table[2].tnode.file = vfs_get_file_tnode("/devices/stderr", NULL);
     file_table[2].position = 0;
     file_table[2].flags = O_WRONLY;
 
@@ -346,6 +347,18 @@ mount:
     
     return;
 }
+
+ssize_t task_chr_stdin(uint8_t* buf, size_t count, uint8_t direction);
+ssize_t task_chr_stdout(uint8_t* buf, size_t count, uint8_t direction);
+ssize_t task_chr_stderr(uint8_t* buf, size_t count, uint8_t direction);
+
+bool vfs_isatty(file_entry_t* entry)
+{
+    return entry->entry_type == ET_FILE ? (S_ISCHR(entry->tnode.file->inode->st.st_mode) && (entry->tnode.file->inode->file_data.chr.fun == task_chr_stdin || entry->tnode.file->inode->file_data.chr.fun == task_chr_stdout || entry->tnode.file->inode->file_data.chr.fun == task_chr_stderr)) : false;
+}
+
+void vfs_realpath_from_folder_tnode(vfs_folder_tnode_t* inode, char* res);
+void vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res);
 
 bool file_string_cmp(const char* s1, const char* s2);
 

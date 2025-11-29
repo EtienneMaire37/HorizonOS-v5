@@ -60,77 +60,78 @@ void handle_syscall(interrupt_registers_t* registers)
         switch_task();
         break;
 
-    // case SYSCALL_OPEN:      // * open | path = $rbx, oflag = $rcx, mode = $rdx | $rax = errno, $rbx = fd
-    // {
-    //     const char* path = (const char*)registers->rbx;
+    case SYSCALL_OPEN:      // * open | path = $rbx, oflag = $rcx, mode = $rdx | $rax = errno, $rbx = fd
+    {
+        const char* path = (const char*)registers->rbx;
 
-    //     int fd = vfs_allocate_global_file();
-    //     file_table[fd].type = get_drive_type(path);
-    //     file_table[fd].flags = ((int)registers->rcx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
-    //     file_table[fd].position = 0;
+        int fd = vfs_allocate_global_file();
+        file_table[fd].flags = ((int)registers->rcx) & (O_CLOEXEC | O_RDONLY | O_RDWR | O_WRONLY);   // * | O_APPEND | O_CREAT
+        file_table[fd].position = 0;
 
-    //     if (file_table[fd].flags != (int)registers->rcx)
-    //     {
-    //         vfs_remove_global_file(fd);
-    //         registers->rbx = (uint64_t)(-1);
-    //         registers->rax = EINVAL;
-    //         break;
-    //     }
+        if (file_table[fd].flags != (int)registers->rcx)
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EINVAL;
+            break;
+        }
 
-    //     struct stat st;
-    //     int stat_ret = vfs_stat(path, &st);
-    //     if (stat_ret != 0)
-    //     {
-    //         vfs_remove_global_file(fd);
-    //         registers->rbx = (uint64_t)(-1);
-    //         registers->rax = stat_ret;
-    //         break;
-    //     }
+        struct stat st;
+        int stat_ret = vfs_stat(path, __CURRENT_TASK.cwd, &st);
+        if (stat_ret != 0)
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = stat_ret;
+            break;
+        }
 
-    //     if ((!(st.st_mode & S_IRUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_RDONLY))) // * Assume we're the owner of every file
-    //     {
-    //         vfs_remove_global_file(fd);
-    //         registers->rbx = (uint64_t)(-1);
-    //         registers->rax = EACCES;
-    //         break;
-    //     }
+        if ((!(st.st_mode & S_IRUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_RDONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EACCES;
+            break;
+        }
 
-    //     if ((!(st.st_mode & S_IWUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_WRONLY))) // * Assume we're the owner of every file
-    //     {
-    //         vfs_remove_global_file(fd);
-    //         registers->rbx = (uint64_t)(-1);
-    //         registers->rax = EACCES;
-    //         break;
-    //     }
+        if ((!(st.st_mode & S_IWUSR)) && ((file_table[fd].flags & O_RDWR) | (file_table[fd].flags & O_WRONLY))) // * Assume we're the owner of every file
+        {
+            vfs_remove_global_file(fd);
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = EACCES;
+            break;
+        }
 
-    //     file_table[fd].flags &= ~(O_APPEND | O_CREAT);
-    //     switch (file_table[fd].type)
-    //     {
-    //     case DT_INITRD:
-    //         file_table[fd].data.initrd_data.file = initrd_find_file_entry((char*)path + 
-    //                         strlen("/initrd") + (strlen(path) > strlen("/initrd") ? 1 : 0));
-    //         break;
-    //     default:
-    //         file_table[fd].type = DT_INVALID;
-    //     }
-    //     int ret = vfs_allocate_thread_file(current_task_index);
-    //     // LOG(DEBUG, "global fd : %d", fd);
-    //     // LOG(DEBUG, "fd : %d", ret);
-    //     if (ret == -1)
-    //     {
-    //         vfs_remove_global_file(fd);
+        file_table[fd].entry_type = S_ISDIR(stat_ret) ? ET_FOLDER : ET_FILE;
 
-    //         registers->rbx = (uint64_t)(-1);
-    //         registers->rax = ENOMEM;
-    //     }
-    //     else
-    //     {
-    //         __CURRENT_TASK.file_table[ret] = fd;
-    //         registers->rbx = *(uint32_t*)&ret;
-    //         registers->rax = 0;
-    //     }
-    //     break;
-    // }
+        file_table[fd].flags &= ~(O_APPEND | O_CREAT);
+
+        file_table[fd].tnode.file = NULL;
+        file_table[fd].tnode.folder = NULL;
+
+        if (file_table[fd].entry_type == ET_FILE)
+            file_table[fd].tnode.file = vfs_get_file_tnode(path, __CURRENT_TASK.cwd);
+        if (file_table[fd].entry_type == ET_FOLDER)
+            file_table[fd].tnode.folder = vfs_get_folder_tnode(path, __CURRENT_TASK.cwd);
+
+        int ret = vfs_allocate_thread_file(current_task_index);
+        // LOG(DEBUG, "global fd : %d", fd);
+        // LOG(DEBUG, "fd : %d", ret);
+        if (ret == -1)
+        {
+            vfs_remove_global_file(fd);
+
+            registers->rbx = (uint64_t)(-1);
+            registers->rax = ENOMEM;
+        }
+        else
+        {
+            __CURRENT_TASK.file_table[ret] = fd;
+            registers->rbx = *(uint32_t*)&ret;
+            registers->rax = 0;
+        }
+        break;
+    }
 
     case SYSCALL_CLOSE:     // * close | fildes = $rbx | $rax = errno, $rbx = ret
         int fd = (int)registers->rbx;
@@ -228,7 +229,7 @@ void handle_syscall(interrupt_registers_t* registers)
             break;
         }
         file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
-        registers->rbx = entry->entry_type == ET_FILE ? (S_ISCHR(entry->inode.file->st.st_mode) && (entry->inode.file->file_data.chr.fun == task_chr_stdin || entry->inode.file->file_data.chr.fun == task_chr_stdout || entry->inode.file->file_data.chr.fun == task_chr_stderr)) : false;
+        registers->rbx = vfs_isatty(entry);
         if (!registers->rbx)
             registers->rax = ENOTTY;
         break;
@@ -306,63 +307,63 @@ void handle_syscall(interrupt_registers_t* registers)
         } 
         break;
 
-    // case SYSCALL_TCGETATTR:     // * tcgetattr | fildes = $rbx, termios_p = $rcx | $rax = errno
-    // {
-    //     struct termios* termios_p = (struct termios*)registers->rcx;
-    //     if (!termios_p)
-    //     {
-    //         registers->rax = EINVAL;
-    //         break;
-    //     }
-    //     int fd = (int)registers->rbx;
-    //     if (fd < 0 || fd >= OPEN_MAX)
-    //     {
-    //         registers->rax = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] == invalid_fd)
-    //     {
-    //         registers->rax = EBADF;
-    //         break;
-    //     }
-    //     if (file_table[__CURRENT_TASK.file_table[fd]].type != DT_TERMINAL)  // ! not a tty
-    //     {
-    //         registers->rax = ENOTTY;
-    //         break;
-    //     }
-    //     *termios_p = file_table[__CURRENT_TASK.file_table[fd]].data.terminal_data.ts;
-    //     registers->rax = 0;
-    //     break;
-    // }
+    case SYSCALL_TCGETATTR:     // * tcgetattr | fildes = $rbx, termios_p = $rcx | $rax = errno
+    {
+        struct termios* termios_p = (struct termios*)registers->rcx;
+        if (!termios_p)
+        {
+            registers->rax = EINVAL;
+            break;
+        }
+        int fd = (int)registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = EBADF;
+            break;
+        }
+        if (!vfs_isatty(&file_table[__CURRENT_TASK.file_table[fd]]))
+        {
+            registers->rax = ENOTTY;
+            break;
+        }
+        *termios_p = tty_ts;
+        registers->rax = 0;
+        break;
+    }
 
-    // case SYSCALL_TCSETATTR:     // * tcsetattr | fildes = $rbx, termios_p = $rcx, optional_actions = $rdx | $rax = errno
-    // {
-    //     struct termios* termios_p = (struct termios*)registers->rcx;
-    //     if (!termios_p)
-    //     {
-    //         registers->rax = EINVAL;
-    //         break;
-    //     }
-    //     int fd = (int)registers->rbx;
-    //     if (fd < 0 || fd >= OPEN_MAX)
-    //     {
-    //         registers->rax = EBADF;
-    //         break;
-    //     }
-    //     if (__CURRENT_TASK.file_table[fd] == invalid_fd)
-    //     {
-    //         registers->rax = EBADF;
-    //         break;
-    //     }
-    //     if (file_table[__CURRENT_TASK.file_table[fd]].type != DT_TERMINAL)  // ! not a tty
-    //     {
-    //         registers->rax = ENOTTY;
-    //         break;
-    //     }
-    //     file_table[__CURRENT_TASK.file_table[fd]].data.terminal_data.ts = *termios_p;
-    //     registers->rax = 0;
-    //     break;
-    // }
+    case SYSCALL_TCSETATTR:     // * tcsetattr | fildes = $rbx, termios_p = $rcx, optional_actions = $rdx | $rax = errno
+    {
+        struct termios* termios_p = (struct termios*)registers->rcx;
+        if (!termios_p)
+        {
+            registers->rax = EINVAL;
+            break;
+        }
+        int fd = (int)registers->rbx;
+        if (fd < 0 || fd >= OPEN_MAX)
+        {
+            registers->rax = EBADF;
+            break;
+        }
+        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        {
+            registers->rax = EBADF;
+            break;
+        }
+        if (!vfs_isatty(&file_table[__CURRENT_TASK.file_table[fd]]))
+        {
+            registers->rax = ENOTTY;
+            break;
+        }
+        tty_ts = *termios_p;
+        registers->rax = 0;
+        break;
+    }
 
     case SYSCALL_SET_KB_LAYOUT:
     // * Should probably apply some form of security (user system)
@@ -400,6 +401,60 @@ void handle_syscall(interrupt_registers_t* registers)
         DIR* dirp = (DIR*)registers->rcx;
         registers->rbx = (uintptr_t)vfs_readdir(dirent_entry, dirp);
         registers->rax = errno;
+        break;
+    }
+
+    case SYSCALL_GETCWD:    // * getcwd | buffer = $rbx, size = $rcx | $rax = ret
+    {
+        if (!registers->rbx || (size_t)registers->rcx == 0)
+        {
+            registers->rax = (uint64_t)NULL;
+            break;
+        }
+        char buf_cpy[PATH_MAX];
+        vfs_realpath_from_folder_tnode(__CURRENT_TASK.cwd, buf_cpy);
+        for (size_t i = 0; i < (size_t)registers->rcx - 1; i++)
+            ((uint8_t*)registers->rbx)[i] = buf_cpy[i];
+        ((uint8_t*)registers->rbx)[(size_t)registers->rcx - 1] = 0;
+        registers->rax = registers->rbx;
+        break;
+    }
+
+    case SYSCALL_CHDIR:     // * chdir | path = $rbx | $rax = errno
+    {
+        vfs_folder_tnode_t* tnode = vfs_get_folder_tnode((char*)registers->rbx, __CURRENT_TASK.cwd);
+        if (!tnode)
+        {
+            registers->rax = ENOENT;
+            break;
+        }
+        if (vfs_access((char*)registers->rbx, __CURRENT_TASK.cwd, X_OK))
+        {
+            registers->rax = EACCES;
+            break;
+        }
+        __CURRENT_TASK.cwd = tnode;
+        registers->rax = 0;
+        break;
+    }
+
+    case SYSCALL_REALPATH:  // * realpath | path = $rbx, resolved_path = $rcx | $rax = errno
+    {
+        vfs_folder_tnode_t* folder_tnode = vfs_get_folder_tnode((char*)registers->rbx, __CURRENT_TASK.cwd);
+        if (!folder_tnode) // * Maybe it's a file
+        {
+            vfs_file_tnode_t* file_tnode = vfs_get_file_tnode((char*)registers->rbx, __CURRENT_TASK.cwd);
+            if (!file_tnode)
+            {
+                registers->rax = ENOENT;
+                break;
+            }
+            vfs_realpath_from_file_tnode(file_tnode, (char*)registers->rcx);
+            registers->rax = 0;
+            break;
+        }
+        vfs_realpath_from_folder_tnode(folder_tnode, (char*)registers->rcx);
+        registers->rax = 0;
         break;
     }
 

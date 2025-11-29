@@ -5,7 +5,7 @@ DIR* opendir(const char* name)
     char* rp = realpath(name, NULL);
     if (!rp)
     {
-        errno = ENOMEM;
+        errno = ENOENT;
         return NULL;
     }
     struct stat st;
@@ -28,7 +28,6 @@ DIR* opendir(const char* name)
         return NULL;
     }
     strncpy(d->path, rp, PATH_MAX);
-    memset(d->current_path, 0, PATH_MAX);
     memset(d->current_entry, 0, PATH_MAX);
     return d;
 }

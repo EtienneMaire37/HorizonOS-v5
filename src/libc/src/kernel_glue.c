@@ -151,35 +151,6 @@ static struct dirent dirent_entry;      // * "This structure may be statically a
 
 struct dirent* readdir(DIR* dirp)
 {
-    if (dirp->current_path[0])
-    {
-        char current_path[PATH_MAX];
-        __builtin_memcpy(current_path, dirp->current_path, PATH_MAX);
-        int i = 0, j = 0;
-        bool slash = 1;
-        while (current_path[j - 1 + slash])
-        {
-            if (dirp->path[i])
-            {
-                dirp->current_path[i + j] = dirp->path[i];
-                i++;
-            }
-            else
-            {
-                if (slash)
-                {
-                    dirp->current_path[i + j] = '/';
-                    slash = 0;
-                    j++;
-                }
-                else
-                {
-                    dirp->current_path[i + j] = current_path[j - 1];
-                    j++;
-                }
-            }
-        }
-    }
     uint64_t return_address;
     int _errno;
     asm volatile ("int 0xf0" : "=a"(_errno), "=b"(return_address) : "a"(SYSCALL_READDIR), "b"((uint64_t)&dirent_entry), "c"((uint64_t)dirp) : "memory");

@@ -46,36 +46,70 @@ size_t file_string_len(const char* str)
     }
 }
 
-void vfs_explore(vfs_folder_inode_t* inode)
+static size_t vfs_realpath_from_folder_tnode_helper(vfs_folder_tnode_t* tnode, char* res, size_t idx)
 {
-    if (!inode)
+    if (!tnode || !tnode->inode) return idx;
+    if (tnode == vfs_root)
+        return 0;
+    
+    idx = vfs_realpath_from_folder_tnode_helper(tnode->inode->parent, res, idx);
+    res[idx] = '/';
+    size_t len = strlen(tnode->name);
+    memcpy(&res[idx + 1], tnode->name, len);    // !! Very unsafe (can easily overflow) but no form of locking anyways
+                                                // !! TODO: Refactor all this
+    return idx + len + 1;
+}
+
+void vfs_realpath_from_folder_tnode(vfs_folder_tnode_t* tnode, char* res)
+{
+    if (tnode == vfs_root) 
+    {
+        res[0] = '/';
+        res[1] = 0;
+        return;
+    }
+    res[vfs_realpath_from_folder_tnode_helper(tnode, res, 0)] = 0;
+}
+
+void vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res)
+{
+    size_t ret = vfs_realpath_from_folder_tnode_helper(tnode->inode->parent, res, 0);
+    res[ret] = '/';
+    size_t len = strlen(tnode->name);
+    memcpy(&res[ret + 1], tnode->name, len);
+    res[ret + len + 1] = 0;
+}
+
+void vfs_explore(vfs_folder_tnode_t* tnode)
+{
+    if (!tnode || !tnode->inode)
     {
         LOG(WARNING, "vfs_explore: node == NULL");
         return;
     }
-    if (inode->flags & VFS_NODE_LOADING)
+    if (tnode->inode->flags & VFS_NODE_LOADING)
     {
-        while (inode->flags & VFS_NODE_LOADING);
+        while (tnode->inode->flags & VFS_NODE_LOADING);
         return;
     }
-    if (inode->flags & VFS_NODE_EXPLORED)
+    if (tnode->inode->flags & VFS_NODE_EXPLORED)
     {
         LOG(WARNING, "vfs_explore: Node already explored");
         return;
     }
-    inode->flags |= VFS_NODE_LOADING;
+    tnode->inode->flags |= VFS_NODE_LOADING;
 
-    switch (inode->drive.type)
+    switch (tnode->inode->drive.type)
     {
     case DT_INITRD:
-        vfs_initrd_do_explore(inode);
+        vfs_initrd_do_explore(tnode);
         break;
     default:
         abort();
     }
 
-    inode->flags |= VFS_NODE_EXPLORED;
-    inode->flags &= ~VFS_NODE_LOADING;
+    tnode->inode->flags |= VFS_NODE_EXPLORED;
+    tnode->inode->flags &= ~VFS_NODE_LOADING;
 }
 
 void vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(uint8_t*, size_t, uint8_t),
@@ -115,11 +149,12 @@ vfs_file_tnode_t* vfs_get_file_tnode(const char* path, vfs_folder_tnode_t* pwd)
     if (!pwd) pwd = vfs_root;
 
     size_t i = 0;
-    vfs_folder_inode_t* current_folder = path[0] == '/' ? (i++, vfs_root->inode) : pwd->inode;
+    vfs_folder_tnode_t* current_folder_tnode = path[0] == '/' ? (i++, vfs_root) : pwd;
+    vfs_folder_inode_t* current_folder = current_folder_tnode->inode;
     while (i < path_len)
     {
         if (!(current_folder->flags & VFS_NODE_EXPLORED))
-            vfs_explore(current_folder);
+            vfs_explore(current_folder_tnode);
 
         if (file_string_len(&path[i]) == strlen(&path[i]))
         // * Parse files
@@ -147,7 +182,8 @@ vfs_file_tnode_t* vfs_get_file_tnode(const char* path, vfs_folder_tnode_t* pwd)
         if (file_string_cmp("..", &path[i]))
         {
             i += 3;
-            current_folder = current_folder->parent->inode;
+            current_folder_tnode = current_folder->parent;
+            current_folder = current_folder_tnode->inode;
             continue;
         }
         vfs_folder_tnode_t* current_child = current_folder->folders;
@@ -155,6 +191,7 @@ vfs_file_tnode_t* vfs_get_file_tnode(const char* path, vfs_folder_tnode_t* pwd)
         {
             if (file_string_cmp(current_child->name, &path[i]))
             {
+                current_folder_tnode = current_child;
                 current_folder = current_child->inode;
                 i += strlen(current_child->name);
                 break;
@@ -187,7 +224,7 @@ vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* p
     while (i < path_len)
     {
         if (!(current_folder->inode->flags & VFS_NODE_EXPLORED))
-            vfs_explore(current_folder->inode);
+            vfs_explore(current_folder);
 
         if (file_string_cmp("", &path[i]) && path[i] != 0)
         {
@@ -221,26 +258,6 @@ vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* p
     }
     return current_folder;
 }
-
-// int vfs_root_stat(struct stat* st)
-// {
-//     st->st_dev = -1;
-//     st->st_ino = -1;
-//     st->st_mode = S_IFDIR | S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
-//     st->st_nlink = 1;
-//     st->st_uid = 0;
-//     st->st_gid = 0;
-//     st->st_rdev = -1;
-//     st->st_size = 0;
-
-//     st->st_blksize = 0;
-//     st->st_blocks = 0;
-
-//     st->st_atime = 0;
-//     st->st_mtime = 0;
-//     st->st_ctime = 0;
-//     return 0;
-// }
 
 int vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st)
 {
@@ -283,56 +300,72 @@ int vfs_access(const char* path, vfs_folder_tnode_t* pwd, mode_t mode)
     return 0;
 }
 
-// struct dirent* vfs_root_readdir(struct dirent* dirent, DIR* dirp)
-// {
-//     const char* directories[] = 
-//     {
-//         ".",
-//         "initrd",
-//         NULL
-//     };
-//     if (strcmp(dirp->current_entry, "") == 0)
-//     {
-//         strncpy(dirp->current_entry, directories[0], PATH_MAX);
-//         strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
-//         strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
-//         dirent->d_ino = -1;
-//         return dirent;
-//     }
-//     if (strcmp(dirp->current_entry, ".") == 0)
-//     {
-//         strncpy(dirp->current_entry, directories[1], PATH_MAX);
-//         strncpy(dirp->current_path, dirp->current_entry, PATH_MAX);
-//         strncpy(dirent->d_name, dirp->current_path, PATH_MAX);
-//         dirent->d_ino = -1;
-//         return dirent;
-//     }
-//     int i = 0;
-//     while (directories[i] != NULL && strcmp(dirp->current_entry, directories[i]) != 0)
-//         i++;
-//     if (directories[i] == NULL)
-//     {
-//         memset(dirp->current_path, 0, PATH_MAX);
-//         memset(dirp->current_entry, 0, PATH_MAX);
-//         return NULL;
-//     }
-
-//     if (directories[i + 1] == NULL)
-//     {
-//         memset(dirp->current_path, 0, PATH_MAX);
-//         memset(dirp->current_entry, 0, PATH_MAX);
-//         return NULL;
-//     }
-
-//     snprintf(dirp->current_entry, sizeof(dirp->current_entry), "%s", directories[i + 1]);
-//     snprintf(dirp->current_path, sizeof(dirp->current_path), "%s", dirp->current_entry);
-//     snprintf(dirent->d_name, sizeof(dirent->d_name), "%s", dirp->current_path);
-//     dirent->d_ino = -1;
-//     return dirent;
-// }
-
 struct dirent* vfs_readdir(struct dirent* dirent, DIR* dirp)
 {
+    vfs_folder_tnode_t* folder_tnode = vfs_get_folder_tnode(dirp->path, NULL);
+    if (!folder_tnode)
+    {
+        errno = ENOENT;
+        return NULL;
+    }
+
+    if (!(folder_tnode->inode->flags & VFS_NODE_EXPLORED))
+        vfs_explore(folder_tnode);
+
+    if (strcmp(dirp->current_entry, "") == 0)
+    {
+        strcpy(dirp->current_entry, ".");
+        memcpy(dirent->d_name, dirp->current_entry, 2);
+        dirent->d_ino = folder_tnode->inode->st.st_ino;
+        errno = 0;
+        return dirent;
+    }
+
+    if (strcmp(dirp->current_entry, ".") == 0)
+    {
+        strcpy(dirp->current_entry, "..");
+        memcpy(dirent->d_name, dirp->current_entry, 3);
+        dirent->d_ino = folder_tnode->inode->parent->inode->st.st_ino;
+        errno = 0;
+        return dirent;
+    }
+
+    bool found_last_entry = strcmp(dirp->current_entry, "..") == 0;
+
+    vfs_folder_tnode_t* current_folder = folder_tnode->inode->folders;
+
+    while (current_folder)
+    {
+        if (found_last_entry)
+        {
+            memcpy(dirp->current_entry, current_folder->name, PATH_MAX);
+            memcpy(dirent->d_name, dirp->current_entry, PATH_MAX);
+            dirent->d_ino = current_folder->inode->st.st_ino;
+            errno = 0;
+            return dirent;
+        }
+        if (strcmp(dirp->current_entry, current_folder->name) == 0)
+            found_last_entry = true;
+        current_folder = current_folder->next;
+    }
+
+    vfs_file_tnode_t* current_file = folder_tnode->inode->files;
+
+    while (current_file)
+    {
+        if (found_last_entry)
+        {
+            memcpy(dirp->current_entry, current_file->name, PATH_MAX);
+            memcpy(dirent->d_name, dirp->current_entry, PATH_MAX);
+            dirent->d_ino = current_file->inode->st.st_ino;
+            errno = 0;
+            return dirent;
+        }
+        if (strcmp(dirp->current_entry, current_file->name) == 0)
+            found_last_entry = true;
+        current_file = current_file->next;
+    }
+
     errno = 0;
     return NULL;
 }
@@ -353,10 +386,10 @@ int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
 
     if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
     {
-        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].inode.file->st.st_mode;
+        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->st.st_mode;
         if (S_ISCHR(mode))
         {
-            *bytes_read = file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, num_bytes, CHR_DIR_READ);
+            *bytes_read = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->file_data.chr.fun(buffer, num_bytes, CHR_DIR_READ);
             return 0;
         }
     }
@@ -379,10 +412,10 @@ int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* 
     }
     if (file_table[__CURRENT_TASK.file_table[fd]].entry_type == ET_FILE)
     {
-        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].inode.file->st.st_mode;
+        mode_t mode = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->st.st_mode;
         if (S_ISCHR(mode))
         {
-            *bytes_written = file_table[__CURRENT_TASK.file_table[fd]].inode.file->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
+            *bytes_written = file_table[__CURRENT_TASK.file_table[fd]].tnode.file->inode->file_data.chr.fun(buffer, bytes_to_write, CHR_DIR_WRITE);
             return 0;
         }
     }
@@ -392,12 +425,14 @@ int vfs_write(int fd, unsigned char* buffer, uint64_t bytes_to_write, uint64_t* 
 
 void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
 {
+    if (!tnode) return;
+
     char access_str[11];
 
     LOG(DEBUG, "");
     for (int i = 0; i < depth; i++)
         CONTINUE_LOG(DEBUG, "    ");
-    CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s)%s", tnode->name, tnode->inode->st.st_ino, get_access_string(tnode->inode->st.st_mode, access_str), tnode->inode->flags & VFS_NODE_EXPLORED ? ":" : " (not explored)");
+    CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s, device id: %d)%s", tnode->name, tnode->inode->st.st_ino, get_access_string(tnode->inode->st.st_mode, access_str), tnode->inode->st.st_dev, tnode->inode->flags & VFS_NODE_EXPLORED ? ":" : " (not explored)");
     vfs_folder_tnode_t* current_folder = tnode->inode->folders;
     while (current_folder)
     {
@@ -410,7 +445,10 @@ void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
         LOG(DEBUG, "");
         for (int i = 0; i < depth + 1; i++)
             CONTINUE_LOG(DEBUG, "    ");
-        CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s)", current_file->name, current_file->inode->st.st_ino, get_access_string(current_file->inode->st.st_mode, access_str));
+        CONTINUE_LOG(DEBUG, "`%s` [inode %lld] (access: %s", current_file->name, current_file->inode->st.st_ino, get_access_string(current_file->inode->st.st_mode, access_str));
+        if (S_ISCHR(current_file->inode->st.st_mode) || S_ISBLK(current_file->inode->st.st_mode))
+            CONTINUE_LOG(DEBUG, ", special file device id: %d", tnode->inode->st.st_rdev);
+        CONTINUE_LOG(DEBUG, ")");
         current_file = current_file->next;
     }
 }

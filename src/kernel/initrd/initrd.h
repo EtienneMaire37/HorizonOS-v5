@@ -15,8 +15,8 @@ typedef struct initrd_file
     uint64_t size;
     uint8_t* data;
     tar_file_type type;
+    struct stat st;
     char* link;
-    mode_t mode;
 } initrd_file_t;
 
 #define MAX_INITRD_FILES 32
@@ -67,10 +67,19 @@ void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
         initrd_files[initrd_files_count].link = (char*)&header->linked_file[0];
 
         uint64_t mode = ustar_get_number((char*)header->mode, 8);
-        initrd_files[initrd_files_count].mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
+
+        struct stat st;
+        st.st_mode = (header->type == USTAR_TYPE_DIRECTORY ? S_IFDIR : S_IFREG) | 
         ((mode & TUREAD) ? S_IRUSR : 0) | ((mode & TUEXEC) ? S_IXUSR : 0) | // * | ((mode & TUWRITE) ? S_IWUSR : 0)
         ((mode & TGREAD) ? S_IRGRP : 0) | ((mode & TGEXEC) ? S_IXGRP : 0) | // * | ((mode & TGWRITE) ? S_IWGRP : 0)
         ((mode & TOREAD) ? S_IROTH : 0) | ((mode & TOEXEC) ? S_IXOTH : 0);  // * | ((mode & TOWRITE) ? S_IWOTH : 0)
+
+        st.st_blksize = 4096;
+        st.st_atime = st.st_mtime = st.st_ctime = 0;
+        
+        // LOG(DEBUG, "header->last_modification: %.12s", header->last_modification);
+
+        initrd_files[initrd_files_count].st = st;
 
         initrd_files_count++;
         

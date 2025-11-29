@@ -183,11 +183,25 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
             // ps2_kb_update_leds(port);
 
             utf32_char_t character = ps2_scancode_to_unicode(current_ps2_keyboard_scancodes[port_index], port);
-            // LOG(DEBUG, "\'%c\'", character);
-            keyboard_handle_character(character, vk, 
+            if (keyboard_is_key_pressed(VK_LCONTROL) && keyboard_is_key_pressed(VK_LSHIFT))
+            {
+            switch(vk)
+            {
+            case VK_V:
+                vfs_log_tree(vfs_root, 0);
+                break;
+            default:
+                goto key;
+            }
+            }
+            else
+            {
+            key:
+                keyboard_handle_character(character, vk, 
                 (tty_ts.c_lflag & ECHO) != 0, 
                 (tty_ts.c_lflag & ICANON) == 0, 
                 tty_ts.c_cc[VMIN]);
+            }
         }
 
         current_ps2_keyboard_scancodes[port_index].release = current_ps2_keyboard_scancodes[port_index].extended = false;

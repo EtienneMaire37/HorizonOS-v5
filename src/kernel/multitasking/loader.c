@@ -4,6 +4,7 @@
 #include "vas.h"
 #include "../files/elf.h"
 #include "../../libc/src/startup_data.h"
+#include "../vfs/vfs.h"
 
 void multitasking_add_task_from_function(const char* name, void (*func)())
 {
@@ -193,10 +194,28 @@ bool multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t 
 
     if (strlen(path) == 0) return false;
 
-    LOG(DEBUG, "Loading file \"%s\"", path);
-    if (file_string_cmp(path + 1, "initrd"))
-        return multitasking_add_task_from_initrd(name, &path[strlen("/initrd/")], ring, system, data, cwd);
-        
+    vfs_file_tnode_t* tnode = vfs_get_file_tnode(path, NULL);
+
+    if (!tnode)
+    {
+        LOG(ERROR, "Couldn't find program \"%s\"", path);
+        return false;
+    }
+
+    char* simplified_path = malloc(PATH_MAX);
+    if (!simplified_path) abort();
+    
+    vfs_realpath_from_file_tnode(tnode, simplified_path);
+
+    LOG(DEBUG, "Loading file \"%s\"", simplified_path);
+    if (file_string_cmp(simplified_path + 1, "initrd"))
+    {
+        bool ret = multitasking_add_task_from_initrd(simplified_path, &simplified_path[strlen("/initrd/")], ring, system, data, cwd);
+        free(simplified_path);
+        return ret;
+    }
+    
     LOG(ERROR, "Invalid path");
+    free(simplified_path);
     return false;
 }
