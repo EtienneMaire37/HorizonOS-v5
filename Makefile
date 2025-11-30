@@ -37,7 +37,7 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	-O2 \
 	$(CFLAGS) \
 	-mno-red-zone \
-	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized \
+	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-unused-function \
 	-mno-80387 -mno-mmx -mno-sse -mno-avx \
 	$(USER_CFLAGS)
 
