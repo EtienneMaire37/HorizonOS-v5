@@ -53,10 +53,13 @@ static size_t vfs_realpath_from_folder_tnode_helper(vfs_folder_tnode_t* tnode, c
         return 0;
     
     idx = vfs_realpath_from_folder_tnode_helper(tnode->inode->parent, res, idx);
+    if (idx + 1 >= PATH_MAX) return idx;
     res[idx] = '/';
     size_t len = strlen(tnode->name);
-    memcpy(&res[idx + 1], tnode->name, len);    // !! Very unsafe (can easily overflow) but no form of locking anyways
-                                                // !! TODO: Refactor all this
+    if (len + idx + 1 >= PATH_MAX)
+        len = PATH_MAX - idx - 2;
+    memcpy(&res[idx + 1], tnode->name, len);
+    // !! TODO: Refactor all this
     return idx + len + 1;
 }
 
