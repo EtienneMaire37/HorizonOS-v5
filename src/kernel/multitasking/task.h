@@ -128,6 +128,15 @@ uint16_t find_next_task_index()
     return index;
 }
 
+bool is_fd_valid(int fd)
+{
+    if (fd < 0 || fd >= OPEN_MAX)
+        return false;
+    if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        return false;
+    return true;
+}
+
 void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
 void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value);
 void task_write_at_address_8b(thread_t* task, uint64_t address, uint64_t value);

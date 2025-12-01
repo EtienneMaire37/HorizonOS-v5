@@ -31,3 +31,4 @@ int execvpe(const char* file, char* const argv[], char* const envp[]);
 int execvp(const char* file, char* const argv[]);
 int access(const char* path, int mode);
 int isatty(int fd);
+off_t lseek(int fd, off_t offset, int whence);

@@ -135,13 +135,7 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_CLOSE:     // * close | fildes = $rbx | $rax = errno, $rbx = ret
         int fd = (int)registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rbx = (uint64_t)(-1);
-            registers->rax = EBADF;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rbx = (uint64_t)(-1);
             registers->rax = EBADF;
@@ -154,13 +148,7 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_WRITE:     // * write | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_written, $rbx = errno
     {
         int fd = registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rax = (uint64_t)(-1);
-            registers->rbx = EBADF;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rax = (uint64_t)(-1);
             registers->rbx = EBADF;
@@ -173,13 +161,7 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_READ:      // * read | fildes = $rbx, buf = $rcx, nbyte = $rdx | $rax = bytes_read, $rbx = errno
     {
         int fd = (int)registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rax = (uint64_t)-1;
-            registers->rbx = EBADF;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rax = (uint64_t)-1;
             registers->rbx = EBADF;
@@ -216,13 +198,7 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_ISATTY:    // * isatty | fd = $rbx | $rax = errno, $rbx = ret
     {
         int fd = (int)registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rax = EBADF;
-            registers->rbx = 0;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rax = EBADF;
             registers->rbx = 0;
@@ -316,12 +292,7 @@ void handle_syscall(interrupt_registers_t* registers)
             break;
         }
         int fd = (int)registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rax = EBADF;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rax = EBADF;
             break;
@@ -345,12 +316,7 @@ void handle_syscall(interrupt_registers_t* registers)
             break;
         }
         int fd = (int)registers->rbx;
-        if (fd < 0 || fd >= OPEN_MAX)
-        {
-            registers->rax = EBADF;
-            break;
-        }
-        if (__CURRENT_TASK.file_table[fd] == invalid_fd)
+        if (!is_fd_valid(fd))
         {
             registers->rax = EBADF;
             break;
@@ -441,8 +407,9 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_REALPATH:  // * realpath | path = $rbx, resolved_path = $rcx | $rax = errno
     {
         vfs_folder_tnode_t* folder_tnode = vfs_get_folder_tnode((char*)registers->rbx, __CURRENT_TASK.cwd);
-        if (!folder_tnode) // * Maybe it's a file
+        if (!folder_tnode) 
         {
+            // * Maybe it's a file
             vfs_file_tnode_t* file_tnode = vfs_get_file_tnode((char*)registers->rbx, __CURRENT_TASK.cwd);
             if (!file_tnode)
             {
@@ -455,6 +422,50 @@ void handle_syscall(interrupt_registers_t* registers)
         }
         vfs_realpath_from_folder_tnode(folder_tnode, (char*)registers->rcx);
         registers->rax = 0;
+        break;
+    }
+
+    case SYSCALL_LSEEK:     // * lseek | fd = $rbx, offset = (off_t)$rcx, whence = (int)$rdx | $rax = (uint64_t)-errno
+    {
+        int fd = (int)registers->rbx;
+        if (!is_fd_valid(fd))
+        {
+            registers->rax = (uint64_t)(-EBADF);
+            break;
+        }
+        file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
+        if (entry->entry_type != ET_FILE)
+        {
+            registers->rax = (uint64_t)(-ESPIPE);
+            break;
+        }
+        off_t offset = (off_t)registers->rcx;
+        int whence = registers->rdx;
+        switch (whence)
+        {
+        case SEEK_SET:
+            goto do_seek;
+        case SEEK_CUR:
+            offset += entry->position;
+            goto do_seek;
+        case SEEK_END:
+            offset += entry->tnode.file->inode->st.st_size;
+            goto do_seek;
+        default:
+            registers->rax = (uint64_t)(-EINVAL);
+        }
+        if (false)
+        {
+        do_seek:
+            if (offset < 0) // || offset >= entry->tnode.file->inode->st.st_size)
+            {
+                registers->rax = (uint64_t)(-EINVAL);
+                break;
+            }
+            entry->position = offset;
+            registers->rax = entry->position;
+            break;
+        }
         break;
     }
 

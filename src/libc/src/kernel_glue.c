@@ -242,3 +242,15 @@ char* realpath(const char* path, char* resolved_path)
     }
     return resolved_path;
 }
+
+off_t lseek(int fd, off_t offset, int whence)
+{
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_LSEEK), "b"(fd), "c"((uint64_t)offset), "d"(whence));
+    if (ret < 0)
+    {
+        errno = -ret;
+        return -1;
+    }
+    return ret;
+}

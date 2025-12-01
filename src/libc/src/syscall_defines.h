@@ -32,5 +32,7 @@
 
 #define SYSCALL_REALPATH    19
 
+#define SYSCALL_LSEEK       20
+
 #define SYSCALL_FLUSH_INPUT_BUFFER  0x40
 #define SYSCALL_SET_KB_LAYOUT       0x8000

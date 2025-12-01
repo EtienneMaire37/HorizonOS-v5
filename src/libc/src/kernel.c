@@ -128,3 +128,8 @@ char* realpath(const char* path, char* resolved_path)
 {
     abort();
 }
+
+off_t lseek(int fd, off_t offset, int whence)
+{
+    abort();
+}

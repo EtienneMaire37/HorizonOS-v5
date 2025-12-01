@@ -104,7 +104,7 @@ typedef struct file_entry
 {
     int used;
     int flags;
-    uint64_t position;
+    off_t position;
     uint8_t entry_type;
     union
     {
