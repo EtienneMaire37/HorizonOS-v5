@@ -270,7 +270,7 @@ void handle_syscall(interrupt_registers_t* registers)
         else
         {
             lock_task_queue();
-            __CURRENT_TASK.forked_pid = current_pid++;
+            __CURRENT_TASK.forked_pid = task_generate_pid();
             pid_t forked_pid = __CURRENT_TASK.forked_pid;
             unlock_task_queue();
             switch_task();

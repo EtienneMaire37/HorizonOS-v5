@@ -26,7 +26,8 @@ thread_t task_create_empty()
 
     task.rsp = 0;
 
-    task.pid = current_pid++;
+    task.pid = task_generate_pid();
+    task.pgid = task.pid;
     task.system_task = true;
 
     task.fpu_state = fpu_state_create();
@@ -105,7 +106,6 @@ void multitasking_init()
 {
     task_count = 0;
     current_task_index = 0;
-    current_pid = 0;
 
     vfs_init_file_table();
 

@@ -25,7 +25,7 @@ typedef struct thread
     pid_t forked_pid;
 
     uint8_t ring;
-    pid_t pid;
+    pid_t pid, pgid;
     bool system_task;    // system_task: cause kernel panics
 
     vfs_folder_tnode_t* cwd;
@@ -65,7 +65,6 @@ uint64_t multitasking_counter = TASK_SWITCH_DELAY;
 uint16_t current_task_index = 0;
 bool multitasking_enabled = false;
 volatile bool first_task_switch = true;
-uint64_t current_pid;
 
 extern void iretq_instruction();
 void task_kill(uint16_t index);
@@ -135,6 +134,12 @@ bool is_fd_valid(int fd)
     if (__CURRENT_TASK.file_table[fd] == invalid_fd)
         return false;
     return true;
+}
+
+pid_t task_generate_pid()
+{
+    static pid_t current = 0;
+    return current++;
 }
 
 void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
