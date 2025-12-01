@@ -568,13 +568,6 @@ void _start()
     printf("Done.\n");
     LOG(INFO, "Done parsing ACPI tables.");
 
-    LOG(INFO, "Scanning PCI buses...");
-    printf("Scanning PCI buses...\n");
-
-    pci_scan_buses();
-
-    LOG(INFO, "Done scanning PCI buses.");
-
     if (ps2_controller_connected)
     {
         LOG(INFO, "Detecting PS/2 devices");
@@ -609,8 +602,6 @@ void _start()
         }
 
         ps2_flush_buffer();
-
-        putchar('\n');
     }
 
     LOG(INFO, "Setting up the VFS...");
@@ -632,6 +623,15 @@ void _start()
     vfs_add_chr("/devices", "stdout", task_chr_stdout, 0, 0);
     vfs_add_chr("/devices", "stderr", task_chr_stderr, 0, 0);
     LOG(INFO, "Set up the VFS.");
+
+    LOG(INFO, "Scanning PCI buses...");
+    printf("Scanning PCI buses...\n");
+
+    pci_scan_buses();
+
+    putchar('\n');
+
+    LOG(INFO, "Done scanning PCI buses.");
 
     LOG(DEBUG, "VFS TREE:");
     vfs_log_tree(vfs_root, 0);

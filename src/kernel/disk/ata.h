@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mbr.h"
+#include "../vfs/vfs.h"
 
 #define IDE_MAX     4
 
@@ -99,6 +100,8 @@ typedef struct pci_ide_controller_data
 
 pci_ide_controller_data_t pci_ide_controller[IDE_MAX];
 uint16_t connected_pci_ide_controllers = 0;
+
+ssize_t ata_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
 
 void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function);
 void ata_write_command_block_register(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t reg, uint8_t data);

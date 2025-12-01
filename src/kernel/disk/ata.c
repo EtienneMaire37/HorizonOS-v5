@@ -178,6 +178,28 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
         }
     }
 
+    // * Create block special files
+    if (IDE_MAX >= 10) abort();
+    for (uint8_t i = 0; i < 2; i++)
+    {
+        for (uint8_t j = 0; j < 2; j++)
+        {
+            if (pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].connected) 
+            {
+                const int bufsiz = (3 + 1) + 1 + 1 + (1);
+                char file_name[bufsiz];
+
+                snprintf(file_name, bufsiz, "ata%u_%u", connected_pci_ide_controllers - 1, i * 2 + j);
+
+                vfs_file_tnode_t* tnode = vfs_add_chr("/devices", file_name, ata_iofunc, 0, 0);
+                tnode->inode->file_data.ide.ide_idx = connected_pci_ide_controllers - 1;
+                tnode->inode->file_data.ide.ata_idx = j + 2 * i;
+
+                vfs_get_file_tnode("/devices/", NULL);
+            }
+        }
+    }
+
     LOG(INFO, "Partitions on connected drives:");
     for (uint8_t i = 0; i < 2; i++)
     {
@@ -187,6 +209,7 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
             {
                 LOG(INFO, "Drive %u:%u:", i, j);
                 printf("Drive %u:%u:\n", i, j);
+
                 mbr_boot_sector_t* data = (mbr_boot_sector_t*)&pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].boot_sector;
                 for (uint8_t k = 0; k < 4; k++)
                 {
@@ -317,4 +340,83 @@ bool ata_pio_read_sectors(pci_ide_controller_data_t* controller, uint8_t channel
     }
 
     return true;
+}
+
+bool ata_pio_read_bytes(pci_ide_controller_data_t* controller, uint8_t channel, uint8_t drive, uint64_t address, uint64_t byte_count, uint8_t* buffer)
+{
+    if (!buffer)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: NULL buffer");
+        return false;
+    }
+
+    uint64_t lba = address / 512;
+    uint64_t sector_count = (address + byte_count - 512 * lba + 511) / 512;
+
+    if (sector_count == 0 || byte_count == 0)
+        return true;
+
+    if (channel > 1 || drive > 1)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Invalid channel or drive");
+        return false;
+    }
+
+    if (!controller->channels[channel].devices[drive].connected)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Drive not connected");
+        return false;
+    }
+
+    if (lba + sector_count > controller->channels[channel].devices[drive].size)
+    {
+        LOG(ERROR, "ata_pio_read_sectors: Invalid read (LBA out of range)");
+        if (lba >= controller->channels[channel].devices[drive].size)
+            return false;
+        sector_count = controller->channels[channel].devices[drive].size - lba;
+    }
+
+    ata_write_command_block_register(controller, channel, ATA_REG_HDDEVSEL, 0xe0 | (drive << 4) | ((lba >> 24) & 0x0f));
+    // ata_write_command_block_register(controller, channel, ATA_REG_FEATURES, 0);
+
+    ata_write_command_block_register(controller, channel, ATA_REG_SECCOUNT, sector_count);
+    ata_write_command_block_register(controller, channel, ATA_REG_SECNUM, (uint8_t)(lba & 0xff));
+    ata_write_command_block_register(controller, channel, ATA_REG_CYLLOW, (uint8_t)((lba >> 8) & 0xff));
+    ata_write_command_block_register(controller, channel, ATA_REG_CYLHIGH, (uint8_t)((lba >> 16) & 0xff));
+
+    ata_write_command_block_register(controller, channel, ATA_REG_COMMAND, ATA_CMD_READ_PIO);
+
+    uint64_t buf_idx = 0;
+
+    for (uint8_t i = 0; i < sector_count; i++)
+    {
+        if (!ata_poll(controller, channel))
+            return false;
+
+        for (uint16_t j = 0; j < 256; j++)
+        {
+            uint16_t word = inw(controller->channels[channel].base_address + ATA_REG_DATA);
+            uint64_t addr1 = 512 * lba + i * 512 + 2 * j;
+            uint64_t addr2 = addr1 + 1;
+            if (addr1 >= address && addr1 < address + byte_count)
+                buffer[buf_idx++] = word & 0xff;
+            if (addr2 >= address && addr2 < address + byte_count)
+                buffer[buf_idx++] = word >> 8;
+        }
+    }
+
+    return true;
+}
+
+ssize_t ata_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
+{
+    if (direction == CHR_DIR_READ)
+    {
+        ide_descriptor_t ide = entry->tnode.file->inode->file_data.ide;
+        if (!ata_pio_read_bytes(&pci_ide_controller[ide.ide_idx], ide.ata_idx / 2, ide.ata_idx % 2, entry->position, count, buf))
+            return 0;
+        return count;
+    }
+    
+    return 0;
 }

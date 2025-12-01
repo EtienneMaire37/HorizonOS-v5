@@ -39,6 +39,11 @@ typedef struct vfs_folder_tnode vfs_folder_tnode_t;
 
 typedef struct file_entry file_entry_t;
 
+typedef struct 
+{
+    uint8_t ide_idx, ata_idx;
+} ide_descriptor_t;
+
 // * i-nodes
 typedef struct vfs_file_inode
 {
@@ -47,6 +52,7 @@ typedef struct vfs_file_inode
     union
     {
         initrd_file_t* initrd;
+        ide_descriptor_t ide;
     } file_data;
 
     ssize_t (*io_func)(file_entry_t*, uint8_t* buf, size_t count, uint8_t direction);
@@ -328,7 +334,7 @@ mount:
             VFS_NODE_INIT, 
             drive.type == DT_VIRTUAL ? 0 : vfs_generate_device_id(), 
             S_IFDIR | 
-            S_IRUSR | S_IWUSR | S_IXUSR |
+            S_IRUSR | S_IXUSR |
             S_IRGRP | S_IXGRP |
             S_IROTH | S_IXOTH, 
             uid, gid,
@@ -347,6 +353,9 @@ bool vfs_isatty(file_entry_t* entry)
 {
     return entry->entry_type == ET_FILE ? (S_ISCHR(entry->tnode.file->inode->st.st_mode) && (entry->tnode.file->inode->io_func == task_chr_stdin || entry->tnode.file->inode->io_func == task_chr_stdout || entry->tnode.file->inode->io_func == task_chr_stderr)) : false;
 }
+
+vfs_file_tnode_t* vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
+    uid_t uid, gid_t gid);
 
 void vfs_realpath_from_folder_tnode(vfs_folder_tnode_t* inode, char* res);
 void vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res);
