@@ -619,9 +619,9 @@ void _start()
     vfs_mount_device("devices", (drive_t){.type = DT_VIRTUAL}, 0, 0);
     vfs_get_folder_tnode("/devices", NULL)->inode->flags |= VFS_NODE_EXPLORED;
 
-    vfs_add_chr("/devices", "stdin", task_chr_stdin, 0, 0);
-    vfs_add_chr("/devices", "stdout", task_chr_stdout, 0, 0);
-    vfs_add_chr("/devices", "stderr", task_chr_stderr, 0, 0);
+    vfs_add_special("/devices", "stdin", task_chr_stdin, 0, 0);
+    vfs_add_special("/devices", "stdout", task_chr_stdout, 0, 0);
+    vfs_add_special("/devices", "stderr", task_chr_stderr, 0, 0);
     LOG(INFO, "Set up the VFS.");
 
     LOG(INFO, "Scanning PCI buses...");

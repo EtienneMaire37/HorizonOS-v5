@@ -256,7 +256,7 @@ vfs_folder_tnode_t* vfs_create_empty_folder_tnode(const char* name, vfs_folder_t
     return tnode;
 }
 
-vfs_file_inode_t* vfs_create_chr_special_file_inode(vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
+vfs_file_inode_t* vfs_create_special_file_inode(vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
 {
     vfs_file_inode_t* inode = malloc(sizeof(vfs_file_inode_t));
     if (!inode) return NULL;
@@ -282,7 +282,7 @@ vfs_file_inode_t* vfs_create_chr_special_file_inode(vfs_folder_tnode_t* parent, 
     return inode;
 }
 
-vfs_file_tnode_t* vfs_create_chr_special_file_tnode(const char* name, vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
+vfs_file_tnode_t* vfs_create_special_file_tnode(const char* name, vfs_folder_tnode_t* parent, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t), uid_t uid, gid_t gid)
 {
     vfs_file_tnode_t* tnode = malloc(sizeof(vfs_file_tnode_t));
     if (!tnode)
@@ -298,7 +298,7 @@ vfs_file_tnode_t* vfs_create_chr_special_file_tnode(const char* name, vfs_folder
         return NULL;
     }
     tnode->next = NULL;
-    tnode->inode = vfs_create_chr_special_file_inode(parent, fun, uid, gid);
+    tnode->inode = vfs_create_special_file_inode(parent, fun, uid, gid);
     if (!tnode->inode)
     {
         free(tnode->name);
@@ -354,7 +354,7 @@ bool vfs_isatty(file_entry_t* entry)
     return entry->entry_type == ET_FILE ? (S_ISCHR(entry->tnode.file->inode->st.st_mode) && (entry->tnode.file->inode->io_func == task_chr_stdin || entry->tnode.file->inode->io_func == task_chr_stdout || entry->tnode.file->inode->io_func == task_chr_stderr)) : false;
 }
 
-vfs_file_tnode_t* vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
+vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
     uid_t uid, gid_t gid);
 
 void vfs_realpath_from_folder_tnode(vfs_folder_tnode_t* inode, char* res);

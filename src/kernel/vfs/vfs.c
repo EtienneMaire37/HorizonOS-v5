@@ -115,24 +115,24 @@ void vfs_explore(vfs_folder_tnode_t* tnode)
     tnode->inode->flags &= ~VFS_NODE_LOADING;
 }
 
-vfs_file_tnode_t* vfs_add_chr(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
+vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
     uid_t uid, gid_t gid)
 {
     if (!folder)
     {
-        LOG(WARNING, "vfs_add_chr: folder == NULL");
+        LOG(WARNING, "vfs_add_special: folder == NULL");
         return NULL;
     }
     if (!name)
     {
-        LOG(WARNING, "vfs_add_chr: name == NULL");
+        LOG(WARNING, "vfs_add_special: name == NULL");
         return NULL;
     }
 
     vfs_folder_tnode_t* parent = vfs_get_folder_tnode(folder, NULL);
     if (!parent)
     {
-        LOG(WARNING, "vfs_add_chr: \"%s\" is not a valid folder", folder);
+        LOG(WARNING, "vfs_add_special: \"%s\" is not a valid folder", folder);
         return NULL;
     }
 
@@ -140,7 +140,7 @@ vfs_file_tnode_t* vfs_add_chr(const char* folder, const char* name, ssize_t (*fu
     while (*current_tnode)
         current_tnode = &(*current_tnode)->next;
 
-    *current_tnode = vfs_create_chr_special_file_tnode(name, parent, fun, uid, gid);
+    *current_tnode = vfs_create_special_file_tnode(name, parent, fun, uid, gid);
 
     return *current_tnode;
 }

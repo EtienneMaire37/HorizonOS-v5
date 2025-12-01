@@ -76,6 +76,8 @@ void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
 
         st.st_blksize = 4096;
         st.st_atime = st.st_mtime = st.st_ctime = 0;
+
+        st.st_size = file_size;
         
         // LOG(DEBUG, "header->last_modification: %.12s", header->last_modification);
 

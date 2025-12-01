@@ -79,7 +79,7 @@ int main(int argc, char** argv)
                 {
                     char access_str[11];
 
-                    printf("%s ", get_access_string(st.st_mode, access_str));
+                    printf("%s %zu ", get_access_string(st.st_mode, access_str), (size_t)st.st_size);
                 }
                 if (dir)
                 {

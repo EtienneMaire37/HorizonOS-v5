@@ -4,7 +4,7 @@ typedef int pid_t;
 typedef unsigned long long size_t;
 
 typedef long long ssize_t;
-typedef int off_t;
+typedef long long off_t;
 
 typedef int dev_t;
 typedef long long ino_t;
