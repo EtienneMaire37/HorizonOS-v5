@@ -192,11 +192,11 @@ void pci_connect_ide_controller(uint8_t bus, uint8_t device, uint8_t function)
                 snprintf(file_name, bufsiz, "ata%u_%u", connected_pci_ide_controllers - 1, i * 2 + j);
 
                 vfs_file_tnode_t* tnode = vfs_add_special("/devices", file_name, ata_iofunc, 0, 0);
+                if (!tnode)
+                    continue;
                 tnode->inode->file_data.ide.ide_idx = connected_pci_ide_controllers - 1;
                 tnode->inode->file_data.ide.ata_idx = j + 2 * i;
                 tnode->inode->st.st_size = 512 * pci_ide_controller[connected_pci_ide_controllers - 1].channels[i].devices[j].size;
-
-                vfs_get_file_tnode("/devices/", NULL);
             }
         }
     }

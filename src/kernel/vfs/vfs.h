@@ -343,6 +343,44 @@ mount:
     return;
 }
 
+static void vfs_unload_folder_helper(vfs_folder_tnode_t* tnode)
+{
+    if (!tnode) return;
+    if (tnode->inode->parent == tnode) return;
+
+    while (tnode->inode->folders)
+    {
+        vfs_folder_tnode_t* next_folder_tnode = tnode->inode->folders->next;
+        vfs_unload_folder_helper(tnode->inode->folders);
+        tnode->inode->folders = next_folder_tnode;
+    }
+
+    while (tnode->inode->files)
+    {
+        vfs_file_tnode_t* file_tnode = tnode->inode->files; 
+        free(file_tnode->inode);
+        free(file_tnode->name);
+        tnode->inode->files = tnode->inode->files->next;
+        free(file_tnode);
+    }
+
+    free(tnode->inode);
+    free(tnode->name);
+    free(tnode);
+}
+
+void vfs_unload_folder(vfs_folder_tnode_t* tnode)
+{
+    vfs_folder_tnode_t* parent = tnode->inode->parent;
+    vfs_folder_tnode_t** current_folder = &parent->inode->folders;
+    while (*current_folder && (*current_folder) != tnode)
+        current_folder = &(*current_folder)->next;
+    if (!*current_folder)
+        abort();     // !!! Should be impossible
+    *current_folder = tnode->next;
+    vfs_unload_folder_helper(tnode);
+}
+
 ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
 ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
 ssize_t task_chr_stderr(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
