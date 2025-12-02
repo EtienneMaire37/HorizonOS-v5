@@ -26,7 +26,7 @@ void set_raw_mode(bool enable)
     {
         tcgetattr(STDIN_FILENO, &oldt);
         newt = oldt;
-        newt.c_lflag &= ~(ICANON | ECHO);   // * Disable canonical mode and echoing
+        newt.c_lflag &= ~(ICANON | ECHO | ISIG);   // * Disable canonical mode and echoing and interrupts
         newt.c_cc[VMIN] = 1;
         newt.c_cc[VTIME] = 0;
         tcsetattr(STDIN_FILENO, TCSANOW, &newt);
