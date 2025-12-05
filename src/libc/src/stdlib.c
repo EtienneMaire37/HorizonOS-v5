@@ -488,10 +488,7 @@ int system(const char* command)
 
         tcsetpgrp(STDIN_FILENO, pgrp);
 
-        if (WIFEXITED(wstatus))
-            return_value = WEXITSTATUS(wstatus);
-        else if (WIFSIGNALED(wstatus))
-            return_value = 128 + WTERMSIG(wstatus);
+        return_value = wstatus;
 
         free(argv);
         goto do_return;

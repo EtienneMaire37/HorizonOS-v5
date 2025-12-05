@@ -203,8 +203,8 @@ int main(int argc, char** argv)
             set_raw_mode(true);
             if (status != -1) 
             {
-                if (status >= 128)
-                    printf("\n%s\n", strsignal(status - 128));
+                if (WIFSIGNALED(status))
+                    printf("\n%s\n", strsignal(WTERMSIG(status)));
             }
             char buf[16];
             snprintf(buf, sizeof(buf), "%d", status);
