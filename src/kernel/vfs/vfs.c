@@ -115,7 +115,7 @@ void vfs_explore(vfs_folder_tnode_t* tnode)
     tnode->inode->flags &= ~VFS_NODE_LOADING;
 }
 
-vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
+vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, mode_t mode, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
     uid_t uid, gid_t gid)
 {
     if (!folder)
@@ -140,7 +140,7 @@ vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, ssize_t 
     while (*current_tnode)
         current_tnode = &(*current_tnode)->next;
 
-    *current_tnode = vfs_create_special_file_tnode(name, parent, fun, uid, gid);
+    *current_tnode = vfs_create_special_file_tnode(name, parent, mode, fun, uid, gid);
 
     return *current_tnode;
 }
