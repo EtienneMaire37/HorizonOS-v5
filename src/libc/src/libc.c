@@ -9,11 +9,11 @@ static int num_environ;
 
 #include "../include/inttypes.h"
 
-int64_t minint(int64_t a, int64_t b)
+static int64_t minint(int64_t a, int64_t b)
 {
     return a < b ? a : b;
 }
-int64_t maxint(int64_t a, int64_t b)
+static int64_t maxint(int64_t a, int64_t b)
 {
     return a > b ? a : b;
 }

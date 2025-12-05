@@ -70,10 +70,10 @@ uint64_t make_address_canonical(uint64_t address)
 
 #define physical_null ((physical_address_t)0)
 
-int64_t minint(int64_t a, int64_t b);
-int64_t maxint(int64_t a, int64_t b);
-int64_t absint(int64_t x);
-int imod(int a, int b);
+static int64_t minint(int64_t a, int64_t b);
+static int64_t maxint(int64_t a, int64_t b);
+static int64_t absint(int64_t x);
+static int imod(int a, int b);
 
 #include "../libc/include/inttypes.h"
 #include "../libc/include/limits.h"
@@ -153,19 +153,19 @@ initrd_file_t* commit_file;
 #include "../liballoc/liballoc.c"
 #include "memalloc/liballoc_hooks.c"
 
-int64_t minint(int64_t a, int64_t b)
+static int64_t minint(int64_t a, int64_t b)
 {
     return a < b ? a : b;
 }
-int64_t maxint(int64_t a, int64_t b)
+static int64_t maxint(int64_t a, int64_t b)
 {
     return a > b ? a : b;
 }
-int64_t absint(int64_t x)
+static int64_t absint(int64_t x)
 {
     return x < 0 ? -x : x;
 }
-int imod(int a, int b)
+static int imod(int a, int b)
 {
     if (b <= 0) 
     {
