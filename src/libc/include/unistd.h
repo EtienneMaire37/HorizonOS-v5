@@ -32,3 +32,8 @@ int execvp(const char* file, char* const argv[]);
 int access(const char* path, int mode);
 int isatty(int fd);
 off_t lseek(int fd, off_t offset, int whence);
+pid_t tcgetpgrp(int fd);
+int tcsetpgrp(int fd, pid_t pgrp);
+int setpgid(pid_t pid, pid_t pgid);
+pid_t getpgid(pid_t pid);
+pid_t getpgrp();

@@ -190,6 +190,9 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode)   // port is 1
             case VK_V:
                 vfs_log_tree(vfs_root, 0);
                 break;
+            case VK_P:
+                tasks_log();
+                break;
             default:
                 goto key;
             }

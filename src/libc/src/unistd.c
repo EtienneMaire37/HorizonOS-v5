@@ -77,3 +77,8 @@ int execvp(const char* file, char* const argv[])
 {
     return execvpe(file, argv, environ);
 }
+
+pid_t getpgrp()
+{
+    return getpgid(0);
+}

@@ -254,3 +254,51 @@ off_t lseek(int fd, off_t offset, int whence)
     }
     return ret;
 }
+
+pid_t tcgetpgrp(int fd)
+{
+    pid_t ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_TCGETPGRP), "b"(fd));
+    if (ret < 0)
+    {
+        errno = -ret;
+        return -1;
+    }
+    return ret;
+}
+
+int tcsetpgrp(int fd, pid_t pgrp)
+{
+    int ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_TCSETPGRP), "b"(fd));
+    if (ret)
+    {
+        errno = ret;
+        return -1;
+    }
+    return 0;
+}
+
+pid_t getpgid(pid_t pid)
+{
+    pid_t ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_GETPGID), "b"(pid));
+    if (ret < 0)
+    {
+        errno = -ret;
+        return -1;
+    }
+    return ret;
+}
+
+int setpgid(pid_t pid, pid_t pgid)
+{
+    pid_t ret;
+    asm volatile ("int 0xf0" : "=a"(ret) : "a"(SYSCALL_SETPGID), "b"(pid), "c"(pgid));
+    if (ret)
+    {
+        errno = ret;
+        return -1;
+    }
+    return 0;
+}

@@ -38,7 +38,7 @@ thread_t task_create_empty()
     task.is_dead = false;
     task.forked_pid = 0;    // is_being_forked = false
 
-    task.parent = -1;
+    task.parent = 0;
     task.wait_pid = -1;
 
     task.to_reap = false;
@@ -246,6 +246,7 @@ void switch_task()
 
 thread_t* find_task_by_pid(pid_t pid)
 {
+    if (pid < 0) return NULL;
     for (uint16_t i = 0; i < task_count; i++)
         if (tasks[i].pid == pid)
             return &tasks[i];
@@ -380,4 +381,18 @@ void cleanup_tasks()
             continue;
         }
     }
+}
+
+void tasks_log()
+{
+    LOG(DEBUG, "Tasks: (Total CPU usage: %u.%u)", (1000 - tasks[0].stored_cpu_ticks) / 10,  (1000 - tasks[0].stored_cpu_ticks) % 10);
+    lock_task_queue();
+    for (uint16_t i = 1; i < task_count; i++)
+    {
+        thread_t* task = &tasks[i];
+        LOG(DEBUG, "%s── task \"%s\" [pid %lld, ppid %lld, pgid %lld] | CPU Usage: %u.%u%s", i == task_count - 1 ? "└" : "├",
+            task->name, task->pid, task->parent, task->pgid, task->stored_cpu_ticks / 10, task->stored_cpu_ticks % 10,
+            task_is_blocked(i) ? " (blocked)" : "");
+    }
+    unlock_task_queue();
 }

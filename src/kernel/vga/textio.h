@@ -42,7 +42,6 @@
 #define TAB_LENGTH       4
 
 #define TTY_RES_X   100
-
 #define TTY_RES_Y   35
 // Assume ar (probably should set a max value and dynamically scroll if below a certain threshold)
 
@@ -52,6 +51,8 @@ uint32_t tty_cursor = 0;
 uint8_t tty_color = (FG_WHITE | BG_BLACK);
 
 struct termios tty_ts;
+
+pid_t tty_foreground_pgrp = 1;
 
 bool tty_cursor_blink = true;
 

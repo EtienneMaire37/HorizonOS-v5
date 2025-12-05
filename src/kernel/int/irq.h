@@ -12,6 +12,19 @@ void handle_apic_irq(interrupt_registers_t* registers)
         uint64_t increment = precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
         global_timer += GLOBAL_TIMER_INCREMENT;
         system_thousands += increment;
+
+        __CURRENT_TASK.current_cpu_ticks += increment;
+        if (system_thousands >= 1000)
+        {
+            lock_task_queue();
+            for (int i = 0; i < task_count; i++)
+            {
+                tasks[i].stored_cpu_ticks = tasks[i].current_cpu_ticks;
+                tasks[i].current_cpu_ticks = 0;
+            }
+            unlock_task_queue();
+        }
+
         resolve_time();
 
         if (system_thousands - increment < 500 && system_thousands >= 500)

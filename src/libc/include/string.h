@@ -38,3 +38,4 @@ typedef unsigned long long size_t;
 
 char* strdup(const char* str);
 char* strerror(int errnum);
+char* strsignal(int signum);

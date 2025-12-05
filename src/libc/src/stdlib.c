@@ -461,6 +461,8 @@ int system(const char* command)
         argv[i++] = arg;
     argv[i] = NULL;
 
+    pid_t pgrp = getpgrp();
+
     pid_t ret = fork();
     if (ret == -1)
     {
@@ -470,16 +472,26 @@ int system(const char* command)
 
     if (ret == 0)
     {
+        setpgid(0, 0);
+
         execvp(first_arg, argv);
         perror(first_arg);
         exit(127);
     }
     else
     {
+        setpgid(ret, ret);
+        tcsetpgrp(STDIN_FILENO, ret);
+        
         int wstatus;
         waitpid(ret, &wstatus, 0);
-        // return_value = WEXITSTATUS(wstatus);
-        return_value = wstatus;
+
+        tcsetpgrp(STDIN_FILENO, pgrp);
+
+        if (WIFEXITED(wstatus))
+            return_value = WEXITSTATUS(wstatus);
+        else if (WIFSIGNALED(wstatus))
+            return_value = 128 + WTERMSIG(wstatus);
 
         free(argv);
         goto do_return;

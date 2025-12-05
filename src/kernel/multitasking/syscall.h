@@ -4,6 +4,7 @@
 #include "../../libc/src/syscall_defines.h"
 #include "../../libc/src/startup_data.h"
 #include "../multitasking/loader.h"
+#include "../../libc/include/signal.h"
 
 ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
@@ -54,8 +55,8 @@ void handle_syscall(interrupt_registers_t* registers)
     case SYSCALL_EXIT:     // * exit | exit_code = $rbx |
         LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, (int)registers->rbx);
         lock_task_queue();
+        __CURRENT_TASK.return_value = (registers->rbx & 0xff) | WEXITBIT;
         __CURRENT_TASK.is_dead = true;
-        __CURRENT_TASK.return_value = registers->rbx & 0xff;
         unlock_task_queue();
         switch_task();
         break;
@@ -469,11 +470,101 @@ void handle_syscall(interrupt_registers_t* registers)
         break;
     }
 
+    case SYSCALL_TCGETPGRP: // * tcgetpgrp | fd = $rbx | $rax = (uint64_t)-errno/pid
+    {
+        int fd = registers->rbx;
+        if (!is_fd_valid(fd))
+        {
+            registers->rax = (uint64_t)-EBADF;
+            break;
+        }
+        file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
+        if (!vfs_isatty(entry))
+        {
+            registers->rax = (uint64_t)-ENOTTY;
+            break;
+        }
+        registers->rax = (uint64_t)tty_foreground_pgrp;
+        break;
+    }
+
+    case SYSCALL_TCSETPGRP: // * tcsetpgrp | fd = $rbx, pgrp = $rcx | $rax = (uint64_t)errno
+    {
+        int fd = registers->rbx;
+        if (!is_fd_valid(fd))
+        {
+            registers->rax = EBADF;
+            break;
+        }
+        file_entry_t* entry = &file_table[__CURRENT_TASK.file_table[fd]];
+        if (!vfs_isatty(entry))
+        {
+            registers->rax = ENOTTY;
+            break;
+        }
+        pid_t pgrp = (pid_t)registers->rcx;
+        if (pgrp <= 0)
+        {
+            registers->rax = EINVAL;
+            break;
+        }
+        tty_foreground_pgrp = pgrp;
+        registers->rax = 0;
+        break;
+    }
+    
+    case SYSCALL_GETPGID:   // * getpgid | pid = $rbx | $rax = (uint64_t)-errno/pid
+    {
+        pid_t pid = (pid_t)registers->rbx;
+        if (pid < 0)
+        {
+            registers->rax = (uint64_t)-EINVAL;
+            break;
+        }
+        thread_t* task;
+        if (pid == 0)
+            task = &__CURRENT_TASK;
+        else
+            task = find_task_by_pid(pid);
+        if (!task)
+        {
+            registers->rax = (uint64_t)-ESRCH;
+            break;
+        }
+        registers->rax = task->pgid;
+        break;
+    }
+
+    case SYSCALL_SETPGID:   // * setpgid | pid = $rbx, pgid = $rcx | $rax = (uint64_t)errno
+    {
+        pid_t pid = (pid_t)registers->rbx;
+        if (pid < 0)
+        {
+            registers->rax = (uint64_t)-EINVAL;
+            break;
+        }
+        thread_t* task;
+        if (pid == 0)
+            task = &__CURRENT_TASK;
+        else
+            task = find_task_by_pid(pid);
+        if (!task)
+        {
+            registers->rax = (uint64_t)-ESRCH;
+            break;
+        }
+        pid_t pgid = (pid_t)registers->rcx;
+        if (!pgid)
+            pgid = task->pgid;
+        task->pgid = pgid;
+        break;
+    }
+
     default:
         LOG(ERROR, "Undefined system call (%#llx)", registers->rax);
         
         __CURRENT_TASK.is_dead = true;
-        __CURRENT_TASK.return_value = 0x80000000;
+        __CURRENT_TASK.return_value = WSIGNALBIT | SIGILL;
         switch_task();
     }
 }

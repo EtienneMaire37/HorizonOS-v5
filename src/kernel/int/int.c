@@ -27,11 +27,12 @@ void interrupt_handler(interrupt_registers_t* registers)
         else
         {
             log_registers();
-            // !! Should send a signal
-            // if (registers->interrupt_number == 14)  // * Page fault
-            //     printf("Segmentation fault\n");
+            __CURRENT_TASK.return_value = WSIGNALBIT;
+            if (registers->interrupt_number == 14)
+                __CURRENT_TASK.return_value |= SIGSEGV;
+            else
+                __CURRENT_TASK.return_value |= SIGILL;
             __CURRENT_TASK.is_dead = true;
-            __CURRENT_TASK.return_value = 0x80000000;
             switch_task();
         }
 

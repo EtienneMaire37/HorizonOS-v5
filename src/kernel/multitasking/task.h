@@ -16,16 +16,14 @@ typedef struct thread
     uint32_t return_value;
 
     pid_t wait_pid;
-    int wstatus;
+    uint32_t wstatus;
 
     bool to_reap;
-
-    pid_t parent;
 
     pid_t forked_pid;
 
     uint8_t ring;
-    pid_t pid, pgid;
+    pid_t pid, parent, pgid;    // TODO: rename parent to ppid
     bool system_task;    // system_task: cause kernel panics
 
     vfs_folder_tnode_t* cwd;
@@ -122,6 +120,8 @@ uint16_t find_next_task_index()
     do 
     {
         index = (index + 1) % task_count;
+        if (index == 0) continue;
+        if (index == current_task_index) return task_is_blocked(index) ? 0 : index;
     }
     while (task_is_blocked(index)); // Skip blocked tasks
     return index;
@@ -156,6 +156,8 @@ void multitasking_start();
 void task_kill(uint16_t index);
 void multitasking_add_idle_task();
 
+thread_t* find_task_by_pid(pid_t pid);
+
 void task_copy_file_table(uint16_t from, uint16_t to, bool cloexec);
 
 void task_stack_push(thread_t*, uint64_t);
@@ -163,3 +165,5 @@ void task_stack_push(thread_t*, uint64_t);
 void cleanup_tasks();
 
 void idle_main();
+
+void tasks_log();

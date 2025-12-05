@@ -201,16 +201,13 @@ int main(int argc, char** argv)
             set_raw_mode(false);
             int status = system(data);
             set_raw_mode(true);
-            int exit_code = -1;
             if (status != -1) 
             {
-                if (WIFEXITED(status))
-                    exit_code = WEXITSTATUS(status);
-                // else
-                //     exit_code = 128 + WTERMSIG(status);
+                if (status >= 128)
+                    printf("\n%s\n", strsignal(status - 128));
             }
             char buf[16];
-            snprintf(buf, sizeof(buf), "%d", exit_code);
+            snprintf(buf, sizeof(buf), "%d", status);
             setenv("?", buf, true);
             // printf("%d\n", exit_code);
         }

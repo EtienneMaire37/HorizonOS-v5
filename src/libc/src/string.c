@@ -1,3 +1,5 @@
+#include "../include/signal.h"
+
 void* memset(void* dst, int value, size_t n)
 {
     for (size_t i = 0; i < n; i++)
@@ -147,6 +149,31 @@ char* strerror(int errnum)
         case ETIMEDOUT: return "Connection timed out";
         case EXDEV: return "Cross-device link";
         default: return "Unknown error";
+    }
+}
+
+char* strsignal(int signum)
+{
+    switch (signum)
+    {
+        case SIGHUP:    return "Hangup";
+        case SIGINT:    return "Interrupt";
+        case SIGQUIT:   return "Quit";
+        case SIGILL:    return "Illegal instruction";
+        case SIGTRAP:   return "Trace/breakpoint trap";
+        case SIGABRT:   return "Aborted";
+        case SIGBUS:    return "Bus error";
+        case SIGFPE:    return "Floating point exception";
+        case SIGKILL:   return "Killed";
+        case SIGUSR1:   return "User defined signal 1";
+        case SIGSEGV:   return "Segmentation fault";
+        case SIGUSR2:   return "User defined signal 2";
+        case SIGPIPE:   return "Broken pipe";
+        case SIGALRM:   return "Alarm clock";
+        case SIGTERM:   return "Terminated";
+        case SIGSTOP:   return "Stopped (signal)";
+        case SIGTSTP:   return "Stopped";
+        default:        return "Unknown signal";
     }
 }
 

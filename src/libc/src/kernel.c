@@ -133,3 +133,23 @@ off_t lseek(int fd, off_t offset, int whence)
 {
     abort();
 }
+
+pid_t tcgetpgrp(int fd)
+{
+    abort();
+}
+
+int tcsetpgrp(int fd, pid_t pgrp)
+{
+    abort();
+}
+
+pid_t getpgid(pid_t pid)
+{
+    abort();
+}
+
+int setpgid(pid_t pid, pid_t pgid)
+{
+    abort();
+}
