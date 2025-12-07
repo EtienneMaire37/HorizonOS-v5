@@ -150,12 +150,12 @@ src/tasks/bin/term: src/tasks/src/term/* src/tasks/link.ld src/libc/lib/libc.a s
 
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	nasm -f elf64 -D__LARGE__ -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
-	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O2 $(CFLAGS) -fno-lto
+	nasm -f elf64 -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
+	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O2 $(CFLAGS) -fno-lto -fpic -fpie
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O2 $(CFLAGS) -malign-double -fno-lto
+	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O2 $(CFLAGS) -malign-double -fno-lto -fpic -fpie
 	$(CROSSAR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 $(CROSSGCC):
