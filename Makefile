@@ -1,4 +1,4 @@
-CFLAGS := -std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fno-omit-frame-pointer -mcmodel=large -march=x86-64 # -v4
+CFLAGS := -std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fno-omit-frame-pointer -mcmodel=large -march=x86-64 -flto # -v4
 DATE := `date +"%Y-%m-%d"`
 CROSSGCC := ./crossgcc/bin/x86_64-elf-gcc
 CROSSLD := ./crossgcc/bin/x86_64-elf-ld
@@ -38,10 +38,10 @@ horizonos.iso: $(CROSSGCC) $(USERGCC) $(MKBOOTIMG) rmbin $(DIR2FAT32) resources/
 	$(CFLAGS) \
 	-mno-red-zone \
 	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-unused-function \
-	-mno-80387 -mno-mmx -mno-sse -mno-avx \
+	-mno-80387 -mno-mmx -mno-sse -mno-avx -fno-lto \
 	$(USER_CFLAGS)
 
-	$(CROSSGCC) -nostdlib -n -T src/kernel/link.ld -o bin/kernel.elf -ffreestanding \
+	$(CROSSGCC) -nostdlib -n -T src/kernel/link.ld -o bin/kernel.elf -ffreestanding -flto \
 	bin/kernel.o \
 	"bin/gdt.o" \
 	"bin/idt.o"  \
@@ -151,11 +151,11 @@ src/tasks/bin/term: src/tasks/src/term/* src/tasks/link.ld src/libc/lib/libc.a s
 src/libc/lib/libc.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
 	nasm -f elf64 -D__LARGE__ -o "src/libc/lib/crt0.o" "src/libc/src/crt0.asm"
-	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O2 $(CFLAGS)
+	$(CROSSGCC) -c "src/libc/src/libc.c" -o "src/libc/lib/libc.o" -O2 $(CFLAGS) -fno-lto
 	$(CROSSAR) rcs "src/libc/lib/libc.a" "src/libc/lib/libc.o"
 src/libc/lib/libm.a: src/libc/src/* src/libc/include/*
 	mkdir -p ./src/libc/lib
-	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O2 $(CFLAGS) -malign-double
+	$(CROSSGCC) -c "src/libc/src/math.c" -o "src/libc/lib/libm.o" -O2 $(CFLAGS) -malign-double -fno-lto
 	$(CROSSAR) rcs "src/libc/lib/libm.a" "src/libc/lib/libm.o"
 
 $(CROSSGCC):
