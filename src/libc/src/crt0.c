@@ -29,6 +29,21 @@ void _main()
     // for (int i = 0; i < environ_num; i++)
     //     dprintf(STDOUT_FILENO, "\"%s\"\n", environ[i]);
 
+    stdin = FILE_create();
+    if (stdin == NULL) abort();
+    stdin->fd = STDIN_FILENO;
+    stdin->flags = FILE_FLAGS_READ;
+
+    stdout = FILE_create();
+    if (stdout == NULL) abort();
+    stdout->fd = STDOUT_FILENO;
+    stdout->flags = FILE_FLAGS_WRITE | (isatty(stdout->fd) ? FILE_FLAGS_LBF : FILE_FLAGS_FBF);
+
+    stderr = FILE_create();
+    if (stderr == NULL) abort();
+    stderr->fd = STDERR_FILENO;
+    stderr->flags = FILE_FLAGS_WRITE | (isatty(stderr->fd) ? FILE_FLAGS_NBF : FILE_FLAGS_FBF);
+
     char** _environ = malloc((environ_num + 1) * sizeof(char*));
     if (_environ)
     {
@@ -43,22 +58,10 @@ void _main()
         environ = _environ;
     }
     else
+    {
+        perror("libc");
         abort();
-
-    stdin = FILE_create();
-    if (stdin == NULL) exit(EXIT_FAILURE);
-    stdin->fd = STDIN_FILENO;
-    stdin->flags = FILE_FLAGS_READ;
-
-    stdout = FILE_create();
-    if (stdout == NULL) exit(EXIT_FAILURE);
-    stdout->fd = STDOUT_FILENO;
-    stdout->flags = FILE_FLAGS_WRITE | (isatty(stdout->fd) ? FILE_FLAGS_LBF : FILE_FLAGS_FBF);
-
-    stderr = FILE_create();
-    if (stderr == NULL) exit(EXIT_FAILURE);
-    stderr->fd = STDERR_FILENO;
-    stderr->flags = FILE_FLAGS_WRITE | (isatty(stderr->fd) ? FILE_FLAGS_NBF : FILE_FLAGS_FBF);
+    }
 
     create_b64_decoding_table();
 

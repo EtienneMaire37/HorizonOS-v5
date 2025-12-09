@@ -120,7 +120,7 @@ uint16_t find_next_task_index()
     do 
     {
         index = (index + 1) % task_count;
-        if (index == 0) continue;
+        if (index == 1) continue;   // * 0 -> 1
         if (index == current_task_index) return task_is_blocked(index) ? 0 : index;
     }
     while (task_is_blocked(index)); // Skip blocked tasks

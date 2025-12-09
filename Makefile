@@ -74,10 +74,10 @@ src/tasks/bin/init.elf: src/tasks/src/init/* src/tasks/bin/term src/tasks/bin/ec
 	mkdir -p ./src/tasks/bin
 	$(CROSSGCC) -c "src/tasks/src/init/main.c" -o "src/tasks/bin/init.o" $(CFLAGS) -I"src/libc/include" -O3
 	$(CROSSGCC) -T src/tasks/link.ld \
-	-o "src/tasks/bin/init.elf" \
+	-o "src/tasks/bin/init.elf" $(CFLAGS) \
 	"src/tasks/bin/init.o" \
 	"src/libc/lib/crt0.o" \
-	"src/libc/lib/libc.so" \
+	"src/libc/lib/libc.a" \
 	"src/libc/lib/libm.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
@@ -89,7 +89,7 @@ src/tasks/bin/echo: src/tasks/src/echo/* src/tasks/link.ld src/libc/lib/crt0.o s
     -o "src/tasks/bin/echo" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/echo.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 
@@ -100,7 +100,7 @@ src/tasks/bin/ls: src/tasks/src/ls/* src/tasks/link.ld src/libc/lib/crt0.o src/l
     -o "src/tasks/bin/ls" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/ls.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 
@@ -111,7 +111,7 @@ src/tasks/bin/cat: src/tasks/src/cat/* src/tasks/link.ld src/libc/lib/crt0.o src
     -o "src/tasks/bin/cat" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/cat.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 
@@ -122,7 +122,7 @@ src/tasks/bin/clear: src/tasks/src/clear/* src/tasks/link.ld src/libc/lib/crt0.o
     -o "src/tasks/bin/clear" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/clear.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 
@@ -133,7 +133,7 @@ src/tasks/bin/printenv: src/tasks/src/printenv/* src/tasks/link.ld src/libc/lib/
     -o "src/tasks/bin/printenv" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/printenv.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 
@@ -144,7 +144,7 @@ src/tasks/bin/term: src/tasks/src/term/* src/tasks/link.ld src/libc/lib/crt0.o s
     -o "src/tasks/bin/term" \
 	"src/libc/lib/crt0.o" \
     "src/tasks/bin/term.o" \
-    "src/libc/lib/libc.so" \
+    "src/libc/lib/libc.a" \
 	-ffreestanding -nostdlib \
 	-lgcc
 

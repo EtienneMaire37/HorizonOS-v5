@@ -32,9 +32,10 @@ SECTIONS
     {
         *(COMMON)
         *(.bss .bss.*)
-        . = ALIGN(0x1000);
-        _break_address = .;
     } :bss
 
+    . = ALIGN(0x1000);
+    _break_address = .;
+    
     /DISCARD/ : { *(.comment) *(.note) }
 }

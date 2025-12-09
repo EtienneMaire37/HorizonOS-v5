@@ -50,10 +50,22 @@ ssize_t task_chr_stderr(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t
 
 void handle_syscall(interrupt_registers_t* registers)
 {
+    // LOG(TRACE, "syscall %llu", registers->rax);
     switch (registers->rax)
     {
     case SYSCALL_EXIT:     // * exit | exit_code = $rbx |
-        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code %d", __CURRENT_TASK.name, __CURRENT_TASK.pid, (int)registers->rbx);
+        LOG(WARNING, "Task \"%s\" (pid = %d) exited with return code ", __CURRENT_TASK.name, __CURRENT_TASK.pid);
+        switch ((int)registers->rbx)
+        {
+        case EXIT_SUCCESS:
+            CONTINUE_LOG(WARNING, "%s", "EXIT_SUCCESS");
+            break;
+        case EXIT_FAILURE:
+            CONTINUE_LOG(WARNING, "%s", "EXIT_FAILURE");
+            break;
+        default:
+            CONTINUE_LOG(WARNING, "%d", (int)registers->rbx);
+        }
         lock_task_queue();
         __CURRENT_TASK.return_value = (registers->rbx & 0xff) | WEXITBIT;
         __CURRENT_TASK.is_dead = true;
@@ -176,8 +188,8 @@ void handle_syscall(interrupt_registers_t* registers)
 
     case SYSCALL_BRK:   // * brk | addr = $rbx, break_address = $rcx | $rax = errno, $rbx = break_address
     {
-        uint64_t addr = registers->rdx;
-        uint64_t break_address = registers->rcx;
+        uintptr_t addr = registers->rbx;
+        uintptr_t break_address = registers->rcx;
 
         if (addr < break_address)
         {
@@ -190,6 +202,8 @@ void handle_syscall(interrupt_registers_t* registers)
                     __CURRENT_TASK.ring == 3 ? PG_USER : PG_SUPERVISOR, 
                     PG_READ_WRITE, CACHE_WB);
         }
+
+        break_address = addr;
 
         registers->rbx = break_address;
         registers->rax = break_address == addr ? 0 : ENOMEM;
