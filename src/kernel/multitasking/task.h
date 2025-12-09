@@ -114,17 +114,17 @@ bool task_is_blocked(uint16_t index)
     return false;
 }
 
-uint16_t find_next_task_index() 
+uint16_t find_next_task_index()
 {
-    uint16_t index = current_task_index;
-    do 
+    for (uint16_t off = 1; off < task_count; off++)
     {
-        index = (index + 1) % task_count;
-        if (index == 1) continue;   // * 0 -> 1
-        if (index == current_task_index) return task_is_blocked(index) ? 0 : index;
+        uint16_t idx = (current_task_index + off) % task_count;
+        if (idx == 0) continue;
+        if (!task_is_blocked(idx)) return idx;
     }
-    while (task_is_blocked(index)); // Skip blocked tasks
-    return index;
+
+    if (!task_is_blocked(current_task_index)) return current_task_index;
+    return 0;
 }
 
 bool is_fd_valid(int fd)
