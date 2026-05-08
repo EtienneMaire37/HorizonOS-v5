@@ -9,7 +9,7 @@ page_table_data_t* global_page_table = NULL;
 void page_data_table_init()
 {
     assert(!global_page_table);
-    global_page_table = malloc(sizeof(page_table_data_t) * allocatable_memory / 0x1000);
+    global_page_table = pfa_allocate_contiguous_pages(((sizeof(page_table_data_t) * allocatable_memory / 0x1000) + 0xfff) / 0x1000);
     assert(global_page_table);
 }
 uint32_t lock_page_table(uint64_t* addr)

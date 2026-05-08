@@ -303,7 +303,7 @@ void pfa_free_physical_contiguous_pages(physical_address_t address, size_t pages
         pfa_free_physical_page(address + 0x1000ULL * i);
 }
 
-__attribute__((malloc, malloc(pfa_free_page, 1))) void* pfa_allocate_page()
+__attribute__((malloc, malloc(pfa_free_page, 1), assume_aligned(4096))) void* pfa_allocate_page()
 {
     physical_address_t paddr = pfa_allocate_physical_page();
     if (!paddr) return NULL;
@@ -316,7 +316,7 @@ void pfa_free_page(const void* ptr)
     pfa_free_physical_page((physical_address_t)ptr - PHYS_MAP_BASE);
 }
 
-__attribute__((malloc, malloc(pfa_free_contiguous_pages, 1))) void* pfa_allocate_contiguous_pages(size_t pages)
+__attribute__((malloc, malloc(pfa_free_contiguous_pages, 1), assume_aligned(4096))) void* pfa_allocate_contiguous_pages(size_t pages)
 {
     physical_address_t paddr = pfa_allocate_physical_contiguous_pages(pages);
     if (!paddr) return NULL;
