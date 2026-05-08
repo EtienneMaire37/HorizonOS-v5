@@ -127,7 +127,10 @@ _interrupt_handler:
     ; * (if "enough" stack space is left for the kernel, for some measure of "enough").
     ; * This way, interrupts are enabled most of the time."
     ; * -> nullplan
+    cmp qword [rsp + 8 * 19], 32 ; irq
+    jge dont_sti
     sti
+dont_sti:
     call interrupt_handler
 global intret
 intret:

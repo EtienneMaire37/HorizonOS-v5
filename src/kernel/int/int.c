@@ -15,7 +15,7 @@ initrd_file_t* kernel_symbols_file = NULL;
 
 #include "kernel_panic.h"
 
-#define return_from_isr() { if (multitasking_enabled) { lock_scheduler(); if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) { unlock_scheduler(); task_handle_signal_to_userspace(registers); } else unlock_scheduler(); }  return; }
+#define return_from_isr() { if (multitasking_enabled) { if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); }  return; }
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
@@ -44,9 +44,6 @@ void interrupt_handler(interrupt_registers_t* registers)
 
         if (multitasking_enabled)
         {
-            if (task_lock_depth != 0)
-                kernel_panic(registers);
-
             if (current_task->system_task || task_count == 1 || !multitasking_enabled ||
 registers->interrupt_number == DOUBLE_FAULT || registers->interrupt_number == MACHINE_CHECK)
                 kernel_panic(registers);
@@ -54,10 +51,11 @@ registers->interrupt_number == DOUBLE_FAULT || registers->interrupt_number == MA
             {
                 print_stack_trace(registers->rip, registers->rbp, false);
                 int signum = get_signal_from_exception(registers);
-                task_send_signal(current_task, signum);
-                kill_task(current_task, signum);
-                while (task_lock_depth) unlock_scheduler();
-                abort();
+                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                __task_send_signal(current_task, signum);
+                __kill_task(current_task, signum);
+                release_spinlock_noint(&sched_lock, flags);
+                kernel_panic(registers);
             }
         }
         else

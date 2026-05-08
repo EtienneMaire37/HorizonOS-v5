@@ -45,7 +45,7 @@ bool should_restart_syscall()
 
 void task_handle_signal_to_userspace(interrupt_registers_t* registers)
 {
-    lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
     if (current_task->sig_pending_user_space)
     {
         if (current_task->pending_signal_handler)
@@ -54,9 +54,9 @@ void task_handle_signal_to_userspace(interrupt_registers_t* registers)
             current_task->sig_pending_user_space = false;
         }
         else
-            task_handle_sig_dfl(current_task, current_task->pending_signal_number);
+            __task_handle_sig_dfl(current_task, current_task->pending_signal_number);
     }
-    unlock_scheduler();
+    release_spinlock_noint(&sched_lock, flags);
 }
 
 uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_address)
@@ -80,33 +80,33 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
-        unlock_scheduler();
         ssize_t ret;
-        sc_ret_errno = (uint64_t)vfs_read(arg1, arg2, arg3, &ret);
+        sc_ret_errno = (uint64_t)__vfs_read(arg1, arg2, arg3, &ret);
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_WRITE, 3, int, const void*, size_t)
         SC_LOG("syscall SYS_WRITE(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
-        unlock_scheduler();
         ssize_t ret;
-        sc_ret_errno = vfs_write(arg1, arg2, arg3, &ret);
+        sc_ret_errno = __vfs_write(arg1, arg2, arg3, &ret);
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_EXIT, 1, int)
@@ -116,16 +116,19 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_ISATTY, 1, int)
         SC_LOG("syscall SYS_ISATTY(%d)", arg1);
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(arg1);
-        if (vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(arg1);
+        if (__vfs_isatty(entry))
             sc_ret_errno = 0;
         else
             sc_ret_errno = ENOTTY;
+        release_spinlock_noint(&file_table_lock, flags);
         break;
     sc_case(SYS_VM_MAP, 6, void*, size_t, int, int, int, off_t)
         SC_LOG("syscall SYS_VM_MAP(%p, %zu, %#x, %#x, %d, %" PRId64 ")", arg1, arg2, arg3, arg4, arg5, arg6);
@@ -207,27 +210,32 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_SEEK, 3, int, off_t, int)
         SC_LOG("syscall SYS_SEEK(%d, %" PRId64 ", %d)", arg1, arg2, arg3);
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
         if (arg3 != SEEK_SET && arg3 != SEEK_CUR && arg3 != SEEK_END)
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EINVAL;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
-        file_entry_t* entry = get_global_file_entry(arg1);
+        file_entry_t* entry = __get_global_file_entry(arg1);
         if (entry->entry_type != VFS_ET_FILE)
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)((off_t)0);
             break;
         }
         if (!S_ISREG(entry->st.st_mode))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ESPIPE;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
@@ -249,15 +257,18 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         do_seek:
             if (offset < 0) // || offset >= entry->tnode.file->inode->st.st_size)
             {
+                release_spinlock_noint(&file_table_lock, flags);
                 sc_ret_errno = EINVAL;
                 sc_ret(1) = (uint64_t)((off_t)-1);
                 break;
             }
             entry->position = offset;
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = 0;
-            sc_ret(1) = (uint64_t)entry->position;
+            sc_ret(1) = (uint64_t)offset;
             break;
         }
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_OPENAT, 4, int, const char*, int, unsigned int)
@@ -273,19 +284,19 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
 
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
         bool relative = *arg2 != '/';
-        if (relative && arg1 != AT_FDCWD && !is_fd_valid(arg1))
+        if (relative && arg1 != AT_FDCWD && !__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        int fd = vfs_allocate_global_file();
+        int fd = __vfs_allocate_global_file();
 
         if (fd == -1)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENFILE;
             break;
         }
@@ -293,15 +304,15 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         file_table[fd].flags = arg3;
         file_table[fd].position = 0;
 
-        file_entry_t* entry = get_global_file_entry(arg1);
+        file_entry_t* entry = __get_global_file_entry(arg1);
         vfs_folder_tnode_t* cwd = (arg1 == AT_FDCWD) ? current_task->cwd : ((entry && (entry->entry_type == VFS_ET_FOLDER)) ? entry->tnode.folder : NULL);
 
         struct stat st;
-        int stat_ret = vfs_stat(arg2, cwd, &st);
+        int stat_ret = __vfs_stat(arg2, cwd, &st);
         if (stat_ret != 0)
         {
-            vfs_remove_global_file(fd);
-            unlock_scheduler();
+            __vfs_remove_global_file(fd);
+            release_spinlock_noint(&file_table_lock, flags);
             if (stat_ret == ENOENT && (arg3 & O_CREAT))
                 sc_ret_errno = EROFS;
             else
@@ -311,8 +322,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         if ((arg3 & O_DIRECTORY) && !S_ISDIR(st.st_mode))
         {
-            vfs_remove_global_file(fd);
-            unlock_scheduler();
+            __vfs_remove_global_file(fd);
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
@@ -331,8 +342,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
             if (wr && file_table[fd].tnode.file->inode->drive.type == DT_INITRD)
             {
-                vfs_remove_global_file(fd);
-                unlock_scheduler();
+                __vfs_remove_global_file(fd);
+                release_spinlock_noint(&file_table_lock, flags);
                 sc_ret_errno = EROFS;
                 break;
             }
@@ -345,8 +356,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             if (wr)
             {
-                vfs_remove_global_file(fd);
-                unlock_scheduler();
+                __vfs_remove_global_file(fd);
+                release_spinlock_noint(&file_table_lock, flags);
                 sc_ret_errno = EISDIR;
                 break;
             }
@@ -366,11 +377,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         file_table[fd].file_data.folder_child.cur_index = 0;
         file_table[fd].file_data.folder_child.done_reading = false;
 
-        int ret = vfs_allocate_thread_file(current_task);
+        int ret = __vfs_allocate_thread_file(current_task);
         if (ret == -1)
         {
-            vfs_remove_global_file(fd);
-            unlock_scheduler();
+            __vfs_remove_global_file(fd);
+            release_spinlock_noint(&file_table_lock, flags);
 
             sc_ret_errno = EMFILE;
         }
@@ -378,22 +389,22 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             current_task->file_table[ret].index = fd;
             current_task->file_table[ret].flags = (arg3 & O_CLOEXEC) ? FD_CLOEXEC : 0;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)ret;
         }
         break;
     sc_case(SYS_CLOSE, 1, int)
         SC_LOG("syscall SYS_CLOSE(%d)", arg1);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        vfs_close(arg1);
-        unlock_scheduler();
+        __vfs_close(arg1);
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_OPEN_DIR, 1, const char*)
@@ -406,18 +417,18 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
 
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
 
         vfs_folder_tnode_t* tnode = vfs_get_folder_tnode(arg1, current_task->cwd);
         if (!tnode)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOENT;
             sc_ret(1) = -1;
             break;
         }
 
-        int fd = vfs_allocate_global_file();
+        int fd = __vfs_allocate_global_file();
 
         file_table[fd].entry_type = VFS_ET_FOLDER;
 
@@ -430,11 +441,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         file_table[fd].on_destroy = NULL;
 
-        int ret = vfs_allocate_thread_file(current_task);
+        int ret = __vfs_allocate_thread_file(current_task);
         if (ret == -1)
         {
-            vfs_remove_global_file(fd);
-            unlock_scheduler();
+            __vfs_remove_global_file(fd);
+            release_spinlock_noint(&file_table_lock, flags);
 
             sc_ret_errno = EMFILE;
             sc_ret(1) = (uint64_t)(-1);
@@ -443,7 +454,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             current_task->file_table[ret].index = fd;
             current_task->file_table[ret].flags = 0;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)ret;
         }
@@ -451,19 +462,19 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ_ENTRIES, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ_ENTRIES(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = 0;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(arg1);
+        file_entry_t* entry = __get_global_file_entry(arg1);
         assert(entry);
         if (entry->entry_type != VFS_ET_FOLDER)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTDIR;
             sc_ret(1) = 0;
             break;
@@ -473,7 +484,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             sc_ret(1) = 0;
             entry->file_data.folder_child.done_reading = false;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             break;
         }
         struct dirent64 dir_entry;
@@ -496,14 +507,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             bytes_read += sizeof(dir_entry);
         }
         sc_ret(1) = bytes_read;
-        unlock_scheduler();
+        release_spinlock_noint(&file_table_lock, flags);
         break;
     sc_case(SYS_IOCTL, 3, int, unsigned long, void*)
         SC_LOG("syscall SYS_IOCTL(%d, %#lx, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg3);
-        lock_scheduler();
         syscall_ioctl(registers, arg1, arg2, arg3);
-        unlock_scheduler();
         break;
     sc_case(SYS_EXECVE, 3, const char*, char**, char**)
         SC_LOG("syscall SYS_EXECVE(\"%s\", %p, %p)", arg1, arg2, arg3);
@@ -525,12 +534,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
         startup_data_struct_t data = startup_data_init_from_command(arg2, arg3);
-        lock_scheduler();
-        thread_t* new_task = multitasking_add_task_from_vfs(rpath, rpath, 3, false, &data, current_task->cwd);
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        thread_t* new_task = __multitasking_add_task_from_vfs(rpath, rpath, 3, false, &data, current_task->cwd);
         if (!new_task)
         {
             LOG(TRACE, "EXECVE: Couldn't load executable");
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = ENOENT;
             break;
         }
@@ -538,70 +547,72 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             pid_t old_pid = current_task->pid;
 
-            task_set_pid(current_task, task_generate_pid());
-            task_set_pid(new_task, old_pid);
+            __task_set_pid(current_task, task_generate_pid());
+            __task_set_pid(new_task, old_pid);
 
             new_task->ppid = current_task->ppid;
-            task_set_pgid(new_task, current_task->pgid);
+            __task_set_pgid(new_task, current_task->pgid);
 
             new_task->sid = current_task->sid;
 
             task_copy_file_table(current_task, new_task, true);
 
-            move_running_task_to_thread_queue(&reapable_tasks, current_task);
+            __move_running_task_to_thread_queue(&reapable_tasks, current_task);
 
-            thread_t* parent = find_task_by_pid_anywhere(new_task->ppid);
+            thread_t* parent = __find_task_by_pid_anywhere(new_task->ppid);
             if (parent)
-                tq_hashmap_push_back(pid_to_children_tq_hashmap, parent->pid, new_task);
+                __tq_hashmap_push_back(pid_to_children_tq_hashmap, parent->pid, new_task);
 
-            unlock_scheduler();
-            assert(task_lock_depth == 0);
             switch_task();
+            release_spinlock_noint(&sched_lock, flags);
             break;
         }
         break;
     sc_case(SYS_TCGETATTR, 2, int, struct termios*)
         SC_LOG("syscall SYS_TCGETATTR(%d, %p)", arg1, arg2);
         sc_validate_pointer(arg2);
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        if (!vfs_isatty(get_global_file_entry(arg1)))
+        if (!__vfs_isatty(__get_global_file_entry(arg1)))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             break;
         }
         *arg2 = tty_ts;
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_TCSETATTR, 3, int, int, const struct termios*)
         SC_LOG("syscall SYS_TCSETATTR(%d, %d, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg3);
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        if (!vfs_isatty(get_global_file_entry(arg1)))
+        if (!__vfs_isatty(__get_global_file_entry(arg1)))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             break;
         }
-        lock_scheduler();
         tty_ts = *arg3;
+        release_spinlock_noint(&file_table_lock, flags);
         if (arg2 == TCSAFLUSH)
         {
+            uint32_t flags = acquire_spinlock_noint(&keyboard_input_lock);
             keyboard_buffered_input_buffer.get_index = keyboard_buffered_input_buffer.put_index = 0;
             keyboard_input_buffer.get_index = keyboard_input_buffer.put_index = 0;
+            release_spinlock_noint(&keyboard_input_lock, flags);
         }
-        // LOG(TRACE, "TCSETATTR: .c_iflag = %#o", arg3->c_iflag);
-        // LOG(TRACE, "TCSETATTR: .c_oflag = %#o", arg3->c_oflag);
-        // LOG(TRACE, "TCSETATTR: .c_cflag = %#o", arg3->c_cflag);
-        // LOG(TRACE, "TCSETATTR: .c_lflag = %#o", arg3->c_lflag);
-        // LOG(TRACE, "TCSETATTR: .c_line = `%c`", arg3->c_line);
-        unlock_scheduler();
         sc_ret_errno = 0;
         break;
     sc_case(SYS_GETCWD, 2, char*, size_t)
@@ -641,40 +652,37 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_FCHDIR, 1, int)
         SC_LOG("syscall SYS_FCHDIR(%d)", arg1);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(arg1);
+        file_entry_t* entry = __get_global_file_entry(arg1);
         if (entry->entry_type != VFS_ET_FOLDER)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
         current_task->cwd = entry->tnode.folder;
-        unlock_scheduler();
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_FORK, 0)
         SC_LOG("syscall SYS_FORK()");
         sc_ret_errno = 0;
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         current_task->forked_pid = task_generate_pid();
         pid_t forked_pid = current_task->forked_pid;
-        move_running_task_to_thread_queue(&forked_tasks, current_task);
-        unlock_scheduler();
-        assert(task_lock_depth == 0);
+        __move_running_task_to_thread_queue(&forked_tasks, current_task);
+        release_spinlock_noint(&sched_lock, flags);
         switch_task();
-        lock_scheduler();
         if (current_task->pid == forked_pid)
             sc_ret(1) = 0;
         else
             sc_ret(1) = forked_pid;
-        unlock_scheduler();
         break;
     sc_case(SYS_SIGACTION, 3, int, const struct sigaction*, struct sigaction*)
         SC_LOG("syscall SYS_SIGACTION(%d, %p, %p)", arg1, arg2, arg3);
@@ -693,21 +701,20 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         SC_LOG("syscall SYS_SIGPROCMASK(%d, %p, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
         sc_validate_pointer(arg3);
-        lock_scheduler();
         if (arg3) *arg3 = current_task->sig_mask;
         if (!arg1)
         {
-            unlock_scheduler();
             sc_ret_errno = 0;
             break;
         }
         sigset_t old_sigmask = current_task->sig_mask;
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         switch (arg1)
         {
         case SIG_BLOCK:
         	current_task->sig_mask = sigset_bitwise_or(*arg2, current_task->sig_mask);
-            task_unmask_signal(current_task, SIGKILL);
-            task_unmask_signal(current_task, SIGSTOP);
+            __task_unmask_signal(current_task, SIGKILL);
+            __task_unmask_signal(current_task, SIGSTOP);
         	sc_ret_errno = 0;
         	break;
         case SIG_UNBLOCK:
@@ -716,15 +723,15 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
            	break;
         case SIG_SETMASK:
            	current_task->sig_mask = *arg2;
-            task_unmask_signal(current_task, SIGKILL);
-            task_unmask_signal(current_task, SIGSTOP);
+            __task_unmask_signal(current_task, SIGKILL);
+            __task_unmask_signal(current_task, SIGSTOP);
            	sc_ret_errno = 0;
            	break;
         default:
         	sc_ret_errno = EINVAL;
         }
-        task_try_handle_signals(current_task, old_sigmask, current_task->sig_mask);
-        unlock_scheduler();
+        __task_try_handle_signals(current_task, old_sigmask, current_task->sig_mask);
+        release_spinlock_noint(&sched_lock, flags);
     	break;
     sc_case(SYS_WAIT4, 4, pid_t, int*, int, struct rusage*)
         SC_LOG("syscall SYS_WAIT4(%d, %p, %#o, %p)", arg1, arg2, arg3, arg4);
@@ -741,11 +748,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock_scheduler();
-        pid_t first_pid = waitpid_find_child_in_tq(&dead_tasks, arg1, arg2, current_task->pgid);
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        pid_t first_pid = __waitpid_find_child_in_tq(&dead_tasks, arg1, arg2, current_task->pgid);
         if (!first_pid && !hashmap_get_item(pid_to_children_tq_hashmap, current_task->pid))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = ECHILD;
             break;
         }
@@ -755,24 +762,23 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = 0;
             if (first_pid)
             {
-                thread_t* task = find_task_by_pid_anywhere(first_pid);
+                thread_t* task = __find_task_by_pid_anywhere(first_pid);
                 assert(task);
                 if (arg2) *arg2 = task->return_value;
-                move_task_to_queue(&reapable_tasks, task);
+                __move_task_to_queue(&reapable_tasks, task);
             }
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             break;
         }
         current_task->wait_pid = arg1;
         current_task->pgid_on_waitpid = current_task->pgid;
         current_task->waitpid_flags = arg3;
         current_task->waitpid_ret = -1;
-        move_running_task_to_thread_queue(&waitpid_tasks, current_task);
-        unlock_scheduler();
-        waitpid_check_dead();
-        assert(task_lock_depth == 0);
+        __move_running_task_to_thread_queue(&waitpid_tasks, current_task);
+        release_spinlock_noint(&sched_lock, flags);
+        __waitpid_check_dead();
         switch_task();
-        lock_scheduler();
+        flags = acquire_spinlock_noint(&sched_lock);
         if (arg4)
             memset(arg4, 0, sizeof(struct rusage));
         if (arg2) *arg2 = current_task->wstatus;
@@ -782,23 +788,23 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
         else
             sc_ret_errno = 0;
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, flags);
         break;
     sc_case(SYS_TTYNAME, 3, int, char*, size_t)
         SC_LOG("syscall SYS_TTYNAME(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
             sc_ret_errno = EBADF;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             break;
         }
-        file_entry_t* entry = get_global_file_entry(arg1);
-        if (!vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(arg1);
+        if (!__vfs_isatty(entry))
         {
             sc_ret_errno = ENOTTY;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             break;
         }
         vfs_file_tnode_t* tnode = entry->tnode.file;
@@ -807,11 +813,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (rp_ret == -1 || rp_ret > arg3)
         {
             sc_ret_errno = ERANGE;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             break;
         }
         memcpy(arg2, path, rp_ret);
-        unlock_scheduler();
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_GETRESUID, 3, uid_t*, uid_t*, uid_t*)
@@ -819,11 +825,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         sc_validate_pointer(arg1);
         sc_validate_pointer(arg2);
         sc_validate_pointer(arg3);
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         *arg1 = current_task->ruid;
         *arg2 = current_task->euid;
         *arg3 = current_task->suid;
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_GETRESGID, 3, uid_t*, uid_t*, uid_t*)
@@ -831,11 +837,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         sc_validate_pointer(arg1);
         sc_validate_pointer(arg2);
         sc_validate_pointer(arg3);
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         *arg1 = current_task->rgid;
         *arg2 = current_task->egid;
         *arg3 = current_task->sgid;
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_CLOCK_GET, 3, int, time_t*, long*)
@@ -846,7 +852,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
         case CLOCK_REALTIME:
             *arg2 = ktime(NULL);
-            *arg3 = system_thousands * 1000000;
+            *arg3 = system_milliseconds * 1000000;
             sc_ret_errno = 0;
             break;
         default:
@@ -855,15 +861,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_GETPID, 0)
         SC_LOG("syscall SYS_GETPID()");
-        lock_scheduler();
         sc_ret(0) = (uint64_t)current_task->pid;
-        unlock_scheduler();
         break;
     sc_case(SYS_GETPPID, 0)
         SC_LOG("syscall SYS_GETPPID()");
-        lock_scheduler();
         sc_ret(0) = (uint64_t)current_task->ppid;
-        unlock_scheduler();
         break;
     sc_case(SYS_GETHOSTNAME, 2, char*, size_t)
         SC_LOG("syscall SYS_GETHOSTNAME(%p, %zu)", arg1, arg2);
@@ -894,18 +896,18 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock_scheduler();
-        file_entry_t* entry = get_global_file_entry(arg1);
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        file_entry_t* entry = __get_global_file_entry(arg1);
         if (arg1 != AT_FDCWD && !entry)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
         if ((strcmp(arg2, "") == 0) && (arg3 & AT_EMPTY_PATH))
         {
             *arg4 = entry->st;
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = 0;
             break;
         }
@@ -921,7 +923,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             if (entry->entry_type != VFS_ET_FOLDER)
             {
                 sc_ret_errno = ENOTDIR;
-                unlock_scheduler();
+                release_spinlock_noint(&file_table_lock, flags);
                 break;
             }
             if (entry->entry_type == VFS_ET_FOLDER)
@@ -936,8 +938,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         fstatat_get_st:
             ;
             struct stat st;
-            int stat_ret = vfs_stat(arg2, cwd, &st);
-            unlock_scheduler();
+            int stat_ret = __vfs_stat(arg2, cwd, &st);
+            release_spinlock_noint(&file_table_lock, flags);
             if (stat_ret != 0)
             {
                 sc_ret_errno = stat_ret;
@@ -967,38 +969,38 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         if (arg1 == 0)
         {
             sc_ret_errno = 0;
             sc_ret(1) = current_task->pgid;
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             break;
         }
-        thread_t* process = find_task_by_pid_anywhere(arg1);
+        thread_t* process = __find_task_by_pid_anywhere(arg1);
         if (!process)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = ESRCH;
             break;
         }
         sc_ret(1) = (uint64_t)process->pgid;
+        release_spinlock_noint(&sched_lock, flags);
         sc_ret_errno = 0;
-        unlock_scheduler();
         break;
     sc_case(SYS_SETPGID, 2, pid_t, pid_t)
         SC_LOG("syscall SYS_SETPGID(%d, %d)", arg1, arg2);
-        lock_scheduler();
-        thread_t* process = find_task_by_pid_anywhere(arg1);
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        thread_t* process = __find_task_by_pid_anywhere(arg1);
         if (!process || process == idle_task)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = ESRCH;
             break;
         }
-        task_set_pgid(process, arg2);
+        __task_set_pgid(process, arg2);
         sc_ret_errno = 0;
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, flags);
         break;
     sc_case(SYS_DUP, 1, int)
         SC_LOG("syscall SYS_DUP(%d)", arg1);
@@ -1024,34 +1026,34 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock_scheduler();
-        if (!is_fd_valid(arg1))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(arg1))
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
         if (arg3 <= -1)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EINVAL;
             break;
         }
-        if (is_fd_valid(arg3))
-            vfs_close(arg3);
+        if (__is_fd_valid(arg3))
+            __vfs_close(arg3);
         current_task->file_table[arg3].index = current_task->file_table[arg1].index;
         current_task->file_table[arg3].flags = (arg2 & O_CLOEXEC) ? FD_CLOEXEC : 0;
         file_table[current_task->file_table[arg3].index].used++;
-        unlock_scheduler();
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_FCNTL, 3, int, int, uint64_t)
         SC_LOG("syscall SYS_FCNTL(%d, %d, %" PRIu64 ")", arg1, arg2, arg3);
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
         switch (arg2)
         {
         case F_GETFD:
-            if (!is_fd_valid(arg1))
+            if (!__is_fd_valid(arg1))
             {
                 sc_ret_errno = EBADF;
                 break;
@@ -1060,7 +1062,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret(1) = current_task->file_table[arg1].flags;
             break;
         case F_SETFD:
-            if (!is_fd_valid(arg1))
+            if (!__is_fd_valid(arg1))
             {
                 sc_ret_errno = EBADF;
                 break;
@@ -1069,7 +1071,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             current_task->file_table[arg1].flags = arg3;
             break;
         case F_GETFL:
-            if (!is_fd_valid(arg1))
+            if (!__is_fd_valid(arg1))
             {
                 sc_ret_errno = EBADF;
                 break;
@@ -1080,7 +1082,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         case F_DUPFD_CLOEXEC:
         case F_DUPFD:
             ;
-            int ret = vfs_dup(arg1);
+            int ret = __vfs_dup(arg1);
             if (ret >= 0)
             {
                 sc_ret_errno = 0;
@@ -1096,14 +1098,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             // task_send_signal(current_task, SIGILL);
             sc_ret_errno = ENOSYS;
         }
-        unlock_scheduler();
+        release_spinlock_noint(&file_table_lock, flags);
         break;
     sc_case(SYS_SIGRET, 0)
         SC_LOG("syscall SYS_SIGRET()");
         *return_address = sigret;
         sc_ret_errno = 0;
-        // LOG(TRACE, "poped ret rsp:  %#16" PRIx64, registers->rsp);
-        // hexdump((void*)registers->rsp, sizeof(interrupt_registers_t));
         break;
     sc_case(SYS_PSELECT, 6, int, fd_set*, fd_set*, fd_set*, const struct timespec*, const sigset_t*)
         SC_LOG("syscall SYS_PSELECT(%d, %p, %p, %p, %p, %p)", arg1, arg2, arg3, arg4, arg5, arg6);
@@ -1112,7 +1112,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         sc_validate_pointer(arg4);
         sc_validate_pointer(arg5);
         sc_validate_pointer(arg6);
-        lock_scheduler();
+        uint32_t sd_flags = acquire_spinlock_noint(&sched_lock);
         // * sigmask
         sigset_t saved_sigmask = current_task->sig_mask;
         if (arg6)
@@ -1124,18 +1124,20 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret(1) = 0;
             if (arg5)
             {
-                current_task->timeout_deadline = global_timer + arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS;
-                move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
+                FATAL("TODO: Implement TSC deadlines");
+                // current_task->timeout_deadline = global_timer + arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS;
+                __move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
                 switch_task();
-                unlock_scheduler();
-                lock_scheduler();
+                release_spinlock_noint(&sched_lock, sd_flags);
+                sd_flags = acquire_spinlock_noint(&sched_lock);
             }
             else
                 current_task->timeout_deadline = 0;
-            if (current_task->timeout_deadline >= global_timer)
+            FATAL("TODO: Implement TSC deadlines");
+            // if (current_task->timeout_deadline >= global_timer)
                 sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
             current_task->sig_mask = saved_sigmask;
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, sd_flags);
             break;
         }
 
@@ -1143,6 +1145,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         fd_set read_ret, write_ret;
 
+        uint32_t ft_flags = acquire_spinlock_noint(&file_table_lock);
         do
         {
             sc_ret_errno = 0;
@@ -1156,13 +1159,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 for (int i = 0; i < arg1; i++)
                 {
                     if (!FD_ISSET(i, &read_ret)) continue;
-                    file_entry_t* entry = get_global_file_entry(i);
+                    file_entry_t* entry = __get_global_file_entry(i);
                     if (!entry)
                     {
                         FD_CLR(i, &read_ret);
                         continue;
                     }
-                    if (vfs_willblock(entry, POLLIN))
+                    if (__vfs_willblock(entry, POLLIN))
                         FD_CLR(i, &read_ret);
                     else
                         shouldblock = false;
@@ -1173,13 +1176,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 for (int i = 0; i < arg1; i++)
                 {
                     if (!FD_ISSET(i, &write_ret)) continue;
-                    file_entry_t* entry = get_global_file_entry(i);
+                    file_entry_t* entry = __get_global_file_entry(i);
                     if (!entry)
                     {
                         FD_CLR(i, &write_ret);
                         continue;
                     }
-                    if (vfs_willblock(entry, POLLOUT))
+                    if (__vfs_willblock(entry, POLLOUT))
                         FD_CLR(i, &write_ret);
                     else
                         shouldblock = false;
@@ -1195,26 +1198,28 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                     for (int i = 0; i < arg1; i++)
                     {
                         if (!((arg2 ? FD_ISSET(i, arg2) : false) || (arg3 ? FD_ISSET(i, arg3) : false))) continue;
-                        file_entry_t* entry = get_global_file_entry(i);
+                        file_entry_t* entry = __get_global_file_entry(i);
                         if (!entry)
                             continue;
                         if (arg2 ? FD_ISSET(i, arg2) : false)
-                            if (vfs_willblock(entry, POLLIN))
+                            if (__vfs_willblock(entry, POLLIN))
                                 goto pselect_monitor;
                         if (arg3 ? FD_ISSET(i, arg3) : false)
-                            if (vfs_willblock(entry, POLLOUT))
+                            if (__vfs_willblock(entry, POLLOUT))
                                 goto pselect_monitor;
 
                         continue;
 
                     pselect_monitor:
-                        task_monitor_entry(current_task, entry);
+                        __task_monitor_entry(current_task, entry);
                     }
                 }
-                task_start_polling(current_task, arg5 ? arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS : NO_TIMEOUT);
+                __task_start_polling(current_task, arg5 ? arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS : NO_TIMEOUT);
                 switch_task();
-                unlock_scheduler();
-                lock_scheduler();
+                release_spinlock_noint(&file_table_lock, ft_flags);
+                release_spinlock_noint(&sched_lock, sd_flags);
+                sd_flags = acquire_spinlock_noint(&sched_lock);
+                ft_flags = acquire_spinlock_noint(&file_table_lock);
                 if (current_task->sig_pending_user_space)
                 {
                     sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
@@ -1222,7 +1227,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
             }
         } while (shouldblock);
-
+        release_spinlock_noint(&file_table_lock, ft_flags);
         if (sc_ret_errno != ERESTART)
         {
             if (arg2) *arg2 = read_ret;
@@ -1240,7 +1245,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         }
 
         current_task->sig_mask = saved_sigmask;
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, sd_flags);
         break;
     sc_case(SYS_FADVISE, 4, int, off_t, off_t, int)
         SC_LOG("syscall SYS_FADVISE(%d, %ld, %ld, %d)", arg1, arg2, arg3, arg4);
@@ -1266,35 +1271,35 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         if (arg1 > 0)
         {
-            thread_t* task = find_task_by_pid_anywhere(arg1);
+            thread_t* task = __find_task_by_pid_anywhere(arg1);
             if (!task)
             {
                 sc_ret_errno = ESRCH;
-                unlock_scheduler();
+                release_spinlock_noint(&sched_lock, flags);
                 break;
             }
             if (task->pid == 0)
             {
                 sc_ret_errno = EPERM;
-                unlock_scheduler();
+                release_spinlock_noint(&sched_lock, flags);
                 break;
             }
-            task_send_signal(task, arg2);
+            __task_send_signal(task, arg2);
         }
         else if (arg1 == 0 || arg1 < -1)
         {
             pid_t pgrp = arg1 ? -arg1 : current_task->pgid;
-            task_send_signal_to_pgrp(arg2, pgrp);
+            __task_send_signal_to_pgrp(arg2, pgrp);
         }
         else    // arg1 == -1
         {
         // * then  sig is sent to every process for which the calling process has permission to send signals, except for process 1
             FATAL("Not implemented");
         }
-        unlock_scheduler();
+        release_spinlock_noint(&sched_lock, flags);
         sc_ret_errno = 0;
         break;
 
@@ -1324,22 +1329,23 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        precise_time_t deadline = global_timer + *arg2 * PRECISE_NANOSECONDS + *arg1 * PRECISE_SECONDS;
-        current_task->timeout_deadline = deadline;
-        move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
-        switch_task();
-        const precise_time_t timer = global_timer;
-        if (timer <= deadline)
-        {
-            sc_ret_errno = EINTR;
-            *arg1 = (deadline - timer) / PRECISE_SECONDS;
-            *arg2 = ((deadline - timer) / PRECISE_NANOSECONDS) % 1000000000;
-            break;
-        }
-        *arg1 = 0;
-        *arg2 = 0;
-        sc_ret_errno = 0;
-        break;
+        FATAL("Not implemented");
+        // precise_time_t deadline = global_timer + *arg2 * PRECISE_NANOSECONDS + *arg1 * PRECISE_SECONDS;
+        // current_task->timeout_deadline = deadline;
+        // move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
+        // switch_task();
+        // const precise_time_t timer = global_timer;
+        // if (timer <= deadline)
+        // {
+        //     sc_ret_errno = EINTR;
+        //     *arg1 = (deadline - timer) / PRECISE_SECONDS;
+        //     *arg2 = ((deadline - timer) / PRECISE_NANOSECONDS) % 1000000000;
+        //     break;
+        // }
+        // *arg1 = 0;
+        // *arg2 = 0;
+        // sc_ret_errno = 0;
+        // break;
 
     sc_case(SYS_POLL, 3, struct pollfd*, nfds_t, int)
         SC_LOG("syscall SYS_POLL(%p, %lu, %d)", arg1, arg2, arg3);
@@ -1347,7 +1353,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         sc_validate_pointer(arg1);
         const size_t array_bytes = sizeof(struct pollfd) * arg2;
         struct pollfd* ret = alloca(array_bytes);
-        lock_scheduler();
+        uint32_t sd_flags = acquire_spinlock_noint(&sched_lock);
+        uint32_t ft_flags = acquire_spinlock_noint(&file_table_lock);
         bool shouldblock = arg3 != 0;
         do
         {
@@ -1357,20 +1364,20 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             {
                 ret[i] = arg1[i];
                 struct pollfd* fds = &ret[i];
-                file_entry_t* entry = get_global_file_entry(fds->fd);
+                file_entry_t* entry = __get_global_file_entry(fds->fd);
                 int set = 0;
                 if (entry)
                 {
                     fds->revents = 0;
                     if ((fds->events & POLLIN) || (fds->events & POLLRDNORM))
                     {
-                        if (!vfs_willblock(entry, POLLIN))
-                            fds->revents |= (set = 1, shouldblock = false, POLLIN | vfs_hup(entry));
+                        if (!__vfs_willblock(entry, POLLIN))
+                            fds->revents |= (set = 1, shouldblock = false, POLLIN | __vfs_hup(entry));
                     }
                     if ((fds->events & POLLOUT) || (fds->events & POLLWRNORM))
                     {
-                        if (!vfs_willblock(entry, POLLOUT))
-                            fds->revents |= (set = 1, shouldblock = false, POLLOUT | vfs_hup(entry));
+                        if (!__vfs_willblock(entry, POLLOUT))
+                            fds->revents |= (set = 1, shouldblock = false, POLLOUT | __vfs_hup(entry));
                     }
                 }
                 else
@@ -1382,26 +1389,28 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 for (nfds_t i = 0; i < arg2; i++)
                 {
                     struct pollfd* fds = &arg1[i];
-                    file_entry_t* entry = get_global_file_entry(fds->fd);
+                    file_entry_t* entry = __get_global_file_entry(fds->fd);
                     if (!entry)
                         continue;
                     if ((fds->events & POLLIN) || (fds->events & POLLRDNORM))
-                        if (vfs_willblock(entry, POLLIN))
+                        if (__vfs_willblock(entry, POLLIN))
                             goto poll_monitor;
                     if ((fds->events & POLLOUT) || (fds->events & POLLWRNORM))
-                        if (vfs_willblock(entry, POLLOUT))
+                        if (__vfs_willblock(entry, POLLOUT))
                             goto poll_monitor;
 
                     continue;
 
                 poll_monitor:
                     // SC_LOG("Starting poll on fd %d", fds->fd);
-                    task_monitor_entry(current_task, entry);
+                    __task_monitor_entry(current_task, entry);
                 }
-                task_start_polling(current_task, PRECISE_MILLISECONDS * arg3);
+                __task_start_polling(current_task, PRECISE_MILLISECONDS * arg3);
                 switch_task();
-                unlock_scheduler();
-                lock_scheduler();
+                release_spinlock_noint(&file_table_lock, ft_flags);
+                release_spinlock_noint(&sched_lock, sd_flags);
+                sd_flags = acquire_spinlock_noint(&sched_lock);
+                ft_flags = acquire_spinlock_noint(&file_table_lock);
                 if (current_task->sig_pending_user_space)
                 {
                     sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
@@ -1409,9 +1418,10 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
             }
         } while (shouldblock);
+        release_spinlock_noint(&file_table_lock, ft_flags);
+        release_spinlock_noint(&sched_lock, sd_flags);
         if (sc_ret_errno != ERESTART)
             memcpy(arg1, ret, array_bytes);
-        unlock_scheduler();
         break;
     sc_case(SYS_GETAFFINITY, 3, pid_t, size_t, cpu_set_t*)
         SC_LOG("syscall SYS_GETAFFINITY(%d, %zu, %p)", arg1, arg2, arg3);
@@ -1421,12 +1431,15 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        thread_t* task = arg1 == 0 ? current_task : find_task_by_pid_anywhere(arg1);
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        thread_t* task = arg1 == 0 ? current_task : __find_task_by_pid_anywhere(arg1);
         if (!task)
         {
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = ESRCH;
             break;
         }
+        release_spinlock_noint(&sched_lock, flags);
         sc_ret_errno = 0;
         CPU_ZERO(arg3);
         CPU_SET(0, arg3);   // * No SMP for now
@@ -1443,19 +1456,19 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
     sc_case(SYS_SETSID, 0)
         SC_LOG("syscall SYS_SETSID()");
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
         thread_queue_t* tq = hashmap_get_item(pgid_to_tq_hashmap, current_task->pid);
         if (tq && *tq)
         {
-            unlock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
             sc_ret_errno = EPERM;
             break;
         }
-        unlock_scheduler();
         current_task->sid = current_task->pid;
-        task_set_pgid(current_task, current_task->pid);
-        sc_ret_errno = 0;
+        __task_set_pgid(current_task, current_task->pid);
         sc_ret(1) = current_task->sid;
+        release_spinlock_noint(&sched_lock, flags);
+        sc_ret_errno = 0;
         break;
 
     sc_case(SYS_LOG, 1, const char*)

@@ -227,6 +227,7 @@ void _start()
     }
 
     pfa_detect_usable_memory();
+    page_data_table_init();
 
     tty_init(true);
 
@@ -493,16 +494,20 @@ void _start()
     printf(" | Done\n");
     LOG(INFO, "APIC enabled");
 
-    LOG(INFO, "Setting up the APIC timer");
-    printf("Setting up the APIC timer");
+    LOG(INFO, "Setting up the APIC timer and calibrating the TSC");
+    printf("Setting up the APIC timer and calibrating the TSC");
     fflush(stdout);
 
-    apic_timer_init();
+    apic_timer_and_tsc_init();
+    last_tsc = rdtsc();
     rtc_get_time();
     time_initialized = true;
 
-    LOG(INFO, "Set up the APIC timer");
+    LOG(INFO, "Set up the APIC timer and TSC");
     printf(" | Done\n");
+
+    LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
+    printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
 
     printf("Time: ");
 
@@ -526,12 +531,6 @@ void _start()
     LOG(DEBUG, "Done setting up FS/GS segment bases");
 
     enable_interrupts();
-
-    printf("Calibrating TSC...\n");
-    LOG(DEBUG, "Calibrating TSC...");
-    calibrate_tsc();
-    LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
-    printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
 
     LOG(INFO, "Parsing ACPI tables..");
     printf("Parsing ACPI tables...\n");
@@ -580,6 +579,8 @@ void _start()
     }
     else
         printf("No PS/2 Controller\n");
+
+    FATAL("TODO: Lock VFS");
 
     LOG(INFO, "Setting up the VFS...");
     printf("Mounting initrd at root...\n");
@@ -673,7 +674,7 @@ void _start()
     multitasking_init();
 
     startup_data_struct_t data = startup_data_init_from_command((char*[]){"/sbin/init", NULL}, (char*[]){NULL});
-    thread_t* init_task = multitasking_add_task_from_vfs("init", "/sbin/init", 3, true, &data, vfs_root);
+    thread_t* init_task = __multitasking_add_task_from_vfs("init", "/sbin/init", 3, true, &data, vfs_root);
     if (!init_task)
     {
         LOG(CRITICAL, "init task couldn't start");
@@ -681,7 +682,7 @@ void _start()
         abort();
     }
 
-    lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&file_table_lock);
     init_task->file_table[STDIN_FILENO].flags = 0;
     init_task->file_table[STDIN_FILENO].index = 0;
     file_table[init_task->file_table[STDIN_FILENO].index].used++;
@@ -691,7 +692,9 @@ void _start()
     init_task->file_table[STDERR_FILENO].flags = 0;
     init_task->file_table[STDERR_FILENO].index = 2;
     file_table[init_task->file_table[STDERR_FILENO].index].used++;
-    unlock_scheduler();
+    release_spinlock_noint(&file_table_lock, flags);
+
+    FATAL("ADD BACK lock_scheduler TO BE ABLE TO POSTPONE TASK SWITCHES");
 
     LOG(DEBUG, "Starting multitasking...");
     printf("Starting multitasking...\n\n");

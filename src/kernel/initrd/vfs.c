@@ -1,5 +1,6 @@
 #include "../vfs/vfs.h"
 #include "../vfs/table.h"
+#include "../util/error.h"
 
 #include <stdlib.h>
 #include <limits.h>

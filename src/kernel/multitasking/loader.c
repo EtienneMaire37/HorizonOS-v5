@@ -19,8 +19,10 @@ thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
     task->rsp = TASK_STACK_TOP_ADDRESS - 8;
     task_setup_stack(task, (uint64_t)func);
 
-    multitasking_add_task(task);
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    __multitasking_add_task(task);
     task_count++;
+    release_spinlock_noint(&sched_lock, flags);
 
     LOG(DEBUG, "Done");
 
@@ -291,15 +293,17 @@ thread_t* multitasking_add_task_from_initrd(const char* name, const char* path, 
 
     assert((task->rsp % 16) == 0);
 
-    multitasking_add_task(task);
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    __multitasking_add_task(task);
     task_count++;
+    release_spinlock_noint(&sched_lock, flags);
 
     LOG(DEBUG, "Done");
 
     return task;
 }
 
-thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
+thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
 {
     if (!name) return false;
     if (!data)
@@ -310,14 +314,11 @@ thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uin
 
     if (strlen(path) == 0) return NULL;
 
-    lock_scheduler();
-
     vfs_file_tnode_t* tnode = vfs_get_file_tnode(path, NULL);
 
     if (!tnode)
     {
         LOG(ERROR, "Couldn't find program \"%s\"", path);
-        unlock_scheduler();
         return NULL;
     }
 
@@ -340,7 +341,6 @@ thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uin
     {
         LOG(ERROR, "Invalid path");
         free(simplified_path);
-        unlock_scheduler();
         return NULL;
     }
     char* prefix = malloc(PATH_MAX);
@@ -356,6 +356,5 @@ thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uin
 
     free(simplified_path);
     free(prefix);
-    unlock_scheduler();
     return ret;
 }

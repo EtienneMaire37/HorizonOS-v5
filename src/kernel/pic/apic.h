@@ -35,7 +35,7 @@ void lapic_send_eoi();
 void lapic_set_spurious_interrupt_number(uint8_t int_num);
 void lapic_enable();
 void lapic_set_tpr(uint8_t p);
-void apic_timer_init();
+void apic_timer_and_tsc_init();
 
 static inline bool is_bsp()
 {

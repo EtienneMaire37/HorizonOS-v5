@@ -85,7 +85,10 @@ bool keyboard_is_key_pressed(virtual_address_t vk)
     return ps2_kb_is_key_pressed(vk);
 }
 
-void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struct termios* ts, bool* sigint)
+// ! No locking here
+// * This is because interrupts are disabled, this is only a temporary hack and obviously this should be inside a terminal emulator not the kernel
+// * so by the time i add SMP this code should (hopefully) not be here anymore
+void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struct termios* ts, bool* sigint)
 {
     // TODO: Implement PTYs and move all this out of the kernel
 
@@ -112,7 +115,6 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struct 
         && ascii != '\n' && ascii != '\t' && ascii != '\b' && ascii != 0x1b
         )
         return;
-    lock_scheduler();
     if (character == '\b')
     {
         if (raw)
@@ -204,12 +206,13 @@ void keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struct 
         keyboard_buffered_input_buffer.get_index = keyboard_input_buffer.get_index;
         keyboard_buffered_input_buffer.put_index = keyboard_input_buffer.put_index;
         keyboard_input_buffer.get_index = keyboard_input_buffer.put_index = 0;
-        run_it_on_queue(&_waiting_for_stdin_tasks, lambda(void, (thread_t* task)
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        __run_it_on_queue(&_waiting_for_stdin_tasks, lambda(void, (thread_t* task)
         {
-            task_stop_polling(task);
+            __task_stop_polling(task);
         }));
+        release_spinlock_noint(&sched_lock, flags);
     }
-    unlock_scheduler();
 
     fflush(stdout);
 }

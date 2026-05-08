@@ -11,54 +11,31 @@
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
-    lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
     bool ts = false, sigint = false;
     switch (registers->interrupt_number)
     {
     case APIC_TIMER_INT:
     {
-        uint64_t increment = precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
-        global_timer += GLOBAL_TIMER_INCREMENT;
-        system_thousands += increment;
-
-        if (current_task && multitasking_enabled)
-            current_task->current_cpu_ticks += increment;
-        if (system_thousands >= 1000 && multitasking_enabled)
-        {
-            lock_scheduler();
-            thread_t* cur = running_tasks;
-            do
-            {
-                cur->stored_cpu_ticks = cur->current_cpu_ticks;
-                cur->current_cpu_ticks = 0;
-
-                cur = cur->next;
-            } while (cur != running_tasks);
-            unlock_scheduler();
-        }
-
+        uint32_t flags = acquire_spinlock_noint(&time_lock);
         resolve_time();
+        release_spinlock_noint(&time_lock, flags);
 
-        #ifdef TTY_CURSOR_BLINK
-        if (system_thousands - increment < 500 && system_thousands >= 500 && tty_data)
-        {
-            tty_cursor_blink ^= true;
-            __tty_render_character(tty_cursor, tty_data[tty_cursor], false);
-            __tty_refresh_screen(true);
-        }
-        #endif
+        FATAL("TODO: Implement TSC deadlines");
 
-        if (multitasking_enabled)
-        {
-            run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
-            {
-                if (task->timeout_deadline == NO_TIMEOUT)
-                    return;
-                if (task->timeout_deadline >= global_timer)
-                    return;
-                task_stop_polling(task);
-            }));
-        }
+        // if (multitasking_enabled)
+        // {
+        //     uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        //     __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
+        //     {
+        //         if (task->timeout_deadline == NO_TIMEOUT)
+        //             return;
+        //         if (task->timeout_deadline >= global_timer)
+        //             return;
+        //         __task_stop_polling(task);
+        //     }));
+        //     release_spinlock_noint(&sched_lock, flags);
+        // }
 
         // TODO: Remove the "periodic timer interrupt" design entirely from the kernel
         // if (multitasking_enabled)
@@ -89,10 +66,10 @@ void handle_apic_irq(interrupt_registers_t* registers)
     lapic_send_eoi();
 
     if (sigint)
-        task_send_signal_to_pgrp(SIGINT, tty_foreground_pgrp);
+        __task_send_signal_to_pgrp(SIGINT, tty_foreground_pgrp);
 
     if (ts)
         switch_task();
 
-    unlock_scheduler();
+    release_spinlock_noint(&sched_lock, flags);
 }

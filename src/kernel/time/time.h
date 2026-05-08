@@ -1,18 +1,20 @@
 #pragma once
 
 #include "../cpu/util.h"
+#include "../multicore/spinlock.h"
 #include <stdint.h>
 
 typedef uint64_t precise_time_t;
 #define PRECISE_TIME_MAX        UINT64_MAX
 
-extern volatile int64_t system_seconds, system_minutes, system_hours, system_day, system_month;
-extern volatile int64_t system_year;
-extern volatile int64_t system_thousands;
+extern atomic_flag time_lock, sleep_lock;
+
+extern int64_t system_seconds, system_minutes, system_hours, system_day, system_month;
+extern int64_t system_year;
+extern int64_t system_milliseconds;
+extern int64_t tsc_remainder;
 
 extern bool time_initialized;
-
-extern volatile precise_time_t global_timer;
 
 #define GLOBAL_TIMER_FREQUENCY  1000ULL
 #define GLOBAL_TIMER_INCREMENT  (precise_time_ticks_per_second / GLOBAL_TIMER_FREQUENCY)
@@ -31,10 +33,4 @@ static inline uint64_t precise_time_to_milliseconds(precise_time_t time)
     return time / PRECISE_MILLISECONDS;
 }
 
-static inline void ksleep(precise_time_t time)
-{
-    time++; // * Should guarantee to wait AT LEAST time
-    precise_time_t start_timer = global_timer;
-    while (global_timer < start_timer + time)
-        hlt();
-}
+void ksleep(precise_time_t time);

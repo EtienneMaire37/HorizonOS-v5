@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../files/psf.h"
 #include <termios.h>
+#include <stdbool.h>
+#include "../files/psf.h"
 #include "../vga/constants.h"
 #include "../multitasking/mutex.h"
 

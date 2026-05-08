@@ -12,6 +12,7 @@
 #include "../cpu/segbase.h"
 #include "../util/defs.h"
 #include "../cpu/registers.h"
+#include "../memalloc/page_data.h"
 
 extern initrd_file_t* commit_file;
 
@@ -266,12 +267,16 @@ static inline void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers
             uint64_t* pml4 = (uint64_t*)(registers->cr3 + PHYS_MAP_BASE);
 
             uint64_t* pml4_entry = &pml4[pml4e];
+            uint32_t pml4_flags = lock_page_table(pml4);
+
             printf("pml4 entry: %#.16" PRIx64 "\n", *pml4_entry);
             LOG(INFO, "pml4 entry: %#.16" PRIx64, *pml4_entry);
 
             if (is_pdpt_entry_present(pml4_entry))
             {
                 uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
+                uint32_t pdpt_flags = lock_page_table(pdpt);
+
                 uint64_t* pdpt_entry = &pdpt[pdpte];
                 printf("pdpt entry: %#.16" PRIx64 "\n", *pdpt_entry);
                 LOG(INFO, "pdpt entry: %#.16" PRIx64, *pdpt_entry);
@@ -279,6 +284,8 @@ static inline void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers
                 if (is_pdpt_entry_present(pdpt_entry))
                 {
                     uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
+                    uint32_t pd_flags = lock_page_table(pd);
+
                     uint64_t* pd_entry = &pd[pde];
                     printf("pd entry: %#.16" PRIx64 "\n", *pd_entry);
                     LOG(INFO, "pd entry: %#.16" PRIx64, *pd_entry);
@@ -286,12 +293,17 @@ static inline void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers
                     if (is_pdpt_entry_present(pd_entry))
                     {
                         uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
+                        uint32_t pt_flags = lock_page_table(pt);
                         uint64_t* pt_entry = &pt[pte];
                         printf("pt entry: %#.16" PRIx64 "\n", *pt_entry);
                         LOG(INFO, "pt entry: %#.16" PRIx64, *pt_entry);
+                        unlock_page_table(pt, pt_flags);
                     }
+                    unlock_page_table(pd, pd_flags);
                 }
+                unlock_page_table(pdpt, pdpt_flags);
             }
+            unlock_page_table(pml4, pml4_flags);
             putchar('\n');
         }
     }

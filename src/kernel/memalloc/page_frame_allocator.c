@@ -22,6 +22,8 @@ uint64_t first_free_page_index_hint = 0;
 
 uint64_t memory_allocated, allocatable_memory;
 
+spinlock_noint_t pfa_lock = SPINLOCK_NOINT_INIT;
+
 void pfa_detect_usable_memory()
 {
     usable_memory = usable_memory_blocks = 0;
@@ -146,8 +148,6 @@ physical_address_t pfa_allocate_physical_page()
 
 physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
 {
-//     LOG(TRACE, "pfa_allocate_physical_contiguous_pages(%zu)", pages);
-
     if (memory_allocated + 0x1000 * pages > allocatable_memory)
     {
         LOG(CRITICAL, "pfa_allocate_physical_contiguous_pages: Out of memory at start!");
@@ -157,7 +157,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
 
     #ifdef DEBUG_ALLOCATOR
     {
-        lock_scheduler();
+        uint32_t flags = acquire_spinlock_noint(&pfa_lock);
         static int page_index = 0;
         uint64_t remaining = page_index;
         for (uint8_t j = first_alloc_block; j < usable_memory_blocks; j++)
@@ -169,8 +169,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
                 first_free_page_index_hint = page_index + pages;
                 memory_allocated += 0x1000 * pages;
                 LOG_MEM_ALLOCATED();
-                unlock_scheduler();
-                // LOG(TRACE, "Allocated page: %#" PRIx64, addr);
+                release_spinlock_noint(&pfa_lock, flags);
                 page_index++;
                 return addr;
             }
@@ -180,14 +179,12 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
     }
     #endif
 
-//     if (memory_allocated + 0x1000 * pages > allocatable_memory * 9 / 10)
-//         LOG(WARNING, "pfa_allocate_physical_contiguous_pages: Over 90%% of memory used!");
-
-    lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&pfa_lock);
 
     for (uint64_t qword_index = first_free_page_index_hint / 64; qword_index < bitmap_size / 8; qword_index++)
     {
     loop_start:
+        ;
         uint64_t* qword = (uint64_t*)&bitmap[8 * qword_index];
         if (*qword == 0xffffffffffffffff) continue;
 
@@ -245,8 +242,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
                 first_free_page_index_hint = page_index + pages;
                 memory_allocated += 0x1000 * pages;
                 LOG_MEM_ALLOCATED();
-                unlock_scheduler();
-                // LOG(TRACE, "Allocated page: %#" PRIx64, addr);
+                release_spinlock_noint(&pfa_lock, flags);
                 return addr;
             }
             remaining -= block_pages;
@@ -291,14 +287,13 @@ void pfa_free_physical_page(physical_address_t address)
     uint64_t qword = page_index / 64;
     uint8_t bit = page_index % 64;
     if (qword * 8 >= bitmap_size) return;
-    lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&pfa_lock);
     *(uint64_t*)&bitmap[8 * qword] &= ~(1ULL << bit);
     if (page_index < first_free_page_index_hint)
         first_free_page_index_hint = page_index;
 
     memory_allocated -= 0x1000;
-    unlock_scheduler();
-    // LOG(TRACE, "Freed page: %#" PRIx64, address);
+    release_spinlock_noint(&pfa_lock, flags);
     LOG_MEM_ALLOCATED();
 }
 

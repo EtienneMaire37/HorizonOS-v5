@@ -49,10 +49,3 @@ context_switch:
     mov gs, dx
 
     ret
-
-global unlock_scheduler__and__iretq
-extern unlock_scheduler_symbol
-extern iretq_instruction
-unlock_scheduler__and__iretq:
-    call unlock_scheduler_symbol
-    jmp iretq_instruction

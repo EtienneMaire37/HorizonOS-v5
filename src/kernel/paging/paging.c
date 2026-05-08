@@ -10,19 +10,11 @@ bool pat_enabled = false;
 #include <string.h>
 #include "../memalloc/page_frame_allocator.h"
 #include "../multitasking/multitasking.h"
+#include "../memalloc/page_data.h"
 
 uint64_t* create_empty_pdpt()
 {
-    uint64_t* pdpt = pfa_allocate_page();
-    if (unlikely(!pdpt))
-    {
-        LOG(ERROR, "Couldn't create PDPT!!!");
-        return NULL;
-    }
-
-    memset(pdpt, 0, 4096);
-
-    return (uint64_t*)pdpt;
+    return (uint64_t*)(((uintptr_t)create_empty_pdpt_phys()) + PHYS_MAP_BASE);
 }
 
 physical_address_t create_empty_pdpt_phys()
@@ -36,6 +28,7 @@ physical_address_t create_empty_pdpt_phys()
     }
 
     memset(pdpt, 0, 4096);
+    global_page_table[paddr / 0x1000] = page_data_init;
 
     return paddr;
 }
@@ -111,58 +104,45 @@ void remap_range(uint64_t* pml4,
     uint64_t pages,
     uint8_t privilege, uint8_t read_write, uint8_t cache_type)
 {
-    // LOG(DEBUG, "remap_range(%p, %#" PRIx64 ", %#" PRIx64 ", %" PRIu64 ", %d, %d, %d)",
-    //     pml4, start_virtual_address, start_physical_address, pages, privilege, read_write, cache_type);
-
-    if (!pml4)
+    uint32_t pml4_flags = lock_page_table(pml4);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
-        LOG(ERROR, "remap_range: NULL virtual address space");
-        return;
+        if (!is_pdpt_entry_present(&pml4[pml4e]))
+            set_pdpt_entry(&pml4[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        {
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
+                set_pdpt_entry(&pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            {
+                if (!is_pdpt_entry_present(&pd_address[pde]))
+                    set_pdpt_entry(&pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                {
+                    set_pdpt_entry(&pd_address[pde], vaddr_from_indices(pml4e, pdpte, pde, pte) - start_virtual_address + start_physical_address,
+                        privilege, read_write,
+                        cache_type);
+                }
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(pd_address, pd_flags);
+        }
+        unlock_page_table(pdpt_address, pdpt_flags);
     }
-
-    if ((start_virtual_address | start_physical_address) & 0xfff)
-    {
-        LOG(CRITICAL, "remap_range: Kernel tried to map non page aligned addresses");
-        abort();
-    }
-
-    // uint64_t end_virtual_address = start_virtual_address + 0x1000 * pages;
-
-    // for (uint64_t vaddr = start_virtual_address; vaddr < end_virtual_address; vaddr += 0x1000)
-    for (uint64_t i = 0; i < pages; i++)
-    {
-        uint64_t vaddr = start_virtual_address + 0x1000 * i;
-
-        uint64_t pte = (vaddr >> 12) & 0x1ff;
-        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
-        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
-        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
-
-        uint64_t* pml4_entry = &pml4[pml4e];
-        if (!is_pdpt_entry_present(pml4_entry))
-            set_pdpt_entry(pml4_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-        uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
-
-        uint64_t* pdpt_entry = &pdpt[pdpte];
-        if (!is_pdpt_entry_present(pdpt_entry))
-            set_pdpt_entry(pdpt_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
-
-        uint64_t* pd_entry = &pd[pde];
-        if (!is_pdpt_entry_present(pd_entry))
-            set_pdpt_entry(pd_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
-
-        uint64_t* pt_entry = &pt[pte];
-        if (is_pdpt_entry_present(pt_entry))
-            abort();
-
-        set_pdpt_entry(pt_entry, vaddr - start_virtual_address + start_physical_address,
-            privilege, read_write,
-            cache_type);
-    }
+    unlock_page_table(pml4, pml4_flags);
 }
 
 void allocate_range(uint64_t* pml4,
@@ -170,284 +150,200 @@ void allocate_range(uint64_t* pml4,
     uint64_t pages,
     uint8_t privilege, uint8_t read_write, uint8_t cache_type)
 {
-    // LOG(DEBUG, "allocate_range(%p, %#" PRIx64 ", %" PRId64 ", %d, %d, %d)",
-    //     pml4, start_virtual_address, pages, privilege, read_write, cache_type);
-
-    if (!pml4)
+    uint32_t pml4_flags = lock_page_table(pml4);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
-        LOG(ERROR, "allocate_range: NULL virtual address space");
-        return;
+        if (!is_pdpt_entry_present(&pml4[pml4e]))
+            set_pdpt_entry(&pml4[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        {
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
+                set_pdpt_entry(&pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            {
+                if (!is_pdpt_entry_present(&pd_address[pde]))
+                    set_pdpt_entry(&pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                {
+                    if (!is_pdpt_entry_present(&pt_address[pte]))
+                        set_pdpt_entry(&pt_address[pte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+                }
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(pd_address, pd_flags);
+        }
+        unlock_page_table(pdpt_address, pdpt_flags);
     }
-
-    if (start_virtual_address & 0xfff)
-    {
-        LOG(CRITICAL, "allocate_range: Kernel tried to map non page aligned addresses");
-        abort();
-    }
-
-    // uint64_t end_virtual_address = start_virtual_address + 0x1000 * pages;
-
-    // for (uint64_t vaddr = start_virtual_address; vaddr < end_virtual_address; vaddr += 0x1000)
-    for (uint64_t i = 0; i < pages; i++)
-    {
-        uint64_t vaddr = start_virtual_address + 0x1000 * i;
-
-        uint64_t pte = (vaddr >> 12) & 0x1ff;
-        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
-        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
-        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
-
-        uint64_t* pml4_entry = &pml4[pml4e];
-        if (!is_pdpt_entry_present(pml4_entry))
-            set_pdpt_entry(pml4_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
-
-        uint64_t* pdpt_entry = &pdpt[pdpte];
-        if (!is_pdpt_entry_present(pdpt_entry))
-            set_pdpt_entry(pdpt_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
-
-        uint64_t* pd_entry = &pd[pde];
-        if (!is_pdpt_entry_present(pd_entry))
-            set_pdpt_entry(pd_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
-
-        uint64_t* pt_entry = &pt[pte];
-        assert(!is_pdpt_entry_present(pt_entry));
-
-        set_pdpt_entry(pt_entry, pfa_allocate_physical_page(),
-            privilege, read_write,
-            cache_type);
-    }
+    unlock_page_table(pml4, pml4_flags);
 }
 
+// TODO: Reference count and unmap page tables
 void free_range(uint64_t* pml4,
     uint64_t start_virtual_address,
     uint64_t pages)
 {
-    if (!pml4)
+    uint32_t pml4_flags = lock_page_table(pml4);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
-        LOG(ERROR, "free_range: NULL virtual address space");
-        return;
-    }
+        if (!is_pdpt_entry_present(&pml4[pml4e])) continue;
 
-    if (start_virtual_address & 0xfff)
-    {
-        LOG(CRITICAL, "free_range: Kernel tried to free non page aligned addresses");
-        abort();
-    }
-
-    for (uint64_t i = 0; i < pages; i++)
-    {
-        uint64_t vaddr = start_virtual_address + 0x1000 * i;
-
-        uint64_t pte = (vaddr >> 12) & 0x1ff;
-        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
-        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
-        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
-
-        uint64_t* pml4_entry = &pml4[pml4e];
-        if (!is_pdpt_entry_present(pml4_entry))
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
         {
-            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1;
-            continue;
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            {
+                if (!is_pdpt_entry_present(&pd_address[pde])) continue;
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                {
+                    if (!is_pdpt_entry_present(&pt_address[pte])) continue;
+                    remove_pdpt_entry(&pt_address[pte]);
+                    pfa_free_physical_page(get_pdpt_entry_address(&pt_address[pte]));
+                }
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(pd_address, pd_flags);
         }
-
-        uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
-
-        uint64_t* pdpt_entry = &pdpt[pdpte];
-        if (!is_pdpt_entry_present(pdpt_entry))
-        {
-            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1;
-            continue;
-        }
-
-        uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
-
-        uint64_t* pd_entry = &pd[pde];
-        if (!is_pdpt_entry_present(pd_entry))
-        {
-            i += ((uint64_t)1 << 9) - pte - 1;
-            continue;
-        }
-
-        uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
-
-        uint64_t* pt_entry = &pt[pte];
-        if (!is_pdpt_entry_present(pt_entry))
-            continue;
-
-        uint64_t address = (uint64_t)get_pdpt_entry_address(pt_entry);
-        remove_pdpt_entry(pt_entry);
-        pfa_free_physical_page(address);
+        unlock_page_table(pdpt_address, pdpt_flags);
     }
+    unlock_page_table(pml4, pml4_flags);
 }
 
 void unmap_range(uint64_t* pml4,
     uint64_t start_virtual_address,
     uint64_t pages)
 {
-    if (!pml4)
+    uint32_t pml4_flags = lock_page_table(pml4);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
-        LOG(ERROR, "unmap_range: NULL virtual address space");
-        return;
-    }
+        if (!is_pdpt_entry_present(&pml4[pml4e])) continue;
 
-    if (start_virtual_address & 0xfff)
-    {
-        LOG(CRITICAL, "unmap_range: Kernel tried to free non page aligned addresses");
-        abort();
-    }
-
-    for (uint64_t i = 0; i < pages; i++)
-    {
-        uint64_t vaddr = start_virtual_address + 0x1000 * i;
-
-        uint64_t pte = (vaddr >> 12) & 0x1ff;
-        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
-        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
-        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
-
-        uint64_t* pml4_entry = &pml4[pml4e];
-        if (!is_pdpt_entry_present(pml4_entry))
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
         {
-            i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1;
-            continue;
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            {
+                if (!is_pdpt_entry_present(&pd_address[pde])) continue;
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                {
+                    if (!is_pdpt_entry_present(&pt_address[pte])) continue;
+                    remove_pdpt_entry(&pt_address[pte]);
+                }
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(pd_address, pd_flags);
         }
-
-        uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
-
-        uint64_t* pdpt_entry = &pdpt[pdpte];
-        if (!is_pdpt_entry_present(pdpt_entry))
-        {
-            i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1;
-            continue;
-        }
-
-        uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
-
-        uint64_t* pd_entry = &pd[pde];
-        if (!is_pdpt_entry_present(pd_entry))
-        {
-            i += ((uint64_t)1 << 9) - pte - 1;
-            continue;
-        }
-
-        uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
-
-        uint64_t* pt_entry = &pt[pte];
-        if (!is_pdpt_entry_present(pt_entry))
-            continue;
-
-        uint64_t address = (uint64_t)get_pdpt_entry_address(pt_entry);
-        remove_pdpt_entry(pt_entry);
+        unlock_page_table(pdpt_address, pdpt_flags);
     }
+    unlock_page_table(pml4, pml4_flags);
 }
 
 void copy_mapping(uint64_t* src, uint64_t* dst,
     uint64_t start_virtual_address,
     uint64_t pages)
 {
-    if (!src)
+    uint32_t pml4_flags = lock_page_table(src);
+    uint32_t dst_pml4_flags = lock_page_table(dst);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
-        LOG(ERROR, "copy_mapping: NULL source virtual address space");
-        return;
-    }
+        if (!is_pdpt_entry_present(&src[pml4e])) continue;
 
-    if (!dst)
-    {
-        LOG(ERROR, "copy_mapping: NULL destination virtual address space");
-        return;
-    }
+        if (!is_pdpt_entry_present(&dst[pml4e]))
+            set_pdpt_entry(&dst[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
-    if (start_virtual_address & 0xfff)
-    {
-        LOG(CRITICAL, "copy_mapping: Kernel tried to map non page aligned addresses");
-        abort();
-    }
-
-    for (uint64_t i = 0; i < pages; i++)
-    {
-        uint64_t vaddr = start_virtual_address + 0x1000 * i;
-
-        if (vaddr < start_virtual_address)
-            break;
-
-        uint64_t pte = (vaddr >> 12) & 0x1ff;
-        uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
-        uint64_t pdpte = (vaddr >> (12 + 2 * 9)) & 0x1ff;
-        uint64_t pml4e = (vaddr >> (12 + 3 * 9)) & 0x1ff;
-
-        uint64_t* old_pml4_entry = &src[pml4e];
-        if (!is_pdpt_entry_present(old_pml4_entry))
-            skip_pml4();
-
-        uint64_t* new_pml4_entry = &dst[pml4e];
-
-        if (!is_pdpt_entry_present(new_pml4_entry))
-            set_pdpt_entry(new_pml4_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* old_pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(old_pml4_entry));
-
-        uint64_t* old_pdpt_entry = &old_pdpt[pdpte];
-        if (!is_pdpt_entry_present(old_pdpt_entry))
-            skip_pdpt();
-
-        uint64_t* new_pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(new_pml4_entry));
-
-        uint64_t* new_pdpt_entry = &new_pdpt[pdpte];
-
-        // * 1GB page
-        // !!! WILL LEAK MEMORY IF USED ON TOP OF ALLOCATED PAGE TABLES
-        if (is_pdpt_entry_large(old_pdpt_entry))
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&src[pml4e]));
+        uint64_t* dst_pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        uint32_t dst_pdpt_flags = lock_page_table(dst_pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
         {
-            *new_pdpt_entry = *old_pdpt_entry;
-            skip_pdpt();
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
+
+            if (!is_pdpt_entry_present(&dst_pdpt_address[pdpte]))
+                set_pdpt_entry(&dst_pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint64_t* dst_pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            uint32_t dst_pd_flags = lock_page_table(dst_pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            {
+                if (!is_pdpt_entry_present(&pd_address[pde])) continue;
+
+                if (!is_pdpt_entry_present(&dst_pd_address[pde]))
+                    set_pdpt_entry(&dst_pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint64_t* dst_pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                uint32_t dst_pt_flags = lock_page_table(dst_pt_address);
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                {
+                    if (!is_pdpt_entry_present(&pt_address[pte])) continue;
+
+                    if (!is_pdpt_entry_present(&dst_pt_address[pte]))
+                        set_pdpt_entry(&dst_pt_address[pte], pfa_allocate_physical_page(), get_pdpt_entry_privilege(&pt_address[pte]), get_pdpt_entry_read_write(&pt_address[pte]), CACHE_WB);
+
+                    memcpy((void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pt_address[pte])), (void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pt_address[pte])), 4096);
+                }
+                unlock_page_table(dst_pt_address, pt_flags);
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(dst_pd_address, pd_flags);
+            unlock_page_table(pd_address, pd_flags);
         }
-
-        if (!is_pdpt_entry_present(new_pdpt_entry))
-            set_pdpt_entry(new_pdpt_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* old_pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(old_pdpt_entry));
-
-        uint64_t* old_pd_entry = &old_pd[pde];
-        if (!is_pdpt_entry_present(old_pd_entry))
-            skip_pd();
-
-        uint64_t* new_pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(new_pdpt_entry));
-
-        uint64_t* new_pd_entry = &new_pd[pde];
-
-        // * 2MB page
-        // !!! WILL LEAK MEMORY IF USED ON TOP OF ALLOCATED PAGE TABLES
-        if (is_pdpt_entry_large(old_pd_entry))
-        {
-            *new_pd_entry = *old_pd_entry;
-            skip_pd();
-        }
-
-        if (!is_pdpt_entry_present(new_pd_entry))
-            set_pdpt_entry(new_pd_entry, create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
-
-        uint64_t* old_pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(old_pd_entry));
-        uint64_t* new_pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(new_pd_entry));
-
-        memcpy(new_pt, old_pt, 4096);
-
-        i += ((uint64_t)1 << 9) - pte - 1;
+        unlock_page_table(dst_pdpt_address, pdpt_flags);
+        unlock_page_table(pdpt_address, pdpt_flags);
     }
+    unlock_page_table(dst, dst_pml4_flags);
+    unlock_page_table(src, pml4_flags);
 }
 
 void* virtual_to_physical(uint64_t* cr3, uint64_t vaddr)
 {
-    if (!cr3)
-    {
-        LOG(TRACE, "virtual_to_physical: cr3 address NULL");
-        return NULL;
-    }
+    assert(cr3);
+
+    uint32_t pml4_flags = lock_page_table(cr3);
 
     uint64_t pte = (vaddr >> 12) & 0x1ff;
     uint64_t pde = (vaddr >> (12 + 9)) & 0x1ff;
@@ -457,38 +353,56 @@ void* virtual_to_physical(uint64_t* cr3, uint64_t vaddr)
     uint64_t* pml4_entry = &cr3[pml4e];
     if (!is_pdpt_entry_present(pml4_entry))
     {
+        unlock_page_table(cr3, pml4_flags);
         LOG(TRACE, "virtual_to_physical: pml4 entry not present");
         return NULL;
     }
 
     uint64_t* pdpt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pml4_entry));
+    uint32_t pdpt_flags = lock_page_table(pdpt);
 
     uint64_t* pdpt_entry = &pdpt[pdpte];
     if (!is_pdpt_entry_present(pdpt_entry))
     {
+        unlock_page_table(pdpt, pdpt_flags);
+        unlock_page_table(cr3, pml4_flags);
         LOG(TRACE, "virtual_to_physical: pdpt entry not present");
         return NULL;
     }
 
     uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
+    uint32_t pd_flags = lock_page_table(pd);
 
     uint64_t* pd_entry = &pd[pde];
     if (!is_pdpt_entry_present(pd_entry))
     {
+        unlock_page_table(pd, pd_flags);
+        unlock_page_table(pdpt, pdpt_flags);
+        unlock_page_table(cr3, pml4_flags);
         LOG(TRACE, "virtual_to_physical: pd entry not present");
         return NULL;
     }
 
     uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
+    uint32_t pt_flags = lock_page_table(pt);
 
     uint64_t* pt_entry = &pt[pte];
     if (!is_pdpt_entry_present(pt_entry))
     {
+        unlock_page_table(pt, pt_flags);
+        unlock_page_table(pd, pd_flags);
+        unlock_page_table(pdpt, pdpt_flags);
+        unlock_page_table(cr3, pml4_flags);
         LOG(TRACE, "virtual_to_physical: pt entry not present");
         return NULL;
     }
 
     uint8_t* page = (uint8_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pt_entry));
+
+    unlock_page_table(pt, pt_flags);
+    unlock_page_table(pd, pd_flags);
+    unlock_page_table(pdpt, pdpt_flags);
+    unlock_page_table(cr3, pml4_flags);
 
     return (void*)&page[vaddr & 0xfff];
 }

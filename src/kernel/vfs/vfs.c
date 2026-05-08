@@ -158,8 +158,6 @@ void vfs_mount_device(const char* name, const char* path, drive_t drive, uid_t u
         return;
     }
 
-    lock_scheduler();
-
     vfs_folder_tnode_t** current = &parent->inode->folders;
 
     if (!(*current))
@@ -170,7 +168,6 @@ void vfs_mount_device(const char* name, const char* path, drive_t drive, uid_t u
         if (strcmp(name, (*current)->name) == 0)
         {
             LOG(ERROR, "vfs_mount_device: Couldn't mount partition: Mount point already exists");
-            unlock_scheduler();
             return;
         }
 
@@ -187,9 +184,6 @@ mount:
             S_IROTH | S_IXOTH,
             uid, gid,
             drive);
-
-    unlock_scheduler();
-
     return;
 }
 
@@ -197,8 +191,6 @@ static void vfs_unload_folder_helper(vfs_folder_tnode_t* tnode)
 {
     if (!tnode) return;
     if (tnode->inode->parent == tnode) return;
-
-    lock_scheduler();
 
     while (tnode->inode->folders)
     {
@@ -216,9 +208,6 @@ static void vfs_unload_folder_helper(vfs_folder_tnode_t* tnode)
         free(file_tnode);
     }
 
-    // * useless
-    unlock_scheduler();
-
     free(tnode->inode);
     free(tnode->name);
     free(tnode);
@@ -227,14 +216,12 @@ static void vfs_unload_folder_helper(vfs_folder_tnode_t* tnode)
 void vfs_unload_folder(vfs_folder_tnode_t* tnode)
 {
     vfs_folder_tnode_t* parent = tnode->inode->parent;
-    lock_scheduler();
     vfs_folder_tnode_t** current_folder = &parent->inode->folders;
     while (*current_folder && (*current_folder) != tnode)
         current_folder = &(*current_folder)->next;
     if (!*current_folder)
         abort();     // !!! Should be impossible
     *current_folder = tnode->next;
-    unlock_scheduler();
     vfs_unload_folder_helper(tnode);
 }
 
@@ -326,6 +313,7 @@ ssize_t vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res)
 
 void vfs_explore(vfs_folder_tnode_t* tnode)
 {
+    FATAL("TODO: Reference counting");
     // LOG(TRACE, "exploring folder: %s", tnode->name);
     if (!tnode || !tnode->inode)
     {
@@ -386,15 +374,11 @@ vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, mode_t m
         return NULL;
     }
 
-    lock_scheduler();
-
     vfs_file_tnode_t** current_tnode = &parent->inode->files;
     while (*current_tnode)
         current_tnode = &(*current_tnode)->next;
 
     *current_tnode = vfs_create_special_file_tnode(name, parent, mode, fun, uid, gid);
-
-    unlock_scheduler();
 
     return *current_tnode;
 }
@@ -525,7 +509,7 @@ vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* p
     return current_folder;
 }
 
-int vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st)
+int __vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st)
 {
     if (!path || !st)
         return EFAULT;
@@ -553,30 +537,25 @@ int vfs_access(const char* path, vfs_folder_tnode_t* pwd, int mode)
 {
     if (mode == 0) return 0;
     struct stat st;
-    int ret = vfs_stat(path, pwd, &st);
+    int ret = __vfs_stat(path, pwd, &st);
     if (ret)
         return ret;
     // * Assume we're the root user for now
     return 0;
 }
 
-int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
+int __vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
 {
     assert(bytes_read);
-    // !!! EXTREMELY UNSAFE
-    // TODO: Rewrite all of the locked paths everywhere
-    lock_scheduler();
-    if (!is_fd_valid(fd))
+    if (!__is_fd_valid(fd))
     {
-        unlock_scheduler();
         *bytes_read = -1;
         return EBADF;
     }
-    file_entry_t* entry = get_global_file_entry(fd);
+    file_entry_t* entry = __get_global_file_entry(fd);
     assert(entry);
     if ((entry->flags & O_ACCMODE) == O_WRONLY)
     {
-        unlock_scheduler();
         *bytes_read = -1;
         return EBADF;
     }
@@ -591,32 +570,26 @@ int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read)
         {
             int ret = *bytes_read;
             *bytes_read = 0;
-            unlock_scheduler();
             return -ret;
         }
-        unlock_scheduler();
         return 0;
     }
     *bytes_read = 0;
-    unlock_scheduler();
     return EISDIR;
 }
 
-int vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* bytes_written)
+int __vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* bytes_written)
 {
     assert(bytes_written);
-    lock_scheduler();
-    if (!is_fd_valid(fd))
+    if (!__is_fd_valid(fd))
     {
-        unlock_scheduler();
         *bytes_written = (uint64_t)-1;
         return EBADF;
     }
-    file_entry_t* entry = get_global_file_entry(fd);
+    file_entry_t* entry = __get_global_file_entry(fd);
     assert(entry);
     if ((entry->flags & O_ACCMODE) == O_RDONLY)
     {
-        unlock_scheduler();
         *bytes_written = -1;
         return EBADF;
     }
@@ -630,13 +603,10 @@ int vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* byte
         {
             int ret = *bytes_written;
             *bytes_written = 0;
-            unlock_scheduler();
             return -ret;
         }
-        unlock_scheduler();
         return 0;
     }
-    unlock_scheduler();
     // ! Opening a directory for writing should return EISDIR
     FATAL("Fatal error in vfs_write!!!");
 }
@@ -679,7 +649,6 @@ ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t 
     case IO_DIR_READ:
         if (count == 0)
             return 0;
-        assert(task_lock_depth == 1);
         if (current_task->pgid != tty_foreground_pgrp)
         {
             task_send_signal(current_task, SIGTTIN);
@@ -688,11 +657,11 @@ ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t 
         if (no_buffered_characters(keyboard_buffered_input_buffer))
         {
             current_task->timeout_deadline = PRECISE_TIME_MAX;
-            copy_task_to_thread_queue(&_waiting_for_stdin_tasks, current_task);
-            move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
+            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            __copy_task_to_thread_queue(&_waiting_for_stdin_tasks, current_task);
+            __move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
             switch_task();
-            unlock_scheduler();
-            lock_scheduler();
+            release_spinlock_noint(&sched_lock, flags);
         }
         if (no_buffered_characters(keyboard_buffered_input_buffer))
             return -EINTR;
@@ -714,11 +683,8 @@ ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t
     case IO_DIR_READ:
         return 0;
     case IO_DIR_WRITE:
-        assert(task_lock_depth == 1);
-        unlock_scheduler();
         for (uint32_t i = 0; i < count; i++)
             tty_outc(buf[i]);
-        lock_scheduler();
         return count;
     }
     return 0;
@@ -737,11 +703,9 @@ ssize_t task_chr_tty(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t di
     }
 }
 
-bool vfs_isatty(file_entry_t* entry)
+bool __vfs_isatty(file_entry_t* entry)
 {
-    lock_scheduler();
-    if (!entry) return (unlock_scheduler(), false);
+    if (!entry) return false;
     bool ret = entry->entry_type == VFS_ET_FILE ? (S_ISCHR(entry->st.st_mode) && entry->tnode.file->inode->io_func == task_chr_tty) : false;
-    unlock_scheduler();
     return ret;
 }

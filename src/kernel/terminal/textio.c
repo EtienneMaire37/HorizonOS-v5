@@ -77,9 +77,7 @@ void tty_init(bool refresh)
 
 void tty_clear_screen(char c, bool refresh)
 {
-    lock_scheduler();
     __tty_clear_screen(c, refresh);
-    unlock_scheduler();
 }
 
 void __tty_ignore_next_characters(int n)
@@ -201,12 +199,10 @@ uint8_t tty_ansi_to_vga_mask(uint8_t ansi_code)
 void tty_set_color(uint8_t fg_color, uint8_t bg_color)
 {
 	fflush(stdout);
-	lock_scheduler();
 
 #ifndef LOG_TO_TTY
 	tty_color = (fg_color & 0x0f) | (bg_color & 0xf0);
 #endif
-    unlock_scheduler();
 }
 
 void tty_set_window_size(int sx, int sy, bool refresh)
@@ -217,10 +213,8 @@ void tty_set_window_size(int sx, int sy, bool refresh)
 		sx = MAX_TTY_X;
 		sy = sx / TTY_AR;
 	}
-	lock_scheduler();
 	tty_res_x = sx;
 	tty_res_y = sy;
-	unlock_scheduler();
 	__tty_refresh_screen(refresh);
 }
 
@@ -627,19 +621,15 @@ void tty_outc_ex(char c, int flags, bool refresh)
 	if (c == 0)
 		return;
 
-	lock_scheduler();
-
 	if (tty_ignore_chars > 0)
 	{
 	    tty_ignore_chars--;
-		unlock_scheduler();
 		return;
 	}
 
 	if (tty_cursor >= MAX_TTY_X * tty_res_y)
 	{
 		tty_cursor++;
-		unlock_scheduler();
 		return;
 	}
 
@@ -650,10 +640,8 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		tty_escape_sequence_index = 0;
 		tty_osc_index = 0;
 		tty_control_sequence_buffer[0] = 0;
-		unlock_scheduler();
 		return;
 	#else
-        unlock_scheduler();
     #ifdef PRINT_UNRECOGNIZED_ANSI
 		tty_outc('^');
 	#endif
@@ -669,40 +657,32 @@ void tty_outc_ex(char c, int flags, bool refresh)
     	case '[':
             tty_reading_control_sequence = true;
            	tty_sequence_question_mark = tty_sequence_exclamation_mark = false;
-           	unlock_scheduler();
            	return;
         case ']':
             tty_reading_operating_system_command = true;
-            unlock_scheduler();
 			return;
 		case 'M':
 			tty_cursor -= MAX_TTY_X;
             __tty_scroll(refresh);
-		    unlock_scheduler();
 		    return;
         case '(':
         // * Designate G0 Character Set
        	    __tty_ignore_next_characters(1);
-            unlock_scheduler();
             return;
 
 		case '=':
 		    // * Alternate keypad notation
-		    unlock_scheduler();
 		    return;
     	case '>':
     	    // * Normal keypad notation
-    	    unlock_scheduler();
     	    return;
 
          case 'c':
             // * Full reset
             __tty_full_reset(refresh);
-            unlock_scheduler();
             return;
 
     	default:
-           	unlock_scheduler();
         #ifdef PRINT_UNRECOGNIZED_ANSI
            	tty_outc('^');
            	tty_outc(c);
@@ -717,14 +697,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		{
 			tty_control_sequence_buffer[tty_escape_sequence_index] *= 10;
 			tty_control_sequence_buffer[tty_escape_sequence_index] += c - '0';
-			unlock_scheduler();
 			return;
 		}
 		if (c == ';' && tty_reading_operating_system_command)
 		{
 		    tty_reading_operating_system_command_string = true;
 			tty_reading_operating_system_command = false;
-			unlock_scheduler();
 			return;
 		}
 		switch (c)
@@ -792,7 +770,6 @@ void tty_outc_ex(char c, int flags, bool refresh)
                 tty_cursor -= (tty_cursor / MAX_TTY_X) * MAX_TTY_X;
    			if (tty_cursor_blink)
   				__tty_render_cursor(tty_cursor, refresh);
-    		unlock_scheduler();
     		return;
 		}
 		case 'B':
@@ -811,7 +788,6 @@ void tty_outc_ex(char c, int flags, bool refresh)
                 tty_cursor = (tty_cursor % MAX_TTY_X) + MAX_TTY_X * (tty_res_y - 1);
    			if (tty_cursor_blink)
   				__tty_render_cursor(tty_cursor, refresh);
-    		unlock_scheduler();
     		return;
 		}
 		case 'C':
@@ -830,7 +806,6 @@ void tty_outc_ex(char c, int flags, bool refresh)
                 tty_cursor = tty_res_x - 1 + MAX_TTY_X * (tty_res_x / MAX_TTY_X);
    			if (tty_cursor_blink)
   				__tty_render_cursor(tty_cursor, refresh);
-    		unlock_scheduler();
     		return;
 		}
 		case 'D':
@@ -849,7 +824,6 @@ void tty_outc_ex(char c, int flags, bool refresh)
                 tty_cursor = MAX_TTY_X * (tty_res_x / MAX_TTY_X);
    			if (tty_cursor_blink)
   				__tty_render_cursor(tty_cursor, refresh);
-    		unlock_scheduler();
     		return;
 		}
 		case 'l':
@@ -910,14 +884,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 		}
-		unlock_scheduler();
 		return;
 	}
 
 	if (tty_reading_operating_system_command_string)
 	{
 	    __tty_osc_put(c);
-        unlock_scheduler();
         return;
 	}
 
@@ -1005,8 +977,6 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		__tty_render_cursor(tty_cursor, refresh);
 
 	__tty_scroll(refresh);
-
-	unlock_scheduler();
 }
 
 void tty_outc(char c)

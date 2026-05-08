@@ -1,10 +1,14 @@
 #include "defs.h"
 #include "../util/lambda.h"
+#include "../util/read_write.h"
+#include "../multicore/spinlock.h"
+#include "../cpu/tsc.h"
 
 #include <assert.h>
 
 // * page 0xFEE00xxx
 volatile local_apic_registers_t* lapic = NULL;
+atomic_flag ioapic_lock = ATOMIC_FLAG_INIT; // TODO: Implement a per I/O APIC lock
 
 uint32_t ps2_1_gsi = 1, ps2_12_gsi = 12;
 
@@ -28,14 +32,14 @@ void lapic_init()
     {
         uint64_t paddr = (apic_base_msr & ~0xfff) & ((1ULL << physical_address_width) - 1);
 
-        lapic = vmm_find_free_kernel_space_pages(NULL, 1);
+        uint32_t flags = acquire_spinlock_noint(&vmm_lock);
+        lapic = __vmm_find_free_kernel_space_pages(NULL, 1);
         LOG(DEBUG, "Mapping local APIC at physical address %#" PRIx64 " to %p", paddr, lapic);
 
-        lock_scheduler();
         remap_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
             (uint64_t)lapic, paddr,
             1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_UC);
-        unlock_scheduler();
+        release_spinlock_noint(&vmm_lock, flags);
         invlpg((uint64_t)lapic);
     }
 
@@ -46,7 +50,7 @@ void lapic_init()
 uint32_t lapic_get_cpu_id()
 {
     if (lapic)
-        return (lapic->id_register >> 24) & 0xff;
+        return (READ_ONCE(lapic->id_register) >> 24) & 0xff;
     else
         return rdmsr(IA32_X2APIC_APICID_MSR);
 }
@@ -54,55 +58,56 @@ uint32_t lapic_get_cpu_id()
 void lapic_send_eoi()
 {
     if (lapic)
-        lapic->end_of_interrupt_register = 0;
+        WRITE_ONCE(lapic->end_of_interrupt_register, 0);
     else
         wrmsr(IA32_X2APIC_EOI_MSR, 0);
 }
 
 void lapic_set_spurious_interrupt_number(uint8_t int_num)
 {
-    uint32_t val = lapic ? lapic->spurious_interrupt_vector_register : rdmsr(IA32_X2APIC_SIVR_MSR);
+    uint32_t val = lapic ? READ_ONCE(lapic->spurious_interrupt_vector_register) : rdmsr(IA32_X2APIC_SIVR_MSR);
     val &= 0xffffff00;
     val |= int_num;
-    if (lapic)  lapic->spurious_interrupt_vector_register = val;
+    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, val);
     else        wrmsr(IA32_X2APIC_SIVR_MSR, val);
 }
 
 void lapic_enable()
 {
-    if (lapic)  lapic->spurious_interrupt_vector_register |= 0x100;
+    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, READ_ONCE(lapic->spurious_interrupt_vector_register) | 0x100);
     else        wrmsr(IA32_X2APIC_SIVR_MSR, rdmsr(IA32_X2APIC_SIVR_MSR) | 0x100);
 }
 
 void lapic_disable()
 {
-    if (lapic)  lapic->spurious_interrupt_vector_register &= ~0x100;
+    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, READ_ONCE(lapic->spurious_interrupt_vector_register) & ~0x100);
     else        wrmsr(IA32_X2APIC_SIVR_MSR, rdmsr(IA32_X2APIC_SIVR_MSR) & ~0x100);
 }
 
 void lapic_set_tpr(uint8_t p)
 {
-    uint32_t val = lapic ? lapic->task_priority_register : rdmsr(IA32_X2APIC_TPR_MSR);
+    uint32_t val = lapic ? READ_ONCE(lapic->task_priority_register) : rdmsr(IA32_X2APIC_TPR_MSR);
     val &= 0xffffff00;
     val |= p;
-    if (lapic)  lapic->task_priority_register = val;
+    if (lapic)  WRITE_ONCE(lapic->task_priority_register, val);
     else        wrmsr(IA32_X2APIC_TPR_MSR, val);
 }
 
 uint32_t ioapic_read_register(volatile io_apic_registers_t* ioapic, uint8_t reg)
 {
-    ioapic->IOREGSEL = reg;
-    memory_barrier();
-    return ioapic->IOWIN;
+    acquire_spinlock(&ioapic_lock);
+    WRITE_ONCE(ioapic->IOREGSEL, reg);
+    uint32_t ret = READ_ONCE(ioapic->IOWIN);
+    release_spinlock(&ioapic_lock);
+    return ret;
 }
 
 void ioapic_write_register(volatile io_apic_registers_t* ioapic, uint8_t reg, uint32_t val)
 {
-    ioapic->IOREGSEL = reg;
-    memory_barrier();
-    ioapic->IOWIN = val;
-    memory_barrier();
-    (void)ioapic->IOWIN;
+    acquire_spinlock(&ioapic_lock);
+    WRITE_ONCE(ioapic->IOREGSEL, reg);
+    WRITE_ONCE(ioapic->IOWIN, val);
+    release_spinlock(&ioapic_lock);
 }
 
 uint8_t ioapic_get_max_redirection_entry(volatile io_apic_registers_t* ioapic)
@@ -138,15 +143,15 @@ void ioapic_write_redirection_entry(volatile io_apic_registers_t* ioapic, uint32
 
 void* map_ioapic_in_current_vas(uint64_t paddr)
 {
-    void* vaddr = vmm_find_free_kernel_space_pages(NULL, 1);
+    uint32_t flags = acquire_spinlock_noint(&vmm_lock);
+    void* vaddr = __vmm_find_free_kernel_space_pages(NULL, 1);
 
     LOG(DEBUG, "Mapping I/O APIC at physical address %#" PRIx64 " to %p", paddr, vaddr);
 
-    lock_scheduler();
     remap_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
         (uint64_t)vaddr, paddr,
         1, PG_SUPERVISOR, PG_READ_WRITE, CACHE_UC);
-    unlock_scheduler();
+    release_spinlock_noint(&vmm_lock, flags);
     invlpg((uint64_t)vaddr);
 
     return vaddr;
@@ -297,14 +302,18 @@ void madt_extract_data()
     }
 }
 
-void apic_timer_init()
+void apic_timer_and_tsc_init()
 {
+    try_calibrate_tsc_with_cpuid();
+
     rtc_wait_while_updating();
+
+    uint64_t start_tsc = rdtsc();
 
     if (lapic)
     {
-        lapic->divide_configuration_register = LAPIC_TIMER_DIVIDE_BY_16;
-        lapic->initial_count_register = 0xffffffff;
+        WRITE_ONCE(lapic->divide_configuration_register, LAPIC_TIMER_DIVIDE_BY_16);
+        WRITE_ONCE(lapic->initial_count_register, 0xffffffff);
     }
     else
     {
@@ -314,15 +323,20 @@ void apic_timer_init()
 
     rtc_wait_while_updating();
 
+    uint64_t tsc_per_second = rdtsc() - start_tsc;
+
+    if (!tsc_cycles_per_second)
+        tsc_cycles_per_second = tsc_per_second;
+
     if (lapic)
     {
-        lapic->lvt_timer_register = LAPIC_TIMER_MASKED;
+        WRITE_ONCE(lapic->lvt_timer_register, LAPIC_TIMER_MASKED);
 
-        uint32_t ticks_in_1_sec = 0xffffffff - lapic->current_count_register;
+        uint32_t ticks_in_1_sec = 0xffffffff - READ_ONCE(lapic->current_count_register);
 
-        lapic->lvt_timer_register = APIC_TIMER_INT | LAPIC_TIMER_PERIODIC;
-        lapic->divide_configuration_register = LAPIC_TIMER_DIVIDE_BY_16;
-        lapic->initial_count_register = ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY;
+        WRITE_ONCE(lapic->lvt_timer_register, APIC_TIMER_INT | LAPIC_TIMER_PERIODIC);
+        WRITE_ONCE(lapic->divide_configuration_register, LAPIC_TIMER_DIVIDE_BY_16);
+        WRITE_ONCE(lapic->initial_count_register, ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY);
     }
     else
     {

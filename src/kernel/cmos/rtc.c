@@ -2,6 +2,11 @@
 #include "cmos.h"
 #include "../time/ktime.h"
 #include "../util/math.h"
+#include "../time/time.h"
+#include "../cpu/registers.h"
+
+#include <stdbool.h>
+#include <assert.h>
 
 bool rtc_binary_mode;   // 0 = BCD, 1 = Binary
 bool rtc_24_hour_mode;  // 0 = 12-hour, 1 = 24-hour
@@ -18,6 +23,8 @@ void rtc_detect_mode()
 // * Assumes rtc_wait_while_updating was called just before
 void rtc_get_time()
 {
+    assert(!(get_rflags() & (1 << 9)));
+
     cmos_select_register(CMOS_REGISTER_SECONDS);
     system_seconds = cmos_read_register();
     cmos_select_register(CMOS_REGISTER_MINUTES);
@@ -52,7 +59,7 @@ void rtc_get_time()
             system_hours = system_hours;
     }
 
-    system_thousands = 0;
+    system_milliseconds = 0;
 
     resolve_time();
 }

@@ -5,11 +5,12 @@
 const uint64_t start = 0x800000;
 bool vmm_initialized = false;
 
-static void* vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
+spinlock_noint_t vmm_lock = SPINLOCK_NOINT_INIT;
+
+static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
 {
-    if (!vmm_initialized)
-        abort();
-    if (pages > 0x800000000 / 2 - start) 
+    assert(vmm_initialized);
+    if (pages > 0x800000000 / 2 - start)
         return NULL;
     for (uint64_t vaddr = ((uint64_t)hint + 0xfff) & ~0xfff;; vaddr += 0x1000)
     {
@@ -23,7 +24,7 @@ static void* vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
         bool found_space = true;
         for (uint64_t offset = 0; offset < 0x1000ULL * pages; offset += 0x1000)
         {
-            if (!is_page_free(vaddr + offset))
+            if (!__is_page_free(vaddr + offset))
             {
                 vaddr += offset;
                 found_space = false;
@@ -40,10 +41,10 @@ static void* vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
 
 void* vmm_find_free_user_space_pages(void* hint, size_t pages)
 {
-    return vmm_find_free_pages(hint, pages, LOWER_HALF);
+    return __vmm_find_free_pages(hint, pages, LOWER_HALF);
 }
 
-void* vmm_find_free_kernel_space_pages(void* hint, size_t pages)
+void* __vmm_find_free_kernel_space_pages(void* hint, size_t pages)
 {
-    return vmm_find_free_pages(hint, pages, HIGHER_HALF);
+    return __vmm_find_free_pages(hint, pages, HIGHER_HALF);
 }

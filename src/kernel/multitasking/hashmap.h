@@ -6,11 +6,9 @@
 #include <stdlib.h>
 #include "multitasking.h"
 
-static inline void tq_hashmap_push_back(hashmap_t* hmp, uint64_t key, thread_t* thread)
+static inline void __tq_hashmap_push_back(hashmap_t* hmp, uint64_t key, thread_t* thread)
 {
     if (!hmp) return;
-
-    lock_scheduler();
 
     thread_queue_t* tq = hashmap_get_item(hmp, key);
     if (!tq)
@@ -20,23 +18,16 @@ static inline void tq_hashmap_push_back(hashmap_t* hmp, uint64_t key, thread_t* 
         hashmap_set_item(hmp, key, tq);
     }
 
-    thread_queue_push_back(tq, thread);
-
-    unlock_scheduler();
+    __thread_queue_push_back(tq, thread);
 }
 
-static inline void tq_hashmap_remove(hashmap_t* hmp, uint64_t key, thread_t* thread)
+static inline void __tq_hashmap_remove(hashmap_t* hmp, uint64_t key, thread_t* thread)
 {
     if (!hmp) return;
 
-    lock_scheduler();
-
     thread_queue_t* tq = hashmap_get_item(hmp, key);
     if (!tq || !*tq)
-    {
-        unlock_scheduler();
         return;
-    }
 
     ll_remove(tq, ll_find_item_by_data(tq, thread));
 
@@ -45,7 +36,6 @@ static inline void tq_hashmap_remove(hashmap_t* hmp, uint64_t key, thread_t* thr
         hashmap_remove_item(hmp, key);
         free(tq);
     }
-    unlock_scheduler();
 }
 
 static inline void tq_hashmap_log(hashmap_t* hmp)

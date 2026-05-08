@@ -16,45 +16,54 @@ void syscall_ioctl(interrupt_registers_t* registers, int fd, unsigned long reque
     {
     case TIOCSPGRP:
     {
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
         sc_ret(1) = 0;
         pid_t pgrp = *(pid_t*)arg;
-        if (!is_fd_valid(fd))
+        if (!__is_fd_valid(fd))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = -1;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(fd);
-        if (!vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(fd);
+        if (!__vfs_isatty(entry))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             sc_ret(1) = -1;
             break;
         }
         if (pgrp <= 0)
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EINVAL;
             sc_ret(1) = -1;
             break;
         }
+        release_spinlock_noint(&file_table_lock, flags);
         tty_foreground_pgrp = pgrp;
         break;
     }
     case TIOCGPGRP:
     {
         sc_ret(1) = -1;
-        if (!is_fd_valid(fd))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(fd))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(fd);
-        if (!vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(fd);
+        if (!__vfs_isatty(entry))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             break;
         }
         *(pid_t*)arg = tty_foreground_pgrp;
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret(1) = 0;
         break;
     }
@@ -66,17 +75,21 @@ void syscall_ioctl(interrupt_registers_t* registers, int fd, unsigned long reque
             sc_ret_errno = EFAULT;
             break;
         }
-        if (!is_fd_valid(fd))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(fd))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(fd);
-        if (!vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(fd);
+        if (!__vfs_isatty(entry))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             break;
         }
+        release_spinlock_noint(&file_table_lock, flags);
         struct winsize* ws = arg;
         ws->ws_col = tty_res_x;
         ws->ws_row = tty_res_y;
@@ -93,20 +106,24 @@ void syscall_ioctl(interrupt_registers_t* registers, int fd, unsigned long reque
             sc_ret_errno = EFAULT;
             break;
         }
-        if (!is_fd_valid(fd))
+        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        if (!__is_fd_valid(fd))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = get_global_file_entry(fd);
-        if (!vfs_isatty(entry))
+        file_entry_t* entry = __get_global_file_entry(fd);
+        if (!__vfs_isatty(entry))
         {
+            release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = ENOTTY;
             break;
         }
         struct winsize* ws = arg;
         tty_set_window_size(ws->ws_col, ws->ws_row, true);
-        task_send_signal_to_pgrp(SIGWINCH, tty_foreground_pgrp);
+        __task_send_signal_to_pgrp(SIGWINCH, tty_foreground_pgrp);
+        release_spinlock_noint(&file_table_lock, flags);
         sc_ret(1) = 0;
         break;
     }

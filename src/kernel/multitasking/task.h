@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <elf.h>
 #include <stdint.h>
+#include "../time/time.h"
 #include "../vfs/vfs.h"
 #include "../util/linked_list.h"
 
@@ -14,6 +15,11 @@ typedef struct thread thread_t;
 
 typedef struct thread
 {
+    struct sigaction sig_act_array[NUM_SIGNALS];
+    file_table_index_t file_table[OPEN_MAX];
+
+    char name[THREAD_NAME_MAX];
+
     ll_t _poll_tqs;
 
     precise_time_t timeout_deadline;
@@ -29,7 +35,6 @@ typedef struct thread
     int pending_signal_number;
 
     sigset_t sig_pending, sig_mask;
-    struct sigaction sig_act_array[NUM_SIGNALS];
     bool sig_pending_user_space;
 
     // * waitpid shenanigans
@@ -48,16 +53,10 @@ typedef struct thread
     vfs_folder_tnode_t* cwd;
     uint8_t* fpu_state;
 
-    file_table_index_t file_table[OPEN_MAX];
-
-    int lock_depth;
-
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
 
     uint64_t rsp, cr3;
     uint64_t fs_base, gs_base;
-
-    char name[THREAD_NAME_MAX];
 
     // * We still have to keep them here in the case
     // * where the current process is blocked before context switching
@@ -88,17 +87,14 @@ extern void syscall_handler();
 
 // !!! Assumes task queue is locked
 extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds);
-void full_context_switch(thread_t* next);
+void __full_context_switch(thread_t* next);
 void end_context_switch();
-thread_t* find_next_task();
-bool is_fd_valid(int fd);
+thread_t* __find_next_task();
+bool __is_fd_valid(int fd);
 
 pid_t task_generate_pid();
-void task_set_pid(thread_t* task, pid_t pid);
-void task_set_pgid(thread_t* task, pid_t pgid);
-
-void multitasking_add_task(thread_t* task);
-void multitasking_remove_task(thread_t* task);
+void __task_set_pid(thread_t* task, pid_t pid);
+void __task_set_pgid(thread_t* task, pid_t pgid);
 
 void task_write_at_address_1b(thread_t* task, uint64_t address, uint8_t value);
 void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t value);
@@ -112,12 +108,14 @@ void task_set_name(thread_t* task, const char* name);
 
 thread_t* task_create_empty();
 void task_destroy(thread_t* task);
+void __task_destroy(thread_t* task);
 void switch_task();
 void multitasking_init();
 void multitasking_start();
 void multitasking_add_idle_task();
 
-void task_init_file_table(thread_t* task);
+void __task_init_file_table(thread_t* task);
+void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec);
 void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec);
 
 void task_stack_push(thread_t*, uint64_t);
@@ -130,11 +128,10 @@ void cleanup_tasks();
 void tasks_log();
 
 void kill_task(thread_t* task, int ret);
+void __kill_task(thread_t* task, int ret);
 
-void task_mask_signal(thread_t* task, int sig);
-void task_unmask_signal(thread_t* task, int sig);
-void task_set_pending_signal(thread_t* task, int sig);
-void task_unset_pending_signal(thread_t* task, int sig);
-void task_queue_signal(thread_t* task, int sig);
+void __task_unmask_signal(thread_t* task, int sig);
+void __task_set_pending_signal(thread_t* task, int sig);
+void __task_unset_pending_signal(thread_t* task, int sig);
 
-void waitpid_check_dead();
+void __waitpid_check_dead();

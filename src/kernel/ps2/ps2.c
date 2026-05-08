@@ -26,8 +26,9 @@ bool ps2_wait_for_output()
 {
     if (!ps2_controller_connected)
         return true;
-    uint64_t start = precise_time_to_milliseconds(global_timer);
-    while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
+    FATAL("TODO: Implement TSC deadlines");
+    // uint64_t start = precise_time_to_milliseconds(global_timer);
+    // while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
     {
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         if ((reg & PS2_STATUS_INPUT_FULL) == 0) // * Device has read all data
@@ -41,8 +42,9 @@ bool ps2_wait_for_input_with_timeout(uint64_t timeout)
 {
     if (!ps2_controller_connected)
         return true;
-    uint64_t start = precise_time_to_milliseconds(global_timer);
-    while (precise_time_to_milliseconds(global_timer) - start < timeout)
+    FATAL("TODO: Implement TSC deadlines");
+    // uint64_t start = precise_time_to_milliseconds(global_timer);
+    // while (precise_time_to_milliseconds(global_timer) - start < timeout)
     {
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         if (reg & PS2_STATUS_OUTPUT_FULL)   // * Device has data to send

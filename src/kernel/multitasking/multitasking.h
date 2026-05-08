@@ -16,7 +16,7 @@ extern uint8_t global_cpu_ticks;
 
 extern thread_t* running_tasks;
 #define idle_task running_tasks
-extern uint16_t task_count;
+extern _Atomic uint16_t task_count;
 
 extern uint64_t multitasking_counter;
 
@@ -25,58 +25,28 @@ extern thread_t* last_task;
 extern bool multitasking_enabled;
 
 extern utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;
+extern atomic_flag keyboard_input_lock;
 
 extern bool queued_ts;
 
 extern void iretq_instruction();
 
-extern uint64_t scheduler_lock_rflags;
-extern int task_lock_depth, saved_tld;
+extern atomic_flag sched_lock;
 
-static inline void lock_scheduler()
-{
-    uint64_t rflags = get_rflags();
-    disable_interrupts();
-    if (task_lock_depth == 0)
-        scheduler_lock_rflags = rflags;
-    task_lock_depth++;
-}
-
-static inline void unlock_scheduler()
-{
-    disable_interrupts();
-    int depth = --task_lock_depth;
-    assert(depth >= 0);
-    if (depth == 0)
-    {
-        if (queued_ts && multitasking_enabled)
-        {
-            queued_ts = false;
-            enable_interrupts();
-            switch_task();
-        }
-        set_rflags_if(scheduler_lock_rflags);
-    }
-}
-
-extern void unlock_scheduler__and__iretq();
-
-static inline bool multitasking_is_pgrp_empty(pid_t pgid)
+static inline bool __multitasking_is_pgrp_empty(pid_t pgid)
 {
     thread_queue_t* tq = hashmap_get_item(pgid_to_tq_hashmap, pgid);
     if (!tq) return true;
     return *tq == NULL;
 }
 
-static inline int vfs_allocate_thread_file(thread_t* task)
+static inline int __vfs_allocate_thread_file(thread_t* task)
 {
-    lock_scheduler();
     for (int i = 0; i < OPEN_MAX; i++)
     {
         if (task->file_table[i].index == invalid_fd)
-            return (unlock_scheduler(), i);
+            return i;
     }
-    unlock_scheduler();
     return -1;
 }
 
@@ -108,25 +78,26 @@ static inline void log_context(thread_t* task)
     }
 }
 
-void vfs_close(int fd);
+void __vfs_close(int fd);
 
 void multitasking_init();
 void multitasking_start();
 void multitasking_add_idle_task(char* name);
-void multitasking_add_task(thread_t* task);
-void multitasking_remove_task(thread_t* task);
+void __multitasking_add_task(thread_t* task);
+void __multitasking_remove_task(thread_t* task);
 
-void task_stop(thread_t* thread, int sig);
-void task_continue(thread_t* thread);
+void __task_stop(thread_t* thread, int sig);
+void __task_continue(thread_t* thread);
 
-thread_t* find_running_task_by_pid(pid_t pid);
-thread_t* find_task_by_pid_in_queue(void* queue, pid_t pid);
-thread_t* find_task_by_pid_anywhere(pid_t pid);
+thread_t* __find_running_task_by_pid(pid_t pid);
+thread_t* __find_task_by_pid_in_queue(void* queue, pid_t pid);
+thread_t* __find_task_by_pid_anywhere(pid_t pid);
 
-void task_handle_sig_dfl(thread_t* task, int sig);
-void task_send_signal_to_pgrp(int sig, pid_t pgrp);
+void __task_handle_sig_dfl(thread_t* task, int sig);
+void __task_send_signal_to_pgrp(int sig, pid_t pgrp);
 void task_send_signal(thread_t* thread, int sig);
-void task_handle_signal(thread_t* thread, int sig);
-void task_try_handle_signals(thread_t* thread, sigset_t old, sigset_t new);
+void __task_send_signal(thread_t* thread, int sig);
+void __task_handle_signal(thread_t* thread, int sig);
+void __task_try_handle_signals(thread_t* thread, sigset_t old, sigset_t new);
 
-pid_t waitpid_find_child_in_tq(thread_queue_t* queue, pid_t pid, int* wstatus, int pgid_on_call);
+pid_t __waitpid_find_child_in_tq(thread_queue_t* queue, pid_t pid, int* wstatus, int pgid_on_call);

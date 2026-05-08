@@ -13,4 +13,4 @@ struct pipe_data
 };
 
 int vfs_setup_pipe(int* ds, int flags);
-bool vfs_isapipe(file_entry_t* entry);
+bool __vfs_isapipe(file_entry_t* entry);

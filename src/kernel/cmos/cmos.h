@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../io/io.h"
+
 #define CMOS_REGISTER_SELECT    0x70
 #define CMOS_REGISTER_DATA      0x71
 

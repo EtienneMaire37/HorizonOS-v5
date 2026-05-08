@@ -5,6 +5,7 @@
 #include "../util/likely.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 typedef struct linear_framebuffer
 {

@@ -216,42 +216,9 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* task_swi
             // ps2_kb_update_leds(port);
 
             utf32_char_t character = ps2_scancode_to_unicode(current_ps2_keyboard_scancodes[port_index], port);
-            if (keyboard_is_key_pressed(VK_LCONTROL) || keyboard_is_key_pressed(VK_RCONTROL))
-            {
-                if (keyboard_is_key_pressed(VK_LSHIFT) && keyboard_is_key_pressed(VK_LALT))
-                {
-                    if (!current_ps2_keyboard_scancodes[port_index].extended)
-                    switch (current_keyboard_layout->ps2_layout_data.char_table[current_ps2_keyboard_scancodes[port_index].scancode])
-                    {
-                    case 'v':
-                        vfs_log_tree(vfs_root, 0);
-                        break;
-                    case 'p':
-                        tasks_log();
-                        break;
-                    case 't':
-                        print_stack_trace((uint64_t)ps2_handle_keyboard_scancode, get_rbp(), false);
-                        break;
-                    case 'f':
-                    	LOG(INFO, "Futex hashmap:");
-                    	hashmap_log(futex_tq_hashmap);
-						break;
-					case 'm':
-	                    DO_LOG_MEM_ALLOCATED();
-					    break;
-                    default:
-                        goto key;
-                    }
-                    else
-                        goto key;
-                }
-                goto key;
-            }
-            else
-            {
-            key:
-                keyboard_handle_character(character, vk, &tty_ts, send_sigint);
-            }
+            uint32_t flags = acquire_spinlock_noint(&keyboard_input_lock);
+            __keyboard_handle_character(character, vk, &tty_ts, send_sigint);
+            release_spinlock_noint(&keyboard_input_lock, flags);
         }
 
         current_ps2_keyboard_scancodes[port_index].release = current_ps2_keyboard_scancodes[port_index].extended = false;

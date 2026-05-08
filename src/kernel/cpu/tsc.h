@@ -4,6 +4,7 @@
 #include "../cpu/cpuid.h"
 
 extern uint64_t tsc_cycles_per_second;
+extern uint64_t last_tsc;
 
 static inline uint64_t rdtsc()
 {
@@ -12,7 +13,7 @@ static inline uint64_t rdtsc()
     return ((uint64_t)edx << 32) | eax;
 }
 
-static inline void calibrate_tsc()
+static inline void try_calibrate_tsc_with_cpuid()
 {
     if (cpuid_highest_function_parameter >= 0x15)
     {
@@ -24,20 +25,4 @@ static inline void calibrate_tsc()
             return;
         }
     }
-    precise_time_t start = global_timer;
-    while (start == global_timer)
-        hlt();
-    start = global_timer;
-    uint64_t start_tsc = rdtsc();
-    const int ms = 1000;
-    while (global_timer < start + ms * PRECISE_MILLISECONDS)
-        hlt();
-    uint64_t end_tsc = rdtsc();
-    tsc_cycles_per_second = (end_tsc - start_tsc) * 1000 / ms;
-    // * Round up
-    // * round(n) = floor((floor(2n)+1)/2)
-    const uint64_t roundfac = 10000000;
-    uint64_t two_n = 2 * tsc_cycles_per_second / roundfac;
-    uint64_t n = (two_n + 1) / 2;
-    tsc_cycles_per_second = n * roundfac;
 }

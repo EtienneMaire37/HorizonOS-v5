@@ -43,23 +43,23 @@ static inline file_entry_t file_entry_create_empty()
     return ent;
 }
 
+extern atomic_flag file_table_lock;
 extern file_entry_t file_table[MAX_FILE_TABLE_ENTRIES];
 
-static inline file_entry_t* get_global_file_entry(int fd)
+static inline file_entry_t* __get_global_file_entry(int fd)
 {
-    lock_scheduler();
-    if (!is_fd_valid(fd))
-        return (unlock_scheduler(), NULL);
+    if (!__is_fd_valid(fd))
+        return NULL;
     file_entry_t* entry = &file_table[current_task->file_table[fd].index];
-    unlock_scheduler();
     return entry;
 }
 
-bool vfs_willblock(file_entry_t* entry, short events);
-int vfs_hup(file_entry_t* entry);
+bool __vfs_willblock(file_entry_t* entry, short events);
+int __vfs_hup(file_entry_t* entry);
 
-void task_monitor_entry(thread_t* task, file_entry_t* entry);
-void task_start_polling(thread_t* task, precise_time_t timeout);
-void task_stop_polling(thread_t* task);
+void __task_monitor_entry(thread_t* task, file_entry_t* entry);
+void __task_start_polling(thread_t* task, precise_time_t timeout);
+void __task_stop_polling(thread_t* task);
 
 int vfs_dup(int fd);
+int __vfs_dup(int fd);

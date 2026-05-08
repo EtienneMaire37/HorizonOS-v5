@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../time/time.h"
+#include "../time/ktime.h"
 #include "../util/evaluate.h"
 
 #include "../io/io.h"
@@ -88,11 +89,17 @@ extern bool first_log;
 #define _LOG(level, ...) do { \
     if (!first_log) fputc('\n', stderr); \
     first_log = false; \
+    uint32_t flags = acquire_spinlock_noint(&time_lock); \
+    resolve_time(); \
+    int64_t system_seconds = system_seconds, system_minutes = system_minutes, system_hours = system_hours, system_day = system_day, system_month = system_month; \
+    int64_t system_year = system_year; \
+    int64_t system_milliseconds = system_milliseconds; \
+    release_spinlock_noint(&time_lock, flags); \
     if (time_initialized) \
         fprintf(stderr, LOG_FMT, \
             system_year, system_month, system_day, \
             system_hours, system_minutes, system_seconds, \
-            system_thousands, \
+            system_milliseconds, \
             LOG_LEVEL_COLOR[level], LOG_LEVEL_STR[level]); \
     else fprintf(stderr, LOG_FMT_NOTIME, LOG_LEVEL_COLOR[level], LOG_LEVEL_STR[level]); \
     fprintf(stderr, __VA_ARGS__); \

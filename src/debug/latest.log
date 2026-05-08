@@ -1,0 +1,206 @@
+0000-00-00 00:00:00.000 - [Debug] 	_start
+0000-00-00 00:00:00.000 - [Info] 	Kernel booted successfully with limine (0xffffffff80000000-0xffffffff8087d000)
+0000-00-00 00:00:00.000 - [Info] 	Kernel is 8900608 bytes long
+0000-00-00 00:00:00.000 - [Info] 	Framebuffer : (1280, 800) (scanline 5120 bytes) at 0xffff8000fd000000
+0000-00-00 00:00:00.000 - [Info] 	CPUID highest function parameter: 0x10
+0000-00-00 00:00:00.000 - [Info] 	CPU manufacturer id : "AuthenticAMD"
+0000-00-00 00:00:00.000 - [Info] 	CPUID highest extended function parameter: 0x80000022
+0000-00-00 00:00:00.000 - [Info] 	Physical address is 48 bits long
+0000-00-00 00:00:00.000 - [Info] 	Parsing initrd
+0000-00-00 00:00:00.000 - [Info] 	Initrd address : 0xffff80003b683000 | Initrd size : 67102720 bytes
+0000-00-00 00:00:00.000 - [Info] 	Found end of archive at 67094528
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "etc"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "etc/group" ; Size : 19 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "etc/passwd" ; Size : 32 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "boot"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/hterm.ti" ; Size : 2986 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/commit.txt" ; Size : 40 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/ka8x16thin-1.psf" ; Size : 5128 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/symbols.txt" ; Size : 23801 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/pci.ids" ; Size : 1590678 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/tcvn8x16.psf" ; Size : 4100 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "boot/kernel.elf" ; Size : 254000 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "bin"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/b2sum" ; Size : 316784 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/link" ; Size : 180128 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/bashbug" ; Size : 6821 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/fgrep" ; Size : 104 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tree" ; Size : 6240 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/dir" ; Size : 983008 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/readlink" ; Size : 267576 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/pr" ; Size : 423232 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sort" ; Size : 846136 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sync" ; Size : 190552 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/shred" ; Size : 517432 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/du" ; Size : 1028784 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/id" ; Size : 211584 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/grep" ; Size : 439376 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Symbolic link : "bin/reset" -> "tset"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/uname" ; Size : 176392 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/split" ; Size : 538376 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/factor" ; Size : 635960 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/cmatrix" ; Size : 305728 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/chown" ; Size : 390256 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tty" ; Size : 171120 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/chmod" ; Size : 328952 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/groups" ; Size : 186936 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/pinky" ; Size : 233592 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/printf" ; Size : 414824 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/basenc" ; Size : 635672 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/ln" ; Size : 392912 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tee" ; Size : 229624 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/cat" ; Size : 215544 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/cut" ; Size : 231320 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/paste" ; Size : 210144 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/base64" ; Size : 227288 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/dirname" ; Size : 174328 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/rmdir" ; Size : 205536 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/fold" ; Size : 255744 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/toe" ; Size : 180016 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/head" ; Size : 430544 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/bash" ; Size : 4411712 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/env" ; Size : 399928 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/od" ; Size : 516624 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/users" ; Size : 188976 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/[" ; Size : 205616 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/nl" ; Size : 652856 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/vdir" ; Size : 983008 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tail" ; Size : 566296 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/printenv" ; Size : 171272 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/pwd" ; Size : 224904 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/unexpand" ; Size : 261896 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/hostid" ; Size : 172720 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/stty" ; Size : 456920 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/rm" ; Size : 353696 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/cksum" ; Size : 989864 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/ls" ; Size : 983000 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/pathchk" ; Size : 182944 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/seq" ; Size : 412816 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Symbolic link : "bin/captoinfo" -> "tic"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tset" ; Size : 143112 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/nproc" ; Size : 188688 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tabs" ; Size : 134856 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/truncate" ; Size : 207752 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/md5sum" ; Size : 244968 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/expand" ; Size : 259040 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/ptx" ; Size : 698736 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sum" ; Size : 245168 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/mkdir" ; Size : 259936 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/mktemp" ; Size : 219744 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/nice" ; Size : 183152 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/numfmt" ; Size : 571848 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/join" ; Size : 278496 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/infocmp" ; Size : 241616 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/fmt" ; Size : 225856 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/echo" ; Size : 155824 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sha256sum" ; Size : 324224 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/true" ; Size : 151496 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/lesskey" ; Size : 51848 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/who" ; Size : 421624 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/lessecho" ; Size : 16480 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/ncurses6-config" ; Size : 9513 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/timeout" ; Size : 402416 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/mv" ; Size : 710496 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/comm" ; Size : 218936 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tsort" ; Size : 283848 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sha224sum" ; Size : 324224 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/stat" ; Size : 688800 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/whoami" ; Size : 173608 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/dd" ; Size : 492280 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/wc" ; Size : 405304 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/uniq" ; Size : 245368 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/chgrp" ; Size : 390256 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/csplit" ; Size : 878976 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/nohup" ; Size : 202056 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/yes" ; Size : 177352 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/unlink" ; Size : 182856 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/touch" ; Size : 593928 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/install" ; Size : 718784 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sha1sum" ; Size : 260536 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/test" ; Size : 202952 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sha512sum" ; Size : 407152 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/setkbl" ; Size : 3992 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/realpath" ; Size : 278336 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/expr" ; Size : 1020080 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/base32" ; Size : 228264 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/date" ; Size : 641584 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/clear" ; Size : 130728 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sleep" ; Size : 205712 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/dircolors" ; Size : 262952 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Symbolic link : "bin/sh" -> "bash"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/df" ; Size : 641568 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/chroot" ; Size : 493008 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/mkfifo" ; Size : 213248 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tac" ; Size : 666824 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/cp" ; Size : 650264 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/sha384sum" ; Size : 407152 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/less" ; Size : 995184 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/logname" ; Size : 173000 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/shuf" ; Size : 302136 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Symbolic link : "bin/infotocap" -> "tic"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/basename" ; Size : 175840 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tput" ; Size : 139432 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tr" ; Size : 232752 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/false" ; Size : 151504 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/tic" ; Size : 270288 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/mknod" ; Size : 227936 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "bin/egrep" ; Size : 104 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "sbin"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "sbin/init" ; Size : 4384 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "root"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "root/.bashrc" ; Size : 2071 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "usr"
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "usr/lib"
+0000-00-00 00:00:00.000 - [Info] 	├── File : "usr/lib/libc.so" ; Size : 17298128 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "usr/lib/libdl.so" ; Size : 2720 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── File : "usr/lib/ld.so" ; Size : 1759856 bytes
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "usr/share"
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "usr/share/terminfo"
+0000-00-00 00:00:00.000 - [Info] 	├── Directory : "usr/share/terminfo/h"
+0000-00-00 00:00:00.000 - [Info] 	└── File : "usr/share/terminfo/h/hterm" ; Size : 2377 bytes
+0000-00-00 00:00:00.000 - [Info] 	Done parsing initrd (149 files)
+0000-00-00 00:00:00.000 - [Debug] 	Opening file "boot/symbols.txt" from initrd
+0000-00-00 00:00:00.000 - [Debug] 	Loading font "boot/ka8x16thin-1.psf":
+0000-00-00 00:00:00.000 - [Debug] 	Opening file "boot/ka8x16thin-1.psf" from initrd
+0000-00-00 00:00:00.000 - [Info] 	Loaded psf font "boot/ka8x16thin-1.psf":
+0000-00-00 00:00:00.000 - [Debug] 		char width: 8
+0000-00-00 00:00:00.000 - [Debug] 		char height: 16
+0000-00-00 00:00:00.000 - [Debug] 		bytes per glyph: 16
+0000-00-00 00:00:00.000 - [Debug] 		num glyph: 256
+0000-00-00 00:00:00.000 - [Debug] 	Loading font "boot/tcvn8x16.psf":
+0000-00-00 00:00:00.000 - [Debug] 	Opening file "boot/tcvn8x16.psf" from initrd
+0000-00-00 00:00:00.000 - [Info] 	Loaded psf font "boot/tcvn8x16.psf":
+0000-00-00 00:00:00.000 - [Debug] 		char width: 8
+0000-00-00 00:00:00.000 - [Debug] 		char height: 16
+0000-00-00 00:00:00.000 - [Debug] 		bytes per glyph: 16
+0000-00-00 00:00:00.000 - [Debug] 		num glyph: 256
+0000-00-00 00:00:00.000 - [Info] 	Usable memory map:
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x1000 ; length : 393216 | type : 5
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x61000 ; length : 253952 | type : 0
+0000-00-00 00:00:00.000 - [Info] 	   Memory block : address : 0x61000 ; length : 253952
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x9fc00 ; length : 1024 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xf0000 ; length : 20480 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xf5000 ; length : 4096 | type : 8
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xf6000 ; length : 40960 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x100000 ; length : 995241984 | type : 0
+0000-00-00 00:00:00.000 - [Info] 	   Memory block : address : 0x100000 ; length : 995241984
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3b623000 ; length : 393216 | type : 5
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3b683000 ; length : 67104768 | type : 6
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3f682000 ; length : 12288 | type : 0
+0000-00-00 00:00:00.000 - [Info] 	   Memory block : address : 0x3f682000 ; length : 12288
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3f685000 ; length : 24576 | type : 5
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3f68b000 ; length : 8900608 | type : 6
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3ff08000 ; length : 274432 | type : 5
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3ff4b000 ; length : 12288 | type : 0
+0000-00-00 00:00:00.000 - [Info] 	   Memory block : address : 0x3ff4b000 ; length : 12288
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3ff4e000 ; length : 598016 | type : 5
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3ffe0000 ; length : 12288 | type : 8
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0x3ffe3000 ; length : 118784 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xfd000000 ; length : 4096000 | type : 7
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xfeffc000 ; length : 16384 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xfffc0000 ; length : 262144 | type : 1
+0000-00-00 00:00:00.000 - [Debug] 	   Limine memory block : address : 0xfd00000000 ; length : 12884901888 | type : 1
+0000-00-00 00:00:00.000 - [Trace] 	Bitmap size: 30380
+0000-00-00 00:00:00.000 - [Trace] 	PFA: bitmap address: 0xffff800000061000
+0000-00-00 00:00:00.000 - [Trace] 	PFA: First alloc address: 0xffff800000068000
+0000-00-00 00:00:00.000 - [Info] 	Detected 995491840 bytes of allocatable memory

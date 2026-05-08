@@ -8,12 +8,10 @@
 #include "../util/lambda.h"
 #include "../multitasking/syscall.h"
 
-bool vfs_isapipe(file_entry_t* entry)
+bool __vfs_isapipe(file_entry_t* entry)
 {
-    lock_scheduler();
-    if (!entry) return (unlock_scheduler(), false);
+    if (!entry) return false;
     bool ret = entry->entry_type == VFS_ET_FILE ? S_ISFIFO(entry->st.st_mode) : false;
-    unlock_scheduler();
     return ret;
 }
 
@@ -21,7 +19,6 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
 {
     if (count == 0)
         return 0;
-    assert(task_lock_depth == 1);
     size_t in_buffer = ring_get_buffered_bytes(*entry->file_data.pipe_data.buffer);
     size_t maxwrite = entry->file_data.pipe_data.buffer->size - in_buffer - 1;
     switch (direction)
@@ -33,10 +30,10 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
             {
                 if (entry->flags & O_NONBLOCK)
                     return -EWOULDBLOCK;
-                move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
+                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                __move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
                 switch_task();
-                unlock_scheduler();
-                lock_scheduler();
+                release_spinlock_noint(&sched_lock, flags);
                 in_buffer = ring_get_buffered_bytes(*entry->file_data.pipe_data.buffer);
             }
             if (in_buffer <= 0)
@@ -51,12 +48,14 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
         }
         if (entry->file_data.pipe_data.other_end != -1)
         {
-            move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
-            run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
+            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            __move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
+            __run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
             {
                 ll_remove(&thread->_poll_tqs, ll_find_item_by_data(&thread->_poll_tqs, &entry->blocked_on_poll));
-                task_stop_polling(thread);
+                __task_stop_polling(thread);
             }));
+            release_spinlock_noint(&sched_lock, flags);
         }
         return count;
     case IO_DIR_WRITE:
@@ -66,10 +65,10 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
             {
                 if (entry->flags & O_NONBLOCK)
                     return -EWOULDBLOCK;
-                move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
+                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                __move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
                 switch_task();
-                unlock_scheduler();
-                lock_scheduler();
+                release_spinlock_noint(&sched_lock, flags);
                 maxwrite = entry->file_data.pipe_data.buffer->size - ring_get_buffered_bytes(*entry->file_data.pipe_data.buffer) - 1;
             }
             if (maxwrite <= 0)
@@ -86,12 +85,14 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
         }
         if (entry->file_data.pipe_data.other_end != -1)
         {
-            move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
-            run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
+            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            __move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
+            __run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
             {
                 ll_remove(&thread->_poll_tqs, ll_find_item_by_data(&thread->_poll_tqs, &entry->blocked_on_poll));
-                task_stop_polling(thread);
+                __task_stop_polling(thread);
             }));
+            release_spinlock_noint(&sched_lock, flags);
         }
         return count;
     default:
@@ -102,7 +103,6 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
 void pipe_destroy(file_entry_t* entry)
 {
     assert(entry);
-    lock_scheduler();
     if (entry->file_data.pipe_data.other_end == -1)
     {
         free(entry->file_data.pipe_data.buffer->buffer);
@@ -113,9 +113,10 @@ void pipe_destroy(file_entry_t* entry)
     {
         file_entry_t* other = &file_table[entry->file_data.pipe_data.other_end];
         other->file_data.pipe_data.other_end = -1;
-        move_all_tasks_to_running_queue(&other->blocked_on_io);
+        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        __move_all_tasks_to_running_queue(&other->blocked_on_io);
+        release_spinlock_noint(&sched_lock, flags);
     }
-    unlock_scheduler();
 }
 
 void vfs_setup_pipe_end(int fildes, int other, int flags)
@@ -153,34 +154,34 @@ void vfs_setup_pipe_end(int fildes, int other, int flags)
 
 int vfs_setup_pipe(int* fds, int flags)
 {
-    lock_scheduler();
-    int fildes1 = vfs_allocate_global_file();
+    uint32_t eflags = acquire_spinlock_noint(&file_table_lock);
+    int fildes1 = __vfs_allocate_global_file();
     if (fildes1 == -1)
-        return (unlock_scheduler(), ENFILE);
-    int fildes2 = vfs_allocate_global_file();
+        return (release_spinlock_noint(&file_table_lock, eflags), ENFILE);
+    int fildes2 = __vfs_allocate_global_file();
     if (fildes2 == -1)
     {
-        vfs_remove_global_file(fildes1);
-        unlock_scheduler();
+        __vfs_remove_global_file(fildes1);
+        release_spinlock_noint(&file_table_lock, eflags);
         return ENFILE;
     }
-    int fd1 = vfs_allocate_thread_file(current_task);
+    int fd1 = __vfs_allocate_thread_file(current_task);
     if (fd1 == -1)
     {
-        vfs_remove_global_file(fildes1);
-        vfs_remove_global_file(fildes2);
-        unlock_scheduler();
+        __vfs_remove_global_file(fildes1);
+        __vfs_remove_global_file(fildes2);
+        release_spinlock_noint(&file_table_lock, eflags);
         return EMFILE;
     }
     current_task->file_table[fd1].index = fildes1;
-    int fd2 = vfs_allocate_thread_file(current_task);
+    int fd2 = __vfs_allocate_thread_file(current_task);
     current_task->file_table[fd2].index = fildes2;
     if (fd2 == -1)
     {
-        vfs_close(fd1);
-        vfs_remove_global_file(fildes1);
-        vfs_remove_global_file(fildes2);
-        unlock_scheduler();
+        __vfs_close(fd1);
+        __vfs_remove_global_file(fildes1);
+        __vfs_remove_global_file(fildes2);
+        release_spinlock_noint(&file_table_lock, eflags);
         return EMFILE;
     }
     fds[0] = fd1;
@@ -200,6 +201,6 @@ int vfs_setup_pipe(int* fds, int flags)
         current_task->file_table[fd2].flags |= FD_CLOEXEC;
     }
     // SC_LOG("pipe: [%d, %d]", fd1, fd2);
-    unlock_scheduler();
+    release_spinlock_noint(&file_table_lock, eflags);
     return 0;
 }

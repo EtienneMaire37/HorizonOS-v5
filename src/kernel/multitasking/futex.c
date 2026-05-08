@@ -6,7 +6,7 @@
 
 void futex_wait(uint64_t paddr, int expected)
 {
-	lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
 	if (*(int*)(paddr + PHYS_MAP_BASE) != expected) goto end;
 	thread_queue_t* fqueue = hashmap_get_item(futex_tq_hashmap, paddr);
 	if (!fqueue)
@@ -15,19 +15,19 @@ void futex_wait(uint64_t paddr, int expected)
 		*fqueue = TQ_INIT;
 		hashmap_set_item(futex_tq_hashmap, paddr, fqueue);
 	}
-	move_running_task_to_thread_queue(fqueue, current_task);
+	__move_running_task_to_thread_queue(fqueue, current_task);
 
 end:
-	unlock_scheduler();
+    release_spinlock_noint(&sched_lock, flags);
 }
 
 void futex_wake(uint64_t paddr, int num)
 {
-	lock_scheduler();
+    uint32_t flags = acquire_spinlock_noint(&sched_lock);
 	thread_queue_t* fqueue = (thread_queue_t*)hashmap_get_item(futex_tq_hashmap, paddr);
 	if (!fqueue)
 		goto end;
-	move_n_tasks_to_running_queue(fqueue, num);
+	__move_n_tasks_to_running_queue(fqueue, num);
 end:
-	unlock_scheduler();
+    release_spinlock_noint(&sched_lock, flags);
 }

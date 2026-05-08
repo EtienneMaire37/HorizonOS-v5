@@ -2,7 +2,6 @@
 
 #include "../files/ustar.h"
 #include <unistd.h>
-#include "../debug/out.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>

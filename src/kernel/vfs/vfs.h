@@ -95,6 +95,7 @@ typedef struct vfs_file_tnode
 {
     char* name;
     vfs_file_inode_t* inode;
+    int used;
 
     struct vfs_file_tnode* next;
 } vfs_file_tnode_t;
@@ -103,6 +104,7 @@ typedef struct vfs_folder_tnode
 {
     char* name;
     vfs_folder_inode_t* inode;
+    int used;
 
     struct vfs_folder_tnode* next;
 } vfs_folder_tnode_t;
@@ -132,8 +134,9 @@ vfs_file_tnode_t* vfs_get_file_tnode(const char* path, vfs_folder_tnode_t* pwd);
 vfs_folder_tnode_t* vfs_get_folder_tnode(const char* path, vfs_folder_tnode_t* pwd);
 
 void vfs_init_file_table();
-int vfs_allocate_global_file();
-void vfs_remove_global_file(int fd);
+void __vfs_init_file_table();
+int __vfs_allocate_global_file();
+void __vfs_remove_global_file(int fd);
 
 ino_t vfs_generate_inode_number();
 dev_t vfs_generate_device_id();
@@ -158,7 +161,7 @@ ssize_t task_chr_tty(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t di
 
 ssize_t initrd_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction);
 
-bool vfs_isatty(file_entry_t* entry);
+bool __vfs_isatty(file_entry_t* entry);
 
 vfs_file_tnode_t* vfs_add_special(const char* folder, const char* name, mode_t mode, ssize_t (*fun)(file_entry_t*, uint8_t*, size_t, uint8_t),
     uid_t uid, gid_t gid);
@@ -168,10 +171,10 @@ ssize_t vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res);
 
 bool file_string_cmp(const char* s1, const char* s2);
 
-int vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st);
+int __vfs_stat(const char* path, vfs_folder_tnode_t* pwd, struct stat* st);
 int vfs_access(const char* path, vfs_folder_tnode_t* pwd, int mode);
 
-int vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read);
-int vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* bytes_written);
+int __vfs_read(int fd, void* buffer, size_t num_bytes, ssize_t* bytes_read);
+int __vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* bytes_written);
 
 void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth);

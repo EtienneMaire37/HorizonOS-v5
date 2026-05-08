@@ -12,9 +12,29 @@
 // #define PHYS_MAP_OFFSET     0xffff800000000000
 extern uint64_t PHYS_MAP_BASE;
 
-#define skip_pml4() { i += ((uint64_t)1 << (9 * 3)) - (pdpte << (9 * 2)) - (pde << 9) - pte - 1; continue; }
-#define skip_pdpt() { i += ((uint64_t)1 << (9 * 2)) - (pde << 9) - pte - 1; continue; }
-#define skip_pd()   { i += ((uint64_t)1 << 9) - pte - 1; continue; }
+static inline __attribute__((always_inline)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
+{
+    return make_address_canonical(((uint64_t)pml4e << 39ULL) | ((uint64_t)pdpte << 30ULL) | ((uint64_t)pde << 21ULL) | ((uint64_t)pte << 12ULL));
+}
+static inline __attribute__((always_inline)) void simplify_paging_indices(uint16_t* pml4e, uint16_t* pdpte, uint16_t* pde, uint16_t* pte)
+{
+    while (*pte >= 512)
+    {
+        (*pte) -= 512;
+        (*pde)++;
+        while (*pde >= 512)
+        {
+            (*pde) -= 512;
+            (*pdpte)++;
+            while (*pdpte >= 512)
+            {
+                (*pdpte) -= 512;
+                (*pml4e)++;
+                assert((*pml4e) < 512);
+            }
+        }
+    }
+}
 
 #define PG_SHIFT        12ULL
 #define PG_SIZE         (1ULL << PG_SHIFT)

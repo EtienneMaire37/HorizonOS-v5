@@ -1,5 +1,6 @@
 #include "initrd.h"
 #include "../multitasking/multitasking.h"
+#include "../debug/out.h"
 
 #include <stdlib.h>
 #include <assert.h>
