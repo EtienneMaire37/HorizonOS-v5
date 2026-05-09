@@ -9,7 +9,6 @@
 
 #include <stdbool.h>
 
-// #define PHYS_MAP_OFFSET     0xffff800000000000
 extern uint64_t PHYS_MAP_BASE;
 
 static inline __attribute__((always_inline)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
@@ -18,15 +17,15 @@ static inline __attribute__((always_inline)) virtual_address_t vaddr_from_indice
 }
 static inline __attribute__((always_inline)) void simplify_paging_indices(uint16_t* pml4e, uint16_t* pdpte, uint16_t* pde, uint16_t* pte)
 {
-    while (*pte >= 512)
+    while ((*pte) >= 512)
     {
         (*pte) -= 512;
         (*pde)++;
-        while (*pde >= 512)
+        while ((*pde) >= 512)
         {
             (*pde) -= 512;
             (*pdpte)++;
-            while (*pdpte >= 512)
+            while ((*pdpte) >= 512)
             {
                 (*pdpte) -= 512;
                 (*pml4e)++;

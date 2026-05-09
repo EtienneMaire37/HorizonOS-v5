@@ -1,4 +1,6 @@
 #include "gdt.h"
+#include <string.h>
+#include "../multitasking/task.h"
 
 struct gdt_entry GDT[7];	// 5 + 2 for TSS
 struct tss_entry TSS;
@@ -23,4 +25,20 @@ void setup_ssd_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint3
 void install_gdt()
 {
     load_gdt(sizeof(GDT) - 1, (uint64_t)&GDT);
+}
+
+void setup_gdt_tss()
+{
+    memset(&GDT[0], 0, sizeof(struct gdt_entry));       // NULL Descriptor
+    setup_gdt_entry(&GDT[1], 0, 0xfffff, 0x9A, 0xA);    // Kernel mode code segment
+    setup_gdt_entry(&GDT[2], 0, 0xfffff, 0x92, 0xC);    // Kernel mode data segment
+    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xF2, 0xC);    // User mode data segment
+    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xFA, 0xA);    // User mode code segment
+
+    memset(&TSS, 0, sizeof(struct tss_entry));
+    TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
+    setup_ssd_gdt_entry(&GDT[5], (physical_address_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
+
+    install_gdt();
+    load_tss();
 }

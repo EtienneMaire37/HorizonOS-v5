@@ -395,7 +395,7 @@ void __fork_task(thread_t* task)
     new_task->ppid = task->pid;
     new_task->wait_pid = -1;
 
-    task_vas_copy((uint64_t*)(task->cr3 + PHYS_MAP_BASE), (uint64_t*)(new_task->cr3 + PHYS_MAP_BASE), 0, TASK_STACK_TOP_ADDRESS >> 12);
+    copy_mapping((uint64_t*)(task->cr3 + PHYS_MAP_BASE), (uint64_t*)(new_task->cr3 + PHYS_MAP_BASE), 0, TASK_STACK_TOP_ADDRESS >> 12);
 
     new_task->pgid = -1;
     __task_set_pgid(new_task, task->pgid);

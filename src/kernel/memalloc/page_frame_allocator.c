@@ -155,29 +155,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
         abort();
     }
 
-    #ifdef DEBUG_ALLOCATOR
-    {
-        uint32_t flags = acquire_spinlock_noint(&pfa_lock);
-        static int page_index = 0;
-        uint64_t remaining = page_index;
-        for (uint8_t j = first_alloc_block; j < usable_memory_blocks; j++)
-        {
-            uint64_t block_pages = usable_memory_map[j].length / 0x1000;
-            if (remaining + pages <= block_pages)
-            {
-                physical_address_t addr = usable_memory_map[j].address + remaining * 0x1000;
-                first_free_page_index_hint = page_index + pages;
-                memory_allocated += 0x1000 * pages;
-                LOG_MEM_ALLOCATED();
-                release_spinlock_noint(&pfa_lock, flags);
-                page_index++;
-                return addr;
-            }
-            remaining -= block_pages;
-        }
-        abort();
-    }
-    #endif
+    FATAL("DOESN'T TAKE INTO ACCOUNT MEMORY BLOCKS PROPERLY");
 
     uint32_t flags = acquire_spinlock_noint(&pfa_lock);
 

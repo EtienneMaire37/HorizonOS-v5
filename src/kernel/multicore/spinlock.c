@@ -23,18 +23,13 @@ uint32_t acquire_spinlock_noint(atomic_flag* spinlock)
 {
     uint32_t eflags = get_rflags();
     disable_interrupts();
-    if (eflags & (1 << 9))
+    while (try_acquire_spinlock(spinlock))
     {
-        while (try_acquire_spinlock(spinlock))
-        {
-            FATAL("DEADLOCK");
-            enable_interrupts();
-            __builtin_ia32_pause();
-            disable_interrupts();
-        }
+        FATAL("DEADLOCK");
+        set_rflags_if(eflags);
+        __builtin_ia32_pause();
+        disable_interrupts();
     }
-    else
-        acquire_spinlock(spinlock);
     return eflags;
 }
 

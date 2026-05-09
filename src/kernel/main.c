@@ -269,11 +269,12 @@ void _start()
     LOG(INFO, "Setting up paging...");
     printf("Setting up paging...\n");
 
+    LOG(DEBUG, "PHYS_MAP_BASE: %#" PRIx64, PHYS_MAP_BASE);
+
     {
-        global_cr3 = pfa_allocate_page();
+        global_cr3 = create_empty_pdpt();
         assert(global_cr3);
         LOG(DEBUG, "global_cr3: %p", global_cr3);
-        memset(global_cr3, 0, 4096);
 
         uint64_t* boot_cr3 = (uint64_t*)(get_cr3_address() + PHYS_MAP_BASE);
 
@@ -453,18 +454,7 @@ void _start()
     printf("Loading a GDT with TSS...");
     fflush(stdout);
 
-    memset(&GDT[0], 0, sizeof(struct gdt_entry));       // NULL Descriptor
-    setup_gdt_entry(&GDT[1], 0, 0xfffff, 0x9A, 0xA);    // Kernel mode code segment
-    setup_gdt_entry(&GDT[2], 0, 0xfffff, 0x92, 0xC);    // Kernel mode data segment
-    setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xF2, 0xC);    // User mode data segment
-    setup_gdt_entry(&GDT[4], 0, 0xfffff, 0xFA, 0xA);    // User mode code segment
-
-    memset(&TSS, 0, sizeof(struct tss_entry));
-    TSS.rsp0 = TASK_KERNEL_STACK_TOP_ADDRESS;
-    setup_ssd_gdt_entry(&GDT[5], (physical_address_t)&TSS, sizeof(struct tss_entry) - 1, 0x89, 0);  // TSS
-
-    install_gdt();
-    load_tss();
+    setup_gdt_tss();
 
     printf(" | Done\n");
     LOG(INFO, "GDT and TSS loaded");

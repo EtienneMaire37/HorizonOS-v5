@@ -11,7 +11,7 @@ struct gdt_decriptor
 } __attribute__((packed));
 
 struct gdt_entry
-{   
+{
     uint16_t 	limit_lo   	: 16;
     uint16_t 	base_lo    	: 16;
     uint8_t 	base_mid    : 8;
@@ -21,7 +21,7 @@ struct gdt_entry
     uint8_t 	base_hi     : 8;
 } __attribute__((packed));
 
-struct tss_entry 
+struct tss_entry
 {
 	uint32_t reserved0;
 	uint64_t rsp0;
@@ -65,3 +65,4 @@ extern void load_tss();
 void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
 void setup_ssd_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
 void install_gdt();
+void setup_gdt_tss();
