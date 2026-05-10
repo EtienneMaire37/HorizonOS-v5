@@ -326,12 +326,15 @@ static inline void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers
 
     putchar('\n');
 
-    printf("commit hash: ");
-    tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
-    puts((const char*)commit_file->data);
-    tty_set_color(FG_WHITE, BG_BLACK);
+    if (commit_file)
+    {
+        printf("commit hash: ");
+        tty_set_color(FG_LIGHTMAGENTA, BG_BLACK);
+        puts((const char*)commit_file->data);
+        tty_set_color(FG_WHITE, BG_BLACK);
 
-    LOG(INFO, "commit hash: %s", commit_file->data);
+        LOG(INFO, "commit hash: %s", commit_file->data);
+    }
 
     halt();
 }

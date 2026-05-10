@@ -9,7 +9,15 @@
 
 #define MAX_MEMORY (128 * TB)
 
+#define memory_map_get_free_pages(i)                (usable_memory_map[i].total_pages - usable_memory_map[i].used_pages)
+#define memory_map_set_free_pages(i, free_pages)    usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - (free_pages)
+
+#define pfa_bitmap_get_page(i)                      (!!(bitmap[i / 8] & (1 << (i % 8))))
+#define pfa_bitmap_set_page(i, sta)                 bitmap[i / 8] = (bitmap[i / 8] & ~(1 << (i % 8))) | (!!(sta) << (i % 8))
+
 extern uint64_t usable_memory;
+
+extern physical_address_t max_allocatable_address;
 
 extern struct mem_block usable_memory_map[MAX_USABLE_MEMORY_BLOCKS];
 extern uint8_t usable_memory_blocks;
