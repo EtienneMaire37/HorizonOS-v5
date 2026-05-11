@@ -63,9 +63,10 @@ uint8_t get_pdpt_entry_read_write(const uint64_t* entry)
 uint8_t get_pdpt_entry_cache_type(const uint64_t* entry)
 {
     if (!is_pdpt_entry_present(entry))
-        return 0x80 | CACHE_WB;
+        return CACHE_WB;
 
-    uint64_t pat = rdmsr(IA32_PAT_MSR);
+    // * Assumes init_pat was called
+    uint64_t pat = PAGE_ATTRIBUTE_TABLE;
     uint8_t pat_index = (((*entry) >> 3) & 0b10) | (((*entry) >> 3) & 1);
     return pat >> (pat_index * 8);
 }
@@ -116,23 +117,38 @@ void remap_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
         {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
                 set_pdpt_entry(&pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
             {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
                     set_pdpt_entry(&pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
                 {
-                    set_pdpt_entry(&pd_address[pde], vaddr_from_indices(pml4e, pdpte, pde, pte) - start_virtual_address + start_physical_address,
+                    if (pte >= 512)
+                    {
+                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        break;
+                    }
+                    set_pdpt_entry(&pt_address[pte], vaddr_from_indices(pml4e, pdpte, pde, pte) - start_virtual_address + start_physical_address,
                         privilege, read_write,
                         cache_type);
                 }
@@ -162,22 +178,37 @@ void allocate_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
         {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
                 set_pdpt_entry(&pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
             {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
                     set_pdpt_entry(&pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
                 {
+                    if (pte >= 512)
+                    {
+                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        break;
+                    }
                     if (!is_pdpt_entry_present(&pt_address[pte]))
                         set_pdpt_entry(&pt_address[pte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
                 }
@@ -206,23 +237,38 @@ void free_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
         {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
             {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
                 if (!is_pdpt_entry_present(&pd_address[pde])) continue;
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
                 {
+                    if (pte >= 512)
+                    {
+                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        break;
+                    }
                     if (!is_pdpt_entry_present(&pt_address[pte])) continue;
-                    remove_pdpt_entry(&pt_address[pte]);
                     pfa_free_physical_page(get_pdpt_entry_address(&pt_address[pte]));
+                    remove_pdpt_entry(&pt_address[pte]);
                 }
                 unlock_page_table(pt_address, pt_flags);
             }
@@ -248,20 +294,35 @@ void unmap_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
         {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
             {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
                 if (!is_pdpt_entry_present(&pd_address[pde])) continue;
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
                 {
+                    if (pte >= 512)
+                    {
+                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        break;
+                    }
                     if (!is_pdpt_entry_present(&pt_address[pte])) continue;
                     remove_pdpt_entry(&pt_address[pte]);
                 }
@@ -286,6 +347,9 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
     for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
     {
+        if (pml4e >= 512)
+            break;
+
         if (!is_pdpt_entry_present(&src[pml4e])) continue;
 
         if (!is_pdpt_entry_present(&dst[pml4e]))
@@ -295,8 +359,103 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* dst_pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
         uint32_t dst_pdpt_flags = lock_page_table(dst_pdpt_address);
-        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pdpte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
         {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
+
+            if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
+
+            // * 1GB page
+            if (is_pdpt_entry_large(&pdpt_address[pdpte]))
+            {
+                dst_pdpt_address[pdpte] = pdpt_address[pdpte];
+                continue;
+            }
+
+            if (!is_pdpt_entry_present(&dst_pdpt_address[pdpte]))
+                set_pdpt_entry(&dst_pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+            uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
+            uint64_t* dst_pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pdpt_address[pdpte]));
+            uint32_t pd_flags = lock_page_table(pd_address);
+            uint32_t dst_pd_flags = lock_page_table(dst_pd_address);
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
+            {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
+
+                if (!is_pdpt_entry_present(&pd_address[pde])) continue;
+
+                // * 2MB page
+                if (is_pdpt_entry_large(&pd_address[pde]))
+                {
+                    dst_pd_address[pde] = pd_address[pde];
+                    continue;
+                }
+
+                if (!is_pdpt_entry_present(&dst_pd_address[pde]))
+                    set_pdpt_entry(&dst_pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+                uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
+                uint64_t* dst_pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pd_address[pde]));
+                uint32_t pt_flags = lock_page_table(pt_address);
+                uint32_t dst_pt_flags = lock_page_table(dst_pt_address);
+
+                memcpy(dst_pt_address, pt_address, 4096);
+
+                unlock_page_table(dst_pt_address, pt_flags);
+                unlock_page_table(pt_address, pt_flags);
+            }
+            unlock_page_table(dst_pd_address, pd_flags);
+            unlock_page_table(pd_address, pd_flags);
+        }
+        unlock_page_table(dst_pdpt_address, pdpt_flags);
+        unlock_page_table(pdpt_address, pdpt_flags);
+    }
+    unlock_page_table(dst, dst_pml4_flags);
+    unlock_page_table(src, pml4_flags);
+}
+
+// * Doesn't support large pages
+void copy_vas(uint64_t* src, uint64_t* dst,
+    uint64_t start_virtual_address,
+    uint64_t pages)
+{
+    uint32_t pml4_flags = lock_page_table(src);
+    uint32_t dst_pml4_flags = lock_page_table(dst);
+    uint16_t pml4e = (start_virtual_address >> 39) & 0x1ff;
+    uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
+    uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
+    uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
+    for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pml4e++)
+    {
+        if (pml4e >= 512)
+            break;
+
+        if (!is_pdpt_entry_present(&src[pml4e])) continue;
+
+        if (!is_pdpt_entry_present(&dst[pml4e]))
+            set_pdpt_entry(&dst[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+
+        uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&src[pml4e]));
+        uint64_t* dst_pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst[pml4e]));
+        uint32_t pdpt_flags = lock_page_table(pdpt_address);
+        uint32_t dst_pdpt_flags = lock_page_table(dst_pdpt_address);
+        for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pdpte++)
+        {
+            if (pdpte >= 512)
+            {
+                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                break;
+            }
+
             if (!is_pdpt_entry_present(&pdpt_address[pdpte])) continue;
 
             if (!is_pdpt_entry_present(&dst_pdpt_address[pdpte]))
@@ -306,8 +465,14 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
             uint64_t* dst_pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
             uint32_t dst_pd_flags = lock_page_table(dst_pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pde++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
             {
+                if (pde >= 512)
+                {
+                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    break;
+                }
+
                 if (!is_pdpt_entry_present(&pd_address[pde])) continue;
 
                 if (!is_pdpt_entry_present(&dst_pd_address[pde]))
@@ -317,13 +482,18 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
                 uint64_t* dst_pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
                 uint32_t dst_pt_flags = lock_page_table(dst_pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; (pte++, simplify_paging_indices(&pml4e, &pdpte, &pde, &pte)))
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
                 {
+                    if (pte >= 512)
+                    {
+                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        break;
+                    }
+
                     if (!is_pdpt_entry_present(&pt_address[pte])) continue;
 
                     if (!is_pdpt_entry_present(&dst_pt_address[pte]))
                         set_pdpt_entry(&dst_pt_address[pte], pfa_allocate_physical_page(), get_pdpt_entry_privilege(&pt_address[pte]), get_pdpt_entry_read_write(&pt_address[pte]), CACHE_WB);
-
                     memcpy((void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pt_address[pte])), (void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pt_address[pte])), 4096);
                 }
                 unlock_page_table(dst_pt_address, pt_flags);

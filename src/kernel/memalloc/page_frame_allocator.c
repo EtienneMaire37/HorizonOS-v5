@@ -152,7 +152,6 @@ physical_address_t pfa_allocate_physical_page()
 
 physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
 {
-    // LOG(TRACE, "pfa_allocate_physical_contiguous_pages(%zu)", pages);
     if (pages == 0)
         return physical_null;
 

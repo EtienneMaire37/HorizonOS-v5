@@ -78,6 +78,9 @@ static const uint8_t pdpt_pat_bits[8] =
 extern uint8_t physical_address_width; // M
 extern bool pat_enabled;
 
+// * WC if PAT is set or UC, default else
+#define PAGE_ATTRIBUTE_TABLE    (CACHE_WB | (CACHE_WT << 8) | (CACHE_UC << 16) | (CACHE_WC << 24) | (CACHE_WC << 32) | (CACHE_WC << 40) | (CACHE_WC << 48) | (CACHE_WC << 56))
+
 static inline uint64_t get_physical_address_mask()
 {
     assert(physical_address_width != 0);
@@ -94,17 +97,7 @@ static inline void init_pat()
     if (!pat_enabled)
         return;
 
-    // * WC if PAT is set or UC, default else
-    wrmsr(IA32_PAT_MSR,
-         CACHE_WB |
-        (CACHE_WT << 8) |
-        (CACHE_UC << 16) |
-        (CACHE_WC << 24) |
-
-        (CACHE_WC << 32) |
-        (CACHE_WC << 40) |
-        (CACHE_WC << 48) |
-        (CACHE_WC << 56));
+    wrmsr(IA32_PAT_MSR, PAGE_ATTRIBUTE_TABLE);
 }
 
 uint64_t* create_empty_pdpt();
@@ -134,5 +127,8 @@ void free_range(uint64_t* pml4,
     uint64_t start_virtual_address,
     uint64_t pages);
 void copy_mapping(uint64_t* src, uint64_t* dst,
+    uint64_t start_virtual_address,
+    uint64_t pages);
+void copy_vas(uint64_t* src, uint64_t* dst,
     uint64_t start_virtual_address,
     uint64_t pages);

@@ -283,8 +283,9 @@ void _start()
         printf("Copying mapping of range %p-%p from limine\n", kernel_start_ptr, kernel_end_ptr);
         LOG(DEBUG, "Copying mapping of range %p-%p from limine", kernel_start_ptr, kernel_end_ptr);
 
-        FATAL("TRIPLE FAULT");
         copy_mapping(boot_cr3, global_cr3, (uintptr_t)kernel_start_ptr, (uint64_t)((uintptr_t)kernel_end_ptr - (uintptr_t)kernel_start_ptr) >> 12);
+
+        FATAL("TRIPLE FAULTS");
 
         for (int i = 0; i < mmap_request.response->entry_count; i++)
         {
