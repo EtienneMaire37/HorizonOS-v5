@@ -12,8 +12,8 @@
 #define memory_map_get_free_pages(i)                (usable_memory_map[i].total_pages - usable_memory_map[i].used_pages)
 #define memory_map_set_free_pages(i, free_pages)    usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - (free_pages)
 
-#define pfa_bitmap_get_page(i)                      (!!(bitmap[i / 8] & (1 << (i % 8))))
-#define pfa_bitmap_set_page(i, sta)                 bitmap[i / 8] = (bitmap[i / 8] & ~(1 << (i % 8))) | (!!(sta) << (i % 8))
+#define pfa_bitmap_get_page(i)                      (!!(bitmap[(i) / 8] & (1 << ((i) % 8))))
+#define pfa_bitmap_set_page(i, sta)                 bitmap[(i) / 8] = (bitmap[(i) / 8] & ~(1 << ((i)% 8))) | (!!(sta) << ((i) % 8))
 
 extern uint64_t usable_memory;
 

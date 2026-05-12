@@ -21,7 +21,7 @@ uint8_t* bitmap;
 
 uint64_t first_free_page_index_hint = 0;
 
-uint64_t memory_allocated, allocatable_memory;
+uint64_t __attribute__((aligned(4))) memory_allocated, allocatable_memory;
 
 spinlock_noint_t pfa_lock = SPINLOCK_NOINT_INIT;
 
@@ -171,7 +171,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
         {
             size_t contiguous_pages = 0;
             uint64_t alloc_start = block_start_index;
-            for (uint32_t j = 0; j < usable_memory_map[i].total_pages; j++)
+            for (uint64_t j = 0; j < usable_memory_map[i].total_pages; j++)
             {
                 if (!pfa_bitmap_get_page(block_start_index + j))
                 {
@@ -182,10 +182,11 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
                     {
                         for (uint64_t k = 0; k < pages; k++)
                             pfa_bitmap_set_page(alloc_start + k, 1);
-                        usable_memory_map[i].used_pages++;
-                        memory_allocated += 0x1000 * pages;
+                        usable_memory_map[i].used_pages += pages;
+                        memory_allocated += 0x1000ULL * pages;
                         release_spinlock_noint(&pfa_lock, flags);
-                        return usable_memory_map[i].address + j * 0x1000ULL;
+                        LOG_MEM_ALLOCATED();
+                        return usable_memory_map[i].address + (alloc_start - block_start_index) * 0x1000ULL;
                     }
                 }
                 else

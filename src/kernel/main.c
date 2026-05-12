@@ -285,8 +285,6 @@ void _start()
 
         copy_mapping(boot_cr3, global_cr3, (uintptr_t)kernel_start_ptr, (uint64_t)((uintptr_t)kernel_end_ptr - (uintptr_t)kernel_start_ptr) >> 12);
 
-        FATAL("TRIPLE FAULTS");
-
         for (int i = 0; i < mmap_request.response->entry_count; i++)
         {
             struct limine_memmap_entry* entry = mmap_request.response->entries[i];

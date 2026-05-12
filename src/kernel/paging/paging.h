@@ -11,9 +11,9 @@
 
 extern uint64_t PHYS_MAP_BASE;
 
-static inline __attribute__((always_inline)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
+static inline __attribute__((always_inline, const)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
 {
-    return make_address_canonical(((uint64_t)pml4e << 39ULL) | ((uint64_t)pdpte << 30ULL) | ((uint64_t)pde << 21ULL) | ((uint64_t)pte << 12ULL));
+    return make_address_canonical(((uint64_t)(pml4e & 0x1ff) << 39ULL) | ((uint64_t)(pdpte & 0x1ff) << 30ULL) | ((uint64_t)(pde & 0x1ff) << 21ULL) | ((uint64_t)(pte & 0x1ff) << 12ULL));
 }
 static inline __attribute__((always_inline)) void simplify_paging_indices(uint16_t* pml4e, uint16_t* pdpte, uint16_t* pde, uint16_t* pte)
 {
