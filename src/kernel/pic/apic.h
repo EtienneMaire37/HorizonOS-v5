@@ -25,6 +25,8 @@ extern volatile local_apic_registers_t* lapic;
 #define LAPIC_TIMER_UNMASKED        0x00000
 #define LAPIC_TIMER_MASKED          0x10000
 
+#define TSC_DEADLINE_DISARMED       0
+
 extern uint32_t ps2_1_gsi, ps2_12_gsi;
 
 void madt_extract_data();
@@ -35,10 +37,9 @@ void lapic_send_eoi();
 void lapic_set_spurious_interrupt_number(uint8_t int_num);
 void lapic_enable();
 void lapic_set_tpr(uint8_t p);
-void apic_timer_and_tsc_init();
 
 static inline bool is_bsp()
 {
     // * BSP bit
-    return (rdmsr(IA32_APIC_BASE_MSR) & (1ULL << 8)) != 0;
+    return (rdmsr(IA32_APIC_BASE_MSR) & (1 << 8)) != 0;
 }

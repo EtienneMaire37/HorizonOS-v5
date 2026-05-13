@@ -2,7 +2,6 @@
 #include "../util/lambda.h"
 #include "../util/read_write.h"
 #include "../multicore/spinlock.h"
-#include "../cpu/tsc.h"
 
 #include <assert.h>
 
@@ -18,8 +17,6 @@ uint32_t ps2_1_gsi = 1, ps2_12_gsi = 12;
 #include "../cpu/memory.h"
 #include "../ps2/ps2.h"
 #include "../cpu/msr.h"
-#include "../int/kernel_panic.h"
-#include "../cmos/rtc.h"
 #include "../memalloc/virtual_memory_allocator.h"
 
 void lapic_init()
@@ -299,53 +296,5 @@ void madt_extract_data()
                 (lapic_id << 56));
             unmap_ioapic((void*)ps2_12_ioapic);
         }
-    }
-}
-
-void apic_timer_and_tsc_init()
-{
-    try_calibrate_tsc_with_cpuid();
-
-    rtc_wait_while_updating();
-
-    uint64_t start_tsc = rdtsc();
-
-    if (lapic)
-    {
-        WRITE_ONCE(lapic->divide_configuration_register, LAPIC_TIMER_DIVIDE_BY_16);
-        WRITE_ONCE(lapic->initial_count_register, 0xffffffff);
-    }
-    else
-    {
-        wrmsr(IA32_X2APIC_DIV_CONF_MSR, LAPIC_TIMER_DIVIDE_BY_16);
-        wrmsr(IA32_X2APIC_INIT_COUNT_MSR, 0xffffffff);
-    }
-
-    rtc_wait_while_updating();
-
-    uint64_t tsc_per_second = rdtsc() - start_tsc;
-
-    if (!tsc_cycles_per_second)
-        tsc_cycles_per_second = tsc_per_second;
-
-    if (lapic)
-    {
-        WRITE_ONCE(lapic->lvt_timer_register, LAPIC_TIMER_MASKED);
-
-        uint32_t ticks_in_1_sec = 0xffffffff - READ_ONCE(lapic->current_count_register);
-
-        WRITE_ONCE(lapic->lvt_timer_register, APIC_TIMER_INT | LAPIC_TIMER_PERIODIC);
-        WRITE_ONCE(lapic->divide_configuration_register, LAPIC_TIMER_DIVIDE_BY_16);
-        WRITE_ONCE(lapic->initial_count_register, ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY);
-    }
-    else
-    {
-        wrmsr(IA32_X2APIC_LVT_TIMER_MSR, LAPIC_TIMER_MASKED);
-
-        uint32_t ticks_in_1_sec = 0xffffffff - rdmsr(IA32_X2APIC_CUR_COUNT_MSR);
-
-        wrmsr(IA32_X2APIC_LVT_TIMER_MSR, APIC_TIMER_INT | LAPIC_TIMER_PERIODIC);
-        wrmsr(IA32_X2APIC_DIV_CONF_MSR, LAPIC_TIMER_DIVIDE_BY_16);
-        wrmsr(IA32_X2APIC_INIT_COUNT_MSR, ticks_in_1_sec / GLOBAL_TIMER_FREQUENCY);
     }
 }

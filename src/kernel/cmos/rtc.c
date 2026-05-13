@@ -61,5 +61,7 @@ void rtc_get_time()
 
     system_milliseconds = 0;
 
-    resolve_time();
+    uint32_t flags = acquire_spinlock_noint(&time_lock);
+    __resolve_time();
+    release_spinlock_noint(&time_lock, flags);
 }

@@ -9,6 +9,8 @@
 
 #define IA32_PAT_MSR                0x277
 
+#define IA32_TSC_DEADLINE_MSR       0x6e0
+
 #define IA32_X2APIC_APICID_MSR      0x802
 #define IA32_X2APIC_TPR_MSR         0x808
 #define IA32_X2APIC_EOI_MSR         0x80B

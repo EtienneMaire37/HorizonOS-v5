@@ -55,9 +55,9 @@ For example to build with LOG_LEVEL=TRACE, LOG_SYSCALLS and NDEBUG:
 ```bash
 make USER_CFLAGS="-DLOG_LEVEL=TRACE -DLOG_SYSCALLS -DNDEBUG"
 ```
-Or to build in "Release" mode:
+Or to build with default settings:
 ```bash
-make USER_CFLAGS="-DNDEBUG"
+make
 ```
 
 A `horizonos.iso` disk image file will be created in the root of the repository.

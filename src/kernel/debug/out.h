@@ -90,16 +90,16 @@ extern bool first_log;
     if (!first_log) fputc('\n', stderr); \
     first_log = false; \
     uint32_t flags = acquire_spinlock_noint(&time_lock); \
-    resolve_time(); \
-    int64_t system_seconds = system_seconds, system_minutes = system_minutes, system_hours = system_hours, system_day = system_day, system_month = system_month; \
-    int64_t system_year = system_year; \
-    int64_t system_milliseconds = system_milliseconds; \
+    __resolve_time(); \
+    int64_t _system_seconds = system_seconds, _system_minutes = system_minutes, _system_hours = system_hours, _system_day = system_day, _system_month = system_month; \
+    int64_t _system_year = system_year; \
+    int64_t _system_milliseconds = system_milliseconds; \
     release_spinlock_noint(&time_lock, flags); \
     if (time_initialized) \
         fprintf(stderr, LOG_FMT, \
-            system_year, system_month, system_day, \
-            system_hours, system_minutes, system_seconds, \
-            system_milliseconds, \
+            _system_year, _system_month, _system_day, \
+            _system_hours, _system_minutes, _system_seconds, \
+            _system_milliseconds, \
             LOG_LEVEL_COLOR[level], LOG_LEVEL_STR[level]); \
     else fprintf(stderr, LOG_FMT_NOTIME, LOG_LEVEL_COLOR[level], LOG_LEVEL_STR[level]); \
     fprintf(stderr, __VA_ARGS__); \

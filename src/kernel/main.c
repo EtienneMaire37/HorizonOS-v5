@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "cpu/temp.h"
 #include "cpu/util.h"
+#include "pic/timer.h"
 
 #include "boot/limine.h"
 
@@ -496,6 +497,17 @@ void _start()
     LOG(INFO, "Set up the APIC timer and TSC");
     printf(" | Done\n");
 
+    assert(!(get_rflags() & (1 << 9)));
+
+    {
+    apic_timer_add_new_deadline(10000000);
+    apic_timer_add_new_deadline(20000000);
+    apic_timer_add_new_deadline(5000000);
+    apic_timer_add_new_deadline(2500000);
+    apic_timer_add_new_deadline(25000000);
+    apic_timer_add_new_deadline(10000000);
+    }
+
     LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
     printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
 
@@ -550,22 +562,6 @@ void _start()
         ksleep(PS2_WAIT_TIME * PRECISE_MILLISECONDS);
 
         ps2_enable_interrupts();
-
-        // if (ps2_device_1_connected)
-        // {
-        //     LOG(INFO, "PS/2 device 1 connected");
-        //     printf("PS/2 device 1 connected\n");
-        // }
-        // if (ps2_device_2_connected)
-        // {
-        //     LOG(INFO, "PS/2 device 2 connected");
-        //     printf("PS/2 device 2 connected\n");
-        // }
-        // if (!(ps2_device_1_connected || ps2_device_2_connected))
-        // {
-        //     LOG(INFO, "No PS/2 devices detected");
-        //     printf("No PS/2 devices detected\n");
-        // }
     }
     else
         printf("No PS/2 Controller\n");

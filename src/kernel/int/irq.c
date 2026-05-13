@@ -8,6 +8,7 @@
 #include "../multitasking/multitasking.h"
 #include "../multitasking/queue.h"
 #include "../util/lambda.h"
+#include "../pic/timer.h"
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
@@ -17,14 +18,11 @@ void handle_apic_irq(interrupt_registers_t* registers)
     {
     case APIC_TIMER_INT:
     {
-        uint32_t flags = acquire_spinlock_noint(&time_lock);
-        resolve_time();
-        release_spinlock_noint(&time_lock, flags);
-
-        FATAL("TODO: Implement TSC deadlines");
+        // apic_timer_handle_irq();
 
         // if (multitasking_enabled)
         // {
+        //     FATAL("TODO: Implement TSC deadlines");
         //     uint32_t flags = acquire_spinlock_noint(&sched_lock);
         //     __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
         //     {
@@ -35,18 +33,6 @@ void handle_apic_irq(interrupt_registers_t* registers)
         //         __task_stop_polling(task);
         //     }));
         //     release_spinlock_noint(&sched_lock, flags);
-        // }
-
-        // TODO: Remove the "periodic timer interrupt" design entirely from the kernel
-        // if (multitasking_enabled)
-        // {
-        //     if (multitasking_counter <= 0)
-        //     {
-        //         multitasking_counter = TASK_SWITCH_DELAY;
-
-        //         ts = true;
-        //     }
-        //     multitasking_counter -= precise_time_to_milliseconds(GLOBAL_TIMER_INCREMENT);
         // }
         break;
     }

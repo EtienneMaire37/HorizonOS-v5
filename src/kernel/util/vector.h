@@ -13,14 +13,14 @@ typedef struct \
     size_t alloc; \
     uint8_t* data; \
 } vector_##name##_t; \
-const vector_##name##_t vector_##name##_init = {.size = 0, .alloc = 0, .data = NULL}; \
-static inline void vector_##name##_clear(vector_##name##_t* vec) \
+static const vector_##name##_t vector_##name##_init = {.size = 0, .alloc = 0, .data = NULL}; \
+static inline __attribute__((always_inline)) void vector_##name##_clear(vector_##name##_t* vec) \
 { \
     assert(vec); \
     vec->size = vec->alloc = 0; \
     free(vec->data); \
 } \
-static inline void vector_##name##_push_back(vector_##name##_t* vec, type new) \
+static inline __attribute__((always_inline)) void vector_##name##_push_back(vector_##name##_t* vec, type new) \
 { \
     assert(vec); \
     if (vec->size + sizeof(type) > vec->alloc) \
@@ -31,7 +31,7 @@ static inline void vector_##name##_push_back(vector_##name##_t* vec, type new) \
     *(type*)&vec->data[vec->size] = new; \
     vec->size += sizeof(type); \
 } \
-static inline void vector_##name##_pop_back(vector_##name##_t* vec) \
+static inline __attribute__((always_inline)) void vector_##name##_pop_back(vector_##name##_t* vec) \
 { \
     assert(vec); \
     if ((vec->size - sizeof(type)) * 2 <= vec->alloc) \
@@ -42,4 +42,13 @@ static inline void vector_##name##_pop_back(vector_##name##_t* vec) \
         vec->data = realloc(vec->data, vec->alloc); \
     } \
     vec->size -= sizeof(type); \
+} \
+static inline __attribute__((always_inline)) type* vector_##name##_at(vector_##name##_t* vec, size_t index) \
+{ \
+    if (index * sizeof(type) >= vec->size) return NULL; \
+    return (type*)&vec->data[sizeof(type) * index]; \
+} \
+static inline __attribute__((always_inline)) size_t vector_##name##_size(vector_##name##_t* vec) \
+{ \
+    return vec->size / sizeof(type); \
 }

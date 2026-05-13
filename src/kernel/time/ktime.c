@@ -11,7 +11,7 @@
 time_t ktime(time_t* t)
 {
     uint32_t flags = acquire_spinlock_noint(&time_lock);
-    resolve_time();
+    __resolve_time();
     time_t now = time_to_unix(system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
     release_spinlock_noint(&time_lock, flags);
     if (t) *t = now;
@@ -38,13 +38,13 @@ uint8_t get_num_days_in_month(int64_t month, int64_t year)
 }
 
 // * Assumes time_lock is acquired
-void resolve_time()
+void __resolve_time()
 {
     if (tsc_cycles_per_second)
     {
         uint64_t new_tsc = rdtsc();
-        uint64_t tsc_diff = new_tsc - READ_ONCE(last_tsc);
-        WRITE_ONCE(last_tsc, new_tsc);
+        uint64_t tsc_diff = new_tsc - last_tsc;
+        last_tsc = new_tsc;
         tsc_remainder += tsc_diff;
         system_milliseconds += tsc_remainder / (tsc_cycles_per_second / 1000);
         tsc_remainder %= tsc_cycles_per_second / 1000;
@@ -78,7 +78,7 @@ void resolve_time()
     }
     while (system_month < 0 || system_month >= 12)
     {
-        system_year -= system_month >= 12 ? -1 : 1;
-        system_month += (system_month >= 12 ? -1 : 1) * 12;
+        system_year -= (system_month >= 12) ? -1 : 1;
+        system_month += ((system_month >= 12) ? -1 : 1) * 12;
     }
 }

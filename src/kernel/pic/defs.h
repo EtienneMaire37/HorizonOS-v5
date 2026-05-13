@@ -30,7 +30,7 @@ struct local_apic_icr_register
     uint8_t reserved[apic_reg_next_offset()];
 } __attribute__((packed));
 
-typedef struct __attribute__((packed)) local_apic_registers 
+typedef struct __attribute__((packed, aligned(4096))) local_apic_registers
 {
     uint8_t reserved0[0x20];
     uint32_t id_register;
@@ -80,7 +80,7 @@ typedef struct __attribute__((packed)) local_apic_registers
     uint32_t divide_configuration_register;
 } local_apic_registers_t;
 
-typedef struct __attribute__((packed)) io_apic_registers 
+typedef struct __attribute__((packed)) io_apic_registers
 {
     uint32_t IOREGSEL;
     uint8_t reserved[apic_reg_next_offset()];

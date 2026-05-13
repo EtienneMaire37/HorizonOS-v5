@@ -128,9 +128,9 @@ _interrupt_handler:
     ; * This way, interrupts are enabled most of the time."
     ; * -> nullplan
     cmp qword [rsp + 8 * 19], 32 ; irq
-    jge dont_sti
+    jge .dont_sti
     sti
-dont_sti:
+.dont_sti:
     call interrupt_handler
 global intret
 intret:

@@ -20,6 +20,8 @@ extern uint64_t* global_cr3;
 
 #define swapgs()                asm volatile ("swapgs")
 
+#define mfence()                asm volatile ("mfence");
+
 static inline void __attribute__((noreturn)) _halt()
 {
     while (true)
