@@ -11,7 +11,7 @@
 #include "../vfs/table.h"
 #include "keyboard.h"
 
-#define bufpri(...) do { character_len = snprintf(buffer, sizeof(buffer), __VA_ARGS__); assert(character_len != sizeof(buffer)); \
+#define bufpri(...) do { char buffer[16] = {0}; size_t character_len = sizeof(buffer); character_len = snprintf(buffer, sizeof(buffer), __VA_ARGS__); assert(character_len != sizeof(buffer)); \
     if ((ssize_t)num_characters < (ssize_t)max_characters - character_len) { for (int i = 0; i < character_len; i++) { if (buffer[i] != 3) utf32_buffer_putchar(&keyboard_input_buffer, buffer[i]); if (echo || buffer[i] == 3) { if (buffer[i] < 0x20) tty_outc('^'); tty_outc_ex((buffer[i] < 0x20) ? buffer[i] + 0x40 : buffer[i], buffer[i] < 0x20 ? TTY_CONTINUE_CHAR : 0, true); } } } } while (0)
 
 const keyboard_layout_t* current_keyboard_layout = &us_qwerty;
@@ -115,17 +115,31 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
         && ascii != '\n' && ascii != '\t' && ascii != '\b' && ascii != 0x1b
         )
         return;
+
+
+    size_t num_characters = get_buffered_characters(keyboard_input_buffer);
+    size_t max_characters = keyboard_input_buffer.size - 1;
+
     if (character == '\b')
     {
-        if (raw)
+        if (ctrl)
         {
-            utf32_buffer_putchar(&keyboard_input_buffer, character);
-            if (echo) printf("\b \b");
+            if (lalt)
+                bufpri("\x1b");
+            bufpri("%c", ('H' & 0x1f));
         }
-        else if (!no_buffered_characters(keyboard_input_buffer))
+        else if (!lalt)
         {
-            if (echo) printf("\b \b");
-            utf32_buffer_unputchar(&keyboard_input_buffer);
+            if (raw)
+            {
+                utf32_buffer_putchar(&keyboard_input_buffer, character);
+                if (echo) printf("\b \b");
+            }
+            else if (!no_buffered_characters(keyboard_input_buffer))
+            {
+                if (echo) printf("\b \b");
+                utf32_buffer_unputchar(&keyboard_input_buffer);
+            }
         }
     }
     else if (character >= 0x07 && character <= 0x0f)
@@ -135,10 +149,6 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
     }
     else
     {
-        size_t num_characters = get_buffered_characters(keyboard_input_buffer);
-        size_t max_characters = keyboard_input_buffer.size - 1;
-        char buffer[16] = {0};
-        size_t character_len = sizeof(buffer);
         char arrow_csi = tty_application_cursor_mode ? 'O' : '[';
 
         int modifier = 1 + shift + 2 * lalt + 4 * ctrl + 8 * meta;
@@ -190,7 +200,7 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
             {
                 if (lalt)
                     bufpri("\x1b");
-                bufpri("%c", ctrl && (character >= 0x20) ? character & 0x1f : character);
+                bufpri("%c", ctrl && (character >= 0x20) ? (character & 0x1f) : character);
                 if (ctrl && ((character & 0x1f) == 3))
                 {
                     utf32_buffer_clear(&keyboard_input_buffer);
