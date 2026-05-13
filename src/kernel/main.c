@@ -499,15 +499,6 @@ void _start()
 
     assert(!(get_rflags() & (1 << 9)));
 
-    {
-    apic_timer_add_new_deadline(10000000);
-    apic_timer_add_new_deadline(20000000);
-    apic_timer_add_new_deadline(5000000);
-    apic_timer_add_new_deadline(2500000);
-    apic_timer_add_new_deadline(25000000);
-    apic_timer_add_new_deadline(10000000);
-    }
-
     LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
     printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
 
