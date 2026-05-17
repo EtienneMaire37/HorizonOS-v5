@@ -6,6 +6,7 @@
 #include "../debug/out.h"
 #include "keyboard.h"
 #include "../multitasking/multitasking.h"
+#include "../cpu/tsc.h"
 
 uint8_t ps2_device_1_type = PS2_DEVICE_UNKNOWN;
 uint8_t ps2_device_2_type = PS2_DEVICE_UNKNOWN;
@@ -26,9 +27,8 @@ bool ps2_wait_for_output()
 {
     if (!ps2_controller_connected)
         return true;
-    FATAL("TODO: Implement TSC deadlines");
-    // uint64_t start = precise_time_to_milliseconds(global_timer);
-    // while (precise_time_to_milliseconds(global_timer) - start < PS2_WAIT_TIME)
+    uint64_t start = rdtsc();
+    while (rdtsc() - start < PS2_WAIT_TIME * tsc_cycles_per_second / 1000)
     {
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         if ((reg & PS2_STATUS_INPUT_FULL) == 0) // * Device has read all data
@@ -42,9 +42,8 @@ bool ps2_wait_for_input_with_timeout(uint64_t timeout)
 {
     if (!ps2_controller_connected)
         return true;
-    FATAL("TODO: Implement TSC deadlines");
-    // uint64_t start = precise_time_to_milliseconds(global_timer);
-    // while (precise_time_to_milliseconds(global_timer) - start < timeout)
+    uint64_t start = rdtsc();
+    while (rdtsc() - start < timeout * tsc_cycles_per_second / 1000)
     {
         uint8_t reg = inb(PS2_STATUS_REGISTER);
         if (reg & PS2_STATUS_OUTPUT_FULL)   // * Device has data to send

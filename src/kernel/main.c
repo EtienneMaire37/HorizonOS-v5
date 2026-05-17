@@ -494,6 +494,17 @@ void _start()
     rtc_get_time();
     time_initialized = true;
 
+    {
+        uint32_t eax, ebx, ecx, edx = 0;
+        cpuid_with_ecx(7, 0, eax, ebx, ecx, edx);
+        tpause_supported = !!(ecx & (1ULL << 5));
+
+        if (tpause_supported)
+            LOG(INFO, "TPAUSE supported");
+        else
+            LOG(WARNING, "TPAUSE not supported");
+    }
+
     LOG(INFO, "Set up the APIC timer and TSC");
     printf(" | Done\n");
 

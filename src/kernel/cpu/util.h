@@ -22,6 +22,8 @@ extern uint64_t* global_cr3;
 
 #define mfence()                asm volatile ("mfence");
 
+#define tpause(state, deadline)        asm volatile ("tpause %0" :: "r"(state), "a"((deadline) & 0xffffffff), "d"((deadline) >> 32));
+
 static inline void __attribute__((noreturn)) _halt()
 {
     while (true)
