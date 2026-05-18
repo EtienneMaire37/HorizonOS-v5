@@ -513,10 +513,10 @@ void _start()
     LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
     printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
 
-    printf("Time: ");
+    printf("Unix time: ");
 
     tty_set_color(FG_LIGHTCYAN, BG_BLACK);
-    printf("%" PRIu64 "-%" PRIu64 "-%" PRIu64 " %" PRIu64 ":%" PRIu64 ":%" PRIu64 "\n", system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
+    printf("%" PRIu64 "\n", (uint64_t)current_time.tv_sec);
     tty_set_color(FG_WHITE, BG_BLACK);
 
     LOG(DEBUG, "Setting up FS/GS segment bases");

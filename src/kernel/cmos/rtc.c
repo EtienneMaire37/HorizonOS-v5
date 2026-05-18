@@ -4,6 +4,7 @@
 #include "../util/math.h"
 #include "../time/time.h"
 #include "../cpu/registers.h"
+#include "../time/gdn.h"
 
 #include <stdbool.h>
 #include <assert.h>
@@ -24,6 +25,8 @@ void rtc_detect_mode()
 void rtc_get_time()
 {
     assert(!(get_rflags() & (1 << 9)));
+
+    int64_t system_seconds, system_minutes, system_hours, system_day, system_month, system_year;
 
     cmos_select_register(CMOS_REGISTER_SECONDS);
     system_seconds = cmos_read_register();
@@ -59,7 +62,8 @@ void rtc_get_time()
             system_hours = system_hours;
     }
 
-    system_milliseconds = 0;
+    current_time.tv_sec = time_to_unix(system_year, system_month, system_day, system_hours, system_minutes, system_seconds);
+    current_time.tv_nsec = 0;
 
     uint32_t flags = acquire_spinlock_noint(&time_lock);
     __resolve_time();

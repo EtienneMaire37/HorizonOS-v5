@@ -3,9 +3,7 @@
 
 atomic_flag time_lock = ATOMIC_FLAG_INIT;
 
-int64_t system_seconds = 0, system_minutes = 0, system_hours = 0, system_day = 0, system_month = 0;
-int64_t system_year = 0;
-int64_t system_milliseconds = 0;
+struct timespec current_time;
 int64_t tsc_remainder = 0;
 
 bool time_initialized = false;

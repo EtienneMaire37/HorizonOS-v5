@@ -9,9 +9,7 @@ typedef uint64_t precise_time_t;
 
 extern atomic_flag time_lock;
 
-extern int64_t system_seconds, system_minutes, system_hours, system_day, system_month;
-extern int64_t system_year;
-extern int64_t system_milliseconds;
+extern struct timespec current_time;
 extern int64_t tsc_remainder;
 
 extern bool tpause_supported;

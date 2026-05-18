@@ -851,8 +851,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         switch (arg1)
         {
         case CLOCK_REALTIME:
-            *arg2 = ktime(NULL);
-            *arg3 = system_milliseconds * 1000000;
+            *arg2 = current_time.tv_sec;
+            *arg3 = current_time.tv_nsec;
             sc_ret_errno = 0;
             break;
         default:
