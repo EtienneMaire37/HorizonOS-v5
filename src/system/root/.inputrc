@@ -1,0 +1,2 @@
+# Ctrl-Backspace: delete previous word
+"\C-H": shell-backward-kill-word

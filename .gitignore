@@ -1,7 +1,7 @@
 horizonos.iso
 horizonos.vdi
 
-debug/*
+/debug/*
 bin/*
 src/tasks/bin/*
 src/tasks/src/gnulib
@@ -10,7 +10,7 @@ src/tasks/src/coreutils
 src/tasks/src/grep
 src/tasks/src/cmatrix
 
-root/
+/root/
 
 crosstoolchain/
 hostoolchain/
