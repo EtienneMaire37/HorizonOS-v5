@@ -12,7 +12,7 @@
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     bool ts = false, sigint = false;
     switch (registers->interrupt_number)
     {
@@ -23,7 +23,7 @@ void handle_apic_irq(interrupt_registers_t* registers)
         // if (multitasking_enabled)
         // {
         //     FATAL("TODO: Implement TSC deadlines");
-        //     uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        //     uint32_t flags = lock_scheduler();
         //     __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
         //     {
         //         if (task->timeout_deadline == NO_TIMEOUT)
@@ -32,7 +32,7 @@ void handle_apic_irq(interrupt_registers_t* registers)
         //             return;
         //         __task_stop_polling(task);
         //     }));
-        //     release_spinlock_noint(&sched_lock, flags);
+        //     unlock_scheduler(flags);
         // }
         break;
     }
@@ -57,5 +57,5 @@ void handle_apic_irq(interrupt_registers_t* registers)
     if (ts)
         switch_task();
 
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }

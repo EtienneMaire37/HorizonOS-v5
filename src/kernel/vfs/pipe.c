@@ -30,10 +30,10 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
             {
                 if (entry->flags & O_NONBLOCK)
                     return -EWOULDBLOCK;
-                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                uint32_t flags = lock_scheduler();
                 __move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
                 switch_task();
-                release_spinlock_noint(&sched_lock, flags);
+                unlock_scheduler(flags);
                 in_buffer = ring_get_buffered_bytes(*entry->file_data.pipe_data.buffer);
             }
             if (in_buffer <= 0)
@@ -48,14 +48,14 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
         }
         if (entry->file_data.pipe_data.other_end != -1)
         {
-            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            uint32_t flags = lock_scheduler();
             __move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
             __run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
             {
                 ll_remove(&thread->_poll_tqs, ll_find_item_by_data(&thread->_poll_tqs, &entry->blocked_on_poll));
                 __task_stop_polling(thread);
             }));
-            release_spinlock_noint(&sched_lock, flags);
+            unlock_scheduler(flags);
         }
         return count;
     case IO_DIR_WRITE:
@@ -65,10 +65,10 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
             {
                 if (entry->flags & O_NONBLOCK)
                     return -EWOULDBLOCK;
-                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                uint32_t flags = lock_scheduler();
                 __move_running_task_to_thread_queue(&entry->blocked_on_io, current_task);
                 switch_task();
-                release_spinlock_noint(&sched_lock, flags);
+                unlock_scheduler(flags);
                 maxwrite = entry->file_data.pipe_data.buffer->size - ring_get_buffered_bytes(*entry->file_data.pipe_data.buffer) - 1;
             }
             if (maxwrite <= 0)
@@ -85,14 +85,14 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
         }
         if (entry->file_data.pipe_data.other_end != -1)
         {
-            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            uint32_t flags = lock_scheduler();
             __move_n_tasks_to_running_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_io, 1);
             __run_it_on_queue(&file_table[entry->file_data.pipe_data.other_end].blocked_on_poll, lambda(void, (thread_t* thread)
             {
                 ll_remove(&thread->_poll_tqs, ll_find_item_by_data(&thread->_poll_tqs, &entry->blocked_on_poll));
                 __task_stop_polling(thread);
             }));
-            release_spinlock_noint(&sched_lock, flags);
+            unlock_scheduler(flags);
         }
         return count;
     default:
@@ -113,9 +113,9 @@ void pipe_destroy(file_entry_t* entry)
     {
         file_entry_t* other = &file_table[entry->file_data.pipe_data.other_end];
         other->file_data.pipe_data.other_end = -1;
-        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        uint32_t flags = lock_scheduler();
         __move_all_tasks_to_running_queue(&other->blocked_on_io);
-        release_spinlock_noint(&sched_lock, flags);
+        unlock_scheduler(flags);
     }
 }
 

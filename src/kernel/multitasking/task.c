@@ -14,6 +14,7 @@
 #include "signal.h"
 #include "multitasking.h"
 #include "../vfs/table.h"
+#include "preempt.h"
 
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
 const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
@@ -64,9 +65,9 @@ thread_t* __task_create_empty()
 
 thread_t* task_create_empty()
 {
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     thread_t* ret = __task_create_empty();
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
     return ret;
 }
 
@@ -115,9 +116,9 @@ void __task_destroy(thread_t* task)
 
 void task_destroy(thread_t* task)
 {
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     __task_destroy(task);
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }
 
 void task_setup_stack_ex(thread_t* task,
@@ -292,16 +293,16 @@ void switch_task()
     assert(task_count > 0);
 
     uint32_t flags;
-    bool lock_state = try_acquire_spinlock_noint(&sched_lock, &flags);
+    bool lock_state = try_lock_scheduler(&flags);
 
-    if (lock_state)
+    if (lock_state || !atomic_load(&preempt_disable_depth))
     {
         queued_ts = true;
         return;
     }
 
     thread_t* next = __find_next_task();
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
     if (current_task != next)
     {
         thread_t* old_task = current_task;
@@ -417,7 +418,7 @@ void __fork_task(thread_t* task)
 void cleanup_tasks()
 {
     // TODO: do NOT call cleanup_tasks on every context switch
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     if (forked_tasks)
     {
         thread_queue_item_t* cur_forked_task = forked_tasks;
@@ -453,7 +454,7 @@ void cleanup_tasks()
         }
         while (reapable_tasks != NULL && cur_reapable_task->prev != cur_reapable_task);
     }
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }
 
 void __waitpid_check_dead()
@@ -524,9 +525,9 @@ pid_t task_generate_pid()
 
 void kill_task(thread_t* task, int ret)
 {
-    int flags = acquire_spinlock_noint(&sched_lock);
+    int flags = lock_scheduler();
     __kill_task(task, ret);
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }
 
 void __kill_task(thread_t* task, int ret)

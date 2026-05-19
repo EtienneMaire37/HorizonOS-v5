@@ -8,9 +8,7 @@
 #include "sigset.h"
 #include "../vfs/table.h"
 #include "task.h"
-#include <stdatomic.h>
-
-spinlock_noint_t sched_lock = SPINLOCK_NOINT_INIT;
+#include "sched_lock.h"
 
 hashmap_t* futex_tq_hashmap = NULL;
 hashmap_t* pid_to_task_hashmap = NULL;
@@ -71,10 +69,10 @@ void multitasking_add_idle_task(char* name)
     task_set_name(task, name);
     task->cr3 = get_cr3_address();
 
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     __multitasking_add_task(task);
     task_count++;
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }
 
 void __multitasking_add_task(thread_t* task)
@@ -254,9 +252,9 @@ void __task_send_signal_to_pgrp(int sig, pid_t pgrp)
 
 void task_send_signal(thread_t* thread, int sig)
 {
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     __task_send_signal(thread, sig);
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 }
 
 void __task_send_signal(thread_t* thread, int sig)

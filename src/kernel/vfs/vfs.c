@@ -657,11 +657,11 @@ ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t 
         if (no_buffered_characters(keyboard_buffered_input_buffer))
         {
             current_task->timeout_deadline = PRECISE_TIME_MAX;
-            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            uint32_t flags = lock_scheduler();
             __copy_task_to_thread_queue(&_waiting_for_stdin_tasks, current_task);
             __move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
             switch_task();
-            release_spinlock_noint(&sched_lock, flags);
+            unlock_scheduler(flags);
         }
         if (no_buffered_characters(keyboard_buffered_input_buffer))
             return -EINTR;

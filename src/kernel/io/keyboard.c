@@ -216,12 +216,12 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
         keyboard_buffered_input_buffer.get_index = keyboard_input_buffer.get_index;
         keyboard_buffered_input_buffer.put_index = keyboard_input_buffer.put_index;
         keyboard_input_buffer.get_index = keyboard_input_buffer.put_index = 0;
-        uint32_t flags = acquire_spinlock_noint(&sched_lock);
+        uint32_t flags = lock_scheduler();
         __run_it_on_queue(&_waiting_for_stdin_tasks, lambda(void, (thread_t* task)
         {
             __task_stop_polling(task);
         }));
-        release_spinlock_noint(&sched_lock, flags);
+        unlock_scheduler(flags);
     }
 
     fflush(stdout);

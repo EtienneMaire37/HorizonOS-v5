@@ -72,7 +72,7 @@ void __vfs_remove_global_file(int fd)
         {
             if (file_table[fd].on_destroy)
                 file_table[fd].on_destroy(&file_table[fd]);
-            uint32_t flags = acquire_spinlock_noint(&sched_lock);
+            uint32_t flags = lock_scheduler();
             __move_all_tasks_to_running_queue(&file_table[fd].blocked_on_io);
             __run_it_on_queue(&file_table[fd].blocked_on_poll, lambda(void, (thread_t* thread)
             {
@@ -80,7 +80,7 @@ void __vfs_remove_global_file(int fd)
                 __task_stop_polling(thread);
             }));
             __remove_all_tasks_from_queue(&file_table[fd].blocked_on_poll);
-            release_spinlock_noint(&sched_lock, flags);
+            unlock_scheduler(flags);
         }
 
         return;

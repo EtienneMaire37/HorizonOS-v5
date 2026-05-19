@@ -19,10 +19,10 @@ thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
     task->rsp = TASK_STACK_TOP_ADDRESS - 8;
     task_setup_stack(task, (uint64_t)func);
 
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     __multitasking_add_task(task);
     task_count++;
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 
     LOG(DEBUG, "Done");
 
@@ -293,10 +293,10 @@ thread_t* multitasking_add_task_from_initrd(const char* name, const char* path, 
 
     assert((task->rsp % 16) == 0);
 
-    uint32_t flags = acquire_spinlock_noint(&sched_lock);
+    uint32_t flags = lock_scheduler();
     __multitasking_add_task(task);
     task_count++;
-    release_spinlock_noint(&sched_lock, flags);
+    unlock_scheduler(flags);
 
     LOG(DEBUG, "Done");
 

@@ -51,10 +51,10 @@ registers->interrupt_number == DOUBLE_FAULT || registers->interrupt_number == MA
             {
                 print_stack_trace(registers->rip, registers->rbp, false);
                 int signum = get_signal_from_exception(registers);
-                uint32_t flags = acquire_spinlock_noint(&sched_lock);
+                uint32_t flags = lock_scheduler();
                 __task_send_signal(current_task, signum);
                 __kill_task(current_task, signum);
-                release_spinlock_noint(&sched_lock, flags);
+                unlock_scheduler(flags);
                 kernel_panic(registers);
             }
         }

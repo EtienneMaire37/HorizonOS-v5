@@ -4,6 +4,7 @@
 #include "queue.h"
 #include "../cpu/registers.h"
 #include "task.h"
+#include "sched_lock.h"
 
 #include <assert.h>
 
@@ -30,8 +31,6 @@ extern atomic_flag keyboard_input_lock;
 extern bool queued_ts;
 
 extern void iretq_instruction();
-
-extern atomic_flag sched_lock;
 
 static inline bool __multitasking_is_pgrp_empty(pid_t pgid)
 {
