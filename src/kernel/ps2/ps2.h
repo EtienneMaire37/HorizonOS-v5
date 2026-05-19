@@ -98,4 +98,4 @@ bool ps2_send_device_full_command(uint8_t device, uint8_t command, uint8_t expec
 bool ps2_send_device_full_command_with_data(uint8_t device, uint8_t command, uint8_t data, uint8_t expected_bytes);
 void ps2_flush_buffer();
 
-void handle_ps2_irq(bool* ts, bool* sigint);
+void handle_ps2_irq(bool* sigint);

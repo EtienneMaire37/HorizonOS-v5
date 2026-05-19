@@ -531,7 +531,7 @@ void ps2_disable_interrupts()
     enable_ps2_kb_input = false;
 }
 
-void handle_ps2_irq(bool* task_switch, bool* send_sigint)
+void handle_ps2_irq(bool* send_sigint)
 {
     if (!ps2_controller_connected)
         return;
@@ -546,7 +546,7 @@ void handle_ps2_irq(bool* task_switch, bool* send_sigint)
                 continue;
 
             if (ps2_device_2_type == PS2_DEVICE_KEYBOARD && enable_ps2_kb_input)
-                ps2_handle_keyboard_scancode(2, data, task_switch, send_sigint);
+                ps2_handle_keyboard_scancode(2, data, send_sigint);
         }
         else
         {
@@ -554,7 +554,7 @@ void handle_ps2_irq(bool* task_switch, bool* send_sigint)
                 continue;
 
             if (ps2_device_1_type == PS2_DEVICE_KEYBOARD && enable_ps2_kb_input)
-                ps2_handle_keyboard_scancode(1, data, task_switch, send_sigint);
+                ps2_handle_keyboard_scancode(1, data, send_sigint);
         }
     }
 }

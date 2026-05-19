@@ -29,6 +29,7 @@ bool multitasking_enabled = false;
 utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;
 atomic_flag keyboard_input_lock = ATOMIC_FLAG_INIT;
 
+// * Per CPU
 bool queued_ts = false;
 
 void multitasking_init()
@@ -232,6 +233,13 @@ void __task_continue(thread_t* thread)
         parent->wstatus = 0xffff;
         __move_task_to_running_queue(&waitpid_tasks, parent);
     }
+}
+
+void task_send_signal_to_pgrp(int sig, pid_t pgrp)
+{
+    uint32_t flags = lock_scheduler();
+    __task_send_signal_to_pgrp(sig, pgrp);
+    unlock_scheduler(flags);
 }
 
 void __task_send_signal_to_pgrp(int sig, pid_t pgrp)

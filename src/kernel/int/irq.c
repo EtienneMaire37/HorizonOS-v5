@@ -12,17 +12,16 @@
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
-    uint32_t flags = lock_scheduler();
-    bool ts = false, sigint = false;
+    bool sigint = false;
     switch (registers->interrupt_number)
     {
     case APIC_TIMER_INT:
     {
-        // apic_timer_handle_irq();
+        apic_timer_handle_irq();
 
-        // if (multitasking_enabled)
-        // {
-        //     FATAL("TODO: Implement TSC deadlines");
+        if (multitasking_enabled)
+        {
+            FATAL("TODO: Implement TSC deadlines");
         //     uint32_t flags = lock_scheduler();
         //     __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
         //     {
@@ -33,16 +32,16 @@ void handle_apic_irq(interrupt_registers_t* registers)
         //         __task_stop_polling(task);
         //     }));
         //     unlock_scheduler(flags);
-        // }
+        }
         break;
     }
 
     case APIC_PS2_1_INT:
-        handle_ps2_irq(&ts, &sigint);
+        handle_ps2_irq(&sigint);
         break;
 
     case APIC_PS2_2_INT:
-        handle_ps2_irq(&ts, &sigint);
+        handle_ps2_irq(&sigint);
         break;
 
     default:    // * Spurious interrupt
@@ -52,10 +51,5 @@ void handle_apic_irq(interrupt_registers_t* registers)
     lapic_send_eoi();
 
     if (sigint)
-        __task_send_signal_to_pgrp(SIGINT, tty_foreground_pgrp);
-
-    if (ts)
-        switch_task();
-
-    unlock_scheduler(flags);
+        task_send_signal_to_pgrp(SIGINT, tty_foreground_pgrp);
 }

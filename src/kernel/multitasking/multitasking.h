@@ -94,6 +94,7 @@ thread_t* __find_task_by_pid_anywhere(pid_t pid);
 
 void __task_handle_sig_dfl(thread_t* task, int sig);
 void __task_send_signal_to_pgrp(int sig, pid_t pgrp);
+void task_send_signal_to_pgrp(int sig, pid_t pgrp);
 void task_send_signal(thread_t* thread, int sig);
 void __task_send_signal(thread_t* thread, int sig);
 void __task_handle_signal(thread_t* thread, int sig);

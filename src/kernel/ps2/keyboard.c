@@ -151,9 +151,9 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
     return base_char;
 }
 
-void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* task_switch, bool* send_sigint)   // port is 1-2
+void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* send_sigint)   // port is 1-2
 {
-    assert(task_switch && send_sigint);
+    assert(send_sigint);
 
     if (port == 1)
     {
