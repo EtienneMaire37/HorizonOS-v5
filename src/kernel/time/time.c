@@ -16,6 +16,7 @@ bool tpause_supported = false;
 
 #include "../cpu/util.h"
 #include "../cpu/tsc.h"
+#include "../pic/timer.h"
 
 void ksleep(precise_time_t time)
 {
@@ -27,7 +28,8 @@ void ksleep(precise_time_t time)
     }
     else
     {
-        while (rdtsc() < deadline)
+        apic_timer_add_new_deadline(deadline);
+        while (last_tsc < deadline)
             __builtin_ia32_pause();
     }
 }
