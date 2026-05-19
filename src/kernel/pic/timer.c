@@ -102,7 +102,7 @@ void apic_timer_add_new_deadline(uint64_t tsc_deadline)
         }
     }
     uint64_t closest_deadline = *vector_u64_at(&tsc_deadlines, len);
-    if (target_deadline == 0 || target_deadline > closest_deadline)
+    if (len == 0 || target_deadline > closest_deadline)
         __apic_timer_set_next_deadline(closest_deadline);
     release_spinlock_noint(&tsc_deadlines_lock, flags);
 }
@@ -115,7 +115,8 @@ void apic_timer_handle_irq()
     while (true)
     {
         len = vector_u64_size(&tsc_deadlines);
-        if (len == 0) break;
+        if (len == 0)
+            break;
         uint64_t new_deadline = *vector_u64_at(&tsc_deadlines, len - 1);
         vector_u64_pop_back(&tsc_deadlines);
         if (new_deadline > tsc)
