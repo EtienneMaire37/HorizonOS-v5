@@ -297,6 +297,8 @@ void switch_task()
 
     if (lock_state || !atomic_load(&preempt_disable_depth))
     {
+        if (!lock_state)
+            unlock_scheduler(flags);
         queued_ts = true;
         return;
     }

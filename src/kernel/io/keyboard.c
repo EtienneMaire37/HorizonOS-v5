@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <string.h>
 #include "../util/math.h"
-#include "../multitasking/task.h"
 #include "../multitasking/multitasking.h"
 #include "../terminal/textio.h"
 #include "../util/lambda.h"

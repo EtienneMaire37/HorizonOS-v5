@@ -1,13 +1,9 @@
 #include "irq.h"
 
-#include "../vfs/table.h"
 #include "../ps2/ps2.h"
 #include "../pic/apic.h"
-#include "../time/ktime.h"
 #include "../terminal/textio.h"
 #include "../multitasking/multitasking.h"
-#include "../multitasking/queue.h"
-#include "../util/lambda.h"
 #include "../pic/timer.h"
 
 void handle_apic_irq(interrupt_registers_t* registers)
