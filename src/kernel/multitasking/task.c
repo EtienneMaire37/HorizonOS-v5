@@ -211,7 +211,7 @@ void task_write_at_aligned_address_8b(thread_t* task, uint64_t address, uint64_t
     }
     if (address & 7)    // ! Not aligned
     {
-        LOG(CRITICAL, "task_write_at_aligned_address_8b: Address %#.16" PRIx64 " not aligned", address);
+        LOG(CRITICAL, "task_write_at_aligned_address_8b: Address %#016" PRIx64 " not aligned", address);
         abort();
     }
 
@@ -261,7 +261,7 @@ uint64_t task_read_at_aligned_address_8b(thread_t* task, uint64_t address)
     }
     if (address & 7)    // ! Not aligned
     {
-        LOG(CRITICAL, "task_write_at_aligned_address_8b: Address %#.16" PRIx64 " not aligned", address);
+        LOG(CRITICAL, "task_write_at_aligned_address_8b: Address %#016" PRIx64 " not aligned", address);
         abort();
     }
 

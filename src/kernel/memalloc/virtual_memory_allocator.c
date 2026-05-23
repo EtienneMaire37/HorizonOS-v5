@@ -9,10 +9,12 @@ spinlock_noint_t vmm_lock = SPINLOCK_NOINT_INIT;
 
 static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
 {
+    static void* global_hint = NULL;
+    void* current_hint = hint ? hint : global_hint;
     assert(vmm_initialized);
     if (pages > 0x800000000 / 2 - start)
         return NULL;
-    for (uint64_t vaddr = ((uint64_t)hint + 0xfff) & ~0xfff;; vaddr += 0x1000)
+    for (uint64_t vaddr = ((uint64_t)current_hint + 0xfff) & ~0xfff;; vaddr += 0x1000)
     {
         if (half == LOWER_HALF) vaddr &= ~0xffff800000000000ULL;
         else                    vaddr |=  0xffff800000000000ULL;
@@ -33,6 +35,8 @@ static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
         }
 
         if (!found_space) continue;
+
+        global_hint = (void*)((uint64_t)vaddr + 0x1000 * pages);
 
         return (void*)vaddr;
     }

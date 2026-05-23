@@ -4,34 +4,34 @@
 #include <stdbool.h>
 #include <abi-bits/errno.h>
 
-void* memset(void* dst, int value, size_t n)
+void* __attribute__((used)) memset(void* dst, int value, size_t n)
 {
-    if (__builtin_memset != memset) return __builtin_memset(dst, value, n);
+    if (__has_builtin(__builtin_memset) && __builtin_memset != memset) return __builtin_memset(dst, value, n);
     for (size_t i = 0; i < n; i++)
         ((uint8_t*)dst)[i] = (uint8_t)value;
     return dst;
 }
 
-void* memcpy(void* dst, const void* src, size_t n)
+void* __attribute__((used)) memcpy(void* dst, const void* src, size_t n)
 {
-    if (__builtin_memcpy != memcpy) return __builtin_memcpy(dst, src, n);
+    if (__has_builtin(__builtin_memcpy) && __builtin_memcpy != memcpy) return __builtin_memcpy(dst, src, n);
     for (size_t i = 0; i < n; i++)
         ((uint8_t*)dst)[i] = ((uint8_t*)src)[i];
     return dst;
 }
 
-void* memmove(void* dst, const void* src, size_t length)
+void* __attribute__((used)) memmove(void* dst, const void* src, size_t length)
 {
-    if (__builtin_memmove != memmove) return __builtin_memmove(dst, src, length);
+    if (__has_builtin(__builtin_memmove) && __builtin_memmove != memmove) return __builtin_memmove(dst, src, length);
     uint8_t data[length];
-    __builtin_memcpy(data, src, length);
-    __builtin_memcpy(dst, data, length);
+    memcpy(data, src, length);
+    memcpy(dst, data, length);
     return dst;
 }
 
-int memcmp(const void* str1, const void* str2, size_t n)
+int __attribute__((used)) memcmp(const void* str1, const void* str2, size_t n)
 {
-    if (__builtin_memcmp != memcmp) return __builtin_memcmp(str1, str2, n);
+    if (__has_builtin(__builtin_memcmp) && __builtin_memcmp != memcmp) return __builtin_memcmp(str1, str2, n);
     for(uint64_t i = 0; i < n; i++)
     {
         if(((uint8_t*)str1)[i] < ((uint8_t*)str2)[i])
@@ -43,9 +43,9 @@ int memcmp(const void* str1, const void* str2, size_t n)
     return 0;
 }
 
-size_t strlen(const char* str)
+size_t __attribute__((used)) strlen(const char* str)
 {
-    if (__builtin_strlen != strlen) return __builtin_strlen(str);
+    if (__has_builtin(__builtin_strlen) && __builtin_strlen != strlen) return __builtin_strlen(str);
     size_t s = 0;
     while ((uint64_t)str & 3)
     {
@@ -74,9 +74,9 @@ size_t strlen(const char* str)
     __builtin_unreachable();
 }
 
-size_t strnlen(const char* str, size_t maxlen)
+size_t __attribute__((used)) strnlen(const char* str, size_t maxlen)
 {
-    if (__builtin_strnlen != strnlen) return __builtin_strnlen(str, maxlen);
+    if (__has_builtin(__builtin_strnlen) && __builtin_strnlen != strnlen) return __builtin_strnlen(str, maxlen);
     size_t s = 0;
     while ((uint64_t)str & 3)
     {
@@ -115,9 +115,9 @@ size_t strnlen(const char* str, size_t maxlen)
     __builtin_unreachable();
 }
 
-int strcmp(const char* str1, const char* str2)
+int __attribute__((used)) strcmp(const char* str1, const char* str2)
 {
-    if (__builtin_strcmp != strcmp) return __builtin_strcmp(str1, str2);
+    if (__has_builtin(__builtin_strcmp) && __builtin_strcmp != strcmp) return __builtin_strcmp(str1, str2);
     const unsigned char* p1 = (const unsigned char*)str1;
     const unsigned char* p2 = (const unsigned char*)str2;
 
@@ -130,9 +130,9 @@ int strcmp(const char* str1, const char* str2)
     return (*p1 > *p2) - (*p2 > *p1);
 }
 
-char* strcpy(char* destination, const char* source)
+char* __attribute__((used)) strcpy(char* destination, const char* source)
 {
-    if (__builtin_strcpy != strcpy) return __builtin_strcpy(destination, source);
+    if (__has_builtin(__builtin_strcpy) && __builtin_strcpy != strcpy) return __builtin_strcpy(destination, source);
     char* _dest = destination;
     while (*source)
     {
@@ -144,9 +144,9 @@ char* strcpy(char* destination, const char* source)
     return _dest;
 }
 
-char* strncpy(char* destination, const char* source, size_t n)
+char* __attribute__((used)) strncpy(char* destination, const char* source, size_t n)
 {
-    if (__builtin_strncpy != strncpy) return __builtin_strncpy(destination, source, n);
+    if (__has_builtin(__builtin_strncpy) && __builtin_strncpy != strncpy) return __builtin_strncpy(destination, source, n);
     char* _dest = destination;
     size_t i = 0;
 
@@ -162,12 +162,12 @@ char* strncpy(char* destination, const char* source, size_t n)
     return _dest;
 }
 
-char* strdup(const char* str)
+char* __attribute__((used)) strdup(const char* str)
 {
     size_t len = strlen(str);
     char* dup = malloc(len);
     if (!dup) return NULL;
-    __builtin_memcpy(dup, str, len + 1);
+    memcpy(dup, str, len + 1);
     return dup;
 }
 

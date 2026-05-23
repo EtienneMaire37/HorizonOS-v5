@@ -121,7 +121,7 @@ void remap_range(uint64_t* pml4,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
@@ -135,7 +135,7 @@ void remap_range(uint64_t* pml4,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
@@ -149,7 +149,7 @@ void remap_range(uint64_t* pml4,
                 {
                     if (pte >= 512)
                     {
-                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        simplify_pte_paging_indices(&pte, &pde);
                         break;
                     }
                     set_pdpt_entry(&pt_address[pte], vaddr_from_indices(pml4e, pdpte, pde, pte) - start_virtual_address + start_physical_address,
@@ -186,11 +186,12 @@ void allocate_range(uint64_t* pml4,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
                 set_pdpt_entry(&pdpt_address[pdpte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+            assert (!is_pdpt_entry_large(&pdpt_address[pdpte]));
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
@@ -198,11 +199,12 @@ void allocate_range(uint64_t* pml4,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
                     set_pdpt_entry(&pd_address[pde], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+                assert (!is_pdpt_entry_large(&pd_address[pde]));
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
@@ -210,7 +212,7 @@ void allocate_range(uint64_t* pml4,
                 {
                     if (pte >= 512)
                     {
-                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        simplify_pte_paging_indices(&pte, &pde);
                         break;
                     }
                     if (!is_pdpt_entry_present(&pt_address[pte]))
@@ -249,7 +251,7 @@ void free_range(uint64_t* pml4,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
@@ -264,7 +266,7 @@ void free_range(uint64_t* pml4,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
@@ -279,7 +281,7 @@ void free_range(uint64_t* pml4,
                 {
                     if (pte >= 512)
                     {
-                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        simplify_pte_paging_indices(&pte, &pde);
                         break;
                     }
                     if (!is_pdpt_entry_present(&pt_address[pte])) continue;
@@ -318,7 +320,7 @@ void unmap_range(uint64_t* pml4,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
             if (!is_pdpt_entry_present(&pdpt_address[pdpte]))
@@ -333,7 +335,7 @@ void unmap_range(uint64_t* pml4,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
                 if (!is_pdpt_entry_present(&pd_address[pde]))
@@ -348,7 +350,7 @@ void unmap_range(uint64_t* pml4,
                 {
                     if (pte >= 512)
                     {
-                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        simplify_pte_paging_indices(&pte, &pde);
                         break;
                     }
                     if (!is_pdpt_entry_present(&pt_address[pte])) continue;
@@ -395,7 +397,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
 
@@ -424,7 +426,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
 
@@ -493,7 +495,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
         {
             if (pdpte >= 512)
             {
-                simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                simplify_pdpte_paging_indices(&pdpte, &pml4e);
                 break;
             }
 
@@ -514,7 +516,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
             {
                 if (pde >= 512)
                 {
-                    simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                    simplify_pde_paging_indices(&pde, &pdpte);
                     break;
                 }
 
@@ -535,7 +537,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
                 {
                     if (pte >= 512)
                     {
-                        simplify_paging_indices(&pml4e, &pdpte, &pde, &pte);
+                        simplify_pte_paging_indices(&pte, &pde);
                         break;
                     }
 

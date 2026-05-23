@@ -1,4 +1,5 @@
 #include "loader.h"
+#include "sched_lock.h"
 #include "vas.h"
 #include "task.h"
 #include "multitasking.h"
@@ -29,7 +30,7 @@ thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
     return task;
 }
 
-thread_t* multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
+thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
 {
     LOG(INFO, "Loading ELF file \"/initrd/%s\"", path);
 
@@ -65,7 +66,7 @@ thread_t* multitasking_add_task_from_initrd(const char* name, const char* path, 
         return NULL;
     }
 
-    thread_t* task = task_create_empty();
+    thread_t* task = __task_create_empty();
     if (!task) return NULL;
     task_set_name(task, name);
     task->cr3 = task_create_empty_vas(ring == 0 ? PG_SUPERVISOR : PG_USER);
@@ -293,10 +294,8 @@ thread_t* multitasking_add_task_from_initrd(const char* name, const char* path, 
 
     assert((task->rsp % 16) == 0);
 
-    uint32_t flags = lock_scheduler();
     __multitasking_add_task(task);
     task_count++;
-    unlock_scheduler(flags);
 
     LOG(DEBUG, "Done");
 
@@ -352,9 +351,17 @@ thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, u
     vfs_realpath_from_folder_tnode(mount_point, prefix);
     size_t prefix_length = strlen(prefix);
 
-    thread_t* ret = multitasking_add_task_from_initrd(simplified_path, strcmp(simplified_path, prefix) == 0 ? "" : &simplified_path[(mount_point == vfs_root ? 0 : 1) + prefix_length], ring, system, data, cwd);
+    thread_t* ret = __multitasking_add_task_from_initrd(simplified_path, strcmp(simplified_path, prefix) == 0 ? "" : &simplified_path[(mount_point == vfs_root ? 0 : 1) + prefix_length], ring, system, data, cwd);
 
     free(simplified_path);
     free(prefix);
+    return ret;
+}
+
+thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
+{
+    uint32_t flags = lock_scheduler();
+    thread_t* ret = __multitasking_add_task_from_vfs(name, path, ring, system, data, cwd);
+    unlock_scheduler(flags);
     return ret;
 }

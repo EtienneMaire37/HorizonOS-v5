@@ -68,6 +68,8 @@ typedef struct vfs_file_inode
         const char* folder_child;
     } file_data;
 
+    size_t reference_count;
+
     ssize_t (*io_func)(file_entry_t*, uint8_t* buf, size_t count, uint8_t direction);
 
     struct stat st;
@@ -80,6 +82,8 @@ typedef struct
     drive_t drive;
 
     struct stat st;
+
+    size_t reference_count;
 
     vfs_file_tnode_t* files;
     vfs_folder_tnode_t* folders;

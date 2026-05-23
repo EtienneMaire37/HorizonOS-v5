@@ -23,10 +23,13 @@ int liballoc_unlock()
 void* liballoc_alloc(size_t pages)
 {
     uint32_t flags = acquire_spinlock_noint(&vmm_lock);
+    // LOG(TRACE, "liballoc_alloc(%zu)", pages);
 	void* addr = __vmm_find_free_kernel_space_pages(NULL, pages);
-    // LOG(TRACE, "liballoc_alloc: %p", addr);
 	if (unlikely(!addr)) return (release_spinlock_noint(&vmm_lock, flags), NULL);
 	allocate_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE), (uint64_t)addr, pages, PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
+	for (uint64_t _addr = (uint64_t)addr; _addr < (uint64_t)addr + 0x1000ULL * pages; _addr += 0x1000ULL)
+	    invlpg(_addr);
+	// LOG(TRACE, "-> %#llx", (unsigned long long)addr);
 	release_spinlock_noint(&vmm_lock, flags);
     return addr;
 }

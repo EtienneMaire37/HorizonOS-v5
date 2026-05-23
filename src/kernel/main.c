@@ -1,3 +1,4 @@
+#include "multitasking/sched_lock.h"
 #define _GNU_SOURCE
 
 #include <stdbool.h>
@@ -568,8 +569,6 @@ void _start()
     else
         printf("No PS/2 Controller\n");
 
-    FATAL("TODO: Lock VFS");
-
     LOG(INFO, "Setting up the VFS...");
     printf("Mounting initrd at root...\n");
     vfs_root = vfs_create_empty_folder_tnode("root", NULL, VFS_NODE_MOUNTPOINT | VFS_NODE_INIT,
@@ -619,6 +618,8 @@ void _start()
         printf("No temperature sensor\n");
     }
 
+    FATAL("TODO: VFS locking and reference counting");
+
     LOG(DEBUG, "VFS TREE:");
     vfs_log_tree(vfs_root, 0);
 
@@ -661,8 +662,12 @@ void _start()
 
     multitasking_init();
 
+    LOG(TRACE, "Loading init task...");
+
     startup_data_struct_t data = startup_data_init_from_command((char*[]){"/sbin/init", NULL}, (char*[]){NULL});
+    uint32_t flags = lock_scheduler();
     thread_t* init_task = __multitasking_add_task_from_vfs("init", "/sbin/init", 3, true, &data, vfs_root);
+    unlock_scheduler(flags);
     if (!init_task)
     {
         LOG(CRITICAL, "init task couldn't start");
@@ -670,7 +675,9 @@ void _start()
         abort();
     }
 
-    uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+    LOG(TRACE, "Setting up console file descriptors for init task...");
+
+    flags = acquire_spinlock_noint(&file_table_lock);
     init_task->file_table[STDIN_FILENO].flags = 0;
     init_task->file_table[STDIN_FILENO].index = 0;
     file_table[init_task->file_table[STDIN_FILENO].index].used++;
@@ -681,8 +688,6 @@ void _start()
     init_task->file_table[STDERR_FILENO].index = 2;
     file_table[init_task->file_table[STDERR_FILENO].index].used++;
     release_spinlock_noint(&file_table_lock, flags);
-
-    FATAL("ADD BACK lock_scheduler TO BE ABLE TO POSTPONE TASK SWITCHES");
 
     LOG(DEBUG, "Starting multitasking...");
     printf("Starting multitasking...\n\n");

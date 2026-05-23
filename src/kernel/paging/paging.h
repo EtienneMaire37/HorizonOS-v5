@@ -15,23 +15,29 @@ static inline __attribute__((always_inline, const)) virtual_address_t vaddr_from
 {
     return make_address_canonical(((uint64_t)(pml4e & 0x1ff) << 39ULL) | ((uint64_t)(pdpte & 0x1ff) << 30ULL) | ((uint64_t)(pde & 0x1ff) << 21ULL) | ((uint64_t)(pte & 0x1ff) << 12ULL));
 }
-static inline __attribute__((always_inline)) void simplify_paging_indices(uint16_t* pml4e, uint16_t* pdpte, uint16_t* pde, uint16_t* pte)
+
+static inline __attribute__((always_inline)) void simplify_pte_paging_indices(uint16_t* pte, uint16_t* pde)
 {
     while ((*pte) >= 512)
     {
         (*pte) -= 512;
         (*pde)++;
-        while ((*pde) >= 512)
-        {
-            (*pde) -= 512;
-            (*pdpte)++;
-            while ((*pdpte) >= 512)
-            {
-                (*pdpte) -= 512;
-                (*pml4e)++;
-                assert((*pml4e) < 512);
-            }
-        }
+    }
+}
+static inline __attribute__((always_inline)) void simplify_pde_paging_indices(uint16_t* pde, uint16_t* pdpte)
+{
+    while ((*pde) >= 512)
+    {
+        (*pde) -= 512;
+        (*pdpte)++;
+    }
+}
+static inline __attribute__((always_inline)) void simplify_pdpte_paging_indices(uint16_t* pdpte, uint16_t* pml4e)
+{
+    while ((*pdpte) >= 512)
+    {
+        (*pdpte) -= 512;
+        (*pml4e)++;
     }
 }
 
@@ -104,6 +110,7 @@ uint64_t* create_empty_pdpt();
 physical_address_t create_empty_pdpt_phys();
 uint64_t* create_empty_virtual_address_space();
 bool is_pdpt_entry_present(const uint64_t* entry);
+bool is_pdpt_entry_large(const uint64_t* entry);
 physical_address_t get_pdpt_entry_address(const uint64_t* entry);
 uint8_t get_pdpt_entry_privilege(const uint64_t* entry);
 uint8_t get_pdpt_entry_read_write(const uint64_t* entry);

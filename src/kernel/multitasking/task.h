@@ -107,6 +107,7 @@ void task_setup_stack(thread_t* task, uint64_t entry_point);
 void task_set_name(thread_t* task, const char* name);
 
 thread_t* task_create_empty();
+thread_t* __task_create_empty();
 void task_destroy(thread_t* task);
 void __task_destroy(thread_t* task);
 void switch_task();

@@ -36,6 +36,9 @@ vfs_folder_inode_t* vfs_create_empty_folder_inode(vfs_folder_tnode_t* parent, ui
     drive_t drive)
 {
     vfs_folder_inode_t* inode = malloc(sizeof(vfs_folder_inode_t));
+    if (!inode) return NULL;
+
+    inode->reference_count = 1;
 
     inode->files = NULL;
     inode->folders = NULL;
@@ -97,6 +100,8 @@ vfs_file_inode_t* vfs_create_special_file_inode(vfs_folder_tnode_t* parent, mode
 {
     vfs_file_inode_t* inode = malloc(sizeof(vfs_file_inode_t));
     if (!inode) return NULL;
+
+    inode->reference_count = 1;
 
     inode->drive.type = DT_VIRTUAL;
     inode->io_func = fun;
@@ -313,7 +318,6 @@ ssize_t vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res)
 
 void vfs_explore(vfs_folder_tnode_t* tnode)
 {
-    FATAL("TODO: Reference counting");
     // LOG(TRACE, "exploring folder: %s", tnode->name);
     if (!tnode || !tnode->inode)
     {

@@ -39,7 +39,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         else
             LOG(WARNING, EXCEPTION_LOG_DATA);
 
-        LOG(WARNING, "CS: %#.16" PRIx64 " DS: %#.16" PRIx64 " SS: %#.16" PRIx64, registers->cs, registers->ds, registers->ss);
+        LOG(WARNING, "CS: %#016" PRIx64 " DS: %#016" PRIx64 " SS: %#016" PRIx64, registers->cs, registers->ds, registers->ss);
         log_segbase();
 
         if (multitasking_enabled)

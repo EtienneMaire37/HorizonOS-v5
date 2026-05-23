@@ -16,7 +16,6 @@ hashmap_t* hashmap_create(size_t cap)
     hmp->data = (ll_t*)malloc(cap);
     assert(hmp->data);
     memset(hmp->data, 0, cap);
-
     return hmp;
 }
 

@@ -29,6 +29,8 @@ static inline __attribute__((always_inline)) bool __is_page_free(uint64_t vaddr)
     uint64_t* pdpt_entry = &pdpt[pdpte];
     if (!is_pdpt_entry_present(pdpt_entry))
         return (unlock_page_table(pdpt, pdpt_flags), unlock_page_table(pml4, pml4_flags), true);
+    if (is_pdpt_entry_large(pdpt_entry))
+        return (unlock_page_table(pdpt, pdpt_flags), unlock_page_table(pml4, pml4_flags), false);
 
     uint64_t* pd = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pdpt_entry));
     uint32_t pd_flags = lock_page_table(pd);
@@ -36,6 +38,8 @@ static inline __attribute__((always_inline)) bool __is_page_free(uint64_t vaddr)
     uint64_t* pd_entry = &pd[pde];
     if (!is_pdpt_entry_present(pd_entry))
         return (unlock_page_table(pd, pd_flags), unlock_page_table(pdpt, pdpt_flags), unlock_page_table(pml4, pml4_flags), true);
+    if (is_pdpt_entry_large(pd_entry))
+        return (unlock_page_table(pd, pd_flags), unlock_page_table(pdpt, pdpt_flags), unlock_page_table(pml4, pml4_flags), false);
 
     uint64_t* pt = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(pd_entry));
     uint32_t pt_flags = lock_page_table(pt);

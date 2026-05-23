@@ -207,6 +207,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
                         first_free_page_hint_block = i;
                         release_spinlock_noint(&pfa_lock, flags);
                         LOG_MEM_ALLOCATED();
+                        // LOG(TRACE, "new(%zu): %#llx", 4096 * pages, usable_memory_map[i].address + (alloc_start - block_start_index) * 0x1000ULL);
                         return usable_memory_map[i].address + (alloc_start - block_start_index) * 0x1000ULL;
                     }
                 }
