@@ -27,9 +27,7 @@ extern volatile local_apic_registers_t* lapic;
 
 #define TSC_DEADLINE_DISARMED       0
 
-extern uint32_t ps2_1_gsi, ps2_12_gsi;
-
-void madt_extract_data();
+void apic_map_irq_from_source(int irq_number, int isr_number);
 
 void lapic_init();
 uint32_t lapic_get_cpu_id();

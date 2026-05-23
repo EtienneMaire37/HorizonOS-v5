@@ -540,10 +540,22 @@ void _start()
     LOG(INFO, "Parsing ACPI tables..");
     printf("Parsing ACPI tables...\n");
     acpi_find_tables();
-    fadt_extract_data();
+
+    ps2_controller_connected = acpi_revision == ACPI_1_0 ? true : (fadt->boot_architecture_flags & 0b10) == 0b10;
+    LOG(INFO, "Preferred power management profile : %s (%u)", fadt->preferred_power_management_profile > 7 ? "Unknown" :
+        preferred_power_management_profile_text[fadt->preferred_power_management_profile], fadt->preferred_power_management_profile);
+    printf("Preferred power management profile : %s (%u)\n", fadt->preferred_power_management_profile > 7 ? "Unknown" :
+        preferred_power_management_profile_text[fadt->preferred_power_management_profile], fadt->preferred_power_management_profile);
 
     disable_interrupts();
-        madt_extract_data();
+    {
+        if (ps2_controller_connected)
+        {
+            apic_map_irq_from_source(1, APIC_PS2_1_INT);
+            apic_map_irq_from_source(12, APIC_PS2_2_INT);
+        }
+        // TODO: Add OSPM support and map fadt->sci_interrupt
+    }
     enable_interrupts();
 
     printf("Done.\n");

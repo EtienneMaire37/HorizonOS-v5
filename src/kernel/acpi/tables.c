@@ -14,8 +14,6 @@ struct xsdt_table* xsdt;
 struct fadt_table* fadt;
 struct madt_table* madt;
 
-uint8_t preferred_power_management_profile;
-
 acpi_revision_t acpi_revision = 0xff;
 uint32_t sdt_count;
 
@@ -138,25 +136,4 @@ void* read_rsdt_ptr(uint32_t index)
     default:
         return NULL;
     }
-}
-
-void fadt_extract_data()
-{
-    assert(fadt);
-
-    LOG(DEBUG, "Extracting data from the FADT");
-
-    ps2_controller_connected = acpi_revision == ACPI_1_0 ? true : (fadt->boot_architecture_flags & 0b10) == 0b10;
-    LOG(TRACE, "FADT: Boot architecture flags: %#x", fadt->boot_architecture_flags);
-
-    uint8_t _preferred_power_management_profile = fadt->preferred_power_management_profile;
-
-    if (_preferred_power_management_profile > 7)
-        preferred_power_management_profile = 0;
-    else
-        preferred_power_management_profile = _preferred_power_management_profile;
-
-    LOG(INFO, "Preferred power management profile : %s (%u)", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
-    // if (preferred_power_management_profile != 0)
-    printf("Preferred power management profile : %s (%u)\n", _preferred_power_management_profile > 7 ? "Unknown" : preferred_power_management_profile_text[preferred_power_management_profile], _preferred_power_management_profile);
 }

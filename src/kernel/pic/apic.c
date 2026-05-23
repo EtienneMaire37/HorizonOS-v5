@@ -9,8 +9,6 @@
 volatile local_apic_registers_t* lapic = NULL;
 atomic_flag ioapic_lock = ATOMIC_FLAG_INIT; // TODO: Implement a per I/O APIC lock
 
-uint32_t ps2_1_gsi = 1, ps2_12_gsi = 12;
-
 #include "apic.h"
 #include "../acpi/tables.h"
 #include "../paging/paging.h"
@@ -143,7 +141,7 @@ void* map_ioapic_in_current_vas(uint64_t paddr)
     uint32_t flags = acquire_spinlock_noint(&vmm_lock);
     void* vaddr = __vmm_find_free_kernel_space_pages(NULL, 1);
 
-    LOG(DEBUG, "Mapping I/O APIC at physical address %#" PRIx64 " to %p", paddr, vaddr);
+    LOG(TRACE, "Mapping I/O APIC at physical address %#" PRIx64 " to %p", paddr, vaddr);
 
     remap_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
         (uint64_t)vaddr, paddr,
@@ -156,7 +154,7 @@ void* map_ioapic_in_current_vas(uint64_t paddr)
 
 void unmap_ioapic(void* addr)
 {
-    LOG(DEBUG, "Unmapping I/O APIC at virtual address %p", addr);
+    LOG(TRACE, "Unmapping I/O APIC at virtual address %p", addr);
 
     free_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
         (uint64_t)addr, 1);
@@ -183,118 +181,66 @@ struct madt_entry_header* find_entry_in_madt(bool (*test_func)(struct madt_entry
     return NULL;
 }
 
-void madt_extract_data()
+void apic_map_irq_from_source(int irq_number, int isr_number)
 {
-    if (!madt) return;
+    assert(madt);
 
-    LOG(DEBUG, "Extracting data from the MADT");
+    LOG(DEBUG, "Mapping IRQ %d to ISR %d", irq_number, isr_number);
 
-    if (ps2_controller_connected)
+    struct madt_entry_header* irq_source_entry = find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
     {
-        struct madt_entry_header* ps2_irq_source_1 = find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
+        if (header->entry_type == 2)    // * I/O APIC Interrupt Source Override
         {
-            if (header->entry_type == 2)    // * I/O APIC Interrupt Source Override
-            {
-                struct madt_ioapic_interrupt_source_override_entry* entry = (struct madt_ioapic_interrupt_source_override_entry*)header;
-                if (entry->irq_source == 1)
-                    return true;
-            }
-            return false;
+            struct madt_ioapic_interrupt_source_override_entry* entry = (struct madt_ioapic_interrupt_source_override_entry*)header;
+            if (entry->irq_source == irq_number)
+                return true;
         }
-        ));
-        struct madt_entry_header* ps2_irq_source_12 = find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
-        {
-            if (header->entry_type == 2)    // * I/O APIC Interrupt Source Override
-            {
-                struct madt_ioapic_interrupt_source_override_entry* entry = (struct madt_ioapic_interrupt_source_override_entry*)header;
-                if (entry->irq_source == 12)
-                    return true;
-            }
-            return false;
-        }
-        ));
-
-        ps2_1_gsi = 1;
-        ps2_12_gsi = 12;
-
-        // * Override
-        if (ps2_irq_source_1)
-            ps2_1_gsi = ((struct madt_ioapic_interrupt_source_override_entry*)ps2_irq_source_1)->gsi;
-        if (ps2_irq_source_12)
-            ps2_12_gsi = ((struct madt_ioapic_interrupt_source_override_entry*)ps2_irq_source_12)->gsi;
-
-        LOG(DEBUG, "PS/2 IRQ 1 GSI: %u", ps2_1_gsi);
-        LOG(DEBUG, "PS/2 IRQ 12 GSI: %u", ps2_12_gsi);
-
-        // printf("PS/2 IRQ 1 GSI: %u\n", ps2_1_gsi);
-        // printf("PS/2 IRQ 12 GSI: %u\n", ps2_12_gsi);
-
-        struct madt_ioapic_entry* ps2_1_ioapic_entry = (struct madt_ioapic_entry*)find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
-        {
-            if (header->entry_type == 1)    // * I/O APIC
-            {
-                struct madt_ioapic_entry* entry = (struct madt_ioapic_entry*)header;
-                if (entry->gsi_base > ps2_1_gsi)
-                    return false;
-                volatile io_apic_registers_t* ioapic = map_ioapic_in_current_vas(entry->ioapic_address);
-                uint32_t max_gsi = ioapic_get_max_redirection_entry(ioapic) + entry->gsi_base;
-                unmap_ioapic((void*)ioapic);
-                if (ps2_1_gsi <= max_gsi)
-                    return true;
-            }
-            return false;
-        }));
-        struct madt_ioapic_entry* ps2_12_ioapic_entry = (struct madt_ioapic_entry*)find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
-        {
-            if (header->entry_type == 1)    // * I/O APIC
-            {
-                struct madt_ioapic_entry* entry = (struct madt_ioapic_entry*)header;
-                if (entry->gsi_base > ps2_12_gsi)
-                    return false;
-                volatile io_apic_registers_t* ioapic = map_ioapic_in_current_vas(entry->ioapic_address);
-                uint32_t max_gsi = ioapic_get_max_redirection_entry(ioapic) + entry->gsi_base;
-                unmap_ioapic((void*)ioapic);
-                if (ps2_12_gsi <= max_gsi)
-                    return true;
-            }
-            return false;
-        }));
-
-        uint64_t lapic_id = lapic_get_cpu_id();
-        // ! Horrible way to do things
-        // TODO: Use logical destination mode
-        assert(lapic_id == (lapic_id & 0xff));
-        if (ps2_1_ioapic_entry)
-        {
-            LOG(DEBUG, "Found I/O APIC entry able to handle GSI %u", ps2_1_gsi);
-            volatile io_apic_registers_t* ps2_1_ioapic = map_ioapic_in_current_vas(ps2_1_ioapic_entry->ioapic_address);
-            uint64_t redirection_entry = ioapic_read_redirection_entry(ps2_1_ioapic, ps2_1_gsi - ps2_1_ioapic_entry->gsi_base);
-            ioapic_write_redirection_entry(ps2_1_ioapic, ps2_1_gsi - ps2_1_ioapic_entry->gsi_base,
-                (redirection_entry & (0x00FFFFFFFFFE0000)) |
-                APIC_PS2_1_INT |
-                APIC_DELIVERY_FIXED |
-                APIC_DESTINATION_PHYSICAL |
-                APIC_POLARITY_ACTIVE_HIGH |
-                APIC_TRIGGER_EDGE |
-                APIC_MASK_ENABLED |
-                (lapic_id << 56));
-            unmap_ioapic((void*)ps2_1_ioapic);
-        }
-        if (ps2_12_ioapic_entry)
-        {
-            LOG(DEBUG, "Found I/O APIC entry able to handle GSI %u", ps2_12_gsi);
-            volatile io_apic_registers_t* ps2_12_ioapic = map_ioapic_in_current_vas(ps2_12_ioapic_entry->ioapic_address);
-            uint64_t redirection_entry = ioapic_read_redirection_entry(ps2_12_ioapic, ps2_12_gsi - ps2_12_ioapic_entry->gsi_base);
-            ioapic_write_redirection_entry(ps2_12_ioapic, ps2_12_gsi - ps2_12_ioapic_entry->gsi_base,
-                (redirection_entry & (0x00FFFFFFFFFE0000)) |
-                APIC_PS2_2_INT |
-                APIC_DELIVERY_FIXED |
-                APIC_DESTINATION_PHYSICAL |
-                APIC_POLARITY_ACTIVE_HIGH |
-                APIC_TRIGGER_EDGE |
-                APIC_MASK_ENABLED |
-                (lapic_id << 56));
-            unmap_ioapic((void*)ps2_12_ioapic);
-        }
+        return false;
     }
+    ));
+
+    int gsi = irq_source_entry ? ((struct madt_ioapic_interrupt_source_override_entry*)irq_source_entry)->gsi : irq_number;
+
+    LOG(DEBUG, "GSI for IRQ source %d is %u", irq_number, gsi);
+
+    struct madt_ioapic_entry* ioapic_entry = (struct madt_ioapic_entry*)find_entry_in_madt(lambda(bool, (struct madt_entry_header* header)
+    {
+        if (header->entry_type == 1)    // * I/O APIC
+        {
+            struct madt_ioapic_entry* entry = (struct madt_ioapic_entry*)header;
+            if (entry->gsi_base > gsi)
+                return false;
+            volatile io_apic_registers_t* ioapic = map_ioapic_in_current_vas(entry->ioapic_address);
+            uint32_t max_gsi = ioapic_get_max_redirection_entry(ioapic) + entry->gsi_base;
+            unmap_ioapic((void*)ioapic);
+            if (gsi <= max_gsi)
+                return true;
+        }
+        return false;
+    }));
+
+    if (!ioapic_entry)
+    {
+        LOG(ERROR, "No I/O APIC can handle GSI %d", gsi);
+        return;
+    }
+
+    uint32_t lapic_id = lapic_get_cpu_id();
+    // ! Horrible way to do things
+    // TODO: Use logical destination mode
+    assert(lapic_id == (lapic_id & 0xff));
+    volatile io_apic_registers_t* ioapic = map_ioapic_in_current_vas(ioapic_entry->ioapic_address);
+    uint64_t redirection_entry = ioapic_read_redirection_entry(ioapic, gsi - ioapic_entry->gsi_base);
+    ioapic_write_redirection_entry(ioapic, gsi - ioapic_entry->gsi_base,
+        (redirection_entry & (0x00FFFFFFFFFE0000)) |
+        APIC_PS2_1_INT |
+        APIC_DELIVERY_FIXED |
+        APIC_DESTINATION_PHYSICAL |
+        APIC_POLARITY_ACTIVE_HIGH |
+        APIC_TRIGGER_EDGE |
+        APIC_MASK_ENABLED |
+        ((uint64_t)lapic_id << 56));
+    unmap_ioapic((void*)ioapic);
+
+    LOG(DEBUG, "Mapped GSI %d to ISR %d", gsi, isr_number);
 }
