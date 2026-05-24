@@ -13,8 +13,7 @@
 #include "../util/defs.h"
 #include "../cpu/registers.h"
 #include "../memalloc/page_data.h"
-
-extern initrd_file_t* commit_file;
+#include "../git/commit.h"
 
 #define PANIC_INVALID           0
 #define PANIC_DEBUG             1

@@ -1,27 +1,21 @@
-#include "multitasking/sched_lock.h"
 #define _GNU_SOURCE
 
 #include <stdbool.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "cpu/temp.h"
-#include "cpu/util.h"
-#include "pic/timer.h"
-
-#include "boot/limine.h"
 
 extern char kernel_start, kernel_end;
 void *kernel_start_ptr, *kernel_end_ptr;
 
 char** environ = NULL;
-int num_environ;
 
-#include "cpu/units.h"
+#include "cpu/temp.h"
+#include "cpu/util.h"
+#include "pic/timer.h"
+#include "multitasking/sched_lock.h"
 
-#include "util/cfunc.h"
-#include "util/math.h"
-#include "util/memory.h"
+#include "boot/limine.h"
 
 #include <inttypes.h>
 #include <limits.h>
@@ -38,7 +32,6 @@ int num_environ;
 #include "fpu/sse.h"
 #include "debug/out.h"
 
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,10 +45,7 @@ int num_environ;
 #include <dirent.h>
 
 #include "vfs/vfs.h"
-#include "time/ktime.h"
 #include "initrd/initrd.h"
-#include "time/gdn.h"
-#include "time/ktime.h"
 #include "cmos/rtc.h"
 #include "pic/apic.h"
 
@@ -79,11 +69,10 @@ int num_environ;
 #include "cpu/segbase.h"
 #include "cpu/tsc.h"
 #include "multitasking/signal.h"
-#include "int/kernel_panic.h"
+#include "cpu/units.h"
+#include "git/commit.h"
 #include "memalloc/virtual_memory_allocator.h"
 #include "vfs/table.h"
-
-initrd_file_t* commit_file;
 
 void _start()
 {
