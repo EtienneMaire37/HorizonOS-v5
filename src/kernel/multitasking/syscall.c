@@ -24,7 +24,7 @@
 #include "../util/memory.h"
 #include "../vfs/entries.h"
 #include <dirent.h>
-#include "../cpu/units.h"
+#include "../util/units.h"
 #include "../vfs/table.h"
 #include <sys/utsname.h>
 #include "../system/info.h"

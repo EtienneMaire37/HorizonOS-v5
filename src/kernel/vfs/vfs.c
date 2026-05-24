@@ -13,7 +13,7 @@
 #include "../terminal/textio.h"
 #include "../util/access.h"
 #include "../multitasking/multitasking.h"
-#include "../cpu/units.h"
+#include "../util/units.h"
 #include "table.h"
 #include "../util/error.h"
 

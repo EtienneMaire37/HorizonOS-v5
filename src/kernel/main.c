@@ -69,7 +69,7 @@ char** environ = NULL;
 #include "cpu/segbase.h"
 #include "cpu/tsc.h"
 #include "multitasking/signal.h"
-#include "cpu/units.h"
+#include "util/units.h"
 #include "git/commit.h"
 #include "memalloc/virtual_memory_allocator.h"
 #include "vfs/table.h"
