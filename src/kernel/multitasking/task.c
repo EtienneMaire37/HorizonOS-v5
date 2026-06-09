@@ -295,7 +295,7 @@ void switch_task()
     uint32_t flags;
     bool lock_state = try_lock_scheduler(&flags);
 
-    if (lock_state || !atomic_load(&preempt_disable_depth))
+    if (lock_state || atomic_load(&preempt_disable_depth))
     {
         if (!lock_state)
             unlock_scheduler(flags);
@@ -304,6 +304,7 @@ void switch_task()
     }
 
     thread_t* next = __find_next_task();
+    // LOG(TRACE, "Switching to task \"%s\" (pid %d)", next->name, next->pid);
     unlock_scheduler(flags);
     if (current_task != next)
     {

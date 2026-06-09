@@ -104,6 +104,13 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
     bool ctrl = keyboard_is_key_pressed(VK_LCONTROL) || keyboard_is_key_pressed(VK_RCONTROL);
     bool lalt = keyboard_is_key_pressed(VK_LALT);
     bool meta = false;
+    
+//     if (ctrl && shift && utf32_to_bios_oem(character) == 'P')
+//     {
+//         LOG(TRACE, "%d tasks", task_count);
+//         LOG(TRACE, "current task: \"%s\" (pid %d)", current_task->name, current_task->pid);
+//         return;
+//     }
 
     char ascii = utf32_to_bios_oem(character);
     if (!is_printable_character(ascii)

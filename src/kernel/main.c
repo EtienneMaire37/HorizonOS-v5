@@ -619,8 +619,6 @@ void _start()
         printf("No temperature sensor\n");
     }
 
-    FATAL("TODO: VFS locking and reference counting");
-
     LOG(DEBUG, "VFS TREE:");
     vfs_log_tree(vfs_root, 0);
 

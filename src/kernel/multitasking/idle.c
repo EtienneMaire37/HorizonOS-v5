@@ -1,11 +1,10 @@
 #include "idle.h"
+#include <stdbool.h>
 
 void idle_main()
 {
-    while(true) 
-    {
-        // printf("Hello from idle task!!!!\n");
-        hlt();
-    }
+    // TODO: Improve scheduler to refresh the TSC deadlines every 20ms or so and keep track of time slices
+    while (true)
+        ; // hlt();
     __builtin_unreachable();
 }

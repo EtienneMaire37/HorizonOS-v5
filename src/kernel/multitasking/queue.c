@@ -20,7 +20,12 @@ void __thread_queue_push_back(thread_queue_t* queue, thread_t* data)
 
 void __thread_queue_remove(thread_queue_t* queue, thread_queue_item_t* item)
 {
-    assert(queue && item);
+    assert(queue);
+    if (!item)
+    {
+        LOG(DEBUG, "__thread_queue_remove: item is NULL");
+        return;
+    }
     ll_remove(queue, item);
 }
 

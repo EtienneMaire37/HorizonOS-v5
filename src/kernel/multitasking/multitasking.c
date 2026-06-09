@@ -52,12 +52,15 @@ void multitasking_init()
 
 void multitasking_start()
 {
+    LOG(TRACE, "aaa");
     fflush(stdout);
     current_task = idle_task;
     last_task = idle_task;
     multitasking_enabled = true;
+    LOG(TRACE, "bbb");
 
     switch_task();
+    LOG(TRACE, "ccc");
 
     idle_main();
 }

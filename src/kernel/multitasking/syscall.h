@@ -48,10 +48,8 @@
         SC_ARGS_SELECT(argc, __VA_ARGS__) \
         sc_ret_errno = 0;
 
-#define SC_LOG_SCHED_DEPTH  0
-
 #ifdef LOG_SYSCALLS
-#define SC_LOG(...) do { LOG(TRACE, "[pid = %d] ", current_task->pid); if (SC_LOG_SCHED_DEPTH) CONTINUE_LOG(TRACE, "(sched depth = %d) ", task_lock_depth); CONTINUE_LOG(TRACE, __VA_ARGS__); } while (0)
+#define SC_LOG(...) do { LOG(TRACE, "[pid = %d] ", current_task->pid); CONTINUE_LOG(TRACE, __VA_ARGS__); } while (0)
 #else
 #define SC_LOG(fmt, ...)
 #endif

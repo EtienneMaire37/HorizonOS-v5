@@ -115,6 +115,7 @@ void __task_stop_polling(thread_t* task)
         {
             ll_item_t* cur = it;
             thread_queue_t* tq = cur->data;
+            assert(tq);
             it = it->next;
             __thread_queue_remove(tq, ll_find_item_by_data(tq, task));
             ll_remove(&task->_poll_tqs, cur);
