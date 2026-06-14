@@ -31,6 +31,7 @@
 #include "../vfs/pipe.h"
 #include <sys/poll.h>
 #include <sched.h>
+#include "../cpu/tsc.h"
 
 extern void sigret();
 
@@ -1124,8 +1125,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret(1) = 0;
             if (arg5)
             {
-                FATAL("TODO: Implement TSC deadlines");
-                // current_task->timeout_deadline = global_timer + arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS;
+                current_task->timeout_deadline = rdtsc() + arg5->tv_nsec * tsc_cycles_per_second / 1000000000 + arg5->tv_sec * tsc_cycles_per_second;
                 __move_running_task_to_thread_queue(&waiting_for_time_tasks, current_task);
                 switch_task();
                 unlock_scheduler(sd_flags);
@@ -1133,8 +1133,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             }
             else
                 current_task->timeout_deadline = 0;
-            FATAL("TODO: Implement TSC deadlines");
-            // if (current_task->timeout_deadline >= global_timer)
+            if (current_task->timeout_deadline >= rdtsc())
                 sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
             current_task->sig_mask = saved_sigmask;
             unlock_scheduler(sd_flags);
@@ -1214,7 +1213,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                         __task_monitor_entry(current_task, entry);
                     }
                 }
-                __task_start_polling(current_task, arg5 ? arg5->tv_nsec * PRECISE_NANOSECONDS + arg5->tv_sec * PRECISE_SECONDS : NO_TIMEOUT);
+                __task_start_polling(current_task, arg5 ? arg5->tv_nsec * tsc_cycles_per_second / 1000000000 + arg5->tv_sec * tsc_cycles_per_second : NO_TIMEOUT);
                 switch_task();
                 release_spinlock_noint(&file_table_lock, ft_flags);
                 unlock_scheduler(sd_flags);

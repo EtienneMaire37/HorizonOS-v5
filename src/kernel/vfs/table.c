@@ -7,6 +7,7 @@
 #include <asm-generic/errno.h>
 #include "../util/error.h"
 #include "vfs.h"
+#include "../cpu/tsc.h"
 
 atomic_flag file_table_lock = ATOMIC_FLAG_INIT;
 file_entry_t file_table[MAX_FILE_TABLE_ENTRIES];
@@ -99,10 +100,9 @@ void __task_monitor_entry(thread_t* task, file_entry_t* entry)
     }
 }
 
-void __task_start_polling(thread_t* task, precise_time_t timeout)
+void __task_start_polling(thread_t* task, uint64_t timeout)
 {
-    FATAL("TODO: Implement TSC deadlines");
-    // current_task->timeout_deadline = timeout == NO_TIMEOUT ? NO_TIMEOUT : global_timer + timeout;
+    current_task->timeout_deadline = timeout == NO_TIMEOUT ? NO_TIMEOUT : rdtsc() + timeout;
     __move_task_to_queue(&waiting_for_time_tasks, task);
 }
 

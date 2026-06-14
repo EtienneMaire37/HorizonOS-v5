@@ -87,7 +87,6 @@ extern void syscall_handler();
 
 // !!! Assumes task queue is locked
 extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds);
-void __full_context_switch(thread_t* next);
 void end_context_switch();
 thread_t* __find_next_task();
 bool __is_fd_valid(int fd);

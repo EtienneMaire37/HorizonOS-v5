@@ -22,7 +22,6 @@ extern _Atomic uint16_t task_count;
 extern uint64_t multitasking_counter;
 
 extern thread_t* current_task;
-extern thread_t* last_task;
 extern bool multitasking_enabled;
 
 extern utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;

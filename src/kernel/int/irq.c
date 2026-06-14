@@ -5,6 +5,9 @@
 #include "../terminal/textio.h"
 #include "../multitasking/multitasking.h"
 #include "../pic/timer.h"
+#include "../cpu/tsc.h"
+#include "../util/lambda.h"
+#include "../vfs/table.h"
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {
@@ -17,17 +20,17 @@ void handle_apic_irq(interrupt_registers_t* registers)
 
         if (multitasking_enabled)
         {
-            FATAL("TODO: Implement TSC deadlines");
-        //     uint32_t flags = lock_scheduler();
-        //     __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
-        //     {
-        //         if (task->timeout_deadline == NO_TIMEOUT)
-        //             return;
-        //         if (task->timeout_deadline >= global_timer)
-        //             return;
-        //         __task_stop_polling(task);
-        //     }));
-        //     unlock_scheduler(flags);
+            uint64_t tsc = rdtsc();
+            uint32_t flags = lock_scheduler();
+            __run_it_on_queue(&waiting_for_time_tasks, lambda(void, (thread_t* task)
+            {
+                if (task->timeout_deadline == NO_TIMEOUT)
+                    return;
+                if (task->timeout_deadline >= tsc)
+                    return;
+                __task_stop_polling(task);
+            }));
+            unlock_scheduler(flags);
         }
         break;
     }

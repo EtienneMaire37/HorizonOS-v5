@@ -21,14 +21,20 @@ context_switch:
     push rbp
 
     mov rbx, qword [rel task_rsp_offset]
+    cmp rdi, 0
+    je dont_save_context1
     mov [rdi + rbx], rsp                ; rdi->rsp = $rsp
+dont_save_context1:
 
     mov rsp, [rsi + rbx]                ; $rsp = rsi->rsp
 
     mov rbx, qword [rel task_cr3_offset]
 
     mov rcx, cr3
+    cmp rdi, 0
+    je dont_save_context2
     mov [rdi + rbx], rcx
+dont_save_context2:
     mov rax, [rsi + rbx]
 
     cmp rax, rcx

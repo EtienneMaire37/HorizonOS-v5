@@ -309,15 +309,17 @@ void switch_task()
     if (current_task != next)
     {
         thread_t* old_task = current_task;
-        last_task = old_task;
         current_task = next;
 
         swapgs();
 
-        old_task->fs_base = rdfsbase();
-        old_task->gs_base = rdgsbase();
+        if (old_task)
+        {
+            old_task->fs_base = rdfsbase();
+            old_task->gs_base = rdgsbase();
 
-        fpu_save_state(old_task->fpu_state);
+            fpu_save_state(old_task->fpu_state);
+        }
 
         context_switch(old_task, current_task, (current_task->ring == 0) ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
 

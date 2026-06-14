@@ -23,7 +23,6 @@ _Atomic uint16_t task_count = 0;
 uint64_t multitasking_counter = TASK_SWITCH_DELAY;
 
 thread_t* current_task = NULL;
-thread_t* last_task = NULL;
 bool multitasking_enabled = false;
 
 utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;
@@ -52,15 +51,11 @@ void multitasking_init()
 
 void multitasking_start()
 {
-    LOG(TRACE, "aaa");
     fflush(stdout);
-    current_task = idle_task;
-    last_task = idle_task;
+    current_task = NULL;
     multitasking_enabled = true;
-    LOG(TRACE, "bbb");
 
     switch_task();
-    LOG(TRACE, "ccc");
 
     idle_main();
 }
@@ -69,14 +64,7 @@ void multitasking_add_idle_task(char* name)
 {
     assert(task_count == 0);
 
-    thread_t* task = task_create_empty();
-    task_set_name(task, name);
-    task->cr3 = get_cr3_address();
-
-    uint32_t flags = lock_scheduler();
-    __multitasking_add_task(task);
-    task_count++;
-    unlock_scheduler(flags);
+    multitasking_add_task_from_function("idle", idle_main);
 }
 
 void __multitasking_add_task(thread_t* task)
@@ -121,6 +109,7 @@ void end_context_switch()
 
 thread_t* __find_next_task()
 {
+    if (current_task == NULL) return idle_task->next;
     thread_t* start = current_task->next;
     thread_t* task;
     for (task = start; task != start->prev; task = task->next)
