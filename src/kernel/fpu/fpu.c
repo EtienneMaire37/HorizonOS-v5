@@ -99,11 +99,7 @@ void fpu_restore_state(uint8_t* s)
 
 void fpu_state_init(uint8_t* s)
 {
-    if (!s)
-    {
-        LOG(WARNING, "fpu_state_init: s == NULL");
-        return;
-    }
+    assert(s);
     memcpy((uint8_t*)s, (uint8_t*)fpu_default_state, xsave_area_size);
 }
 
@@ -129,11 +125,7 @@ uint8_t* fpu_state_create()
 
 uint8_t* fpu_state_create_copy(uint8_t* state)
 {
-    if (!state)
-    {
-        LOG(WARNING, "fpu_state_create_copy: state == NULL");
-        return NULL;
-    }
+    assert(state);
     uint8_t* data = fpu_state_create_empty();
     memcpy((uint8_t*)data, (uint8_t*)state, xsave_area_size);
     return data;

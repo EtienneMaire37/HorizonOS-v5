@@ -104,6 +104,7 @@ void end_context_switch()
     wrfsbase(current_task->fs_base);
     wrgsbase(current_task->gs_base);
 
+    // * Now IA32_GS_BASE_MSR contains the value it had before switching tasks
     swapgs();
 }
 

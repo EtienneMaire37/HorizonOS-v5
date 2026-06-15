@@ -34,7 +34,7 @@ sudo apt install -y build-essential bison flex libgmp3-dev libmpc-dev libmpfr-de
 
 run:
 ```bash
-make USER_CFLAGS="${options}"
+make CFLAGS="${options}"
 ```
 Here's a (non exhaustive) list of the supported options:
 | Option | Value   | Description |
@@ -52,7 +52,7 @@ Here's a (non exhaustive) list of the supported options:
 
 For example to build with LOG_LEVEL=TRACE, LOG_SYSCALLS and NDEBUG:
 ```bash
-make USER_CFLAGS="-DLOG_LEVEL=TRACE -DLOG_SYSCALLS -DNDEBUG"
+make CFLAGS="-DLOG_LEVEL=TRACE -DLOG_SYSCALLS -DNDEBUG"
 ```
 Or to build with default settings:
 ```bash

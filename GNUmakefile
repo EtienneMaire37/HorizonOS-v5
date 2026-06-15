@@ -13,8 +13,6 @@ CROSSNM := $(SYSROOT_DIR)/usr/bin/x86_64-horizonos-nm
 CROSSAR := $(SYSROOT_DIR)/usr/bin/x86_64-horizonos-ar
 CROSSSTRIP := $(SYSROOT_DIR)/usr/bin/x86_64-horizonos-strip
 HOSGCC := $(SYSROOT_DIR)/usr/bin/x86_64-horizonos-gcc
-USER_CFLAGS :=
-USER_LDFLAGS :=
 
 MAKE := make
 
@@ -53,7 +51,7 @@ override LINUX_HEADERS_STAMP := ${MAKE_DIR}/linux-headers/.built
 
 QEMU_FLAGS := -accel kvm -cpu host -debugcon file:debug/latest.log -m 1024 -drive file=horizonos.iso,index=0,media=disk,format=raw -smp 8
 
-.PHONY: all run bios-run uefi-run debug bios-debug uefi-debug rmbin rmkernelbin clean
+.PHONY: all run bios-run uefi-run debug bios-debug uefi-debug clean-userspace clean-kernel clean distclean
 
 all: horizonos.iso
 
@@ -99,7 +97,7 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	-mno-red-zone \
 	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-unused-function -Wno-format-zero-length \
 	-mgeneral-regs-only \
-	${USER_CFLAGS} -DBUILDING_KERNEL -I limine-protocol/include
+	${CFLAGS} -DBUILDING_KERNEL -I limine-protocol/include
 bin/%.asm.o: src/kernel/%.asm src/kernel/link.ld $(MLIBC_STAMP)
 	mkdir -p $(dir $@)
 	nasm -f elf64 $< -o $@
@@ -107,7 +105,7 @@ $(KERNEL_ELF): $(KERNEL_OBJ) $(ASM_OBJ)
 	$(HOSGCC) -nostdlib -T src/kernel/link.ld -ffreestanding -pie -static \
 	-o $@ \
 	$(KERNEL_OBJ) $(ASM_OBJ) \
-	-lgcc $(USER_LDFLAGS)
+	-lgcc ${LDFLAGS}
 # 	$(CROSSSTRIP) $@
 
 run:	bios-run
@@ -302,16 +300,17 @@ $(LINUX_HEADERS_STAMP):
 	cd linux-headers && $(MAKE) ARCH=x86_64 prefix=/usr DESTDIR=${MAKE_DIR}/linux-kernel-headers install
 	touch $@
 
-rmkernelbin:
+clean-kernel:
 	rm -rf bin/*
 	rm -f horizonos.iso
 
-rmbin: rmkernelbin
+clean-userspace:
 	rm -rf src/tasks/bin/*
 	rm -rf src/libc/lib/*
 
-clean: rmbin
-	# rm -f horizonos.vdi
+clean: clean-kernel clean-userspace
+
+distclean: clean
 	rm -f resources/pci.ids
 	rm -rf root
 	rm -rf tmp

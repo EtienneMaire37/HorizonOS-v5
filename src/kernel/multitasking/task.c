@@ -312,6 +312,7 @@ void switch_task()
         current_task = next;
 
         swapgs();
+        // * Now IA32_GS_BASE_MSR contains the value it had before switching to kernel mode
 
         if (old_task)
         {
@@ -380,8 +381,7 @@ void __fork_task(thread_t* task)
         return;
 
     thread_t* new_task = (thread_t*)malloc(sizeof(thread_t));
-    if (!new_task)
-        return;
+    assert(new_task);
 
     *new_task = *task;
 
@@ -393,6 +393,8 @@ void __fork_task(thread_t* task)
 
     new_task->cr3 = task_create_empty_vas((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
     new_task->rsp = task->rsp;
+
+    LOG(TRACE, "task->fpu_state = %p", task->fpu_state);
 
     new_task->fpu_state = fpu_state_create_copy(task->fpu_state);
 
@@ -423,6 +425,7 @@ void __fork_task(thread_t* task)
 void cleanup_tasks()
 {
     // TODO: do NOT call cleanup_tasks on every context switch
+    // ! UB !!!!!!! DIFFERENT OPTIMIZATION LEVELS BREAK THIS
     uint32_t flags = lock_scheduler();
     if (forked_tasks)
     {

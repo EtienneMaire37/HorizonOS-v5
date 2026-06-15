@@ -48,7 +48,7 @@ typedef struct thread
 
     uint8_t ring;
     pid_t pid, ppid, pgid, sid;
-    bool system_task;    // * Allow causing kernel panics
+    bool system_task;    // * Allow causing kernel panics (temporary hack, TODO: remove this)
 
     vfs_folder_tnode_t* cwd;
     uint8_t* fpu_state;
