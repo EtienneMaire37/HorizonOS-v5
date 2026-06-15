@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <stdio.h>
 #include "hashmap.h"
 #include "task.h"
 #include <sys/select.h>
@@ -811,7 +812,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         vfs_file_tnode_t* tnode = entry->tnode.file;
         char path[PATH_MAX];
         ssize_t rp_ret = vfs_realpath_from_file_tnode(tnode, path);
-        if (rp_ret == -1 || rp_ret > arg3)
+        if (rp_ret == -1 || rp_ret > (ssize_t)arg3) // TODO: Check arg3 bounds
         {
             sc_ret_errno = ERANGE;
             release_spinlock_noint(&file_table_lock, flags);

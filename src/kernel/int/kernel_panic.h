@@ -42,7 +42,7 @@ static inline const char* get_panic_message(int err)
 
 #define is_a_valid_function(symbol_type) ((symbol_type) == 'T' || (symbol_type) == 'R' || (symbol_type) == 't' || (symbol_type) == 'r')
 
-static inline void print_kernel_symbol_name(uintptr_t rip, uintptr_t rbp, bool ttyout)
+static inline void print_kernel_symbol_name(uintptr_t rip, bool ttyout)
 {
     initrd_file_t* file = kernel_symbols_file;
     if (file == NULL) return;
@@ -166,7 +166,7 @@ static inline void print_stack_trace(uint64_t rip, uint64_t rbp_val, bool ttyout
     }
 
     LOG(INFO, "rip : %#" PRIx64 " ", rip);
-    print_kernel_symbol_name(rip, (uintptr_t)rbp, ttyout);
+    print_kernel_symbol_name(rip, ttyout);
     if (ttyout)
         putchar('\n');
 
@@ -196,7 +196,7 @@ static inline void print_stack_trace(uint64_t rip, uint64_t rbp_val, bool ttyout
             if (ttyout)
                 printf("rip : %#" PRIx64 " | rbp : %#" PRIx64 " ", rbp->rip, (uint64_t)rbp);
             LOG(INFO, "rip : %#" PRIx64 " | rbp : %#" PRIx64 " ", rbp->rip, (uint64_t)rbp);
-            print_kernel_symbol_name(rbp->rip - 1, (uintptr_t)rbp, ttyout);
+            print_kernel_symbol_name(rbp->rip - 1, ttyout);
             if (ttyout)
                 putchar('\n');
             rbp = (call_frame_t*)rbp->rbp;

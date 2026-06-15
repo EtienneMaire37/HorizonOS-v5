@@ -11,7 +11,7 @@
 #include "keyboard.h"
 
 #define bufpri(...) do { char buffer[16] = {0}; size_t character_len = sizeof(buffer); character_len = snprintf(buffer, sizeof(buffer), __VA_ARGS__); assert(character_len != sizeof(buffer)); \
-    if ((ssize_t)num_characters < (ssize_t)max_characters - character_len) { for (int i = 0; i < character_len; i++) { if (buffer[i] != 3) utf32_buffer_putchar(&keyboard_input_buffer, buffer[i]); if (echo || buffer[i] == 3) { if (buffer[i] < 0x20) tty_outc('^'); tty_outc_ex((buffer[i] < 0x20) ? buffer[i] + 0x40 : buffer[i], buffer[i] < 0x20 ? TTY_CONTINUE_CHAR : 0, true); } } } } while (0)
+    if ((ssize_t)num_characters < (ssize_t)((ssize_t)max_characters - character_len)) { for (size_t i = 0; i < character_len; i++) { if (buffer[i] != 3) utf32_buffer_putchar(&keyboard_input_buffer, buffer[i]); if (echo || buffer[i] == 3) { if (buffer[i] < 0x20) tty_outc('^'); tty_outc_ex((buffer[i] < 0x20) ? buffer[i] + 0x40 : buffer[i], buffer[i] < 0x20 ? TTY_CONTINUE_CHAR : 0, true); } } } } while (0)
 
 const keyboard_layout_t* current_keyboard_layout = &us_qwerty;
 
@@ -97,14 +97,14 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
 
     bool echo = (ts->c_lflag & ECHO) != 0;
     bool raw = (ts->c_lflag & ICANON) == 0;
-    int noncanonical_read_minimum_count = ts->c_cc[VMIN];
+    size_t noncanonical_read_minimum_count = ts->c_cc[VMIN];
     int raw_timeout = ts->c_cc[VTIME];
 
     bool shift = keyboard_is_key_pressed(VK_LSHIFT) || keyboard_is_key_pressed(VK_RSHIFT);
     bool ctrl = keyboard_is_key_pressed(VK_LCONTROL) || keyboard_is_key_pressed(VK_RCONTROL);
     bool lalt = keyboard_is_key_pressed(VK_LALT);
     bool meta = false;
-    
+
 //     if (ctrl && shift && utf32_to_bios_oem(character) == 'P')
 //     {
 //         LOG(TRACE, "%d tasks", task_count);

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include "../util/math.h"
 #include "../terminal/textio.h"
 #include "../util/access.h"
@@ -308,7 +309,7 @@ ssize_t vfs_realpath_from_file_tnode(vfs_file_tnode_t* tnode, char* res)
 {
     size_t ret = vfs_realpath_from_folder_tnode_helper(tnode->inode->parent, res, 0);
     size_t len = strlen(tnode->name);
-    if (ret >= PATH_MAX - len - 2 || ret == -1)
+    if (ret >= PATH_MAX - len - 2 || ret == (size_t)-1)
         return -1;
     res[ret] = '/';
     memcpy(&res[ret + 1], tnode->name, len);
@@ -648,6 +649,7 @@ void vfs_log_tree(vfs_folder_tnode_t* tnode, int depth)
 
 ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
+    (void)entry;
     switch(direction)
     {
     case IO_DIR_READ:
@@ -682,6 +684,7 @@ ssize_t task_chr_stdin(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t 
 
 ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
+    (void)entry;
     switch(direction)
     {
     case IO_DIR_READ:

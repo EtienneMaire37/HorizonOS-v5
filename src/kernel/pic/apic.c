@@ -199,7 +199,7 @@ void apic_map_irq_from_source(int irq_number, int isr_number)
     }
     ));
 
-    int gsi = irq_source_entry ? ((struct madt_ioapic_interrupt_source_override_entry*)irq_source_entry)->gsi : irq_number;
+    uint32_t gsi = irq_source_entry ? ((struct madt_ioapic_interrupt_source_override_entry*)irq_source_entry)->gsi : (uint32_t)irq_number;
 
     LOG(DEBUG, "GSI for IRQ source %d is %u", irq_number, gsi);
 

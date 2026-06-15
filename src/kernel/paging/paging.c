@@ -216,7 +216,7 @@ void allocate_range(uint64_t* pml4,
                         break;
                     }
                     if (!is_pdpt_entry_present(&pt_address[pte]))
-                        set_pdpt_entry(&pt_address[pte], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
+                        set_pdpt_entry(&pt_address[pte], create_empty_pdpt_phys(), privilege, read_write, cache_type);
                 }
                 unlock_page_table(pt_address, pt_flags);
             }

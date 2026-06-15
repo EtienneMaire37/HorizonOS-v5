@@ -64,7 +64,7 @@ void multitasking_add_idle_task(char* name)
 {
     assert(task_count == 0);
 
-    multitasking_add_task_from_function("idle", idle_main);
+    multitasking_add_task_from_function(name, idle_main);
 }
 
 void __multitasking_add_task(thread_t* task)
@@ -349,7 +349,7 @@ signal:
 
 void __task_try_handle_signals(thread_t* thread, sigset_t old, sigset_t new)
 {
-    for (int i = 0; i < sizeof(old.__sig) / sizeof(unsigned long); i++)
+    for (size_t i = 0; i < sizeof(old.__sig) / sizeof(unsigned long); i++)
     {
         unsigned long were_unset = old.__sig[i] ^ ~new.__sig[i];
         while (were_unset)

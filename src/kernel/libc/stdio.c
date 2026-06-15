@@ -331,6 +331,7 @@ int _printf(int (*func_c)(char), int (*func_s)(const char*), const char* format,
         }
         case 'X':
             caps = true;
+            __attribute__ ((fallthrough));
         case 'x':
         {
             if (alternate_form)

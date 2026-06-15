@@ -148,6 +148,8 @@ void vfs_initrd_do_explore(vfs_folder_tnode_t* tnode, vfs_folder_tnode_t* mount_
 
 ssize_t initrd_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t direction)
 {
+    if (direction == IO_DIR_WRITE) return 0;
+
     initrd_file_t* file = entry->tnode.file->inode->file_data.initrd;
     if (entry->position + count > file->size)
         count = file->size - entry->position;

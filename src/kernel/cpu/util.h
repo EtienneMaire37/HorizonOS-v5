@@ -38,6 +38,7 @@ static inline void __attribute__((noreturn)) cause_halt(const char* func, const 
 {
     disable_interrupts();
     // LOG(ERROR, "Kernel halted in function \"%s\" at line %d in file \"%s\"", func, line, file);
+    (void)func; (void)file; (void)line;
     _halt();
 }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #define _GNU_SOURCE
-
 #include <dirent.h>
 #include "vfs.h"
 #include <assert.h>
@@ -81,14 +80,14 @@ static inline struct dirent64 vfs_find_new_child_entry(file_entry_t* entry)
     entry->file_data.folder_child.cur_index = 0;
 
 do_dir_return:
-    dir_entry.d_ino = folder_current_child ? folder_current_child->inode->st.st_ino : -1;
+    dir_entry.d_ino = folder_current_child ? folder_current_child->inode->st.st_ino : (ino_t)-1;
     dir_entry.d_type = folder_current_child ? get_dirent_dt(&folder_current_child->inode->st) : DT_UNKNOWN;
     if (entry->file_data.folder_child.cur_index && folder_current_child)    strncpy(dir_entry.d_name, folder_current_child->name, sizeof(dir_entry.d_name));
     else                                                                    dir_entry.d_name[0] = 0;
     return dir_entry;
 
 do_file_return:
-    dir_entry.d_ino = file_current_child ? file_current_child->inode->st.st_ino : -1;
+    dir_entry.d_ino = file_current_child ? file_current_child->inode->st.st_ino : (ino_t)-1;
     dir_entry.d_type = file_current_child ? get_dirent_dt(&file_current_child->inode->st) : DT_UNKNOWN;
     if (entry->file_data.folder_child.cur_index && file_current_child)      strncpy(dir_entry.d_name, file_current_child->name, sizeof(dir_entry.d_name));
     else                                                                    dir_entry.d_name[0] = 0;

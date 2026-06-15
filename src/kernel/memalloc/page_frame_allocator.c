@@ -38,7 +38,7 @@ void pfa_detect_usable_memory()
 
     LOG(INFO, "Usable memory map:");
 
-    for (int i = 0; i < mmap_request.response->entry_count; i++)
+    for (uint64_t i = 0; i < mmap_request.response->entry_count; i++)
     {
         struct limine_memmap_entry* entry = mmap_request.response->entries[i];
         LOG(DEBUG, "   Limine memory block : address : %#" PRIx64 " ; length : %" PRIu64 " | type : %" PRIu64,
@@ -249,7 +249,7 @@ void pfa_free_physical_page(physical_address_t address)
             block_index = i;
             break;
         }
-        if (i == usable_memory_blocks - 1)
+        if (i + 1 == usable_memory_blocks)
             return;
         page_index += usable_memory_map[i].total_pages;
     }

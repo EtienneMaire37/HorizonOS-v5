@@ -91,12 +91,13 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	mkdir -p $(dir $@)
 	$(HOSGCC) -c $< -o $@ \
 	-MMD -MP \
-	-Wall -Werror -Wno-address-of-packed-member -fpie -fpic -flto=auto -Iroot/usr/include \
+	-Wall -Werror -Wextra -fpie -fpic -flto=auto -Iroot/usr/include \
 	-O3 -ffunction-sections -fdata-sections -mabi=sysv \
 	-std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fstack-protector-strong -march=x86-64 \
 	-mno-red-zone \
-	-Wno-stringop-overflow -Wno-unused-variable -Wno-unused-but-set-variable -Wno-maybe-uninitialized -Wno-unused-function -Wno-format-zero-length \
 	-mgeneral-regs-only \
+	-fsanitize=undefined \
+	-Wno-unused-function -Wno-unused-variable -Wno-address-of-packed-member -Wno-format-zero-length \
 	${CFLAGS} -DBUILDING_KERNEL -I limine-protocol/include
 bin/%.asm.o: src/kernel/%.asm src/kernel/link.ld $(MLIBC_STAMP)
 	mkdir -p $(dir $@)
