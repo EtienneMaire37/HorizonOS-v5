@@ -11,7 +11,7 @@ uint32_t pci_configuration_address_space_read_dword(uint8_t bus, uint8_t device,
     if ((function & 0b111) != function) return 0xffffffff;
     if (offset & 0b11) return 0xffffffff;
 
-    outd(PCI_CONFIG_ADDRESS,    (1 << 31) | // ~ Enable bit
+    outd(PCI_CONFIG_ADDRESS,    (1ULL << 31) | // ~ Enable bit
                                 ((uint32_t)bus << 16) |
                                 ((uint32_t)device << 11) |
                                 ((uint32_t)function << 8) |
