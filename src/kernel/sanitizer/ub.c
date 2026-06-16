@@ -2,7 +2,7 @@
 
 #define DEFINE_UBSAN_SYMBOL(sym) void __attribute__((used)) sym() { FATAL("GCC #UB sanitizer runtime error: " #sym); }
 
-#ifndef COMPILE_TIME_UB_ERRORS
+#ifndef LINK_TIME_UB_ERRORS
 DEFINE_UBSAN_SYMBOL(__ubsan_handle_add_overflow)
 DEFINE_UBSAN_SYMBOL(__ubsan_handle_sub_overflow)
 DEFINE_UBSAN_SYMBOL(__ubsan_handle_negate_overflow)

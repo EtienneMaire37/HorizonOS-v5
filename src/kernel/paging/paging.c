@@ -449,13 +449,13 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
 
                 memcpy(dst_pt_address, pt_address, 4096);
 
-                unlock_page_table(dst_pt_address, pt_flags);
+                unlock_page_table(dst_pt_address, dst_pt_flags);
                 unlock_page_table(pt_address, pt_flags);
             }
-            unlock_page_table(dst_pd_address, pd_flags);
+            unlock_page_table(dst_pd_address, dst_pd_flags);
             unlock_page_table(pd_address, pd_flags);
         }
-        unlock_page_table(dst_pdpt_address, pdpt_flags);
+        unlock_page_table(dst_pdpt_address, dst_pdpt_flags);
         unlock_page_table(pdpt_address, pdpt_flags);
     }
     unlock_page_table(dst, dst_pml4_flags);
@@ -547,13 +547,13 @@ void copy_vas(uint64_t* src, uint64_t* dst,
                         set_pdpt_entry(&dst_pt_address[pte], pfa_allocate_physical_page(), get_pdpt_entry_privilege(&pt_address[pte]), get_pdpt_entry_read_write(&pt_address[pte]), CACHE_WB);
                     memcpy((void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pt_address[pte])), (void*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pt_address[pte])), 4096);
                 }
-                unlock_page_table(dst_pt_address, pt_flags);
+                unlock_page_table(dst_pt_address, dst_pt_flags);
                 unlock_page_table(pt_address, pt_flags);
             }
-            unlock_page_table(dst_pd_address, pd_flags);
+            unlock_page_table(dst_pd_address, dst_pd_flags);
             unlock_page_table(pd_address, pd_flags);
         }
-        unlock_page_table(dst_pdpt_address, pdpt_flags);
+        unlock_page_table(dst_pdpt_address, dst_pdpt_flags);
         unlock_page_table(pdpt_address, pdpt_flags);
     }
     unlock_page_table(dst, dst_pml4_flags);

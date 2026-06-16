@@ -2,12 +2,13 @@
 
 #include <stdint.h>
 #include "../cpu/util.h"
+#include "../util/units.h"
 #include "mmap.h"
 #include "../multitasking/mutex.h"
 
 #include <stdatomic.h>
 
-#define MAX_MEMORY (128 * TB)
+#define MAX_MEMORY (64 * TB)
 
 #define memory_map_get_free_pages(i)                (usable_memory_map[i].total_pages - usable_memory_map[i].used_pages)
 #define memory_map_set_free_pages(i, free_pages)    usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - (free_pages)

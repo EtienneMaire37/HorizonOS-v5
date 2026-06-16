@@ -1,8 +1,9 @@
 #include "virtual_memory_allocator.h"
 #include "../multitasking/task.h"
 #include "../cpu/memory.h"
+#include "page_frame_allocator.h"
 
-const uint64_t start = 0x800000;
+const uint64_t start = MAX_MEMORY; // 0x800000;
 bool vmm_initialized = false;
 
 spinlock_noint_t vmm_lock = SPINLOCK_NOINT_INIT;
@@ -12,8 +13,6 @@ static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
     static void* global_hint = NULL;
     void* current_hint = hint ? hint : global_hint;
     assert(vmm_initialized);
-    if (pages > 0x800000000 / 2 - start)
-        return NULL;
     for (uint64_t vaddr = ((uint64_t)current_hint + 0xfff) & ~0xfff;; vaddr += 0x1000)
     {
         if (half == LOWER_HALF) vaddr &= ~0xffff800000000000ULL;

@@ -92,8 +92,8 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	$(HOSGCC) -c $< -o $@ \
 	-MMD -MP \
 	-Wall -Werror -Wextra -fpie -fpic -flto=auto -Iroot/usr/include \
-	-O3 -ffunction-sections -fdata-sections -mabi=sysv \
-	-std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -fstack-protector-strong -march=x86-64 \
+	-O3 -mabi=sysv \
+	-std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -march=x86-64 \
 	-mno-red-zone \
 	-mgeneral-regs-only \
 	-fsanitize=undefined \

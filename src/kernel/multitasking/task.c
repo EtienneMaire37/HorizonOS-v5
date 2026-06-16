@@ -377,8 +377,7 @@ void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 void __fork_task(thread_t* task)
 {
     // TODO: CoW
-    if (!task)
-        return;
+    assert(task);
 
     thread_t* new_task = (thread_t*)malloc(sizeof(thread_t));
     assert(new_task);
@@ -388,13 +387,12 @@ void __fork_task(thread_t* task)
     new_task->pid = -1;
 
     __task_set_pid(new_task, task->forked_pid);
+
     new_task->forked_pid = 0;
     new_task->system_task = task->system_task;
 
     new_task->cr3 = task_create_empty_vas((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
     new_task->rsp = task->rsp;
-
-    LOG(TRACE, "task->fpu_state = %p", task->fpu_state);
 
     new_task->fpu_state = fpu_state_create_copy(task->fpu_state);
 
@@ -425,7 +423,6 @@ void __fork_task(thread_t* task)
 void cleanup_tasks()
 {
     // TODO: do NOT call cleanup_tasks on every context switch
-    // ! UB !!!!!!! DIFFERENT OPTIMIZATION LEVELS BREAK THIS
     uint32_t flags = lock_scheduler();
     if (forked_tasks)
     {
