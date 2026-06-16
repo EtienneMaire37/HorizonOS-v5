@@ -49,6 +49,7 @@ Here's a (non exhaustive) list of the supported options:
 | -DPRINT_UNRECOGNIZED_ANSI | N/A | If set, will print any unsupported escape sequence to the screen |
 | -DPRINT_PCI_INFO | N/A | Whether to print the pci devices list |
 | -DPRINT_MLIBC_LOGS | N/A | If set, mlibc's logs will be printed to the screen. If not, they will only be logged to port e9 |
+| -DCOMPILE_TIME_UB_ERRORS | N/A | Will cause undefined behaviour to cause a link time error instead of at runtime. |
 
 For example to build with LOG_LEVEL=TRACE, LOG_SYSCALLS and NDEBUG:
 ```bash

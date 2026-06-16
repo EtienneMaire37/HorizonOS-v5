@@ -193,7 +193,7 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* send_sig
                 ps2_keyboard_state[current_ps2_keyboard_scancodes[port_index].scancode] |= (1 << port_index);
 
             virtual_key_t vk = current_ps2_keyboard_scancodes[port_index].extended ? current_keyboard_layout->ps2_layout_data.vk_table_e0[current_ps2_keyboard_scancodes[port_index].scancode] : current_keyboard_layout->ps2_layout_data.vk_table[current_ps2_keyboard_scancodes[port_index].scancode];
-            // if (!current_ps2_keyboard_scancodes[port_index].release)
+            if (current_ps2_keyboard_scancodes[port_index].release)
             {
                 switch (vk)
                 {
@@ -209,8 +209,6 @@ void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* send_sig
                 default:
                     ;
                 }
-
-                // LOG(TRACE, "PS/2 keyboard scancode : %#x %s", current_ps2_keyboard_scancodes[port_index].scancode, current_ps2_keyboard_scancodes[port_index].extended ? "(extended)" : "");
             }
 
             // ps2_kb_update_leds(port);
