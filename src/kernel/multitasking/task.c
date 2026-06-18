@@ -15,6 +15,7 @@
 #include "multitasking.h"
 #include "../vfs/table.h"
 #include "preempt.h"
+#include "../util/memory.h"
 
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
 const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
@@ -391,7 +392,10 @@ void __fork_task(thread_t* task)
     new_task->forked_pid = 0;
     new_task->system_task = task->system_task;
 
+    hexdump(task, sizeof(*task));
+    // ? WTF
     new_task->cr3 = task_create_empty_vas((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
+    hexdump(task, sizeof(*task));
     new_task->rsp = task->rsp;
 
     new_task->fpu_state = fpu_state_create_copy(task->fpu_state);
@@ -433,7 +437,9 @@ void cleanup_tasks()
             cur_forked_task = cur_forked_task->next;
             if (task_to_fork != current_task)
             {
-                __move_task_to_running_queue_by_item(&forked_tasks, cur_forked_task);
+                LOG(DEBUG, "task_to_fork->fpu_state = %p", task_to_fork->fpu_state);
+                __move_task_to_running_queue(&forked_tasks, task_to_fork);
+                LOG(DEBUG, "task_to_fork->fpu_state = %p", task_to_fork->fpu_state);
                 __fork_task(task_to_fork);
             }
         }

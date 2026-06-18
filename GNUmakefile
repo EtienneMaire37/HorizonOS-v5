@@ -96,7 +96,7 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	-std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -march=x86-64 \
 	-mno-red-zone \
 	-mgeneral-regs-only \
-	-fsanitize=undefined \
+	-DNDEBUG \
 	-Wno-unused-function -Wno-unused-variable -Wno-address-of-packed-member -Wno-format-zero-length \
 	${CFLAGS} -DBUILDING_KERNEL -I limine-protocol/include
 bin/%.asm.o: src/kernel/%.asm src/kernel/link.ld $(MLIBC_STAMP)

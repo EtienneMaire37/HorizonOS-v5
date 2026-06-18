@@ -39,7 +39,7 @@ make CFLAGS="${options}"
 Here's a (non exhaustive) list of the supported options:
 | Option | Value   | Description |
 | ------ | ------- | ----------- |
-| -DNDEBUG | N/A | Disable assertions. Might make the kernel run smoother depending on the configuration |
+| -UNDEBUG | N/A | Enable assertions. Might make the kernel run slower depending on the configuration |
 | -DLOG_LEVEL | ={TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL} | Level from which logs are written to port 0xe9 |
 | -DLOG_SYSCALLS | N/A | Whether to log syscalls |
 | -DLOG_MEMORY | N/A | Whether to log page allocation |
@@ -51,9 +51,9 @@ Here's a (non exhaustive) list of the supported options:
 | -DPRINT_MLIBC_LOGS | N/A | If set, mlibc's logs will be printed to the screen. If not, they will only be logged to port e9 |
 | -DLINK_TIME_UB_ERRORS | N/A | Will cause undefined behaviour to cause an error at link time instead of at runtime. |
 
-For example to build with LOG_LEVEL=TRACE, LOG_SYSCALLS and NDEBUG:
+For example to build in "debug" mode with undefined behaviour sanitization, stack smashing protection, assertions, LOG_LEVEL=TRACE, LOG_SYSCALLS and usable stack traces:
 ```bash
-make CFLAGS="-DLOG_LEVEL=TRACE -DLOG_SYSCALLS -DNDEBUG"
+make CFLAGS="-fsanitize=undefined -fstack-protector-strong -UNDEBUG -DLOG_LEVEL=TRACE -DLOG_SYSCALLS -Og -g"
 ```
 Or to build with default settings:
 ```bash

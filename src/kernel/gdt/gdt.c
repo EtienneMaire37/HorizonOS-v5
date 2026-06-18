@@ -2,22 +2,19 @@
 #include <string.h>
 #include "../multitasking/task.h"
 
-struct gdt_entry GDT[7];	// 5 + 2 for TSS
+uint64_t GDT[7];	// 5 + 2 for TSS
 struct tss_entry TSS;
 
-void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
+void setup_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
-    entry->base_lo = (base & 0xffff);
-    entry->base_mid = ((base >> 16) & 0xff);
-    entry->base_hi = ((base >> 24) & 0xff);
-    entry->limit_lo = (limit & 0xffff);
-    entry->limit_hi = ((limit >> 16) & 0xf);
-    entry->access_byte = access_byte;
-    entry->flags = flags;
+    assert(entry);
+    *entry = (((uint64_t)base & 0xff000000) << 32) | (((uint64_t)flags & 0xf) << 52) | ((((uint64_t)limit >> 16) & 0xf) << 48) |
+        ((uint64_t)access_byte << 40) | ((((uint64_t)base >> 16) & 0xff) << 32) | ((base & 0xffff) << 16) | (limit & 0xffff);
 }
 
-void setup_ssd_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
+void setup_ssd_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
+    assert(entry);
     setup_gdt_entry(entry, base & 0xffffffff, limit, access_byte, flags);
     *(uint64_t*)&entry[1] = (base >> 32) & 0xffffffff;
 }
@@ -29,7 +26,7 @@ void install_gdt()
 
 void setup_gdt_tss()
 {
-    memset(&GDT[0], 0, sizeof(struct gdt_entry));       // NULL Descriptor
+    memset(&GDT[0], 0, sizeof(uint64_t));       // NULL Descriptor
     setup_gdt_entry(&GDT[1], 0, 0xfffff, 0x9A, 0xA);    // Kernel mode code segment
     setup_gdt_entry(&GDT[2], 0, 0xfffff, 0x92, 0xC);    // Kernel mode data segment
     setup_gdt_entry(&GDT[3], 0, 0xfffff, 0xF2, 0xC);    // User mode data segment

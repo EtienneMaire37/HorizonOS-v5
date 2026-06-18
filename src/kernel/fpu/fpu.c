@@ -30,12 +30,12 @@ void fpu_init_defaults()
     printf("%s area is %u bytes long (%u page%s)\n", fpu_get_save_instruction_name(xsave_instruction), xsave_area_size, xsave_area_pages, xsave_area_pages == 1 ? "" : "s");
 
     fpu_default_state = pfa_allocate_contiguous_pages(xsave_area_pages);
+// !!! The XSAVE instruction does not write any part of the XSAVE header other than the XSTATE_BV field; in particular,
+// !!! it does *not* write to the XCOMP_BV field.
     memset((uint8_t*)fpu_default_state, 0, xsave_area_size);
     fpu_init();
     fpu_save_state(fpu_default_state);
 
-// !!! The XSAVE instruction does not write any part of the XSAVE header other than the XSTATE_BV field; in particular,
-// !!! it does *not* write to the XCOMP_BV field.
 }
 
 void fpu_init()
@@ -47,9 +47,9 @@ void fpu_save_state(uint8_t* s)
 {
     switch (xsave_instruction)
     {
-    case XSAVES:
-        asm volatile("xsaves [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
-        break;
+    // case XSAVES:
+    //     asm volatile("xsaves [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
+    //     break;
     case XSAVEOPT:
         asm volatile("xsaveopt [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
         break;
@@ -74,9 +74,9 @@ void fpu_restore_state(uint8_t* s)
 {
     switch (xsave_instruction)
     {
-    case XSAVES:
-        asm volatile("xrstors [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
-        break;
+    // case XSAVES:
+    //     asm volatile("xrstors [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
+    //     break;
     case XSAVEOPT:
         asm volatile("xrstor [rdi]" :: "a"(fpu_state_component_bitmap & 0xffffffff), "D"(s), "d"(fpu_state_component_bitmap >> 32) : "memory");
         break;

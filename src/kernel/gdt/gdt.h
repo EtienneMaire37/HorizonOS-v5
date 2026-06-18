@@ -10,17 +10,6 @@ struct gdt_decriptor
     uint64_t address;   // The linear address of the GDT (not the physical address, paging applies).
 } __attribute__((packed));
 
-struct gdt_entry
-{
-    uint16_t 	limit_lo   	: 16;
-    uint16_t 	base_lo    	: 16;
-    uint8_t 	base_mid    : 8;
-    uint8_t 	access_byte : 8;
-    uint8_t 	limit_hi    : 4;
-    uint8_t 	flags       : 4;
-    uint8_t 	base_hi     : 8;
-} __attribute__((packed));
-
 struct tss_entry
 {
 	uint32_t reserved0;
@@ -56,13 +45,13 @@ static const int tss_rsp0_offset = offsetof(struct tss_entry, rsp0);
 
 #define TSS_SEGMENT   			0x28
 
-extern struct gdt_entry GDT[7];	// 5 + 2 for TSS
+extern uint64_t GDT[7];	// 5 + 2 for TSS
 extern struct tss_entry TSS;
 
 extern void load_gdt(uint16_t limit, uint64_t address);
 extern void load_tss();
 
-void setup_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
-void setup_ssd_gdt_entry(struct gdt_entry* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
+void setup_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
+void setup_ssd_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags);
 void install_gdt();
 void setup_gdt_tss();
