@@ -45,7 +45,7 @@ static inline __attribute__((always_inline)) void vector_##name##_pop_back(vecto
 } \
 static inline __attribute__((always_inline)) type* vector_##name##_at(vector_##name##_t* vec, size_t index) \
 { \
-    if (index * sizeof(type) >= vec->size) return NULL; \
+    assert (index * sizeof(type) < vec->size); \
     return (type*)&vec->data[sizeof(type) * index]; \
 } \
 static inline __attribute__((always_inline)) size_t vector_##name##_size(vector_##name##_t* vec) \

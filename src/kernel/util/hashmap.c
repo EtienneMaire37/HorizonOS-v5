@@ -69,6 +69,7 @@ void hashmap_set_item(hashmap_t* hmp, uint64_t key, void* value)
 
 new_item:
 	hashmap_item_t* item = (hashmap_item_t*)malloc(sizeof(hashmap_item_t));
+	assert(item);
 	item->key = key;
 	item->value = value;
 

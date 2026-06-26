@@ -27,6 +27,7 @@ uint32_t sdt_count;
 
 bool acpi_table_valid(void* table_address)
 {
+    assert(table_address);
     uint8_t sum = 0;
     struct sdt_header* hdr = (struct sdt_header*)table_address;
     uint32_t length = hdr->length;

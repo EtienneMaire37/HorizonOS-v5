@@ -213,7 +213,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_SEEK, 3, int, off_t, int)
         SC_LOG("syscall SYS_SEEK(%d, %" PRId64 ", %d)", arg1, arg2, arg3);
         uint32_t flags = acquire_spinlock_noint(&file_table_lock);
-        if (!__is_fd_valid(arg1))
+        file_entry_t* entry = __get_global_file_entry(arg1);
+        if (!entry)
         {
             release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
@@ -227,7 +228,6 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
-        file_entry_t* entry = __get_global_file_entry(arg1);
         if (entry->entry_type != VFS_ET_FILE)
         {
             release_spinlock_noint(&file_table_lock, flags);
@@ -655,13 +655,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_FCHDIR, 1, int)
         SC_LOG("syscall SYS_FCHDIR(%d)", arg1);
         uint32_t flags = acquire_spinlock_noint(&file_table_lock);
-        if (!__is_fd_valid(arg1))
+        file_entry_t* entry = __get_global_file_entry(arg1);
+        if (!entry)
         {
             release_spinlock_noint(&file_table_lock, flags);
             sc_ret_errno = EBADF;
             break;
         }
-        file_entry_t* entry = __get_global_file_entry(arg1);
         if (entry->entry_type != VFS_ET_FOLDER)
         {
             release_spinlock_noint(&file_table_lock, flags);
@@ -908,9 +908,17 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         }
         if ((strcmp(arg2, "") == 0) && (arg3 & AT_EMPTY_PATH))
         {
-            *arg4 = entry->st;
-            release_spinlock_noint(&file_table_lock, flags);
-            sc_ret_errno = 0;
+            if (!entry)
+            {
+                release_spinlock_noint(&file_table_lock, flags);
+                sc_ret_errno = EBADF;
+            }
+            else
+            {
+                *arg4 = entry->st;
+                release_spinlock_noint(&file_table_lock, flags);
+                sc_ret_errno = 0;
+            }
             break;
         }
         bool relative_path = *arg2 != '/';

@@ -165,7 +165,7 @@ char* __attribute__((used)) strncpy(char* destination, const char* source, size_
 char* __attribute__((used)) strdup(const char* str)
 {
     size_t len = strlen(str);
-    char* dup = malloc(len);
+    char* dup = malloc(len + 1);
     if (!dup) return NULL;
     memcpy(dup, str, len + 1);
     return dup;
