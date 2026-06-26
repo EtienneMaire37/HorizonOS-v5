@@ -84,20 +84,13 @@ void set_pdpt_entry(uint64_t* entry, uint64_t address, uint8_t privilege, uint8_
         return;
     }
 
-    cache_type &= 7;
+    cache_type %= sizeof(pdpt_pat_bits) / sizeof(pdpt_pat_bits[0]);
 
     uint64_t pcd_bit = (pdpt_pat_bits[cache_type] & 3) >> 1,
              pwt_bit = (pdpt_pat_bits[cache_type] & 3) & 1;
 
-    uint64_t masked_address = (address & 0xfffffffffffff000) & get_physical_address_mask();
-    if (unlikely(masked_address != address))
-    {
-        LOG(CRITICAL, "Kernel tried to map physical address %#" PRIx64 " but it doesn't fit in %u bits", address, physical_address_width);
-        printf("Kernel tried to map physical address %#" PRIx64 " but it doesn't fit in %u bits\n", address, physical_address_width);
-        abort();
-    }
-
-    *entry = masked_address | (pcd_bit << 4) | (pwt_bit << 3) | ((privilege & 1) << 2) | ((read_write & 1) << 1) | 1;
+    assert (likely(((address & 0xfffffffffffff000) & get_physical_address_mask()) == address));
+    *entry = address | (pcd_bit << 4) | (pwt_bit << 3) | ((privilege & 1) << 2) | ((read_write & 1) << 1) | 1;
 }
 
 void remap_range(uint64_t* pml4,
@@ -110,14 +103,18 @@ void remap_range(uint64_t* pml4,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
+        if (pml4e >= 512)
+            break;
+
         if (!is_pdpt_entry_present(&pml4[pml4e]))
             set_pdpt_entry(&pml4[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -131,7 +128,7 @@ void remap_range(uint64_t* pml4,
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
             {
                 if (pde >= 512)
                 {
@@ -145,7 +142,7 @@ void remap_range(uint64_t* pml4,
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pte++)
                 {
                     if (pte >= 512)
                     {
@@ -175,14 +172,18 @@ void allocate_range(uint64_t* pml4,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
+        if (pml4e >= 512)
+            break;
+
         if (!is_pdpt_entry_present(&pml4[pml4e]))
             set_pdpt_entry(&pml4[pml4e], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -195,7 +196,7 @@ void allocate_range(uint64_t* pml4,
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
             {
                 if (pde >= 512)
                 {
@@ -208,7 +209,7 @@ void allocate_range(uint64_t* pml4,
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pte++)
                 {
                     if (pte >= 512)
                     {
@@ -237,8 +238,12 @@ void free_range(uint64_t* pml4,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
+        if (pml4e >= 512)
+            break;
+
         if (!is_pdpt_entry_present(&pml4[pml4e]))
         {
             pml4e++;
@@ -247,7 +252,7 @@ void free_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -262,7 +267,7 @@ void free_range(uint64_t* pml4,
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
             {
                 if (pde >= 512)
                 {
@@ -277,7 +282,7 @@ void free_range(uint64_t* pml4,
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pte++)
                 {
                     if (pte >= 512)
                     {
@@ -306,8 +311,12 @@ void unmap_range(uint64_t* pml4,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
+        if (pml4e >= 512)
+            break;
+
         if (!is_pdpt_entry_present(&pml4[pml4e]))
         {
             pml4e++;
@@ -316,7 +325,7 @@ void unmap_range(uint64_t* pml4,
 
         uint64_t* pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pml4[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -331,7 +340,7 @@ void unmap_range(uint64_t* pml4,
 
             uint64_t* pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
-            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
             {
                 if (pde >= 512)
                 {
@@ -346,7 +355,7 @@ void unmap_range(uint64_t* pml4,
 
                 uint64_t* pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pte++)
                 {
                     if (pte >= 512)
                     {
@@ -375,7 +384,8 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
         if (pml4e >= 512)
             break;
@@ -393,7 +403,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
         uint64_t* dst_pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
         uint32_t dst_pdpt_flags = lock_page_table(dst_pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -422,7 +432,7 @@ void copy_mapping(uint64_t* src, uint64_t* dst,
             uint64_t* dst_pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
             uint32_t dst_pd_flags = lock_page_table(dst_pd_address);
-            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pde++)
+            for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pde++)
             {
                 if (pde >= 512)
                 {
@@ -473,7 +483,8 @@ void copy_vas(uint64_t* src, uint64_t* dst,
     uint16_t pdpte = (start_virtual_address >> 30) & 0x1ff;
     uint16_t pde = (start_virtual_address >> 21) & 0x1ff;
     uint16_t pte = (start_virtual_address >> 12) & 0x1ff;
-    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+    uint64_t end_virtual_address = make_address_canonical(start_virtual_address + 0x1000 * pages);
+    while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
     {
         if (pml4e >= 512)
             break;
@@ -491,7 +502,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
         uint64_t* dst_pdpt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst[pml4e]));
         uint32_t pdpt_flags = lock_page_table(pdpt_address);
         uint32_t dst_pdpt_flags = lock_page_table(dst_pdpt_address);
-        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+        while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
         {
             if (pdpte >= 512)
             {
@@ -512,7 +523,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
             uint64_t* dst_pd_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pdpt_address[pdpte]));
             uint32_t pd_flags = lock_page_table(pd_address);
             uint32_t dst_pd_flags = lock_page_table(dst_pd_address);
-            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages)
+            while (vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address)
             {
                 if (pde >= 512)
                 {
@@ -533,7 +544,7 @@ void copy_vas(uint64_t* src, uint64_t* dst,
                 uint64_t* dst_pt_address = (uint64_t*)(PHYS_MAP_BASE + get_pdpt_entry_address(&dst_pd_address[pde]));
                 uint32_t pt_flags = lock_page_table(pt_address);
                 uint32_t dst_pt_flags = lock_page_table(dst_pt_address);
-                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < start_virtual_address + 0x1000 * pages; pte++)
+                for (; vaddr_from_indices(pml4e, pdpte, pde, pte) < end_virtual_address; pte++)
                 {
                     if (pte >= 512)
                     {

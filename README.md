@@ -51,9 +51,9 @@ Here's a (non exhaustive) list of the supported options:
 | -DPRINT_MLIBC_LOGS | N/A | If set, mlibc's logs will be printed to the screen. If not, they will only be logged to port e9 |
 | -DLINK_TIME_UB_ERRORS | N/A | Will cause undefined behaviour to cause an error at link time instead of at runtime. |
 
-For example to build in "debug" mode with undefined behaviour sanitization, stack smashing protection, assertions, LOG_LEVEL=TRACE, LOG_SYSCALLS and usable stack traces:
+For example to build in "debug" mode with undefined behaviour sanitization, stack smashing protection, assertions, LOG_LEVEL=TRACE, LOG_SYSCALLS, usable stack traces and static analysis:
 ```bash
-make CFLAGS="-fsanitize=undefined -fstack-protector-strong -UNDEBUG -DLOG_LEVEL=TRACE -DLOG_SYSCALLS -Og -g"
+make CFLAGS="-fsanitize=undefined -fstack-protector-strong -UNDEBUG -DLOG_LEVEL=TRACE -DLOG_SYSCALLS -Og -g -fanalyzer"
 ```
 Or to build with default settings:
 ```bash

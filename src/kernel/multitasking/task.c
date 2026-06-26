@@ -394,8 +394,11 @@ void __fork_task(thread_t* task)
 
     hexdump(task, sizeof(*task));
     // ? WTF
-    new_task->cr3 = task_create_empty_vas((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
+    physical_address_t dbg(uint8_t);
+    new_task->cr3 = dbg((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
     hexdump(task, sizeof(*task));
+    LOG(INFO, "Got through!");
+    abort();
     new_task->rsp = task->rsp;
 
     new_task->fpu_state = fpu_state_create_copy(task->fpu_state);

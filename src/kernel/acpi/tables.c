@@ -83,7 +83,7 @@ void acpi_find_tables()
         if (acpi_table_valid(address))
         {
             struct sdt_header* sdt = (struct sdt_header*)address;
-            uint32_t signature = *(uint64_t*)&sdt->signature;
+            uint32_t signature = sdt->signature;
             char signature_text[5] = { (char)signature, (char)(signature >> 8), (char)(signature >> 16), (char)(signature >> 24), 0 };
             LOG(INFO, "\t\tSignature: %s (%#x)", signature_text, signature);
             printf("Signature: %s (%#x)\n", signature_text, signature);
@@ -124,15 +124,9 @@ void* read_rsdt_ptr(uint32_t index)
     switch (acpi_revision)
     {
     case ACPI_1_0:
-    {
-        uint32_t* sdt_ptr_start = (uint32_t*)(sizeof(struct sdt_header) + (uint64_t)rsdt);
-        return (void*)(sdt_ptr_start[index] + PHYS_MAP_BASE);
-    }
+        return (void*)(rsdt->ptrs_to_sdt[index] + PHYS_MAP_BASE);
     case ACPI_2_0_PLUS:
-    {
-        uint64_t* sdt_ptr_start = (uint64_t*)(sizeof(struct sdt_header) + (uint64_t)xsdt);
-        return (void*)(sdt_ptr_start[index] + PHYS_MAP_BASE);
-    }
+        return (void*)(xsdt->ptrs_to_sdt[index] + PHYS_MAP_BASE);
     default:
         return NULL;
     }

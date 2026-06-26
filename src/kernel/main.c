@@ -147,7 +147,7 @@ void _start()
 
     if (cpu_brand == CPU_AMD)
     {
-        char easter_egg_str[17];
+        _Alignas(sizeof(uint32_t)) char easter_egg_str[17] = { 0 };
 
         uint32_t eax = 0, ebx = 0, ecx = 0, edx = 0;
         cpuid_no_check(0x8ffffffe, eax, ebx, ecx, edx);
@@ -172,6 +172,7 @@ void _start()
 
         if (strcmp(easter_egg_str, "") != 0)
             LOG(INFO, "AMD Easter egg string: \"%s\"", easter_egg_str);
+
     }
 
     if (cpuid_highest_extended_function_parameter >= 0x80000008)

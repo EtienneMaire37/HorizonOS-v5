@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define ACPI_1_0            0
 #define ACPI_2_0_PLUS       2
 
@@ -21,7 +23,7 @@ struct rsdp_table
 
 struct sdt_header
 {
-    char signature[4];
+    uint32_t signature;
     uint32_t length;
     uint8_t revision;
     uint8_t checksum;
@@ -35,15 +37,13 @@ struct sdt_header
 struct rsdt_table
 {
     struct sdt_header header;
-
-    // uint32_t ptrs_to_sdt[(header.length - sizeof(header)) / 4];
+    uint32_t ptrs_to_sdt[];
 } __attribute__((packed));
 
 struct xsdt_table
 {
     struct sdt_header header;
-
-    // uint64_t ptrs_to_sdt[(header.length - sizeof(header)) / 8];
+    uint64_t ptrs_to_sdt[];
 } __attribute__((packed));
 
 struct generic_address_structure

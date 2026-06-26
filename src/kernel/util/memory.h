@@ -7,9 +7,9 @@
 
 static inline void hexdump(void* addr, size_t bytes)
 {
+    LOG(DEBUG, "Hexdump [%#" PRIx64 " - %#" PRIx64 "]:", (uint64_t)addr, (uint64_t)addr + bytes - 1);
     if (bytes == 0)
         return;
-    LOG(DEBUG, "Hexdump [%#" PRIx64 " - %#" PRIx64 "]:", (uint64_t)addr, (uint64_t)addr + bytes - 1);
     size_t addr_off = ((uint64_t)addr % 16);
     size_t offset = addr_off == 0 ? 0 : 16 - addr_off;
     bytes = (bytes + addr_off + 0xf) & ~0xfULL;

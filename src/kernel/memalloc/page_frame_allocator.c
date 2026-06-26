@@ -177,14 +177,14 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
     {
         if (i >= usable_memory_blocks)
         {
-            if (!looped)
+            if (looped)
+                break;
+            else
             {
                 i = first_alloc_block;
                 looped = true;
                 continue;
             }
-            else
-                break;
         }
         if (memory_map_get_free_pages(i) >= pages)
         {
@@ -255,6 +255,8 @@ void pfa_free_physical_page(physical_address_t address)
     }
 
     uint32_t flags = acquire_spinlock_noint(&pfa_lock);
+
+    // LOG(TRACE, "delete(%#llx[4096])", (unsigned long long)address);
 
     usable_memory_map[block_index].used_pages--;
     first_free_page_hint_index = page_index;

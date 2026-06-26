@@ -13,7 +13,7 @@ extern uint64_t PHYS_MAP_BASE;
 
 static inline __attribute__((always_inline, const)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
 {
-    return make_address_canonical(((uint64_t)(pml4e & 0x1ff) << 39ULL) | ((uint64_t)(pdpte & 0x1ff) << 30ULL) | ((uint64_t)(pde & 0x1ff) << 21ULL) | ((uint64_t)(pte & 0x1ff) << 12ULL));
+    return make_address_canonical(((uint64_t)pml4e << 39ULL) | ((uint64_t)pdpte << 30ULL) | ((uint64_t)pde << 21ULL) | ((uint64_t)pte << 12ULL));
 }
 
 static inline __attribute__((always_inline)) void simplify_pte_paging_indices(uint16_t* pte, uint16_t* pde)
@@ -40,18 +40,6 @@ static inline __attribute__((always_inline)) void simplify_pdpte_paging_indices(
         (*pml4e)++;
     }
 }
-
-#define PG_SHIFT        12ULL
-#define PG_SIZE         (1ULL << PG_SHIFT)
-#define IDX_BITS        9ULL
-#define IDX_ENTRIES     (1ULL << IDX_BITS)
-#define IDX_MASK        (IDX_ENTRIES - 1ULL)
-#define CANON_MASK      0x0000FFFFFFFFFFFFULL
-
-#define PAGES_PT        1ULL
-#define PAGES_PD        (IDX_ENTRIES * PAGES_PT)    /* 512 pages = 2 MiB */
-#define PAGES_PDP       (IDX_ENTRIES * PAGES_PD)    /* 512*512 pages = 1 GiB */
-#define PAGES_PML4      (IDX_ENTRIES * PAGES_PDP)
 
 #define PG_SUPERVISOR   0
 #define PG_USER         1
