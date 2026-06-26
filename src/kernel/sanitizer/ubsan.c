@@ -47,7 +47,7 @@ const char* type_check_kinds[] =
 };
 
 #define log_ubsan_error() do { disable_interrupts(); printf("\x1b[31mUBSAN:\x1b[0m\n"); } while (0)
-#define DEFINE_UBSAN_SYMBOL_FALLBACK(sym) void __attribute__((used)) sym(struct source_location* loc) { log_ubsan_error(); printlog("GCC #UB sanitizer runtime error: " #sym); log_location_and_abort(loc); }
+#define DEFINE_UBSAN_SYMBOL_FALLBACK(sym) void __attribute__((used)) sym(struct source_location* loc) { log_ubsan_error(); printlog("ubsan runtime error: " #sym); log_location_and_abort(loc); }
 
 #ifndef LINK_TIME_UB_ERRORS
 DEFINE_UBSAN_SYMBOL_FALLBACK(__ubsan_handle_add_overflow)

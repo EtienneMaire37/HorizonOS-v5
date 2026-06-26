@@ -355,7 +355,7 @@ void __task_try_handle_signals(thread_t* thread, sigset_t old, sigset_t new)
         while (were_unset)
         {
             unsigned long bit = were_unset & -were_unset;  // ? find lowest set bit
-            int sig = __builtin_ctzll(were_unset) + i * sizeof(unsigned long) * 8;
+            size_t sig = __builtin_ctzll(were_unset) + i * sizeof(unsigned long) * 8;
             if (sigset_is_bit_set(thread->sig_pending, sig))
                 __task_handle_signal(thread, sig);
             were_unset ^= bit;

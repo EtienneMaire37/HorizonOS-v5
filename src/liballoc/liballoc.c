@@ -238,7 +238,7 @@ static struct liballoc_major *allocate_new_page( unsigned int size )
 
 
 
-void *PREFIX(malloc)(size_t req_size)
+void __attribute__((no_sanitize("undefined"))) *PREFIX(malloc)(size_t req_size)
 {
 	int startedBet = 0;
 	unsigned long long bestSize = 0;
@@ -591,7 +591,7 @@ void *PREFIX(malloc)(size_t req_size)
 
 
 
-void PREFIX(free)(void *ptr)
+void __attribute__((no_sanitize("undefined"))) PREFIX(free)(void *ptr)
 {
 	struct liballoc_minor *min;
 	struct liballoc_major *maj;
