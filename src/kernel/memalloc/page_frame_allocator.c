@@ -7,7 +7,7 @@
 #include "mmap.h"
 #include "page_frame_allocator.h"
 #include "../boot/limine.h"
-#include "../int/kernel_panic.h"
+#include "../panic/panic.h"
 
 uint64_t usable_memory = 0;
 struct mem_block usable_memory_map[MAX_USABLE_MEMORY_BLOCKS];

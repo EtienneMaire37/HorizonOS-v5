@@ -13,31 +13,15 @@ extern uint64_t PHYS_MAP_BASE;
 
 static inline __attribute__((always_inline, const)) virtual_address_t vaddr_from_indices(uint16_t pml4e, uint16_t pdpte, uint16_t pde, uint16_t pte)
 {
-    return make_address_canonical(((uint64_t)pml4e << 39ULL) | ((uint64_t)pdpte << 30ULL) | ((uint64_t)pde << 21ULL) | ((uint64_t)pte << 12ULL));
+    return make_address_canonical(((uint64_t)pml4e << 39ULL) + ((uint64_t)pdpte << 30ULL) + ((uint64_t)pde << 21ULL) + ((uint64_t)pte << 12ULL));
 }
 
-static inline __attribute__((always_inline)) void simplify_pte_paging_indices(uint16_t* pte, uint16_t* pde)
+static inline __attribute__((always_inline)) void simplify_pdpte_paging_indices(uint16_t* lower, uint16_t* higher)
 {
-    while ((*pte) >= 512)
+    while ((*lower) >= 512)
     {
-        (*pte) -= 512;
-        (*pde)++;
-    }
-}
-static inline __attribute__((always_inline)) void simplify_pde_paging_indices(uint16_t* pde, uint16_t* pdpte)
-{
-    while ((*pde) >= 512)
-    {
-        (*pde) -= 512;
-        (*pdpte)++;
-    }
-}
-static inline __attribute__((always_inline)) void simplify_pdpte_paging_indices(uint16_t* pdpte, uint16_t* pml4e)
-{
-    while ((*pdpte) >= 512)
-    {
-        (*pdpte) -= 512;
-        (*pml4e)++;
+        (*lower) -= 512;
+        (*higher)++;
     }
 }
 

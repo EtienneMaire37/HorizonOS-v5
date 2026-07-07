@@ -10,7 +10,7 @@
 #include "../multitasking/multitasking.h"
 #include "../terminal/textio.h"
 #include "../multitasking/queue.h"
-#include "../int/kernel_panic.h"
+#include "../panic/panic.h"
 #include "../cpu/registers.h"
 #include "../memalloc/page_frame_allocator.h"
 

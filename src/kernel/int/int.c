@@ -13,7 +13,7 @@ initrd_file_t* kernel_symbols_file = NULL;
 #include "../multitasking/signal.h"
 #include "../multitasking/syscall.h"
 
-#include "kernel_panic.h"
+#include "../panic/panic.h"
 
 #define return_from_isr() { if (multitasking_enabled) { if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); }  return; }
 

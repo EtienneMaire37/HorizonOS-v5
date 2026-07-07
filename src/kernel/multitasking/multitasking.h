@@ -64,18 +64,6 @@ static inline void log_tq(thread_queue_t* tq)
     LOG(DEBUG, "}");
 }
 
-static inline void log_context(thread_t* task)
-{
-    if (!task) return;
-    LOG(DEBUG, "log_context (rsp = %#16" PRIx64 ")", task->rsp);
-    for (int i = 0; i < 20; i++)
-    {
-        if (task->rsp + (i + 1) * 8 >= TASK_STACK_TOP_ADDRESS)
-            break;
-        LOG(DEBUG, "%#16" PRIx64 " (rsp + %d) = %#16" PRIx64, task->rsp + 8 * i, i, task_read_at_address_8b(task, task->rsp + 8 * i));
-    }
-}
-
 void __vfs_close(int fd);
 
 void multitasking_init();

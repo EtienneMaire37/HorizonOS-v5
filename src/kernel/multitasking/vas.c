@@ -25,10 +25,13 @@ physical_address_t dbg(uint8_t privilege)
     uint64_t* cr3 = (uint64_t*)(paddr + PHYS_MAP_BASE);
     if (!paddr) return physical_null;
 
-    for (int i = 256; i < 512; i++)
-        set_pdpt_entry(&cr3[i], get_pdpt_entry_address(&global_cr3[i]), PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
+    // for (int i = 256; i < 512; i++)
+    //     set_pdpt_entry(&cr3[i], get_pdpt_entry_address(&global_cr3[i]), PG_SUPERVISOR, PG_READ_WRITE, CACHE_WB);
 
     LOG(TRACE, ".1");
+
+    for (int i = 0; i < 256; i++)
+        LOG(TRACE, "%d: %#016" PRIx64, i, cr3[i]);
 
     // * ALLOCATE RANGE OVERRIDES PTE!!!!!!!!!!!!!!!!!!
     allocate_range(cr3, TASK_STACK_BOTTOM_ADDRESS, TASK_STACK_PAGES,

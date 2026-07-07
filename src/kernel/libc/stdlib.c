@@ -5,7 +5,7 @@
 #include "../cpu/util.h"
 #include "../cpu/registers.h"
 #include "../debug/out.h"
-#include "../int/kernel_panic.h"
+#include "../panic/panic.h"
 
 void __attribute__((noreturn)) abort()
 {
@@ -14,4 +14,10 @@ void __attribute__((noreturn)) abort()
     print_stack_trace((uint64_t)abort, get_rbp(), false);
     printf("\x1b[31mKernel aborted.\x1b[0m\n");
     halt();
+}
+
+int atexit(void (*func)())
+{
+    (void)func;
+    return 0;
 }

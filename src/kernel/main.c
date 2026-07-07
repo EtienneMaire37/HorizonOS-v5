@@ -76,6 +76,8 @@ char** environ = NULL;
 
 void _start()
 {
+    /* * rsp is set to point to the top of a stack, in bootloader-reclaimable memory, which is at least 64KiB (65536 bytes) in size */
+
     disable_interrupts();
 
     PHYS_MAP_BASE = hhdm_request.response->offset;

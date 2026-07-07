@@ -1,4 +1,4 @@
-#include "../int/kernel_panic.h"
+#include "../panic/panic.h"
 
 uintptr_t __attribute__((used)) __stack_chk_guard = 0xdeadcafedeadcafe;
 

@@ -44,7 +44,10 @@ static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
 
 void* vmm_find_free_user_space_pages(void* hint, size_t pages)
 {
-    return __vmm_find_free_pages(hint, pages, LOWER_HALF);
+    uint32_t flags = acquire_spinlock_noint(&vmm_lock);
+    void* ret = __vmm_find_free_pages(hint, pages, LOWER_HALF);
+    release_spinlock_noint(&vmm_lock, flags);
+    return ret;
 }
 
 void* __vmm_find_free_kernel_space_pages(void* hint, size_t pages)
