@@ -353,15 +353,14 @@ thread_t* __find_task_by_pid_anywhere(pid_t pid)
     return hashmap_get_item(pid_to_task_hashmap, pid);
 }
 
-void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
-{
-    uint32_t flags = acquire_spinlock_noint(&file_table_lock);
-    task_copy_file_table(from, to, cloexec);
-    release_spinlock_noint(&file_table_lock, flags);
-}
 void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 {
     uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+    __task_copy_file_table(from, to, cloexec);
+    release_spinlock_noint(&file_table_lock, flags);
+}
+void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
+{
     for (int i = 0; i < OPEN_MAX; i++)
     {
         if (from->file_table[i].index == invalid_fd || (cloexec && (from->file_table[i].flags & FD_CLOEXEC)))
@@ -372,7 +371,6 @@ void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
             file_table[to->file_table[i].index].used++;
         }
     }
-    release_spinlock_noint(&file_table_lock, flags);
 }
 
 void __fork_task(thread_t* task)
@@ -392,13 +390,7 @@ void __fork_task(thread_t* task)
     new_task->forked_pid = 0;
     new_task->system_task = task->system_task;
 
-    hexdump(task, sizeof(*task));
-    // ? WTF
-    physical_address_t dbg(uint8_t);
-    new_task->cr3 = dbg((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
-    hexdump(task, sizeof(*task));
-    LOG(INFO, "Got through!");
-    abort();
+    new_task->cr3 = task_create_empty_vas((new_task->ring == 0) ? PG_SUPERVISOR : PG_USER);
     new_task->rsp = task->rsp;
 
     new_task->fpu_state = fpu_state_create_copy(task->fpu_state);
@@ -440,9 +432,7 @@ void cleanup_tasks()
             cur_forked_task = cur_forked_task->next;
             if (task_to_fork != current_task)
             {
-                LOG(DEBUG, "task_to_fork->fpu_state = %p", task_to_fork->fpu_state);
                 __move_task_to_running_queue(&forked_tasks, task_to_fork);
-                LOG(DEBUG, "task_to_fork->fpu_state = %p", task_to_fork->fpu_state);
                 __fork_task(task_to_fork);
             }
         }

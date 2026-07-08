@@ -173,7 +173,7 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
 
     uint64_t block_start_index = 0;
     bool looped = false;
-    uint32_t i = first_free_page_hint_block;
+    uint32_t i = first_alloc_block;
     while (true)
     {
         if (i >= usable_memory_blocks)
@@ -184,13 +184,14 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
             {
                 i = first_alloc_block;
                 looped = true;
+                block_start_index = 0;
                 continue;
             }
         }
-        if (memory_map_get_free_pages(i) >= pages)
+        if ((looped || i >= first_free_page_hint_block) && memory_map_get_free_pages(i) >= pages)
         {
             size_t contiguous_pages = 0;
-            uint64_t alloc_start = first_free_page_hint_index;
+            uint64_t alloc_start = i == first_free_page_hint_block ? first_free_page_hint_index - block_start_index : 0;
             for (uint64_t j = alloc_start; j < usable_memory_map[i].total_pages; j++)
             {
                 if (!pfa_bitmap_get_page(block_start_index + j))
@@ -225,11 +226,8 @@ physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages)
     abort();
 }
 
-// * MASSIVE BUG
 void pfa_free_physical_page(physical_address_t address)
 {
-    return;
-
     if (address == physical_null)
     {
         LOG(WARNING, "pfa_free_physical_page: Kernel tried to free NULL");
@@ -249,12 +247,13 @@ void pfa_free_physical_page(physical_address_t address)
             block_index = i;
             break;
         }
-        if (i + 1 == usable_memory_blocks)
+        page_index += usable_memory_map[i].total_pages;
+
+        if (i + 1 == usable_memory_blocks || address < usable_memory_map[i].address)
         {
             LOG(ERROR, "Couldn't free page at paddr %#" PRIx64, address);
             return;
         }
-        page_index += usable_memory_map[i].total_pages;
     }
 
     uint32_t flags = acquire_spinlock_noint(&pfa_lock);
@@ -262,8 +261,11 @@ void pfa_free_physical_page(physical_address_t address)
     // LOG(TRACE, "delete[4096] %#llx", (unsigned long long)address);
 
     usable_memory_map[block_index].used_pages--;
-    first_free_page_hint_index = page_index;
-    first_free_page_hint_block = block_index;
+    if (first_free_page_hint_index > page_index)
+    {
+        first_free_page_hint_index = page_index;
+        first_free_page_hint_block = block_index;
+    }
 
     pfa_bitmap_set_page(page_index, 0);
 
