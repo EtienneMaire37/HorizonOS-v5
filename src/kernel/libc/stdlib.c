@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "../../liballoc/liballoc.c"
 
 #include "../cpu/util.h"
 #include "../cpu/registers.h"

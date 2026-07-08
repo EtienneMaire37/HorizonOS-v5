@@ -156,7 +156,7 @@ void unmap_ioapic(void* addr)
 {
     LOG(TRACE, "Unmapping I/O APIC at virtual address %p", addr);
 
-    free_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
+    unmap_range((uint64_t*)(get_cr3_address() + PHYS_MAP_BASE),
         (uint64_t)addr, 1);
 }
 

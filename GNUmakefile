@@ -98,7 +98,7 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	-mgeneral-regs-only \
 	-DNDEBUG \
 	-Wno-unused-function -Wno-unused-variable -Wno-address-of-packed-member -Wno-format-zero-length \
-	${CFLAGS} -DBUILDING_KERNEL -I limine-protocol/include
+	${CFLAGS} -I limine-protocol/include
 bin/%.asm.o: src/kernel/%.asm src/kernel/link.ld $(MLIBC_STAMP)
 	mkdir -p $(dir $@)
 	nasm -f elf64 $< -o $@

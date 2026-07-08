@@ -1,9 +1,11 @@
 #ifndef _LIBALLOC_H
 #define _LIBALLOC_H
 
-/** \defgroup ALLOCHOOKS liballoc hooks 
+#include <stddef.h>
+
+/** \defgroup ALLOCHOOKS liballoc hooks
  *
- * These are the OS specific functions which need to 
+ * These are the OS specific functions which need to
  * be implemented on any platform that the library
  * is expected to work on.
  */
@@ -27,7 +29,7 @@ extern "C" {
 
 /** This function is supposed to lock the memory data structures. It
  * could be as simple as disabling interrupts or acquiring a spinlock.
- * It's up to you to decide. 
+ * It's up to you to decide.
  *
  * \return 0 if the lock was acquired successfully. Anything else is
  * failure.
@@ -62,7 +64,7 @@ extern void* liballoc_alloc(size_t);
 extern int liballoc_free(void*,size_t);
 
 
-       
+
 
 extern void    *PREFIX(malloc)(size_t);				///< The standard function.
 extern void    *PREFIX(realloc)(void *, size_t);		///< The standard function.

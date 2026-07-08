@@ -1,3 +1,6 @@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
+
 #include "liballoc.h"
 #include "../kernel/debug/out.h"
 
@@ -239,7 +242,7 @@ static struct liballoc_major *allocate_new_page( unsigned int size )
 
 
 
-void __attribute__((no_sanitize("undefined"))) *PREFIX(malloc)(size_t req_size)
+void * __attribute__((no_sanitize("undefined"))) PREFIX(malloc)(size_t req_size)
 {
 	int startedBet = 0;
 	unsigned long long bestSize = 0;
@@ -827,3 +830,5 @@ void*   PREFIX(realloc)(void *p, size_t size)
 
 	return ptr;
 }
+
+#pragma GCC diagnostic pop

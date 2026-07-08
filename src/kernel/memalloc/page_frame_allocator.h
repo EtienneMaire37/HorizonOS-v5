@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <assert.h>
 #include "../cpu/util.h"
 #include "../util/units.h"
 #include "mmap.h"
@@ -10,11 +11,31 @@
 
 #define MAX_MEMORY (64 * TB)
 
-#define memory_map_get_free_pages(i)                (usable_memory_map[i].total_pages - usable_memory_map[i].used_pages)
-#define memory_map_set_free_pages(i, free_pages)    usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - (free_pages)
+extern uint64_t bitmap_size;
+extern uint8_t* bitmap;
+extern struct mem_block usable_memory_map[MAX_USABLE_MEMORY_BLOCKS];
+extern uint8_t usable_memory_blocks;
 
-#define pfa_bitmap_get_page(i)                      (!!(bitmap[(i) / 8] & (1 << ((i) % 8))))
-#define pfa_bitmap_set_page(i, sta)                 bitmap[(i) / 8] = (bitmap[(i) / 8] & ~(1 << ((i)% 8))) | (!!(sta) << ((i) % 8))
+static inline bool pfa_bitmap_get_page(uint64_t i)
+{
+    assert(i / 8 < bitmap_size);
+    return !!(bitmap[i / 8] & (1 << (i % 8)));
+}
+static inline void pfa_bitmap_set_page(uint64_t i, bool sta)
+{
+    assert(i / 8 < bitmap_size);
+    bitmap[i / 8] = (bitmap[i / 8] & ~(1 << (i % 8))) | (!!(sta) << (i % 8));
+}
+static inline uint64_t memory_map_get_free_pages(uint64_t i)
+{
+    assert(i < usable_memory_blocks);
+    return usable_memory_map[i].total_pages - usable_memory_map[i].used_pages;
+}
+static inline void memory_map_set_free_pages(uint64_t i, uint64_t free_pages)
+{
+    assert(i < usable_memory_blocks);
+    usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - free_pages;
+}
 
 extern uint64_t usable_memory;
 
@@ -38,6 +59,6 @@ physical_address_t pfa_allocate_physical_page();
 physical_address_t pfa_allocate_physical_contiguous_pages(size_t pages);
 void pfa_free_physical_page(physical_address_t address);
 void pfa_free_page(const void* ptr);
-void* __attribute__((malloc, malloc(pfa_free_page, 1), assume_aligned(4096))) pfa_allocate_page();
+void* pfa_allocate_page();
 void pfa_free_contiguous_pages(const void* ptr, size_t pages);
-void* __attribute__((malloc, malloc(pfa_free_contiguous_pages, 1), assume_aligned(4096))) pfa_allocate_contiguous_pages(size_t pages);
+void* pfa_allocate_contiguous_pages(size_t pages);
