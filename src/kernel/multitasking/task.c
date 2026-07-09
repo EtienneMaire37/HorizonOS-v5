@@ -59,6 +59,8 @@ thread_t* __task_create_empty()
 
     task->queue = NULL;
 
+    task->can_be_killed = true;
+
     __task_init_file_table(task);
 
     return task;
@@ -104,7 +106,7 @@ void __task_destroy(thread_t* task)
     for (int i = 0; i < OPEN_MAX; i++)
     {
     	if (task->file_table[i].index != invalid_fd)
-            __vfs_remove_global_file(task->file_table[i].index);
+            ___vfs_remove_global_file(task->file_table[i].index);
     }
 
     __task_stop_polling(task);
@@ -536,7 +538,16 @@ void kill_task(thread_t* task, int ret)
 
 void __kill_task(thread_t* task, int ret)
 {
-    FATAL("TODO: Only kill on interrupt or syscall return");
+    if (!task->can_be_killed)
+    {
+        task->waiting_for_kill_ret = ret;
+        task->waiting_for_kill = true;
+        task->sig_pending_user_space = true;
+        return;
+    }
+
+    task->waiting_for_kill = false;
+
     LOG(TRACE, "kill_task(%p: {.name = \"%s\", .pid = %d, .ppid = %d, .pgid = %d}, %d)",
         task, task->name, task->pid, task->ppid, task->pgid, ret);
     task->return_value = ret;

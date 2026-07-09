@@ -15,10 +15,12 @@ initrd_file_t* kernel_symbols_file = NULL;
 
 #include "../panic/panic.h"
 
-#define return_from_isr() { if (multitasking_enabled) { if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); }  return; }
+#define return_from_isr() { if (multitasking_enabled) { if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); } task_exit_critical_section(current_task); return; }
 
 void interrupt_handler(interrupt_registers_t* registers)
 {
+    task_enter_critical_section(current_task);
+
     if (registers->interrupt_number == NON_MASKABLE_INTERRUPT)
     {
         LOG(TRACE, "NMI: %#x, %#x", inb(SYSTEM_CONTROL_PORT_A), inb(SYSTEM_CONTROL_PORT_B));
@@ -45,7 +47,7 @@ void interrupt_handler(interrupt_registers_t* registers)
         if (multitasking_enabled)
         {
             if (current_task->system_task || task_count == 1 || !multitasking_enabled ||
-registers->interrupt_number == DOUBLE_FAULT || registers->interrupt_number == MACHINE_CHECK)
+                registers->interrupt_number == DOUBLE_FAULT || registers->interrupt_number == MACHINE_CHECK)
                 kernel_panic(registers);
             else
             {

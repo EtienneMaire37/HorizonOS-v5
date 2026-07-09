@@ -645,7 +645,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		return;
 	#else
     #ifdef PRINT_UNRECOGNIZED_ANSI
-		tty_outc('^');
+		tty_outc_ex('^', 0, false);
 	#endif
 		return;
 	#endif
@@ -686,8 +686,9 @@ void tty_outc_ex(char c, int flags, bool refresh)
 
     	default:
         #ifdef PRINT_UNRECOGNIZED_ANSI
-           	tty_outc('^');
-           	tty_outc(c);
+           	tty_outc_ex('^', 0, false);
+           	tty_outc_ex(c, 0, false);
+            tty_refresh_screen(refresh);
         #endif
            	return;
     	}
@@ -876,12 +877,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
 			tty_reading_operating_system_command_string = false;
 			tty_osc_index = 0;
 		#ifdef PRINT_UNRECOGNIZED_ANSI
-			tty_outc('^');
-			tty_outc('[');
+			tty_outc_ex('^', 0, false);
+			tty_outc_ex('[', 0, false);
 			if (!(tty_escape_sequence_index == 0 && tty_control_sequence_buffer[0] == 0))
 				for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
 					dprintf(STDOUT_FILENO, "%u%s", tty_control_sequence_buffer[i], i == tty_escape_sequence_index ? "" : ";");
-			tty_outc(c);
+			tty_outc_ex(c, 0, false);
 		#endif
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
@@ -940,8 +941,9 @@ void tty_outc_ex(char c, int flags, bool refresh)
         {
             if (i >= MAX_TTY_X * (int32_t)tty_res_y)
                 new_cursor -= MAX_TTY_X;
-            tty_outc_ex(' ', i == start_cursor ? 0 : TTY_CONTINUE_CHAR, refresh);
+            tty_outc_ex(' ', i == start_cursor ? 0 : TTY_CONTINUE_CHAR, false);
         }
+		__tty_refresh_screen(refresh);
 		break;
 	}
 

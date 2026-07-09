@@ -215,7 +215,7 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
             }
         }
     }
-    if ((character == '\n' || character == tty_ts.c_cc[VEOF]) || (raw && get_buffered_characters(keyboard_input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
+    if (*sigint || (character == '\n' || character == tty_ts.c_cc[VEOF]) || (raw && get_buffered_characters(keyboard_input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
     {
         assert(keyboard_buffered_input_buffer.size == keyboard_input_buffer.size);
         memcpy(keyboard_buffered_input_buffer.characters, keyboard_input_buffer.characters, keyboard_input_buffer.size);

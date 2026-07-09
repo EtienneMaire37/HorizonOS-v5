@@ -100,7 +100,7 @@ ssize_t pipe_iofunc(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t dir
     }
 }
 
-void pipe_destroy(file_entry_t* entry)
+void __pipe_destroy(file_entry_t* entry)
 {
     assert(entry);
     if (entry->file_data.pipe_data.other_end == -1)
@@ -113,9 +113,7 @@ void pipe_destroy(file_entry_t* entry)
     {
         file_entry_t* other = &file_table[entry->file_data.pipe_data.other_end];
         other->file_data.pipe_data.other_end = -1;
-        uint32_t flags = lock_scheduler();
         __move_all_tasks_to_running_queue(&other->blocked_on_io);
-        unlock_scheduler(flags);
     }
 }
 
@@ -149,7 +147,7 @@ void vfs_setup_pipe_end(int fildes, int other, int flags)
     file_table[fildes].st = st;
 
     file_table[fildes].iofunc = pipe_iofunc;
-    file_table[fildes].on_destroy = pipe_destroy;
+    file_table[fildes].on_destroy = __pipe_destroy;
 }
 
 int vfs_setup_pipe(int* fds, int flags)

@@ -7,6 +7,7 @@
 #include "../time/time.h"
 #include "../vfs/vfs.h"
 #include "../util/linked_list.h"
+#include "sched_lock.h"
 
 #define THREAD_NAME_MAX 64
 #define NUM_SIGNALS     (SIGRTMAX + 1)
@@ -57,6 +58,9 @@ typedef struct thread
 
     uint64_t rsp, cr3;
     uint64_t fs_base, gs_base;
+
+    bool can_be_killed; // * Probably shouldn't kill tasks when in a critical section of the kernel
+    bool waiting_for_kill, waiting_for_kill_ret;
 
     // * We still have to keep them here in the case
     // * where the current process is blocked before context switching
@@ -135,3 +139,20 @@ void __task_set_pending_signal(thread_t* task, int sig);
 void __task_unset_pending_signal(thread_t* task, int sig);
 
 void __waitpid_check_dead();
+
+static inline void task_enter_critical_section(thread_t* task)
+{
+    if (!task) return;
+    uint32_t flags = lock_scheduler();
+    task->can_be_killed = false;
+    unlock_scheduler(flags);
+}
+static inline void task_exit_critical_section(thread_t* task)
+{
+    if (!task) return;
+    uint32_t flags = lock_scheduler();
+    task->can_be_killed = true;
+    if (task->waiting_for_kill)
+        __kill_task(task, task->waiting_for_kill_ret);
+    unlock_scheduler(flags);
+}

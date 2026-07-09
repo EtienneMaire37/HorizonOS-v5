@@ -690,8 +690,11 @@ ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t
     case IO_DIR_READ:
         return 0;
     case IO_DIR_WRITE:
+    // ! VERY HACKY AND UNSAFE WITH SMP
+    // TODO: Implement PTYs
         for (uint32_t i = 0; i < count; i++)
-            tty_outc(buf[i]);
+            tty_outc_ex(buf[i], 0, false);
+        __tty_refresh_screen(true);
         return count;
     }
     return 0;

@@ -63,7 +63,7 @@ void task_handle_signal_to_userspace(interrupt_registers_t* registers)
 
 uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_address)
 {
-    // SC_LOG("syscall %" PRIu64, registers->rax);
+    task_enter_critical_section(current_task);
     uint64_t syscall_num = registers->rax;
     sc_ret_errno = -1;
     bool sc_no_errno = syscall_num == SYS_GETPID || syscall_num == SYS_GETPPID || syscall_num == SYS_LOG;
@@ -114,7 +114,6 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_EXIT, 1, int)
         SC_LOG("syscall SYS_EXIT(%d)", arg1);
         kill_task(current_task, ((uint16_t)arg1 & 0x7f) << 8);
-        FATAL("exit fatal error");
         break;
     sc_case(SYS_ISATTY, 1, int)
         SC_LOG("syscall SYS_ISATTY(%d)", arg1);
@@ -1511,5 +1510,6 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     if (syscall_num != SYS_SIGRET)
         task_handle_signal_to_userspace(registers);
 
+    task_exit_critical_section(current_task);
     return registers->rsp;
 }

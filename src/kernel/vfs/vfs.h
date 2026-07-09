@@ -141,6 +141,7 @@ void vfs_init_file_table();
 void __vfs_init_file_table();
 int __vfs_allocate_global_file();
 void __vfs_remove_global_file(int fd);
+void ___vfs_remove_global_file(int fd);
 
 ino_t vfs_generate_inode_number();
 dev_t vfs_generate_device_id();
