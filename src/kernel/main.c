@@ -1,3 +1,4 @@
+#include "memalloc/page_data.h"
 #define _GNU_SOURCE
 
 #include <stdbool.h>
@@ -269,6 +270,10 @@ void _start()
         global_cr3 = create_empty_pdpt();
         assert(global_cr3);
         LOG(DEBUG, "global_cr3: %p", global_cr3);
+
+    // * That way each pml4 entry in the higher half is a reference to a pdpt and modifying any kernel mapping in the hh will take effect on all vas
+        for (int i = 256; i < 512; i++)
+            set_pdpt_entry(&global_cr3[i], create_empty_pdpt_phys(), PG_USER, PG_READ_WRITE, CACHE_WB);
 
         uint64_t* boot_cr3 = (uint64_t*)(get_cr3_address() + PHYS_MAP_BASE);
 
