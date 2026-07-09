@@ -91,7 +91,7 @@ bin/%.o: src/kernel/%.c src/kernel/link.ld limine/limine $(MLIBC_STAMP)
 	mkdir -p $(dir $@)
 	$(HOSGCC) -c $< -o $@ \
 	-MMD -MP \
-	-Wall -Werror -Wextra -fpie -fpic -Iroot/usr/include \
+	-Wall -Werror -Wextra -Wno-empty-body -fpie -fpic -Iroot/usr/include \
 	-O3 -mabi=sysv \
 	-std=gnu11 -nostdlib -ffreestanding -masm=intel -m64 -mno-ms-bitfields -mlong-double-80 -march=x86-64 \
 	-mno-red-zone \
