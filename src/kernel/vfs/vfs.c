@@ -692,8 +692,8 @@ ssize_t task_chr_stdout(file_entry_t* entry, uint8_t* buf, size_t count, uint8_t
     case IO_DIR_WRITE:
     // TODO: Implement PTYs
         for (uint32_t i = 0; i < count; i++)
-            tty_outc_ex(buf[i], 0, false);
-        __tty_refresh_screen(true);
+            tty_outc_ex(buf[i], 0);
+        __tty_refresh_screen();
         return count;
     }
     return 0;

@@ -29,6 +29,8 @@ int fputc(int c, FILE* stream)
     case STDOUT_FILENO:
     #ifndef NO_STDOUT
         tty_outc((char)c);
+        if (c == '\n')
+            __tty_refresh_screen();
     #endif
         return c;
     case STDERR_FILENO:
@@ -58,15 +60,16 @@ int puts(const char* s)
     return 0;
 }
 
-// * NOOP
 int fflush(FILE* stream)
 {
     switch((uint64_t)stream)
     {
-    case STDIN_FILENO:
-    case STDOUT_FILENO:
     case STDERR_FILENO:
         return 0;
+    case STDOUT_FILENO:
+        __tty_refresh_screen();
+        return 0;
+    case STDIN_FILENO:
     default:
         errno = EBADF;
         return EOF;

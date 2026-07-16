@@ -121,7 +121,7 @@ void syscall_ioctl(interrupt_registers_t* registers, int fd, unsigned long reque
             break;
         }
         struct winsize* ws = arg;
-        tty_set_window_size(ws->ws_col, ws->ws_row, true);
+        tty_set_window_size(ws->ws_col, ws->ws_row);
         __task_send_signal_to_pgrp(SIGWINCH, tty_foreground_pgrp);
         release_spinlock_noint(&file_table_lock, flags);
         sc_ret(1) = 0;

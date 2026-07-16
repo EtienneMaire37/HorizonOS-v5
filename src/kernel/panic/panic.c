@@ -1,4 +1,5 @@
 #include "panic.h"
+#include <stdio.h>
 
 void print_kernel_symbol_name(uintptr_t rip, bool ttyout)
 {
@@ -169,9 +170,7 @@ void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers_t* registers,
     LOG(CRITICAL, "Kernel panic");
 
     tty_set_color(FG_WHITE, BG_BLACK);
-    tty_clear_screen(' ', true);
-
-    tty_cursor_blink = false;
+    tty_clear_screen(' ');
 
     tty_set_color(FG_LIGHTRED, BG_BLACK);
     printf("Kernel panic\n\n");
@@ -292,6 +291,8 @@ void __attribute__((noreturn)) kernel_panic_ex(interrupt_registers_t* registers,
 
         LOG(INFO, "commit hash: %s", commit_file->data);
     }
+
+    fflush(stdout);
 
     halt();
 }

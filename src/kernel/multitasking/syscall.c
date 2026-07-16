@@ -1504,6 +1504,8 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     }
     }
 
+    assert(get_rflags() & (1 << 9));
+
     if (sc_ret_errno != 0 && !sc_no_errno)
         SC_LOG("errno: %" PRId64 ": %s", sc_ret_errno, strerror(sc_ret_errno));
 

@@ -8,9 +8,8 @@ ssize_t write(int fd, const void* buf, size_t n)
     {
     case STDOUT_FILENO:
         for (size_t i = 0; i < n; i++)
-            tty_outc_ex(((char*)buf)[i], 0, false);
-        if (tty_dirty)
-            __tty_refresh_screen(true);
+            tty_outc_ex(((char*)buf)[i], 0);
+        __tty_refresh_screen();
         return n;
     case STDERR_FILENO:
         for (size_t i = 0; i < n; i++)

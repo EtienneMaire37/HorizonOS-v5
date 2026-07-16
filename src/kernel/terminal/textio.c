@@ -9,6 +9,7 @@ tty_char_t tty_alternate_buffer[MAX_TTY_X * MAX_TTY_Y];
 tty_char_t* tty_data;
 
 uint32_t tty_dirty = 0;
+bool tty_dirty_cursor = false;
 
 bool tty_application_cursor_mode = false;
 
@@ -23,8 +24,6 @@ bool tty_reversed = false;
 struct termios tty_ts;
 
 pid_t tty_foreground_pgrp = 1;
-
-bool tty_cursor_blink = true;
 
 psf_font_t tty_font, tty_font_bold;
 bool tty_bold = false;
@@ -45,7 +44,22 @@ bool tty_reading_operating_system_command = false, tty_reading_operating_system_
 #include "../vga/vga.h"
 #include "../graphics/linear_framebuffer.h"
 
-void __tty_soft_reset(bool refresh)
+static inline void __tty_set_cursor(uint32_t pos)
+{
+    if ((uint32_t)tty_cursor != pos)
+	{
+	    tty_set_dirty(tty_cursor);
+	    tty_cursor = pos;
+		tty_dirty_cursor = true;
+	}
+}
+
+bool __tty_is_dirty()
+{
+    return tty_dirty_cursor || tty_dirty;
+}
+
+void __tty_soft_reset()
 {
     tty_data = tty_buffer;
     tty_color = FG_WHITE | BG_BLACK;
@@ -59,25 +73,27 @@ void __tty_soft_reset(bool refresh)
 	tty_sequence_question_mark = tty_sequence_exclamation_mark = false;
 	tty_reading_operating_system_command = tty_reading_operating_system_command_string = false;
 
-	__tty_refresh_screen(refresh);
+	__tty_refresh_screen();
 }
 
-void __tty_full_reset(bool refresh)
+void __tty_full_reset()
 {
-	__tty_soft_reset(refresh);
-	tty_clear_screen(' ', refresh);
+	__tty_soft_reset();
+	tty_clear_screen(' ');
+	__tty_refresh_screen();
 }
 
-void tty_init(bool refresh)
+void tty_init()
 {
-	__tty_full_reset(refresh);
-	tty_set_window_size(framebuffer.width / 8, framebuffer.height / (8 * TTY_AR), true);
-	tty_clear_screen(' ', refresh);
+	__tty_full_reset();
+	tty_set_window_size(framebuffer.width / 8, framebuffer.height / (8 * TTY_AR));
+	tty_clear_screen(' ');
+	__tty_refresh_screen();
 }
 
-void tty_clear_screen(char c, bool refresh)
+void tty_clear_screen(char c)
 {
-    __tty_clear_screen(c, refresh);
+    __tty_clear_screen(c);
 }
 
 void __tty_ignore_next_characters(int n)
@@ -85,37 +101,27 @@ void __tty_ignore_next_characters(int n)
     tty_ignore_chars += n;
 }
 
-void __tty_clear_screen(char c, bool refresh)
+void __tty_clear_screen(char c)
 {
 	for (uint32_t i = 0; i < MAX_TTY_X * tty_res_y; i++)
-	{
 		if (i % MAX_TTY_X < tty_res_x)
-		{
-		    tty_data[i] = ((tty_char_t)tty_color << 8) | c | ((tty_char_t)tty_bold << 16);
-			tty_set_dirty(tty_data[i]);
-			__tty_render_character(i, tty_data[i], refresh);
-		}
-	}
-	tty_cursor = 0;
-	__tty_render_cursor(tty_cursor, refresh);
+		    __tty_set_character(i, ((tty_char_t)tty_color << 8) | c | ((tty_char_t)tty_bold << 16));
+	__tty_set_cursor(0);
 }
 
-void __tty_clear_section(uint32_t start_char, uint32_t end_char, uint8_t clear_color, bool refresh)
+void __tty_clear_section(uint32_t start_char, uint32_t end_char, uint8_t clear_color)
 {
     for (uint32_t i = start_char; i < end_char; i++)
 	{
 		if (i % MAX_TTY_X < tty_res_x)
 		{
-		    tty_data[i] = ((tty_char_t)clear_color << 8) | ' ' | ((tty_char_t)tty_bold << 16);
-			tty_set_dirty(tty_data[i]);
-			__tty_render_character(i, tty_data[i], refresh);
+			__tty_set_character(i, ((tty_char_t)clear_color << 8) | ' ' | ((tty_char_t)tty_bold << 16));
+			tty_set_dirty(i);
 		}
 	}
-	if (tty_cursor_blink)
-		__tty_render_cursor(tty_cursor, refresh);
 }
 
-void __tty_move_characters(uint32_t start, int offset, bool refresh)
+void __tty_move_characters(uint32_t start, int offset)
 {
     if (offset == 0)
         return;
@@ -123,24 +129,13 @@ void __tty_move_characters(uint32_t start, int offset, bool refresh)
 	if (offset < 0)
 	{
     	for (size_t i = 0; i < items; i++)
-        {
-            tty_data[start + offset + i] = tty_data[start + i];
-            tty_set_dirty(tty_data[start + offset + i]);
-        }
+            __tty_set_character(start + offset + i, tty_data[start + i]);
 	}
 	else
 	{
         for (int i = items - 1; i >= 0; i--)
-        {
-            tty_data[start + offset + i] = tty_data[start + i];
-            tty_set_dirty(tty_data[start + offset + i]);
-        }
+            __tty_set_character(start + offset + i, tty_data[start + i]);
 	}
-	uint32_t base = (offset > 0) ? start : (start + offset);
-	for (uint32_t i = base; i < base + items; i++)
-		if (i % MAX_TTY_X < tty_res_x) __tty_render_character(i, tty_data[i], refresh);
-	if (tty_cursor_blink)
-		__tty_render_cursor(tty_cursor, refresh);
 }
 
 uint8_t tty_ansi_to_vga(uint8_t ansi_code)
@@ -205,7 +200,7 @@ void tty_set_color(uint8_t fg_color, uint8_t bg_color)
 #endif
 }
 
-void tty_set_window_size(int sx, int sy, bool refresh)
+void tty_set_window_size(int sx, int sy)
 {
 	// LOG(DEBUG, "tty_set_window_size(%d, %d)", sx, sy);
 	if (sx > MAX_TTY_X || sy > MAX_TTY_Y || sx <= 0 || sy <= 0)
@@ -215,7 +210,7 @@ void tty_set_window_size(int sx, int sy, bool refresh)
 	}
 	tty_res_x = sx;
 	tty_res_y = sy;
-	__tty_refresh_screen(refresh);
+	__tty_refresh_screen();
 }
 
 uint32_t __tty_get_character_width()
@@ -242,20 +237,16 @@ uint32_t __tty_get_character_pos_y(uint32_t index)
 	return ret;
 }
 
-void __tty_render_character(uint32_t cursor, tty_char_t c, bool refresh)
+void __tty_render_character(uint32_t cursor)
 {
-	if (cursor >= MAX_TTY_X * tty_res_y)
-	    return;
-	if (!refresh)
-	{
-		tty_set_dirty(tty_data[cursor]);
-		return;
-	}
-	if (!(tty_data[cursor] & TTY_DIRTY))
-	    return;
-	tty_unset_dirty(tty_data[cursor]);
+    if (!(tty_data[cursor] & TTY_DIRTY)) return;
 
-	bool bold = (c >> 16) & 1;
+    tty_dirty--;
+    tty_data[cursor] &= ~TTY_DIRTY;
+
+    tty_char_t c = tty_data[cursor];
+
+    bool bold = (c >> 16) & 1;
 	uint8_t color = c >> 8;
 	c &= 0x7f;
 
@@ -281,14 +272,27 @@ void __tty_render_character(uint32_t cursor, tty_char_t c, bool refresh)
 		false, bg_color.r, bg_color.g, bg_color.b);
 }
 
-void __tty_render_cursor(uint32_t cursor, bool refresh)
+void __tty_set_character(uint32_t cursor, tty_char_t c)
 {
 	if (cursor >= MAX_TTY_X * tty_res_y)
-		return;
-	if (cursor % MAX_TTY_X >= tty_res_x)
-		return;
-	if (!refresh)
 	    return;
+	if (cursor == (uint32_t)tty_cursor)
+        tty_dirty_cursor = true;
+	c &= ~TTY_DIRTY;
+    bool dirty = ((tty_data[cursor] & ~TTY_DIRTY) != c) || (tty_data[cursor] & TTY_DIRTY);
+	tty_data[cursor] = c;
+	if (dirty)
+	    tty_set_dirty(cursor);
+}
+
+void __tty_render_cursor(uint32_t cursor)
+{
+    if (!tty_dirty_cursor)
+        return;
+    if (cursor >= MAX_TTY_X * tty_res_y)
+		return;
+    if (cursor % MAX_TTY_X >= tty_res_x)
+		return;
 
 	uint32_t width = __tty_get_character_width();
 	uint32_t height = __tty_get_character_height();
@@ -299,15 +303,25 @@ void __tty_render_cursor(uint32_t cursor, bool refresh)
 	srgb_t cursor_col = theme_cursor_color;
 
 	framebuffer_fill_rect(&framebuffer, x, y + (8 * height / 10), width, height / 5, cursor_col.r, cursor_col.g, cursor_col.b);
+
+	tty_dirty_cursor = false;
 }
 
-void __tty_refresh_screen(bool refresh)
+void __tty_refresh_screen()
 {
-    assert(tty_data);
+    if (!tty_data) return;
+    if (!__tty_is_dirty()) return;
 	for (uint32_t i = 0; i < MAX_TTY_X * tty_res_y; i++)
-		if (i % MAX_TTY_X < tty_res_x) __tty_render_character(i, tty_data[i], refresh);
-	if (tty_cursor_blink)
-		__tty_render_cursor(tty_cursor, refresh);
+		if (i % MAX_TTY_X < tty_res_x)
+		    __tty_render_character(i);
+	__tty_render_cursor(tty_cursor);
+	// ? Not sure why it's not always zero here
+	tty_dirty = 0;
+}
+
+void tty_refresh_screen()
+{
+    __tty_refresh_screen();
 }
 
 void __tty_ansi_m_code(uint32_t code)
@@ -372,7 +386,7 @@ void __tty_ansi_m_code(uint32_t code)
 	    return;
 }
 
-void __tty_ansi_J_code(uint32_t code, bool refresh)
+void __tty_ansi_J_code(uint32_t code)
 {
 	if (tty_sequence_question_mark || tty_sequence_exclamation_mark)
 		return;
@@ -389,10 +403,10 @@ void __tty_ansi_J_code(uint32_t code, bool refresh)
 		(code == 0 ? MAX_TTY_X * tty_res_y :
 		(code == 1 ? (uint32_t)tty_cursor :
 		(code == 2 ? MAX_TTY_X * tty_res_y :
-		(code == 3 ? MAX_TTY_X * tty_res_y : MAX_TTY_X * tty_res_y)))), FG_WHITE | BG_BLACK, refresh);
+		(code == 3 ? MAX_TTY_X * tty_res_y : MAX_TTY_X * tty_res_y)))), FG_WHITE | BG_BLACK);
 }
 
-void __tty_ansi_H_code(uint32_t code, bool refresh)
+void __tty_ansi_H_code(uint32_t code)
 {
 	if (tty_sequence_question_mark || tty_sequence_exclamation_mark)
 		return;
@@ -406,21 +420,14 @@ void __tty_ansi_H_code(uint32_t code, bool refresh)
 	tty_H_code_selector++;
 	tty_H_code_selector %= 2;
 
-	tty_set_dirty(tty_data[tty_cursor]);
-	__tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+	tty_set_dirty(tty_cursor);
 
-	tty_cursor = (n - 1) * MAX_TTY_X + (m - 1);
-	if (tty_cursor_blink)
-	{
-        tty_set_dirty(tty_data[tty_cursor]);
-	    __tty_render_cursor(tty_cursor, refresh);
-		__tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
-	}
+	__tty_set_cursor((n - 1) * MAX_TTY_X + (m - 1));
 
 	return;
 }
 
-void __tty_ansi_h_code(uint32_t code, bool refresh)
+void __tty_ansi_h_code(uint32_t code)
 {
 	if (tty_sequence_question_mark)
 	{
@@ -437,9 +444,11 @@ void __tty_ansi_h_code(uint32_t code, bool refresh)
 			tty_data = tty_alternate_buffer;
 			tty_saved_cursor = tty_cursor;
 			for (uint32_t i = 0; i < MAX_TTY_X * tty_res_y; i++)
-			    tty_data[i] = ' ' | (tty_color << 8) | TTY_DIRTY;
-			tty_dirty = MAX_TTY_X * tty_res_y;
-			__tty_refresh_screen(refresh);
+			{
+			    __tty_set_character(i, ' ' | (tty_color << 8));
+				tty_set_dirty(i);
+			}
+			tty_dirty = tty_res_x * tty_res_y;
 			return;
 		}
 
@@ -449,7 +458,7 @@ void __tty_ansi_h_code(uint32_t code, bool refresh)
 	return;
 }
 
-void __tty_ansi_l_code(uint32_t code, bool refresh)
+void __tty_ansi_l_code(uint32_t code)
 {
 	if (tty_sequence_question_mark)
 	{
@@ -466,9 +475,9 @@ void __tty_ansi_l_code(uint32_t code, bool refresh)
     		tty_data = tty_buffer;
             tty_cursor = tty_saved_cursor;
             for (uint32_t i = 0; i < MAX_TTY_X * tty_res_y; i++)
-			    tty_data[i] |= TTY_DIRTY;
-            tty_dirty = MAX_TTY_X * tty_res_y;
-            __tty_refresh_screen(refresh);
+                tty_set_dirty(i);
+            tty_dirty = tty_res_x * tty_res_y;
+            tty_dirty_cursor = true;
     		return;
     	}
 
@@ -478,7 +487,7 @@ void __tty_ansi_l_code(uint32_t code, bool refresh)
 	return;
 }
 
-void __tty_ansi_K_code(uint32_t code, bool refresh)
+void __tty_ansi_K_code(uint32_t code)
 {
 	if (tty_sequence_question_mark || tty_sequence_exclamation_mark)
 		return;
@@ -492,10 +501,10 @@ void __tty_ansi_K_code(uint32_t code, bool refresh)
 						 code == 0 ? ((tty_cursor + MAX_TTY_X) / MAX_TTY_X) * MAX_TTY_X :
 						(code == 1 ? tty_cursor :
 						(code == 2 ? ((tty_cursor + MAX_TTY_X) / MAX_TTY_X) * MAX_TTY_X : 0)),
-						FG_WHITE | BG_BLACK, refresh);
+						FG_WHITE | BG_BLACK);
 }
 
-void __tty_ansi_P_code(uint32_t code, bool refresh)
+void __tty_ansi_P_code(uint32_t code)
 {
 	if (tty_sequence_question_mark || tty_sequence_exclamation_mark)
 		return;
@@ -503,7 +512,7 @@ void __tty_ansi_P_code(uint32_t code, bool refresh)
 	if (code == 0)
 		code = 1;
 
-	__tty_move_characters(tty_cursor + code, -code, refresh);
+	__tty_move_characters(tty_cursor + code, -code);
 }
 
 void __tty_ansi_t_code(uint32_t code)
@@ -517,7 +526,7 @@ void __tty_ansi_t_code(uint32_t code)
 	return;
 }
 
-void __tty_ansi_at_code(uint32_t code, bool refresh)
+void __tty_ansi_at_code(uint32_t code)
 {
 	if (tty_sequence_question_mark || tty_sequence_exclamation_mark)
 		return;
@@ -525,7 +534,7 @@ void __tty_ansi_at_code(uint32_t code, bool refresh)
 	if (code == 0)
 		code = 1;
 
-	__tty_move_characters(tty_cursor, code, refresh);
+	__tty_move_characters(tty_cursor, code);
 }
 
 void __tty_osc_put(char c)
@@ -549,74 +558,35 @@ void __tty_osc_put(char c)
     }
 }
 
-void __tty_scroll(bool refresh)
+void __tty_scroll()
 {
-    bool scrolled = false;
 	while (tty_cursor / MAX_TTY_X >= (int32_t)tty_res_y || tty_cursor < 0)
 	{
-		scrolled = true;
-
 		if (tty_cursor < 0)
 		{
     		for (uint32_t i = tty_res_y - 1; i > 0; i--)
-            {
                 for (uint32_t j = 0; j < tty_res_x; j++)
-                {
-                    tty_char_t* cur = &tty_data[i * MAX_TTY_X + j];
-                    tty_char_t* new = &tty_data[(i - 1) * MAX_TTY_X + j];
-                    bool are_different = (*cur & 0xffff) != (*new & 0xffff);
-                    *cur = *new;
-                    if (are_different)
-                        tty_set_dirty(*cur);
-                }
-            }
+                    __tty_set_character(i * MAX_TTY_X + j, tty_data[(i - 1) * MAX_TTY_X + j]);
     		for (uint32_t j = 0; j < tty_res_x; j++)
-            {
-                tty_char_t* cur = &tty_data[j];
-                tty_char_t new = ' ' | ((uint16_t)tty_color << 8);
-                bool are_different = (*cur & 0xffff) != (new & 0xffff);
-                *cur = new;
-                if (are_different)
-                    tty_set_dirty(*cur);
-            }
+                __tty_set_character(j, ' ' | ((uint16_t)tty_color << 8));
 		}
 		else
 		{
 		    for (uint32_t i = 0; i < tty_res_y - 1; i++)
-            {
                 for (uint32_t j = 0; j < tty_res_x; j++)
-				{
-    				tty_char_t* cur = &tty_data[i * MAX_TTY_X + j];
-                    tty_char_t* new = &tty_data[(i + 1) * MAX_TTY_X + j];
-                    bool are_different = (*cur & 0xffff) != (*new & 0xffff);
-                    *cur = *new;
-                    if (are_different)
-                        tty_set_dirty(*cur);
-				}
-            }
+				    __tty_set_character(i * MAX_TTY_X + j, tty_data[(i + 1) * MAX_TTY_X + j]);
 			for (uint32_t j = 0; j < tty_res_x; j++)
-            {
-                tty_char_t* cur = &tty_data[(tty_res_y - 1) * MAX_TTY_X + j];
-                tty_char_t new = ' ' | ((uint16_t)tty_color << 8);
-                bool are_different = (*cur & 0xffff) != (new & 0xffff);
-                *cur = new;
-                if (are_different)
-                    tty_set_dirty(*cur);
-            }
+                __tty_set_character((tty_res_y - 1) * MAX_TTY_X + j, ' ' | ((uint16_t)tty_color << 8));
 		}
 
 		if (tty_cursor < 0)
-		    tty_cursor += MAX_TTY_X;
+		    __tty_set_cursor(tty_cursor + MAX_TTY_X);
 		else
-		    tty_cursor -= MAX_TTY_X;
+            __tty_set_cursor(tty_cursor - MAX_TTY_X);
 	}
-   #ifndef DEBUG_SCREEN
-	if (scrolled)
-   #endif
-		__tty_refresh_screen(refresh);
 }
 
-void tty_outc_ex(char c, int flags, bool refresh)
+void tty_outc_ex(char c, int flags)
 {
 	if (!tty_font.f)
 		return;
@@ -665,7 +635,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 			return;
 		case 'M':
 			tty_cursor -= MAX_TTY_X;
-            __tty_scroll(refresh);
+            __tty_scroll();
 		    return;
         case '(':
         // * Designate G0 Character Set
@@ -681,14 +651,14 @@ void tty_outc_ex(char c, int flags, bool refresh)
 
          case 'c':
             // * Full reset
-            __tty_full_reset(refresh);
+            __tty_full_reset();
             return;
 
     	default:
         #ifdef PRINT_UNRECOGNIZED_ANSI
            	tty_outc_ex('^', 0, false);
            	tty_outc_ex(c, 0, false);
-            tty_refresh_screen(refresh);
+            tty_refresh_screen();
         #endif
            	return;
     	}
@@ -737,7 +707,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 			break;
 		case 'J':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_J_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_J_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
@@ -745,14 +715,14 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		case 'H':
 		    tty_H_code_selector = 0;
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_H_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_H_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
 			break;
 		case 'h':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_h_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_h_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
@@ -765,15 +735,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
             tty_escape_sequence_index = 0;
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
-            tty_set_dirty(tty_data[tty_cursor]);
-  		    __tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+            tty_set_dirty(tty_cursor);
     		if (tty_cursor >= n * MAX_TTY_X)
     		    tty_cursor -= n * MAX_TTY_X;
             else
                 tty_cursor -= (tty_cursor / MAX_TTY_X) * MAX_TTY_X;
-   			if (tty_cursor_blink)
-  				__tty_render_cursor(tty_cursor, refresh);
-    		return;
+            return;
 		}
 		case 'B':
 		{
@@ -783,15 +750,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
             tty_escape_sequence_index = 0;
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
-            tty_set_dirty(tty_data[tty_cursor]);
-  		    __tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+            tty_set_dirty(tty_cursor);
     		if (tty_cursor < ((int32_t)tty_res_y - n) * MAX_TTY_X)
     		    tty_cursor += n * MAX_TTY_X;
             else
-                tty_cursor = (tty_cursor % MAX_TTY_X) + MAX_TTY_X * (tty_res_y - 1);
-   			if (tty_cursor_blink)
-  				__tty_render_cursor(tty_cursor, refresh);
-    		return;
+                __tty_set_cursor((tty_cursor % MAX_TTY_X) + MAX_TTY_X * (tty_res_y - 1));
+            return;
 		}
 		case 'C':
 		{
@@ -801,15 +765,12 @@ void tty_outc_ex(char c, int flags, bool refresh)
             tty_escape_sequence_index = 0;
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
-            tty_set_dirty(tty_data[tty_cursor]);
-  		    __tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+            tty_set_dirty(tty_cursor);
     		if ((tty_cursor % MAX_TTY_X) < (int32_t)tty_res_x - n)
     		    tty_cursor += n;
             else
-                tty_cursor = tty_res_x - 1 + MAX_TTY_X * (tty_res_x / MAX_TTY_X);
-   			if (tty_cursor_blink)
-  				__tty_render_cursor(tty_cursor, refresh);
-    		return;
+                __tty_set_cursor(tty_res_x - 1 + MAX_TTY_X * (tty_res_x / MAX_TTY_X));
+            return;
 		}
 		case 'D':
 		{
@@ -819,40 +780,37 @@ void tty_outc_ex(char c, int flags, bool refresh)
             tty_escape_sequence_index = 0;
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
-            tty_set_dirty(tty_data[tty_cursor]);
-  		    __tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+            tty_set_dirty(tty_cursor);
     		if ((tty_cursor % MAX_TTY_X) >= n)
     		    tty_cursor -= n;
             else
-                tty_cursor = MAX_TTY_X * (tty_res_x / MAX_TTY_X);
-   			if (tty_cursor_blink)
-  				__tty_render_cursor(tty_cursor, refresh);
-    		return;
+                __tty_set_cursor(MAX_TTY_X * (tty_res_x / MAX_TTY_X));
+            return;
 		}
 		case 'l':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_l_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_l_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
 			break;
 		case 'K':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_K_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_K_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
 			break;
 		case 'P':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_P_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_P_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
 			break;
 		case '@':
 			for (uint8_t i = 0; i <= tty_escape_sequence_index; i++)
-				__tty_ansi_at_code(tty_control_sequence_buffer[i], refresh);
+				__tty_ansi_at_code(tty_control_sequence_buffer[i]);
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
@@ -866,7 +824,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 			break;
 		case 'p':
 		    if (tty_sequence_exclamation_mark)
-				__tty_soft_reset(refresh);
+				__tty_soft_reset();
 			tty_escape_sequence_index = 0;
 			tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
 			tty_reading_control_sequence = false;
@@ -899,7 +857,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 	if (c != '\b' && c != 7 && c != '\n' && c != '\r')
 	{
 	    tty_data[tty_cursor] = c | ((tty_char_t)tty_color << 8) | (tty_bold ? TTY_BOLD : 0) | (flags & ~0xffff);
-		tty_set_dirty(tty_data[tty_cursor]);
+		tty_set_dirty(tty_cursor);
 		int i = tty_cursor + 1;
 		if (i % MAX_TTY_X >= (int32_t)tty_res_x)
 		{
@@ -909,8 +867,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		while (i < MAX_TTY_X * (int32_t)tty_res_y && (tty_data[i] & TTY_CONTINUE_CHAR))
 		{
 		    tty_data[i] = ' ' | ((tty_char_t)tty_color << 8);
-			tty_set_dirty(tty_data[i]);
-            __tty_render_character(i, tty_data[i], refresh);
+			tty_set_dirty(i);
 		    i++;
 			if (i % MAX_TTY_X >= (int32_t)tty_res_x)
 			{
@@ -920,8 +877,7 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		}
 	}
 
-	tty_set_dirty(tty_data[tty_cursor]);
-	__tty_render_character(tty_cursor, tty_data[tty_cursor], refresh);
+	tty_set_dirty(tty_cursor);
 
 	switch (c)
 	{
@@ -941,9 +897,8 @@ void tty_outc_ex(char c, int flags, bool refresh)
         {
             if (i >= MAX_TTY_X * (int32_t)tty_res_y)
                 new_cursor -= MAX_TTY_X;
-            tty_outc_ex(' ', i == start_cursor ? 0 : TTY_CONTINUE_CHAR, false);
+            tty_outc_ex(' ', i == start_cursor ? 0 : TTY_CONTINUE_CHAR);
         }
-		__tty_refresh_screen(refresh);
 		break;
 	}
 
@@ -955,11 +910,11 @@ void tty_outc_ex(char c, int flags, bool refresh)
     		if (tty_cursor <= 0)
     		    scroll = true;
     	    if ((tty_cursor % MAX_TTY_X) == 0)
-    			tty_cursor = tty_cursor - MAX_TTY_X + tty_res_x - 1;
+    			__tty_set_cursor(tty_cursor - MAX_TTY_X + tty_res_x - 1);
     	    else
     			tty_cursor--;
     		if (scroll)
-    			__tty_scroll(refresh);
+    			__tty_scroll();
     	}
         while ((tty_data[tty_cursor] & TTY_CONTINUE_CHAR) && (tty_cursor % MAX_TTY_X) < (int32_t)tty_res_x);
 		break;
@@ -978,13 +933,10 @@ void tty_outc_ex(char c, int flags, bool refresh)
 		}
 	}
 
-	if (tty_cursor_blink)
-		__tty_render_cursor(tty_cursor, refresh);
-
-	__tty_scroll(refresh);
+	__tty_scroll();
 }
 
 void tty_outc(char c)
 {
-    tty_outc_ex(c, 0, true);
+    tty_outc_ex(c, 0);
 }
