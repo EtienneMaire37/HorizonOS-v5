@@ -15,7 +15,7 @@ initrd_file_t* kernel_symbols_file = NULL;
 
 #include "../panic/panic.h"
 
-#define return_from_isr() { if (multitasking_enabled) { if (current_task->sig_pending_user_space && registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); } task_exit_critical_section(current_task); return; }
+#define return_from_isr() { if (multitasking_enabled) { if (registers->cs != KERNEL_CODE_SEGMENT) task_handle_signal_to_userspace(registers); } task_exit_critical_section(current_task); return; }
 
 void interrupt_handler(interrupt_registers_t* registers)
 {

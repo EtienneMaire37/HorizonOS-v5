@@ -48,7 +48,7 @@ bool should_restart_syscall()
 void task_handle_signal_to_userspace(interrupt_registers_t* registers)
 {
     uint32_t flags = lock_scheduler();
-    if (current_task->sig_pending_user_space)
+    if (current_task->sig_pending_user_space && !current_task->waiting_for_kill)
     {
         if (current_task->pending_signal_handler)
         {

@@ -60,7 +60,8 @@ typedef struct thread
     uint64_t fs_base, gs_base;
 
     bool can_be_killed; // * Probably shouldn't kill tasks when in a critical section of the kernel
-    bool waiting_for_kill, waiting_for_kill_ret;
+    bool waiting_for_kill;
+    int waiting_for_kill_ret;
 
     // * We still have to keep them here in the case
     // * where the current process is blocked before context switching
