@@ -128,6 +128,9 @@ void task_setup_stack_ex(thread_t* task,
     uint64_t entry_point, uint64_t ret_rsp, uint64_t rflags,
     uint64_t rbx, uint64_t r12, uint64_t r13, uint64_t r14, uint64_t r15, uint64_t rbp)
 {
+    // For alignment
+    task_stack_push(task, 0);
+
     task_stack_push(task, (task->ring == 0) ? KERNEL_DATA_SEGMENT : USER_DATA_SEGMENT);
     task_stack_push(task, ret_rsp);
     task_stack_push(task, rflags);
@@ -144,6 +147,8 @@ void task_setup_stack_ex(thread_t* task,
     task_stack_push(task, r14);             // r14
     task_stack_push(task, r15);             // r15
     task_stack_push(task, rbp);             // rbp
+
+    task_stack_push(task, 0);               // rflags
 }
 
 void task_setup_stack(thread_t* task, uint64_t entry_point)
@@ -296,19 +301,20 @@ void switch_task()
     assert(task_count > 0);
 
     uint32_t flags;
-    bool lock_state = try_lock_scheduler(&flags);
+    bool did_lock_sched = !try_lock_scheduler(&flags);
 
-    if (lock_state || atomic_load(&preempt_disable_depth))
+    if (!did_lock_sched || atomic_load(&preempt_disable_depth))
     {
-        if (!lock_state)
+        if (did_lock_sched)
             unlock_scheduler(flags);
         queued_ts = true;
         return;
     }
 
+
     thread_t* next = __find_next_task();
-    // LOG(TRACE, "Switching to task \"%s\" (pid %d)", next->name, next->pid);
     unlock_scheduler(flags);
+
     if (current_task != next)
     {
         thread_t* old_task = current_task;
@@ -543,6 +549,7 @@ void __kill_task(thread_t* task, int ret)
         task->waiting_for_kill_ret = ret;
         task->waiting_for_kill = true;
         task->sig_pending_user_space = true;
+        __move_task_to_queue(&running_tasks, task);
         return;
     }
 

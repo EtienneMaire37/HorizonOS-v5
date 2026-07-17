@@ -289,9 +289,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
     // * Stack is now mapped according to the SysV ABI
 
     assert((task->rsp % 16) == 0);
-
     task_setup_stack(task, dynamic ? ld_so_header->e_entry : header->e_entry);
-
     assert((task->rsp % 16) == 0);
 
     __multitasking_add_task(task);

@@ -20,6 +20,8 @@ context_switch:
     push r15
     push rbp
 
+    pushfq
+
     mov rbx, qword [rel task_rsp_offset]
     cmp rdi, 0
     je dont_save_context1
@@ -42,6 +44,8 @@ dont_save_context2:
     mov cr3, rax
 
 .end:
+    popfq
+
     pop rbp
     pop r15
     pop r14

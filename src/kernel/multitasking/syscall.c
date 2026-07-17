@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include "sched_lock.h"
 #include <stdio.h>
 #include "hashmap.h"
 #include "task.h"
@@ -63,6 +64,7 @@ void task_handle_signal_to_userspace(interrupt_registers_t* registers)
 
 uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_address)
 {
+    assert(get_rflags() & (1 << 9));
     task_enter_critical_section(current_task);
     uint64_t syscall_num = registers->rax;
     sc_ret_errno = -1;
@@ -694,8 +696,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        if (arg3) *arg3 = current_task->sig_act_array[arg1];
-        if (arg2) current_task->sig_act_array[arg1] = *arg2;
+        if (arg2 || arg3)
+        {
+            uint32_t flags = lock_scheduler();
+            if (arg3) *arg3 = current_task->sig_act_array[arg1];
+            if (arg2) current_task->sig_act_array[arg1] = *arg2;
+            unlock_scheduler(flags);
+        }
         sc_ret_errno = 0;
         break;
     sc_case(SYS_SIGPROCMASK, 3, int, const sigset_t*, sigset_t*)
@@ -908,16 +915,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if ((strcmp(arg2, "") == 0) && (arg3 & AT_EMPTY_PATH))
         {
             if (!entry)
-            {
-                release_spinlock_noint(&file_table_lock, flags);
                 sc_ret_errno = EBADF;
-            }
             else
             {
                 *arg4 = entry->st;
-                release_spinlock_noint(&file_table_lock, flags);
                 sc_ret_errno = 0;
             }
+            release_spinlock_noint(&file_table_lock, flags);
             break;
         }
         bool relative_path = *arg2 != '/';

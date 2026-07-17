@@ -600,7 +600,7 @@ int __vfs_write(int fd, const char* buffer, uint64_t bytes_to_write, ssize_t* by
     }
     if (entry->entry_type == VFS_ET_FILE)
     {
-        mode_t mode = entry->st.st_mode;
+        mode_t mode = entry->st.st_mode; // ? // ! BUG: DEADLOCK ON PIPES: Should definitely not lock everything and then switch task (obviously)
         *bytes_written = entry->iofunc(entry, (unsigned char*)buffer, bytes_to_write, IO_DIR_WRITE);
         if (*bytes_written > 0)
             entry->position += *bytes_written;
