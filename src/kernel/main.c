@@ -95,7 +95,7 @@ void _start()
         // * APIC." -> Intel manual Vol. 3A 11-7
         uint32_t eax, ebx, ecx, edx = 0;
         cpuid(1, eax, ebx, ecx, edx);
-        assert(edx & (1ULL << 9));
+        ASSERT(edx & (1ULL << 9));
     }
 
     if (!is_bsp()) // * SMP not supported for now
@@ -106,10 +106,10 @@ void _start()
     kernel_start_ptr = (void*)&kernel_start;
     kernel_end_ptr = (void*)&kernel_end;
 
-    assert(framebuffer_request.response && framebuffer_request.response->framebuffer_count >= 1);
+    ASSERT(framebuffer_request.response && framebuffer_request.response->framebuffer_count >= 1);
 
-    assert(framebuffer_request.response->framebuffers[0]->memory_model == LIMINE_FRAMEBUFFER_RGB);
-    assert(framebuffer_request.response->framebuffers[0]->bpp % 8 == 0);
+    ASSERT(framebuffer_request.response->framebuffers[0]->memory_model == LIMINE_FRAMEBUFFER_RGB);
+    ASSERT(framebuffer_request.response->framebuffers[0]->bpp % 8 == 0);
 
     framebuffer.width = framebuffer_request.response->framebuffers[0]->width;
     framebuffer.height = framebuffer_request.response->framebuffers[0]->height;
@@ -207,7 +207,7 @@ void _start()
             break;
         }
     }
-    assert(initrd);
+    ASSERT(initrd);
 
     initrd_parse((uint64_t)initrd->address, initrd->size);
     kernel_symbols_file = initrd_find_file("boot/symbols.txt");
@@ -228,7 +228,7 @@ void _start()
 
 // * vvv Now we can use stdout
 
-    assert(LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision));
+    ASSERT(LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision));
 
     commit_file = initrd_find_file("boot/commit.txt");
 
@@ -268,7 +268,7 @@ void _start()
 
     {
         global_cr3 = create_empty_pdpt();
-        assert(global_cr3);
+        ASSERT(global_cr3);
         LOG(DEBUG, "global_cr3: %p", global_cr3);
 
     // * That way each pml4 entry in the higher half is a reference to a pdpt and modifying any kernel mapping in the hh will take effect on all vas
@@ -329,7 +329,7 @@ void _start()
         LOG(DEBUG, "Setting %#" PRIx64 "-%#" PRIx64 " as user accessible", (uint64_t)sighandler, (uint64_t)sighandler + 0x1000);
         printf("Setting %#" PRIx64 "-%#" PRIx64 " as user accessible\n", (uint64_t)sighandler, (uint64_t)sighandler + 0x1000);
         uint64_t addr_off = (uint64_t)virtual_to_physical(global_cr3, (uintptr_t)sighandler);
-        assert(addr_off);
+        ASSERT(addr_off);
         uint64_t paddr = addr_off - PHYS_MAP_BASE;
         unmap_range(global_cr3, (uintptr_t)sighandler, 1);
         remap_range(global_cr3, (uintptr_t)sighandler, paddr, 1, PG_USER, PG_READ_ONLY, CACHE_WB);
@@ -506,7 +506,7 @@ void _start()
     LOG(INFO, "Set up the APIC timer and TSC");
     printf(" | Done\n");
 
-    assert(!(get_rflags() & (1 << 9)));
+    ASSERT(!(get_rflags() & (1 << 9)));
 
     LOG(INFO, "TSC clock running at approximatively %" PRIu64 " hz", tsc_cycles_per_second);
     printf("TSC clock running at approximatively %" PRIu64 " hz\n", tsc_cycles_per_second);
@@ -588,7 +588,7 @@ void _start()
         S_IROTH | S_IXOTH,
         0, 0,
         (drive_t){.type = DT_INITRD});
-    assert(vfs_root);
+    ASSERT(vfs_root);
     vfs_root->inode->parent = vfs_root;
     vfs_explore(vfs_root);
 
@@ -657,8 +657,8 @@ void _start()
         }
     };
 
-    assert((sizeof(interrupt_registers_t) % 16) == 0);
-    assert(OPEN_MAX >= 256);
+    ASSERT((sizeof(interrupt_registers_t) % 16) == 0);
+    ASSERT(OPEN_MAX >= 256);
 
     LOG(DEBUG, "sizeof(interrupt_registers_t): %zu", sizeof(interrupt_registers_t));
     LOG(DEBUG, "sizeof(thread_t): %zu", sizeof(thread_t));
@@ -684,7 +684,7 @@ void _start()
 
     LOG(TRACE, "Setting up console file descriptors for init task...");
 
-    flags = acquire_spinlock_noint(&file_table_lock);
+    flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
     init_task->file_table[STDIN_FILENO].flags = 0;
     init_task->file_table[STDIN_FILENO].index = 0;
     file_table[init_task->file_table[STDIN_FILENO].index].used++;
@@ -694,7 +694,7 @@ void _start()
     init_task->file_table[STDERR_FILENO].flags = 0;
     init_task->file_table[STDERR_FILENO].index = 2;
     file_table[init_task->file_table[STDERR_FILENO].index].used++;
-    release_spinlock_noint(&file_table_lock, flags);
+    set_rflags_if(flags);
 
     LOG(DEBUG, "Starting multitasking...");
     printf("Starting multitasking...\n\n");

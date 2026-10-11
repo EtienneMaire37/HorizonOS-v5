@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# TODO: DON'T INSTALL HOS TOOLCHAIN AT SYSROOT!!!!
+
 set -x -e
 
 mkdir -p ${SYSROOT_DIR}

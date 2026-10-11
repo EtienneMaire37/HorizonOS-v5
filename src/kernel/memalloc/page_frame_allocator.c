@@ -49,7 +49,7 @@ void pfa_detect_usable_memory()
             continue;
         if (entry->length & 0xfff)
             continue;
-        assert(usable_memory_blocks < MAX_USABLE_MEMORY_BLOCKS);
+        ASSERT(usable_memory_blocks < MAX_USABLE_MEMORY_BLOCKS);
 
         physical_address_t addr = entry->base;
         uint64_t len = entry->length;
@@ -112,7 +112,7 @@ void pfa_detect_usable_memory()
     while (first_alloc_block < usable_memory_blocks && usable_memory_map[first_alloc_block].total_pages <= bitmap_pages)
         first_alloc_block++;
 
-    assert(first_alloc_block < usable_memory_blocks);
+    ASSERT(first_alloc_block < usable_memory_blocks);
 
     bitmap = (uint8_t*)(usable_memory_map[first_alloc_block].address + PHYS_MAP_BASE);
 
@@ -234,7 +234,7 @@ void pfa_free_physical_page(physical_address_t address)
         return;
     }
 
-    assert(!(address & 0xfff));
+    ASSERT(!(address & 0xfff));
 
     uint64_t page_index = 0;
     uint32_t block_index = 0;

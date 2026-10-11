@@ -10,14 +10,14 @@ size_t npages = 0;
 
 void page_data_table_init()
 {
-    assert(!global_page_table);
+    ASSERT(!global_page_table);
     LOG(TRACE, "Max allocatable address: %#" PRIx64, max_allocatable_address);
     npages = ((sizeof(page_table_data_t) * max_allocatable_address) + 0xfff) / 0x1000; // * How many pages we need to keep track of
     npages = (npages + 0xfff) / 0x1000; // * Hom many pages we need to keep track of these
     global_page_table = pfa_allocate_contiguous_pages(npages);
     memset(global_page_table, 0, npages * 4096ULL);
     LOG(DEBUG, "global_page_table = %p [%zu pages]", global_page_table, npages);
-    assert(global_page_table);
+    ASSERT(global_page_table);
 }
 uint32_t lock_page_table(uint64_t* addr)
 {

@@ -76,7 +76,7 @@ thread_t* task_create_empty()
 
 void __task_set_pgid(thread_t* task, pid_t pgid)
 {
-    assert(task);
+    ASSERT(task);
     if (task->pgid != -1)
         __tq_hashmap_remove(pgid_to_tq_hashmap, task->pgid, task);
     task->pgid = pgid;
@@ -84,7 +84,7 @@ void __task_set_pgid(thread_t* task, pid_t pgid)
 }
 void __task_set_pid(thread_t* task, pid_t pid)
 {
-    assert(task);
+    ASSERT(task);
     if (task->pid != -1)
         hashmap_remove_item(pid_to_task_hashmap, task->pid);
     task->pid = pid;
@@ -111,7 +111,7 @@ void __task_destroy(thread_t* task)
 
     __task_stop_polling(task);
 
-    assert(task->_poll_tqs == TQ_INIT);
+    ASSERT(task->_poll_tqs == TQ_INIT);
     fpu_state_destroy(&task->fpu_state);
     task_free_vas((physical_address_t)task->cr3);
     free(task);
@@ -298,7 +298,7 @@ uint64_t task_read_at_address_8b(thread_t* task, uint64_t address)
 
 void switch_task()
 {
-    assert(task_count > 0);
+    ASSERT(task_count > 0);
 
     uint32_t flags;
     bool did_lock_sched = !try_lock_scheduler(&flags);
@@ -363,9 +363,9 @@ thread_t* __find_task_by_pid_anywhere(pid_t pid)
 
 void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 {
-    uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+    uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
     __task_copy_file_table(from, to, cloexec);
-    release_spinlock_noint(&file_table_lock, flags);
+    set_rflags_if(flags);
 }
 void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 {
@@ -384,10 +384,10 @@ void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 void __fork_task(thread_t* task)
 {
     // TODO: CoW
-    assert(task);
+    ASSERT(task);
 
     thread_t* new_task = (thread_t*)malloc(sizeof(thread_t));
-    assert(new_task);
+    ASSERT(new_task);
 
     *new_task = *task;
 

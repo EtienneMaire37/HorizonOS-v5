@@ -183,7 +183,7 @@ struct madt_entry_header* find_entry_in_madt(bool (*test_func)(struct madt_entry
 
 void apic_map_irq_from_source(int irq_number, int isr_number)
 {
-    assert(madt);
+    ASSERT(madt);
 
     LOG(DEBUG, "Mapping IRQ %d to ISR %d", irq_number, isr_number);
 
@@ -228,7 +228,7 @@ void apic_map_irq_from_source(int irq_number, int isr_number)
     uint32_t lapic_id = lapic_get_cpu_id();
     // ! Horrible way to do things
     // TODO: Use logical destination mode
-    assert(lapic_id == (lapic_id & 0xff));
+    ASSERT(lapic_id == (lapic_id & 0xff));
     volatile io_apic_registers_t* ioapic = map_ioapic_in_current_vas(ioapic_entry->ioapic_address);
     uint64_t redirection_entry = ioapic_read_redirection_entry(ioapic, gsi - ioapic_entry->gsi_base);
     ioapic_write_redirection_entry(ioapic, gsi - ioapic_entry->gsi_base,

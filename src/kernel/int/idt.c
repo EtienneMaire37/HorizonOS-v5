@@ -12,7 +12,7 @@ struct idt_entry IDT[256] __attribute__((aligned(8)));
 
 void setup_idt_entry(struct idt_entry* entry, uint16_t segment, physical_address_t offset, uint8_t privilege, uint8_t type)
 {
-    assert(entry);
+    ASSERT(entry);
     entry->qword_lo = (((uint64_t)offset & 0xffff0000) << 32) | (1ULL << 47) | ((uint64_t)privilege << 45) | ((uint64_t)type << 40) | ((uint64_t)segment << 16) | (offset & 0xffff);
     entry->qword_hi = ((offset & 0xffffffff00000000) >> 32);
 }

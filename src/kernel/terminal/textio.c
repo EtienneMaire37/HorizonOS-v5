@@ -923,7 +923,7 @@ void tty_outc_ex(char c, int flags)
 		break;
 
 	default:
-		assert(tty_cursor / MAX_TTY_X < (int32_t)tty_res_y);
+		ASSERT(tty_cursor / MAX_TTY_X < (int32_t)tty_res_y);
 
 		tty_cursor++;
 		if (tty_cursor % MAX_TTY_X >= (int32_t)tty_res_x)

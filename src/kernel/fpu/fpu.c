@@ -99,7 +99,7 @@ void fpu_restore_state(uint8_t* s)
 
 void fpu_state_init(uint8_t* s)
 {
-    assert(s);
+    ASSERT(s);
     memcpy((uint8_t*)s, (uint8_t*)fpu_default_state, xsave_area_size);
 }
 
@@ -108,8 +108,8 @@ uint8_t* fpu_state_create_empty()
     // * Alignment is needed
     uint8_t* ptr = pfa_allocate_contiguous_pages(xsave_area_pages);
 
-    assert(ptr);
-    assert(((uintptr_t)ptr & 0xfff) == 0);
+    ASSERT(ptr);
+    ASSERT(((uintptr_t)ptr & 0xfff) == 0);
 
     memset(ptr, 0, xsave_area_size);
     // LOG(DEBUG, "Allocated FPU state: %p", ptr);
@@ -125,7 +125,7 @@ uint8_t* fpu_state_create()
 
 uint8_t* fpu_state_create_copy(uint8_t* state)
 {
-    assert(state);
+    ASSERT(state);
     uint8_t* data = fpu_state_create_empty();
     memcpy((uint8_t*)data, (uint8_t*)state, xsave_area_size);
     return data;

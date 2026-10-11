@@ -207,7 +207,7 @@ $(GNULIB_DL_STAMP):
 
 $(COREUTILS_BUILD_STAMP):	$(COREUTILS_DL_STAMP) $(MLIBC_STAMP)
 	cd $(COREUTILS_DIR) && CC=x86_64-horizonos-gcc CC_FOR_BUILD=gcc ./configure --host=x86_64-horizonos --prefix=/usr $(GNU_FLAGS)
-	cd $(COREUTILS_DIR) && $(MAKE) -j$(nproc)
+	cd $(COREUTILS_DIR) && $(MAKE) CFLAGS="-Wno-error" -j$(nproc)
 	cd $(COREUTILS_DIR) && $(MAKE) DESTDIR=${SYSROOT_DIR} -j$(nproc) install
 	touch $@
 

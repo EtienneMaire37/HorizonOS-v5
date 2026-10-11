@@ -10,7 +10,7 @@
 #include "../vfs/table.h"
 #include "keyboard.h"
 
-#define bufpri(...) do { char buffer[16] = {0}; size_t character_len = sizeof(buffer); character_len = snprintf(buffer, sizeof(buffer), __VA_ARGS__); assert(character_len != sizeof(buffer)); \
+#define bufpri(...) do { char buffer[16] = {0}; size_t character_len = sizeof(buffer); character_len = snprintf(buffer, sizeof(buffer), __VA_ARGS__); ASSERT(character_len != sizeof(buffer)); \
     if ((ssize_t)num_characters < (ssize_t)((ssize_t)max_characters - character_len)) { for (size_t i = 0; i < character_len; i++) { if (buffer[i] != 3) utf32_buffer_putchar(&keyboard_input_buffer, buffer[i]); if (echo || buffer[i] == 3) { if (buffer[i] < 0x20) tty_outc('^'); tty_outc_ex((buffer[i] < 0x20) ? buffer[i] + 0x40 : buffer[i], buffer[i] < 0x20 ? TTY_CONTINUE_CHAR : 0); tty_refresh_screen(); } } } } while (0)
 
 const keyboard_layout_t* current_keyboard_layout = &us_qwerty;
@@ -20,7 +20,7 @@ void utf32_buffer_init(utf32_buffer_t* buffer)
     if (!buffer) return;
     buffer->characters = (utf32_char_t*)pfa_allocate_page();
     buffer->size = 4096 / sizeof(utf32_char_t);
-    assert(buffer->size == 1024);
+    ASSERT(buffer->size == 1024);
     buffer->put_index = buffer->get_index = 0;
 }
 
@@ -91,7 +91,7 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
 {
     // TODO: Implement PTYs and move all this out of the kernel
 
-    assert(sigint);
+    ASSERT(sigint);
     if (!multitasking_enabled) return;
     if (get_buffered_characters(keyboard_input_buffer) >= keyboard_input_buffer.size - 1) return;
 
@@ -217,7 +217,7 @@ void __keyboard_handle_character(utf32_char_t character, virtual_key_t vk, struc
     }
     if (*sigint || (character == '\n' || character == tty_ts.c_cc[VEOF]) || (raw && get_buffered_characters(keyboard_input_buffer) >= noncanonical_read_minimum_count))   // * EOL or EOF
     {
-        assert(keyboard_buffered_input_buffer.size == keyboard_input_buffer.size);
+        ASSERT(keyboard_buffered_input_buffer.size == keyboard_input_buffer.size);
         memcpy(keyboard_buffered_input_buffer.characters, keyboard_input_buffer.characters, keyboard_input_buffer.size);
         keyboard_buffered_input_buffer.get_index = keyboard_input_buffer.get_index;
         keyboard_buffered_input_buffer.put_index = keyboard_input_buffer.put_index;

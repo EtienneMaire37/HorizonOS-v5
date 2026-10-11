@@ -103,7 +103,7 @@ void initrd_parse(uint64_t initrd_start, uint64_t initrd_size)
 
         initrd_files_count++;
 
-        assert(initrd_files_count < MAX_INITRD_FILES);
+        ASSERT(initrd_files_count < MAX_INITRD_FILES);
 
     do_loop:
         initrd_offset += (real_file_size + USTAR_BLOCK_SIZE - 1) / USTAR_BLOCK_SIZE * USTAR_BLOCK_SIZE + USTAR_BLOCK_SIZE;

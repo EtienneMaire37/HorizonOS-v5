@@ -16,13 +16,13 @@ typedef struct \
 static const vector_##name##_t vector_##name##_init = {.size = 0, .alloc = 0, .data = NULL}; \
 static inline __attribute__((always_inline)) void vector_##name##_clear(vector_##name##_t* vec) \
 { \
-    assert(vec); \
+    ASSERT(vec); \
     vec->size = vec->alloc = 0; \
     free(vec->data); \
 } \
 static inline __attribute__((always_inline)) void vector_##name##_push_back(vector_##name##_t* vec, type new) \
 { \
-    assert(vec); \
+    ASSERT(vec); \
     if (vec->size + sizeof(type) > vec->alloc) \
     { \
         vec->alloc = (vec->alloc == 0) ? (VEC_MIN_ALLOC * sizeof(type)) : (vec->alloc * 2); \
@@ -33,7 +33,7 @@ static inline __attribute__((always_inline)) void vector_##name##_push_back(vect
 } \
 static inline __attribute__((always_inline)) void vector_##name##_pop_back(vector_##name##_t* vec) \
 { \
-    assert(vec); \
+    ASSERT(vec); \
     if ((vec->size - sizeof(type)) * 2 <= vec->alloc) \
     { \
         vec->alloc = vec->alloc / 2; \

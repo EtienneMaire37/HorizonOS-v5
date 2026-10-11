@@ -36,7 +36,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
     bool dynamic = false;
 
-    assert(ring == 3);
+    ASSERT(ring == 3);
 
     initrd_file_t* file;
     if (!(file = initrd_find_file(path)))
@@ -183,7 +183,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
             task_write_at_address_8b(task, (uint64_t)&data_cpy.cmd[i], 0);
     }
 
-    assert(!(task->rsp & 0x7));
+    ASSERT(!(task->rsp & 0x7));
     if ((data->envc + data->argc + (task->rsp / 8) + 1) % 2 != 0)
         task->rsp -= 8;
 
@@ -193,14 +193,14 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
     if (dynamic)
     {
         initrd_file_t* ld_so = initrd_find_file("usr/lib/ld.so");
-        assert(ld_so);
+        ASSERT(ld_so);
 
         ld_so_header = (Elf64_Ehdr*)ld_so->data;
-        assert(ld_so_header);
+        ASSERT(ld_so_header);
 
-        assert(memcmp("\x7f""ELF", ld_so_header->e_ident, 4) == 0);
+        ASSERT(memcmp("\x7f""ELF", ld_so_header->e_ident, 4) == 0);
 
-        assert(!(ld_so_header->e_ident[4] != ELFCLASS64 ||
+        ASSERT(!(ld_so_header->e_ident[4] != ELFCLASS64 ||
             ld_so_header->e_ident[5] != ELFDATA2LSB ||
             ld_so_header->e_machine != EM_X86_64));
 
@@ -288,9 +288,9 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
     task_stack_push(task, (uint64_t)data_cpy.argc);
     // * Stack is now mapped according to the SysV ABI
 
-    assert((task->rsp % 16) == 0);
+    ASSERT((task->rsp % 16) == 0);
     task_setup_stack(task, dynamic ? ld_so_header->e_entry : header->e_entry);
-    assert((task->rsp % 16) == 0);
+    ASSERT((task->rsp % 16) == 0);
 
     __multitasking_add_task(task);
     task_count++;

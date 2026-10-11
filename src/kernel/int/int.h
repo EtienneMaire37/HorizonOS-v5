@@ -102,7 +102,7 @@ static inline const char* get_error_message(uint32_t fault, uint32_t error_code)
 }
 static inline int get_signal_from_exception(interrupt_registers_t* registers)
 {
-    assert(registers);
+    ASSERT(registers);
 
     switch (registers->interrupt_number)
     {

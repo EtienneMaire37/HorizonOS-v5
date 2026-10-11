@@ -5,8 +5,9 @@
 #include <elf.h>
 #include <stdint.h>
 #include "../time/time.h"
-#include "../vfs/vfs.h"
+#include "../vfs/open_file.h"
 #include "../util/linked_list.h"
+#include "../vfs/open_file_descriptor_vector.h"
 #include "sched_lock.h"
 
 #define THREAD_NAME_MAX 64
@@ -14,10 +15,12 @@
 
 typedef struct thread thread_t;
 
+// TODO: Make task use a clean reference counted system, have more scheduler lock granularity and rename these files to thread.*!
+// XXX: DO THIS ASAP
 typedef struct thread
 {
     struct sigaction sig_act_array[NUM_SIGNALS];
-    file_table_index_t file_table[OPEN_MAX];
+    open_file_descriptor_vector_t open_file_table;
 
     char name[THREAD_NAME_MAX];
 
@@ -51,7 +54,7 @@ typedef struct thread
     pid_t pid, ppid, pgid, sid;
     bool system_task;    // * Allow causing kernel panics (temporary hack, TODO: remove this)
 
-    vfs_folder_tnode_t* cwd;
+    vnode_ref_t cwd;
     uint8_t* fpu_state;
 
     uint16_t stored_cpu_ticks, current_cpu_ticks;   // * In milliseconds
@@ -69,7 +72,6 @@ typedef struct thread
 } thread_t;
 
 #include "../io/keyboard.h"
-#include "../vfs/vfs.h"
 #include "../gdt/gdt.h"
 #include "../cpu/segbase.h"
 #include "mutex.h"

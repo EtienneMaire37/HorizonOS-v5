@@ -27,6 +27,6 @@ sigset_t sigset_bitwise_not(sigset_t s)
 bool sigset_is_bit_set(sigset_t s, size_t bit)
 {
 	size_t idx = bit / sizeof(unsigned long) / 8;
-	assert(idx < sizeof(s.__sig) / sizeof(s.__sig[0]));
+	ASSERT(idx < sizeof(s.__sig) / sizeof(s.__sig[0]));
     return (s.__sig[idx] & (1ULL << (bit - idx * sizeof(unsigned long) * 8))) != 0;
 }

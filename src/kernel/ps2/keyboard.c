@@ -153,7 +153,7 @@ utf32_char_t ps2_scancode_to_unicode(ps2_full_scancode_t scancode, uint8_t port)
 
 void ps2_handle_keyboard_scancode(uint8_t port, uint8_t scancode, bool* send_sigint)   // port is 1-2
 {
-    assert(send_sigint);
+    ASSERT(send_sigint);
 
     if (port == 1)
     {

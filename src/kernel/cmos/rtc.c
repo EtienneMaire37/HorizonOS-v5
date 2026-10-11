@@ -24,7 +24,7 @@ void rtc_detect_mode()
 // * Assumes rtc_wait_while_updating was called just before
 void rtc_get_time()
 {
-    assert(!(get_rflags() & (1 << 9)));
+    ASSERT(!(get_rflags() & (1 << 9)));
 
     int64_t system_seconds, system_minutes, system_hours, system_day, system_month, system_year;
 

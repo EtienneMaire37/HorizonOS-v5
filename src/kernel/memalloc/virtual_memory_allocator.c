@@ -12,7 +12,7 @@ static void* __vmm_find_free_pages(void* hint, size_t pages, memory_half_t half)
 {
     static void* global_hint = NULL;
     void* current_hint = hint ? hint : global_hint;
-    assert(vmm_initialized);
+    ASSERT(vmm_initialized);
     for (uint64_t vaddr = ((uint64_t)current_hint + 0xfff) & ~0xfff;; vaddr += 0x1000)
     {
         if (half == LOWER_HALF) vaddr &= ~0xffff800000000000ULL;

@@ -18,22 +18,22 @@ extern uint8_t usable_memory_blocks;
 
 static inline bool pfa_bitmap_get_page(uint64_t i)
 {
-    assert(i / 8 < bitmap_size);
+    ASSERT(i / 8 < bitmap_size);
     return !!(bitmap[i / 8] & (1 << (i % 8)));
 }
 static inline void pfa_bitmap_set_page(uint64_t i, bool sta)
 {
-    assert(i / 8 < bitmap_size);
+    ASSERT(i / 8 < bitmap_size);
     bitmap[i / 8] = (bitmap[i / 8] & ~(1 << (i % 8))) | (!!(sta) << (i % 8));
 }
 static inline uint64_t memory_map_get_free_pages(uint64_t i)
 {
-    assert(i < usable_memory_blocks);
+    ASSERT(i < usable_memory_blocks);
     return usable_memory_map[i].total_pages - usable_memory_map[i].used_pages;
 }
 static inline void memory_map_set_free_pages(uint64_t i, uint64_t free_pages)
 {
-    assert(i < usable_memory_blocks);
+    ASSERT(i < usable_memory_blocks);
     usable_memory_map[i].used_pages = usable_memory_map[i].total_pages - free_pages;
 }
 

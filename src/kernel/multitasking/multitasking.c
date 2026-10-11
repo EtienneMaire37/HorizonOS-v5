@@ -62,7 +62,7 @@ void multitasking_start()
 
 void multitasking_add_idle_task(char* name)
 {
-    assert(task_count == 0);
+    ASSERT(task_count == 0);
 
     multitasking_add_task_from_function(name, idle_main);
 }
@@ -301,7 +301,7 @@ void __task_handle_signal(thread_t* thread, int sig)
         return;
     }
 
-    assert(!(sig >= SIGRTMIN && sig <= SIGRTMAX));
+    ASSERT(!(sig >= SIGRTMIN && sig <= SIGRTMAX));
 
     if (thread == idle_task)
         return;

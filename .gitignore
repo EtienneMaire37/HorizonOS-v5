@@ -9,6 +9,7 @@ src/tasks/src/bash
 src/tasks/src/coreutils
 src/tasks/src/grep
 src/tasks/src/cmatrix
+src/tasks/src/less
 
 /root/
 

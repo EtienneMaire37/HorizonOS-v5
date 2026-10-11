@@ -14,13 +14,13 @@ thread_queue_t waiting_for_time_tasks = TQ_INIT;
 
 void __thread_queue_push_back(thread_queue_t* queue, thread_t* data)
 {
-    assert(queue && data);
+    ASSERT(queue && data);
     ll_push_back(queue, data);
 }
 
 void __thread_queue_remove(thread_queue_t* queue, thread_queue_item_t* item)
 {
-    assert(queue);
+    ASSERT(queue);
     if (!item)
     {
         LOG(DEBUG, "__thread_queue_remove: item is NULL");
@@ -31,7 +31,7 @@ void __thread_queue_remove(thread_queue_t* queue, thread_queue_item_t* item)
 
 void __move_running_task_to_thread_queue(thread_queue_t* queue, thread_t* task)
 {
-    assert(queue && task);
+    ASSERT(queue && task);
     __multitasking_remove_task(task);
     __thread_queue_push_back(queue, task);
     task->queue = queue;
@@ -48,9 +48,9 @@ void __remove_task_from_thread_queue(thread_queue_t* queue, thread_t* task)
 
 void __move_task_to_running_queue(thread_queue_t* queue, thread_t* item)
 {
-    assert(queue && item);
+    ASSERT(queue && item);
     thread_queue_item_t* it = ll_find_item_by_data(queue, item);
-    assert(it);
+    ASSERT(it);
     __multitasking_add_task(item);
     __thread_queue_remove(queue, it);
     item->queue = &running_tasks;
@@ -68,7 +68,7 @@ void __move_task_to_running_queue_by_item(thread_queue_t* queue, thread_queue_it
 void __move_task_from_to_thread_queue(thread_queue_t* queue1, thread_queue_t* queue2, thread_t* item)
 {
     thread_queue_item_t* it = ll_find_item_by_data(queue1, item);
-    assert(it);
+    ASSERT(it);
     __thread_queue_remove(queue1, it);
     __thread_queue_push_back(queue2, item);
     item->queue = queue2;
@@ -85,7 +85,7 @@ void __move_task_to_queue(void* queue, thread_t* task)
 {
     if (task->queue == queue)
         return;
-    assert(task->queue != &dead_tasks && task->queue != &reapable_tasks);
+    ASSERT(task->queue != &dead_tasks && task->queue != &reapable_tasks);
     if (task->queue == &running_tasks)
     {
         if (queue != &running_tasks)
@@ -102,7 +102,7 @@ void __move_task_to_queue(void* queue, thread_t* task)
 
 void __move_all_tasks_to_running_queue(thread_queue_t* tq)
 {
-    assert(tq);
+    ASSERT(tq);
     if (!*tq) return;
     thread_queue_item_t* it = *tq;
     if (it)
@@ -118,7 +118,7 @@ void __move_all_tasks_to_running_queue(thread_queue_t* tq)
 
 void __remove_all_tasks_from_queue(thread_queue_t* tq)
 {
-    assert(tq);
+    ASSERT(tq);
     if (!*tq) return;
     thread_queue_item_t* it = *tq;
     if (it)
@@ -134,7 +134,7 @@ void __remove_all_tasks_from_queue(thread_queue_t* tq)
 
 void __move_n_tasks_to_running_queue(thread_queue_t* tq, int n)
 {
-    assert(tq);
+    ASSERT(tq);
     if (!*tq) return;
     thread_queue_item_t* it = *tq;
     int i = 0;
@@ -152,7 +152,7 @@ void __move_n_tasks_to_running_queue(thread_queue_t* tq, int n)
 
 void __filter_tasks_to_running_queue(thread_queue_t* tq, bool (*test)(thread_t* task))
 {
-    assert(tq);
+    ASSERT(tq);
     if (!*tq) return;
     bool first_item = true;
     thread_queue_item_t* it = *tq;
@@ -172,7 +172,7 @@ void __filter_tasks_to_running_queue(thread_queue_t* tq, bool (*test)(thread_t* 
 
 void __run_it_on_queue(thread_queue_t* tq, void (*func)(thread_t* task))
 {
-    assert(tq);
+    ASSERT(tq);
     if (!*tq) return;
     bool first_item = true;
     thread_queue_item_t* it = *tq;

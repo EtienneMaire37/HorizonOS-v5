@@ -43,7 +43,7 @@ void apic_timer_and_tsc_init()
     {
         uint32_t eax, ebx, ecx, edx;
         cpuid(1, eax, ebx, ecx, edx);
-        assert(ecx & (1 << 24)); // * Check for TSC-deadline
+        ASSERT(ecx & (1 << 24)); // * Check for TSC-deadline
     }
 
     if (lapic)

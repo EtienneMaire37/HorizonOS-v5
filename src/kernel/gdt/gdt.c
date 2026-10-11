@@ -7,14 +7,14 @@ struct tss_entry TSS;
 
 void setup_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
-    assert(entry);
+    ASSERT(entry);
     *entry = (((uint64_t)base & 0xff000000) << 32) | (((uint64_t)flags & 0xf) << 52) | ((((uint64_t)limit >> 16) & 0xf) << 48) |
         ((uint64_t)access_byte << 40) | ((((uint64_t)base >> 16) & 0xff) << 32) | ((base & 0xffff) << 16) | (limit & 0xffff);
 }
 
 void setup_ssd_gdt_entry(uint64_t* entry, physical_address_t base, uint32_t limit, uint8_t access_byte, uint8_t flags)
 {
-    assert(entry);
+    ASSERT(entry);
     setup_gdt_entry(entry, base & 0xffffffff, limit, access_byte, flags);
     *(uint64_t*)&entry[1] = (base >> 32) & 0xffffffff;
 }

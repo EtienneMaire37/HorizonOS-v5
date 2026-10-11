@@ -61,7 +61,7 @@ extern bool pat_enabled;
 
 static inline uint64_t get_physical_address_mask()
 {
-    assert(physical_address_width != 0);
+    ASSERT(physical_address_width != 0);
     return unlikely(physical_address_width >= 64) ? UINT64_MAX : ((1ULL << physical_address_width) - 1);
 }
 

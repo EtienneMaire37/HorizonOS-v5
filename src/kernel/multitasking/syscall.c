@@ -64,7 +64,7 @@ void task_handle_signal_to_userspace(interrupt_registers_t* registers)
 
 uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_address)
 {
-    assert(get_rflags() & (1 << 9));
+    ASSERT(get_rflags() & (1 << 9));
     task_enter_critical_section(current_task);
     uint64_t syscall_num = registers->rax;
     sc_ret_errno = -1;
@@ -84,33 +84,33 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
         ssize_t ret;
         sc_ret_errno = (uint64_t)__vfs_read(arg1, arg2, arg3, &ret);
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_WRITE, 3, int, const void*, size_t)
         SC_LOG("syscall SYS_WRITE(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
         ssize_t ret;
         sc_ret_errno = __vfs_write(arg1, arg2, arg3, &ret);
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_EXIT, 1, int)
@@ -119,10 +119,10 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_ISATTY, 1, int)
         SC_LOG("syscall SYS_ISATTY(%d)", arg1);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
@@ -131,7 +131,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = 0;
         else
             sc_ret_errno = ENOTTY;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         break;
     sc_case(SYS_VM_MAP, 6, void*, size_t, int, int, int, off_t)
         SC_LOG("syscall SYS_VM_MAP(%p, %zu, %#x, %#x, %d, %" PRId64 ")", arg1, arg2, arg3, arg4, arg5, arg6);
@@ -213,32 +213,32 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_SEEK, 3, int, off_t, int)
         SC_LOG("syscall SYS_SEEK(%d, %" PRId64 ", %d)", arg1, arg2, arg3);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         file_entry_t* entry = __get_global_file_entry(arg1);
         if (!entry)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
         if (arg3 != SEEK_SET && arg3 != SEEK_CUR && arg3 != SEEK_END)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EINVAL;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
         if (entry->entry_type != VFS_ET_FILE)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)((off_t)0);
             break;
         }
         if (!S_ISREG(entry->st.st_mode))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ESPIPE;
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
@@ -260,18 +260,18 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         do_seek:
             if (offset < 0) // || offset >= entry->tnode.file->inode->st.st_size)
             {
-                release_spinlock_noint(&file_table_lock, flags);
+                set_rflags_if(flags);
                 sc_ret_errno = EINVAL;
                 sc_ret(1) = (uint64_t)((off_t)-1);
                 break;
             }
             entry->position = offset;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)offset;
             break;
         }
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_OPENAT, 4, int, const char*, int, unsigned int)
@@ -287,11 +287,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
 
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         bool relative = *arg2 != '/';
         if (relative && arg1 != AT_FDCWD && !__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
@@ -299,7 +299,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         if (fd == -1)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENFILE;
             break;
         }
@@ -315,7 +315,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (stat_ret != 0)
         {
             __vfs_remove_global_file(fd);
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             if (stat_ret == ENOENT && (arg3 & O_CREAT))
                 sc_ret_errno = EROFS;
             else
@@ -326,7 +326,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if ((arg3 & O_DIRECTORY) && !S_ISDIR(st.st_mode))
         {
             __vfs_remove_global_file(fd);
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
@@ -341,12 +341,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (file_table[fd].entry_type == VFS_ET_FILE)
         {
             file_table[fd].tnode.file = vfs_get_file_tnode(arg2, cwd);
-            assert(file_table[fd].tnode.file);
+            ASSERT(file_table[fd].tnode.file);
 
             if (wr && file_table[fd].tnode.file->inode->drive.type == DT_INITRD)
             {
                 __vfs_remove_global_file(fd);
-                release_spinlock_noint(&file_table_lock, flags);
+                set_rflags_if(flags);
                 sc_ret_errno = EROFS;
                 break;
             }
@@ -360,13 +360,13 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             if (wr)
             {
                 __vfs_remove_global_file(fd);
-                release_spinlock_noint(&file_table_lock, flags);
+                set_rflags_if(flags);
                 sc_ret_errno = EISDIR;
                 break;
             }
 
             file_table[fd].tnode.folder = vfs_get_folder_tnode(arg2, cwd);
-            assert(file_table[fd].tnode.folder);
+            ASSERT(file_table[fd].tnode.folder);
 
             file_table[fd].iofunc = NULL;
 
@@ -384,7 +384,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (ret == -1)
         {
             __vfs_remove_global_file(fd);
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
 
             sc_ret_errno = EMFILE;
         }
@@ -392,22 +392,22 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             current_task->file_table[ret].index = fd;
             current_task->file_table[ret].flags = (arg3 & O_CLOEXEC) ? FD_CLOEXEC : 0;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)ret;
         }
         break;
     sc_case(SYS_CLOSE, 1, int)
         SC_LOG("syscall SYS_CLOSE(%d)", arg1);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
         __vfs_close(arg1);
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_OPEN_DIR, 1, const char*)
@@ -420,12 +420,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
 
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
 
         vfs_folder_tnode_t* tnode = vfs_get_folder_tnode(arg1, current_task->cwd);
         if (!tnode)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOENT;
             sc_ret(1) = -1;
             break;
@@ -448,7 +448,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (ret == -1)
         {
             __vfs_remove_global_file(fd);
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
 
             sc_ret_errno = EMFILE;
             sc_ret(1) = (uint64_t)(-1);
@@ -457,7 +457,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             current_task->file_table[ret].index = fd;
             current_task->file_table[ret].flags = 0;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = 0;
             sc_ret(1) = (uint64_t)ret;
         }
@@ -465,19 +465,19 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ_ENTRIES, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ_ENTRIES(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = 0;
             break;
         }
         file_entry_t* entry = __get_global_file_entry(arg1);
-        assert(entry);
+        ASSERT(entry);
         if (entry->entry_type != VFS_ET_FOLDER)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOTDIR;
             sc_ret(1) = 0;
             break;
@@ -487,7 +487,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         {
             sc_ret(1) = 0;
             entry->file_data.folder_child.done_reading = false;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             break;
         }
         struct dirent64 dir_entry;
@@ -510,7 +510,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             bytes_read += sizeof(dir_entry);
         }
         sc_ret(1) = bytes_read;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         break;
     sc_case(SYS_IOCTL, 3, int, unsigned long, void*)
         SC_LOG("syscall SYS_IOCTL(%d, %#lx, %p)", arg1, arg2, arg3);
@@ -574,41 +574,41 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_TCGETATTR, 2, int, struct termios*)
         SC_LOG("syscall SYS_TCGETATTR(%d, %p)", arg1, arg2);
         sc_validate_pointer(arg2);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
         if (!__vfs_isatty(__get_global_file_entry(arg1)))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOTTY;
             break;
         }
         *arg2 = tty_ts;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_TCSETATTR, 3, int, int, const struct termios*)
         SC_LOG("syscall SYS_TCSETATTR(%d, %d, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg3);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
         if (!__vfs_isatty(__get_global_file_entry(arg1)))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOTTY;
             break;
         }
         tty_ts = *arg3;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         if (arg2 == TCSAFLUSH)
         {
             uint32_t flags = acquire_spinlock_noint(&keyboard_input_lock);
@@ -655,22 +655,22 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_FCHDIR, 1, int)
         SC_LOG("syscall SYS_FCHDIR(%d)", arg1);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         file_entry_t* entry = __get_global_file_entry(arg1);
         if (!entry)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
         if (entry->entry_type != VFS_ET_FOLDER)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
         current_task->cwd = entry->tnode.folder;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_FORK, 0)
@@ -771,7 +771,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             if (first_pid)
             {
                 thread_t* task = __find_task_by_pid_anywhere(first_pid);
-                assert(task);
+                ASSERT(task);
                 if (arg2) *arg2 = task->return_value;
                 __move_task_to_queue(&reapable_tasks, task);
             }
@@ -801,18 +801,18 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_TTYNAME, 3, int, char*, size_t)
         SC_LOG("syscall SYS_TTYNAME(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
             sc_ret_errno = EBADF;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             break;
         }
         file_entry_t* entry = __get_global_file_entry(arg1);
         if (!__vfs_isatty(entry))
         {
             sc_ret_errno = ENOTTY;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             break;
         }
         vfs_file_tnode_t* tnode = entry->tnode.file;
@@ -821,11 +821,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         if (rp_ret == -1 || rp_ret > (ssize_t)arg3) // TODO: Check arg3 bounds
         {
             sc_ret_errno = ERANGE;
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             break;
         }
         memcpy(arg2, path, rp_ret);
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_GETRESUID, 3, uid_t*, uid_t*, uid_t*)
@@ -904,11 +904,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         file_entry_t* entry = __get_global_file_entry(arg1);
         if (arg1 != AT_FDCWD && !entry)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
@@ -921,7 +921,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 *arg4 = entry->st;
                 sc_ret_errno = 0;
             }
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             break;
         }
         bool relative_path = *arg2 != '/';
@@ -936,7 +936,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             if (entry->entry_type != VFS_ET_FOLDER)
             {
                 sc_ret_errno = ENOTDIR;
-                release_spinlock_noint(&file_table_lock, flags);
+                set_rflags_if(flags);
                 break;
             }
             if (entry->entry_type == VFS_ET_FOLDER)
@@ -952,7 +952,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             ;
             struct stat st;
             int stat_ret = __vfs_stat(arg2, cwd, &st);
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             if (stat_ret != 0)
             {
                 sc_ret_errno = stat_ret;
@@ -1039,16 +1039,16 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         if (!__is_fd_valid(arg1))
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
         if (arg3 <= -1)
         {
-            release_spinlock_noint(&file_table_lock, flags);
+            set_rflags_if(flags);
             sc_ret_errno = EINVAL;
             break;
         }
@@ -1057,12 +1057,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         current_task->file_table[arg3].index = current_task->file_table[arg1].index;
         current_task->file_table[arg3].flags = (arg2 & O_CLOEXEC) ? FD_CLOEXEC : 0;
         file_table[current_task->file_table[arg3].index].used++;
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_FCNTL, 3, int, int, uint64_t)
         SC_LOG("syscall SYS_FCNTL(%d, %d, %" PRIu64 ")", arg1, arg2, arg3);
-        uint32_t flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         switch (arg2)
         {
         case F_GETFD:
@@ -1111,7 +1111,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             // task_send_signal(current_task, SIGILL);
             sc_ret_errno = ENOSYS;
         }
-        release_spinlock_noint(&file_table_lock, flags);
+        set_rflags_if(flags);
         break;
     sc_case(SYS_SIGRET, 0)
         SC_LOG("syscall SYS_SIGRET()");
@@ -1156,7 +1156,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         fd_set read_ret, write_ret;
 
-        uint32_t ft_flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t ft_flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         do
         {
             sc_ret_errno = 0;
@@ -1227,10 +1227,10 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
                 __task_start_polling(current_task, arg5 ? arg5->tv_nsec * tsc_cycles_per_second / 1000000000 + arg5->tv_sec * tsc_cycles_per_second : NO_TIMEOUT);
                 switch_task();
-                release_spinlock_noint(&file_table_lock, ft_flags);
+                set_rflags_if(ft_flags);
                 unlock_scheduler(sd_flags);
                 sd_flags = lock_scheduler();
-                ft_flags = acquire_spinlock_noint(&file_table_lock);
+                ft_flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
                 if (current_task->sig_pending_user_space)
                 {
                     sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
@@ -1238,7 +1238,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
             }
         } while (shouldblock);
-        release_spinlock_noint(&file_table_lock, ft_flags);
+        set_rflags_if(ft_flags);
         if (sc_ret_errno != ERESTART)
         {
             if (arg2) *arg2 = read_ret;
@@ -1365,7 +1365,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         const size_t array_bytes = sizeof(struct pollfd) * arg2;
         struct pollfd* ret = alloca(array_bytes);
         uint32_t sd_flags = lock_scheduler();
-        uint32_t ft_flags = acquire_spinlock_noint(&file_table_lock);
+        uint32_t ft_flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
         bool shouldblock = arg3 != 0;
         do
         {
@@ -1418,10 +1418,10 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
                 __task_start_polling(current_task, PRECISE_MILLISECONDS * arg3);
                 switch_task();
-                release_spinlock_noint(&file_table_lock, ft_flags);
+                set_rflags_if(ft_flags);
                 unlock_scheduler(sd_flags);
                 sd_flags = lock_scheduler();
-                ft_flags = acquire_spinlock_noint(&file_table_lock);
+                ft_flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
                 if (current_task->sig_pending_user_space)
                 {
                     sc_ret_errno = should_restart_syscall() ? ERESTART : EINTR;
@@ -1429,7 +1429,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                 }
             }
         } while (shouldblock);
-        release_spinlock_noint(&file_table_lock, ft_flags);
+        set_rflags_if(ft_flags);
         unlock_scheduler(sd_flags);
         if (sc_ret_errno != ERESTART)
             memcpy(arg1, ret, array_bytes);
@@ -1508,7 +1508,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     }
     }
 
-    assert(get_rflags() & (1 << 9));
+    ASSERT(get_rflags() & (1 << 9));
 
     if (sc_ret_errno != 0 && !sc_no_errno)
         SC_LOG("errno: %" PRId64 ": %s", sc_ret_errno, strerror(sc_ret_errno));
