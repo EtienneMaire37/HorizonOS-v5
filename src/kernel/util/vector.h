@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <assert.h>
+#include "../util/assert.h"
 
 #define VEC_MIN_ALLOC   8
 

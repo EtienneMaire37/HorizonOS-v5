@@ -10,7 +10,6 @@
 #include "task.h"
 #include "sched_lock.h"
 
-hashmap_t* futex_tq_hashmap = NULL;
 hashmap_t* pid_to_task_hashmap = NULL;
 hashmap_t* pgid_to_tq_hashmap = NULL;
 hashmap_t* pid_to_children_tq_hashmap = NULL;
@@ -26,7 +25,7 @@ thread_t* current_task = NULL;
 bool multitasking_enabled = false;
 
 utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;
-atomic_flag keyboard_input_lock = ATOMIC_FLAG_INIT;
+spinlock_noint_t keyboard_input_lock = SPINLOCK_NOINT_INIT;
 
 // * Per CPU
 bool queued_ts = false;
@@ -39,12 +38,9 @@ void multitasking_init()
     utf32_buffer_init(&keyboard_input_buffer);
     utf32_buffer_init(&keyboard_buffered_input_buffer);
 
-    futex_tq_hashmap = hashmap_create(1 * MB);
     pid_to_task_hashmap = hashmap_create(1 * MB);
     pgid_to_tq_hashmap = hashmap_create(1 * MB);
     pid_to_children_tq_hashmap = hashmap_create(1 * MB);
-
-    vfs_init_file_table();
 
     multitasking_add_idle_task("idle");
 }

@@ -1,13 +1,12 @@
 #include "defs.h"
 #include "../util/lambda.h"
-#include "../util/read_write.h"
 #include "../multicore/spinlock.h"
 
 #include <assert.h>
 
 // * page 0xFEE00xxx
 volatile local_apic_registers_t* lapic = NULL;
-atomic_flag ioapic_lock = ATOMIC_FLAG_INIT; // TODO: Implement a per I/O APIC lock
+spinlock_noint_t ioapic_lock = SPINLOCK_NOINT_INIT; // TODO: Implement a per I/O APIC lock
 
 #include "apic.h"
 #include "../acpi/tables.h"
@@ -45,7 +44,7 @@ void lapic_init()
 uint32_t lapic_get_cpu_id()
 {
     if (lapic)
-        return (READ_ONCE(lapic->id_register) >> 24) & 0xff;
+        return (lapic->id_register >> 24) & 0xff;
     else
         return rdmsr(IA32_X2APIC_APICID_MSR);
 }
@@ -53,56 +52,56 @@ uint32_t lapic_get_cpu_id()
 void lapic_send_eoi()
 {
     if (lapic)
-        WRITE_ONCE(lapic->end_of_interrupt_register, 0);
+        lapic->end_of_interrupt_register = 0;
     else
         wrmsr(IA32_X2APIC_EOI_MSR, 0);
 }
 
 void lapic_set_spurious_interrupt_number(uint8_t int_num)
 {
-    uint32_t val = lapic ? READ_ONCE(lapic->spurious_interrupt_vector_register) : rdmsr(IA32_X2APIC_SIVR_MSR);
+    uint32_t val = lapic ? lapic->spurious_interrupt_vector_register : rdmsr(IA32_X2APIC_SIVR_MSR);
     val &= 0xffffff00;
     val |= int_num;
-    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, val);
+    if (lapic)  lapic->spurious_interrupt_vector_register = val;
     else        wrmsr(IA32_X2APIC_SIVR_MSR, val);
 }
 
 void lapic_enable()
 {
-    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, READ_ONCE(lapic->spurious_interrupt_vector_register) | 0x100);
+    if (lapic)  lapic->spurious_interrupt_vector_register = lapic->spurious_interrupt_vector_register | 0x100;
     else        wrmsr(IA32_X2APIC_SIVR_MSR, rdmsr(IA32_X2APIC_SIVR_MSR) | 0x100);
 }
 
 void lapic_disable()
 {
-    if (lapic)  WRITE_ONCE(lapic->spurious_interrupt_vector_register, READ_ONCE(lapic->spurious_interrupt_vector_register) & ~0x100);
+    if (lapic)  lapic->spurious_interrupt_vector_register = (lapic->spurious_interrupt_vector_register & ~0x100);
     else        wrmsr(IA32_X2APIC_SIVR_MSR, rdmsr(IA32_X2APIC_SIVR_MSR) & ~0x100);
 }
 
 void lapic_set_tpr(uint8_t p)
 {
-    uint32_t val = lapic ? READ_ONCE(lapic->task_priority_register) : rdmsr(IA32_X2APIC_TPR_MSR);
+    uint32_t val = lapic ? lapic->task_priority_register : rdmsr(IA32_X2APIC_TPR_MSR);
     val &= 0xffffff00;
     val |= p;
-    if (lapic)  WRITE_ONCE(lapic->task_priority_register, val);
+    if (lapic)  lapic->task_priority_register = val;
     else        wrmsr(IA32_X2APIC_TPR_MSR, val);
 }
 
 uint32_t ioapic_read_register(volatile io_apic_registers_t* ioapic, uint8_t reg)
 {
-    acquire_spinlock(&ioapic_lock);
-    WRITE_ONCE(ioapic->IOREGSEL, reg);
-    uint32_t ret = READ_ONCE(ioapic->IOWIN);
-    release_spinlock(&ioapic_lock);
+    uint32_t flags = acquire_spinlock_noint(&ioapic_lock);
+    ioapic->IOREGSEL = reg;
+    uint32_t ret = ioapic->IOWIN;
+    release_spinlock_noint(&ioapic_lock, flags);
     return ret;
 }
 
 void ioapic_write_register(volatile io_apic_registers_t* ioapic, uint8_t reg, uint32_t val)
 {
-    acquire_spinlock(&ioapic_lock);
-    WRITE_ONCE(ioapic->IOREGSEL, reg);
-    WRITE_ONCE(ioapic->IOWIN, val);
-    release_spinlock(&ioapic_lock);
+    uint32_t flags = acquire_spinlock_noint(&ioapic_lock);
+    ioapic->IOREGSEL = reg;
+    ioapic->IOWIN = val;
+    release_spinlock_noint(&ioapic_lock, flags);
 }
 
 uint8_t ioapic_get_max_redirection_entry(volatile io_apic_registers_t* ioapic)

@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "msr.h"
-#include "../util/likely.h"
 
 typedef struct __attribute__((packed))
 {
@@ -16,7 +15,7 @@ extern bool fsgsbase;
 
 static void wrfsbase(uint64_t address)
 {
-    if (likely(fsgsbase))
+    if (fsgsbase)
         asm volatile("wrfsbase rax" :: "a"(address));
     else
         wrmsr(IA32_FS_BASE_MSR, address);
@@ -24,7 +23,7 @@ static void wrfsbase(uint64_t address)
 
 static void wrgsbase(uint64_t address)
 {
-    if (likely(fsgsbase))
+    if (fsgsbase)
         asm volatile("wrgsbase rax" :: "a"(address));
     else
         wrmsr(IA32_GS_BASE_MSR, address);
@@ -32,7 +31,7 @@ static void wrgsbase(uint64_t address)
 
 static uint64_t rdfsbase()
 {
-    if (likely(fsgsbase))
+    if (fsgsbase)
     {
         uint64_t address;
         asm volatile("rdfsbase rax" : "=a"(address));
@@ -43,7 +42,7 @@ static uint64_t rdfsbase()
 
 static uint64_t rdgsbase()
 {
-    if (likely(fsgsbase))
+    if (fsgsbase)
     {
         uint64_t address;
         asm volatile("rdgsbase rax" : "=a"(address));

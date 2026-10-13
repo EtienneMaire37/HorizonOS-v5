@@ -1,0 +1,10 @@
+CompileFlags:
+  Compiler: ./hostoolchain/usr/bin/x86_64-horizonos-gcc
+---
+If:
+  PathMatch: .*\.h
+CompileFlags:
+  Add:
+    - -x
+    - c
+    - -std=gnu11

@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../cpu/util.h"
 #include "../multicore/spinlock.h"
 #include <stdint.h>
 
 typedef uint64_t precise_time_t;
 #define PRECISE_TIME_MAX        UINT64_MAX
 
-extern atomic_flag time_lock;
+extern spinlock_noint_t time_lock;
 
 extern struct timespec current_time;
 extern int64_t tsc_remainder;

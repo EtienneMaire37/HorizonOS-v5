@@ -3,8 +3,6 @@
 #include <termios.h>
 #include <stdbool.h>
 #include "../files/psf.h"
-#include "../vga/constants.h"
-#include "../multitasking/mutex.h"
 
 static inline bool is_printable_character(char c)
 {

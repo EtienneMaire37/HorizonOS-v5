@@ -2,14 +2,11 @@
 
 #include "../util/hashmap.h"
 #include "queue.h"
-#include "../cpu/registers.h"
 #include "task.h"
-#include "sched_lock.h"
-
+#include "../io/keyboard.h"
 #include <assert.h>
 
-extern hashmap_t *futex_tq_hashmap,
-                 *pid_to_task_hashmap,
+extern hashmap_t *pid_to_task_hashmap,
                  *pgid_to_tq_hashmap,
                  *pid_to_children_tq_hashmap;
 
@@ -25,7 +22,7 @@ extern thread_t* current_task;
 extern bool multitasking_enabled;
 
 extern utf32_buffer_t keyboard_input_buffer, keyboard_buffered_input_buffer;
-extern atomic_flag keyboard_input_lock;
+extern spinlock_noint_t keyboard_input_lock;
 
 extern bool queued_ts;
 
@@ -36,16 +33,6 @@ static inline bool __multitasking_is_pgrp_empty(pid_t pgid)
     thread_queue_t* tq = hashmap_get_item(pgid_to_tq_hashmap, pgid);
     if (!tq) return true;
     return *tq == NULL;
-}
-
-static inline int __vfs_allocate_thread_file(thread_t* task)
-{
-    for (int i = 0; i < OPEN_MAX; i++)
-    {
-        if (task->file_table[i].index == invalid_fd)
-            return i;
-    }
-    return -1;
 }
 
 static inline void log_tq(thread_queue_t* tq)
@@ -63,8 +50,6 @@ static inline void log_tq(thread_queue_t* tq)
     }
     LOG(DEBUG, "}");
 }
-
-void __vfs_close(int fd);
 
 void multitasking_init();
 void multitasking_start();

@@ -1,11 +1,7 @@
 #pragma once
 
-#include <limits.h>
-#include <signal.h>
 #include <elf.h>
-#include <stdint.h>
 #include "../time/time.h"
-#include "../vfs/open_file.h"
 #include "../util/linked_list.h"
 #include "../vfs/open_file_descriptor_vector.h"
 #include "sched_lock.h"
@@ -17,6 +13,7 @@ typedef struct thread thread_t;
 
 // TODO: Make task use a clean reference counted system, have more scheduler lock granularity and rename these files to thread.*!
 // XXX: DO THIS ASAP
+// NOTE: This is probably the most important thing to change rn!
 typedef struct thread
 {
     struct sigaction sig_act_array[NUM_SIGNALS];
@@ -71,11 +68,6 @@ typedef struct thread
     thread_t *prev, *next;
 } thread_t;
 
-#include "../io/keyboard.h"
-#include "../gdt/gdt.h"
-#include "../cpu/segbase.h"
-#include "mutex.h"
-
 extern const uint64_t task_rsp_offset;
 extern const uint64_t task_cr3_offset;
 
@@ -119,7 +111,6 @@ void __task_destroy(thread_t* task);
 void switch_task();
 void multitasking_init();
 void multitasking_start();
-void multitasking_add_idle_task();
 
 void __task_init_file_table(thread_t* task);
 void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec);

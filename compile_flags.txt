@@ -1,0 +1,6 @@
+--target=x86_64-horizonos-gcc
+-std=gnu11
+-Ilimine-protocol/include
+-Ihostoolchain/usr/bin/../lib/gcc/x86_64-horizonos/15.2.0/include
+-Ihostoolchain/usr/bin/../lib/gcc/x86_64-horizonos/15.2.0/include-fixed
+-Iroot/usr/include

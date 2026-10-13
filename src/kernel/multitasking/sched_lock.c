@@ -5,7 +5,7 @@ spinlock_noint_t sched_lock = SPINLOCK_NOINT_INIT;
 
 void unlock_scheduler(uint32_t flags)
 {
-    atomic_flag_clear_explicit(&sched_lock, memory_order_release);
+    atomic_flag_clear_explicit(&sched_lock.flag, memory_order_release);
     if (queued_ts && multitasking_enabled)
     {
         queued_ts = false;

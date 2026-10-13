@@ -3,7 +3,6 @@
 #include "../cmos/rtc.h"
 #include "../cpu/tsc.h"
 #include "../cpu/util.h"
-#include "../util/read_write.h"
 #include "../util/vector.h"
 
 #include <string.h>
@@ -24,8 +23,8 @@ void apic_timer_and_tsc_init()
 
     if (lapic)
     {
-        WRITE_ONCE(lapic->divide_configuration_register, LAPIC_TIMER_DIVIDE_BY_16);
-        WRITE_ONCE(lapic->initial_count_register, 0xffffffff);
+        lapic->divide_configuration_register = LAPIC_TIMER_DIVIDE_BY_16;
+        lapic->initial_count_register = 0xffffffff;
     }
     else
     {
@@ -47,7 +46,7 @@ void apic_timer_and_tsc_init()
     }
 
     if (lapic)
-        WRITE_ONCE(lapic->lvt_timer_register, APIC_TIMER_INT | LAPIC_TIMER_TSC_DEADLINE);
+        lapic->lvt_timer_register = APIC_TIMER_INT | LAPIC_TIMER_TSC_DEADLINE;
     else
         wrmsr(IA32_X2APIC_LVT_TIMER_MSR, APIC_TIMER_INT | LAPIC_TIMER_TSC_DEADLINE);
 }

@@ -2,8 +2,8 @@
 #include "flags.h"
 #include "inode_stack.h"
 #include "vnode.h"
-#include "spinlock.h"
 #include "mountpoint.h"
+#include "../multicore/spinlock.h"
 
 #include <assert.h>
 #include <linux/limits.h>

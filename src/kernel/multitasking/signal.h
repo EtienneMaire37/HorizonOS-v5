@@ -2,7 +2,6 @@
 
 #include <signal.h>
 #include "../int/int.h"
-#include "syscall.h"
 
 #define SIGDEF_TERM 0
 #define SIGDEF_IGN  1

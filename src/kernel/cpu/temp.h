@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include "cpuid.h"
 #include "msr.h"
-#include "../util/likely.h"
 
 extern uint8_t tcc_activation_temperature;
 extern bool temperature_sensor;
@@ -34,10 +33,10 @@ static inline uint8_t cpu_read_temp()
 {
     if (!temperature_sensor) return 0;
     uint64_t val = rdmsr(IA32_THERM_STATUS_MSR);
-    if (unlikely(((val >> 31) & 1) == 0))
+    if (((val >> 31) & 1) == 0)
         return 0;
     uint8_t readout = (val >> 16) & 0x7f;
-    if (unlikely(readout > tcc_activation_temperature))
+    if (readout > tcc_activation_temperature)
         return 0;
     // uint8_t resolution = (val >> 27) & 0x0f;
     return tcc_activation_temperature - readout;

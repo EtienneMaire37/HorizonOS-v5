@@ -1,8 +1,8 @@
-#include "memalloc/page_data.h"
 #define _GNU_SOURCE
+#include "vfs/vnode.h"
+#include "memalloc/page_data.h"
 
 #include <stdbool.h>
-#include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -23,15 +23,15 @@ char** environ = NULL;
 
 #include "time/time.h"
 
-#include "io/io.h"
 #include "cpu/cpuid.h"
 #include "cpu/msr.h"
 #include "cpu/registers.h"
-#include "multicore/spinlock.h"
 #include "graphics/linear_framebuffer.h"
 #include "cpu/cpuid.h"
 #include "fpu/sse.h"
 #include "debug/out.h"
+#include "vga/constants.h"
+#include "vfs/fs/null.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +45,6 @@ char** environ = NULL;
 #include <fcntl.h>
 #include <dirent.h>
 
-#include "vfs/vfs.h"
 #include "initrd/initrd.h"
 #include "cmos/rtc.h"
 #include "pic/apic.h"
@@ -70,10 +69,8 @@ char** environ = NULL;
 #include "cpu/segbase.h"
 #include "cpu/tsc.h"
 #include "multitasking/signal.h"
-#include "util/units.h"
 #include "git/commit.h"
 #include "memalloc/virtual_memory_allocator.h"
-#include "vfs/table.h"
 
 void _start()
 {
@@ -224,7 +221,7 @@ void _start()
     pfa_detect_usable_memory();
     page_data_table_init();
 
-    tty_init(true);
+    tty_init();
 
 // * vvv Now we can use stdout
 
@@ -580,25 +577,34 @@ void _start()
 
     LOG(INFO, "Setting up the VFS...");
     printf("Mounting initrd at root...\n");
-    vfs_root = vfs_create_empty_folder_tnode("root", NULL, VFS_NODE_MOUNTPOINT | VFS_NODE_INIT,
-        0,
-        S_IFDIR |
-        S_IRUSR | S_IXUSR |
-        S_IRGRP | S_IXGRP |
-        S_IROTH | S_IXOTH,
-        0, 0,
-        (drive_t){.type = DT_INITRD});
-    ASSERT(vfs_root);
-    vfs_root->inode->parent = vfs_root;
-    vfs_explore(vfs_root);
+    vfs_create_root_node();
+    LOG(DEBUG, "Mounting root");
+    errno = vfs_mount(vfs_root_node, (vnode_ref_t){ NULL }, "virt");
+    if (errno)
+        perror("Couldn't mount root");
+    LOG(DEBUG, "Creating /dev");
+    errno = vfs_create("dev", vfs_root_node, 0755 | S_IFDIR, 0, 0);
+    LOG(TRACE, "Done");
+    if (errno)
+        perror("Couldn't create /dev");
+    {
+        vnode_ref_t dev_node = vfs_get_vnode_from_path(&errno, 0, 0, "/dev", (vnode_ref_t){ NULL }, (vnode_ref_t){ NULL }, false);
+        if (errno)
+        {
+            perror("Couldn't find vnode for /dev");
+            abort();
+        }
 
-    vfs_mount_device("mnt", "/", (drive_t){.type = DT_VIRTUAL}, 0, 0);
-    // * Can't mount more than once
-    // vfs_mount_device("initrd", "/mnt", (drive_t){.type = DT_INITRD}, 0, 0);
-    vfs_mount_device("dev", "/", (drive_t){.type = DT_VIRTUAL}, 0, 0);
-
-    // * "The file /dev/tty is a character file with major number 5 and minor number 0, usually with mode 0666 and ownership root:tty."
-    vfs_add_special("/dev", "tty", CHR_MODE, task_chr_tty, 0, 5);
+        vfs_create("null", dev_node, S_IFCHR | 0666, 0, 0, null_read, null_write);
+        vfs_create("tty", dev_node, S_IFCHR | 0666, 0, 0, NULL, NULL);
+        vfs_create("console", dev_node, S_IFCHR | 0666, 0, 0, NULL, NULL);
+        
+        vnode_delete_ref(&dev_node);
+    }
+    LOG(DEBUG, "Creating /tmp");
+    errno = vfs_create("tmp", vfs_root_node, 01777 | S_IFDIR, 0, 0);
+    if (errno)
+        perror("Couldn't create /tmp");
 
     LOG(INFO, "Set up the VFS.");
 
@@ -628,8 +634,10 @@ void _start()
     }
 
     LOG(DEBUG, "VFS TREE:");
-    vfs_log_tree(vfs_root, 0);
+    vfs_log_structure(vfs_root_node);
 
+    // XXX: Terrible
+    // TODO: Actually implement pseudoterminals
     tty_ts = (struct termios)
     {
         .c_iflag = ICRNL | IXON,
@@ -673,7 +681,7 @@ void _start()
 
     startup_data_struct_t data = startup_data_init_from_command((char*[]){"/sbin/init", NULL}, (char*[]){NULL});
     uint32_t flags = lock_scheduler();
-    thread_t* init_task = __multitasking_add_task_from_vfs("init", "/sbin/init", 3, true, &data, vfs_root);
+    thread_t* init_task = __multitasking_add_task_from_vfs("init", "/sbin/init", 3, true, &data, vfs_root_node);
     unlock_scheduler(flags);
     if (!init_task)
     {
@@ -681,20 +689,6 @@ void _start()
         printf("\x1b[31merror\x1b[0m: init task couldn't start\n");
         abort();
     }
-
-    LOG(TRACE, "Setting up console file descriptors for init task...");
-
-    flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
-    init_task->file_table[STDIN_FILENO].flags = 0;
-    init_task->file_table[STDIN_FILENO].index = 0;
-    file_table[init_task->file_table[STDIN_FILENO].index].used++;
-    init_task->file_table[STDOUT_FILENO].flags = 0;
-    init_task->file_table[STDOUT_FILENO].index = 1;
-    file_table[init_task->file_table[STDOUT_FILENO].index].used++;
-    init_task->file_table[STDERR_FILENO].flags = 0;
-    init_task->file_table[STDERR_FILENO].index = 2;
-    file_table[init_task->file_table[STDERR_FILENO].index].used++;
-    set_rflags_if(flags);
 
     LOG(DEBUG, "Starting multitasking...");
     printf("Starting multitasking...\n\n");

@@ -2,6 +2,7 @@
 
 #include "../time/time.h"
 #include "../time/ktime.h"
+#include "../util/evaluate.h"
 
 #include "../io/io.h"
 #include <stdbool.h>
@@ -20,6 +21,7 @@
 #define WARNING             LOG_LEVEL_WARNING
 #define ERROR               LOG_LEVEL_ERROR
 #define CRITICAL            LOG_LEVEL_CRITICAL
+#define NO_LOGS             (CRITICAL + 1)
 
 static inline void debug_outc(char c)
 {
@@ -53,10 +55,8 @@ extern bool first_log;
 #define LOG_FMT_NOTIME  "____________.___ - %s%s \t"
 
 #ifndef LOG_LEVEL
-#define LOG(level, ...) (void)(__VA_ARGS__) // Will get interpreted using the comma operator
-                                            // Pretty cool if you ask me
-#define CONTINUE_LOG(level, ...)
-#else
+#define LOG_LEVEL NO_LOGS
+#endif
 #define _LOG(level, ...) do { \
     if (!first_log) fputc('\n', stderr); \
     first_log = false; \
@@ -72,8 +72,7 @@ extern bool first_log;
 } while (0)
 
 #define LOG(level, ...) \
-    do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) _LOG(level, __VA_ARGS__); else (void)(__VA_ARGS__); } while(0)
+    do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) _LOG(level, __VA_ARGS__); else evaluate(__VA_ARGS__); } while(0)
 
 #define CONTINUE_LOG(level, ...) \
-    do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) fprintf(stderr, __VA_ARGS__); else (void)(__VA_ARGS__); } while(0)
-#endif
+    do { if (LOG_LEVEL <= level && LOG_LEVEL >= 0 && LOG_LEVEL < sizeof(LOG_LEVEL_STR) / sizeof(char*)) fprintf(stderr, __VA_ARGS__); else evaluate(__VA_ARGS__); } while(0)

@@ -1,8 +1,8 @@
 #include "../files/psf.h"
 #include <termios.h>
 #include "../vga/constants.h"
-#include "../multitasking/multitasking.h"
 #include "textio.h"
+#include "../util/assert.h"
 
 tty_char_t tty_buffer[MAX_TTY_X * MAX_TTY_Y];
 tty_char_t tty_alternate_buffer[MAX_TTY_X * MAX_TTY_Y];
@@ -736,10 +736,10 @@ void tty_outc_ex(char c, int flags)
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
             tty_set_dirty(tty_cursor);
-    		if (tty_cursor >= n * MAX_TTY_X)
-    		    tty_cursor -= n * MAX_TTY_X;
-            else
-                tty_cursor -= (tty_cursor / MAX_TTY_X) * MAX_TTY_X;
+			if (tty_cursor >= n * MAX_TTY_X)
+				tty_cursor -= n * MAX_TTY_X;
+			else
+				tty_cursor -= (tty_cursor / MAX_TTY_X) * MAX_TTY_X;
             return;
 		}
 		case 'B':
@@ -751,9 +751,9 @@ void tty_outc_ex(char c, int flags)
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
             tty_set_dirty(tty_cursor);
-    		if (tty_cursor < ((int32_t)tty_res_y - n) * MAX_TTY_X)
-    		    tty_cursor += n * MAX_TTY_X;
-            else
+			if (tty_cursor < ((int32_t)tty_res_y - n) * MAX_TTY_X)
+			    tty_cursor += n * MAX_TTY_X;
+			else
                 __tty_set_cursor((tty_cursor % MAX_TTY_X) + MAX_TTY_X * (tty_res_y - 1));
             return;
 		}
@@ -766,9 +766,9 @@ void tty_outc_ex(char c, int flags)
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
             tty_set_dirty(tty_cursor);
-    		if ((tty_cursor % MAX_TTY_X) < (int32_t)tty_res_x - n)
+			if ((tty_cursor % MAX_TTY_X) < (int32_t)tty_res_x - n)
     		    tty_cursor += n;
-            else
+			else
                 __tty_set_cursor(tty_res_x - 1 + MAX_TTY_X * (tty_res_x / MAX_TTY_X));
             return;
 		}
@@ -781,9 +781,9 @@ void tty_outc_ex(char c, int flags)
     		tty_control_sequence_buffer[tty_escape_sequence_index] = 0;
     		tty_reading_control_sequence = false;
             tty_set_dirty(tty_cursor);
-    		if ((tty_cursor % MAX_TTY_X) >= n)
+			if ((tty_cursor % MAX_TTY_X) >= n)
     		    tty_cursor -= n;
-            else
+			else
                 __tty_set_cursor(MAX_TTY_X * (tty_res_x / MAX_TTY_X));
             return;
 		}

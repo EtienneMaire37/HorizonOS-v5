@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../debug/out.h"
-#include <assert.h>
+#include "../util/assert.h"
 
 extern uint32_t cpuid_highest_function_parameter, cpuid_highest_extended_function_parameter;
 

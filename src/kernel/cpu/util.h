@@ -12,17 +12,17 @@ typedef uint64_t virtual_address_t;
 
 extern uint64_t* global_cr3;
 
-#define enable_interrupts()     asm volatile ("sti")
-#define disable_interrupts()    asm volatile ("cli")
+#define enable_interrupts()     do { asm volatile ("sti"); } while (0)
+#define disable_interrupts()    do { asm volatile ("cli"); } while (0)
 
-#define hlt()                   asm volatile ("hlt")
-#define ud()                    asm volatile ("ud2")
+#define hlt()                   do { asm volatile ("hlt"); } while (0)
+#define ud()                    do { asm volatile ("ud2"); } while (0)
 
-#define swapgs()                asm volatile ("swapgs")
+#define swapgs()                do { asm volatile ("swapgs"); } while (0)
 
-#define mfence()                asm volatile ("mfence");
+#define mfence()                do { asm volatile ("mfence"); } while (0)
 
-#define tpause(state, deadline)        asm volatile ("tpause %0" :: "r"(state), "a"((deadline) & 0xffffffff), "d"((deadline) >> 32));
+#define tpause(state, deadline)        do { asm volatile ("tpause %0" :: "r"(state), "a"((deadline) & 0xffffffff), "d"((deadline) >> 32)); } while (0)
 
 static inline void __attribute__((noreturn)) _halt()
 {

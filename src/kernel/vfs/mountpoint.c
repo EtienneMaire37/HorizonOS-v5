@@ -1,9 +1,8 @@
 #include "mountpoint.h"
 #include "mountpoint_ref.h"
-#include "ref.h"
+#include "../util/ref.h"
 #include "vnode.h"
-#include "log.h"
-#include "util/assert.h"
+#include "../util/assert.h"
 #include <stdlib.h>
 
 void mountpoint_delete_ref(mountpoint_ref_t* ref)

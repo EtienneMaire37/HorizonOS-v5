@@ -1,18 +1,10 @@
 #pragma once
 
 #include "../int/int.h"
-#include "startup_data.h"
-#include "../multitasking/loader.h"
-#include <signal.h>
 #include <sys/wait.h>
-#include "../util/math.h"
 #include <fcntl.h>
-#include "../terminal/textio.h"
 #include <errno.h>
-#include "../io/keyboard.h"
 #include "../multitasking/task.h"
-#include "../paging/paging.h"
-#include "../cpu/segbase.h"
 
 #define SC_ARG0()
 #define SC_ARG1(t1) \

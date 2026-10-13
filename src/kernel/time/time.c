@@ -1,7 +1,7 @@
 #include "time.h"
 #include "../util/vector.h"
 
-atomic_flag time_lock = ATOMIC_FLAG_INIT;
+spinlock_noint_t time_lock = SPINLOCK_NOINT_INIT;
 
 struct timespec current_time;
 int64_t tsc_remainder = 0;
@@ -23,9 +23,7 @@ void ksleep(precise_time_t time)
     // * Should guarantee to wait AT LEAST time
     uint64_t deadline = rdtsc() + time * tsc_cycles_per_second / PRECISE_SECONDS;
     if (tpause_supported)
-    {
         tpause(1, deadline);
-    }
     else
     {
         apic_timer_add_new_deadline(deadline);

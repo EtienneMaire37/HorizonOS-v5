@@ -1,13 +1,10 @@
 #pragma once
 
 #include <stdint.h>
-#include <assert.h>
+#include "../util/assert.h"
 #include "../cpu/util.h"
 #include "../util/units.h"
 #include "mmap.h"
-#include "../multitasking/mutex.h"
-
-#include <stdatomic.h>
 
 #define MAX_MEMORY (64 * TB)
 
