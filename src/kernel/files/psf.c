@@ -1,12 +1,11 @@
 #include "psf.h"
-#include "../multitasking/multitasking.h"
-#include "../util/likely.h"
+#include "../debug/out.h"
 
 uint32_t psf_get_glyph_width(psf_font_t* font)
 {
-    if (unlikely(!font)) return 0;
-    if (unlikely(!font->f)) return 0;
-    if (unlikely(!font->f->data)) return 0;
+    if (!font) return 0;
+    if (!font->f) return 0;
+    if (!font->f->data) return 0;
 
     if (*(uint16_t*)font->f->data == 0x0436)
         return 8;
@@ -18,9 +17,9 @@ uint32_t psf_get_glyph_width(psf_font_t* font)
 
 uint32_t psf_get_glyph_height(psf_font_t* font)
 {
-    if (unlikely(!font)) return 0;
-    if (unlikely(!font->f)) return 0;
-    if (unlikely(!font->f->data)) return 0;
+    if (!font) return 0;
+    if (!font->f) return 0;
+    if (!font->f->data) return 0;
 
     if (*(uint16_t*)font->f->data == 0x0436)
         return ((psf_t*)font->f->data)->bytesperglyph;
@@ -32,9 +31,9 @@ uint32_t psf_get_glyph_height(psf_font_t* font)
 
 uint32_t psf_get_bytes_per_glyph(psf_font_t* font)
 {
-    if (unlikely(!font)) return 0;
-    if (unlikely(!font->f)) return 0;
-    if (unlikely(!font->f->data)) return 0;
+    if (!font) return 0;
+    if (!font->f) return 0;
+    if (!font->f->data) return 0;
 
     if (*(uint16_t*)font->f->data == 0x0436)
         return ((psf_t*)font->f->data)->bytesperglyph;
@@ -46,9 +45,9 @@ uint32_t psf_get_bytes_per_glyph(psf_font_t* font)
 
 uintptr_t psf_get_glyph_data(psf_font_t* font)
 {
-    if (unlikely(!font)) return 0;
-    if (unlikely(!font->f)) return 0;
-    if (unlikely(!font->f->data)) return 0;
+    if (!font) return 0;
+    if (!font->f) return 0;
+    if (!font->f->data) return 0;
 
     if (*(uint16_t*)font->f->data == 0x0436)
         return (uintptr_t)font->f->data + sizeof(psf_t);
@@ -60,9 +59,9 @@ uintptr_t psf_get_glyph_data(psf_font_t* font)
 
 uint32_t psf_get_num_glyph(psf_font_t* font)
 {
-    if (unlikely(!font)) return 0;
-    if (unlikely(!font->f)) return 0;
-    if (unlikely(!font->f->data)) return 0;
+    if (!font) return 0;
+    if (!font->f) return 0;
+    if (!font->f->data) return 0;
 
     if (*(uint16_t*)font->f->data == 0x0436)
         return (((psf_t*)font->f->data)->font_mode & PSF1_MODE512) ? 512 : 256;

@@ -5,13 +5,11 @@ initrd_file_t* kernel_symbols_file = NULL;
 
 #include <sys/wait.h>
 
-#include "../multitasking/vas.h"
 #include "../multitasking/syscall.h"
 #include "int.h"
 #include "irq.h"
 #include "nmi.h"
-#include "../multitasking/signal.h"
-#include "../multitasking/syscall.h"
+#include "../gdt/gdt.h"
 
 #include "../panic/panic.h"
 

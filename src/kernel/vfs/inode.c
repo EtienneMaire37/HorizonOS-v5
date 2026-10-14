@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include "inode.h"
 #include "mountpoint.h"
-#include "ref.h"
-#include "util/assert.h"
+#include "../util/ref.h"
+#include "../util/assert.h"
 
 inode_ref_t vfs_create_new_inode(const struct stat* st, void* fs_specific, void (*free_fs_specific_data)(void*), mountpoint_ref_t mp)
 {

@@ -4,9 +4,11 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <assert.h>
+
 #include "../initrd/initrd.h"
 #include "../util/defs.h"
 #include "../util/error.h"
+#include "../util/assert.h"
 
 typedef struct __attribute__((packed)) interrupt_registers
 {

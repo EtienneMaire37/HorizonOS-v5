@@ -7,7 +7,7 @@
 #include "../pic/timer.h"
 #include "../cpu/tsc.h"
 #include "../util/lambda.h"
-#include "../vfs/table.h"
+#include "../vfs/poll.h"
 
 void handle_apic_irq(interrupt_registers_t* registers)
 {

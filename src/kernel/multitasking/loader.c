@@ -1,12 +1,12 @@
+#include <elf.h>
+#include <string.h>
 #include "loader.h"
 #include "sched_lock.h"
 #include "vas.h"
 #include "task.h"
 #include "multitasking.h"
-#include <elf.h>
 #include "startup_data.h"
-#include "../vfs/vfs.h"
-#include "../util/error.h"
+#include "../vfs/vnode_ref.h"
 
 thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
 {
@@ -30,25 +30,37 @@ thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
     return task;
 }
 
-thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
+thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vnode_ref_t cwd)
 {
-    LOG(INFO, "Loading ELF file \"/initrd/%s\"", path);
+    LOG(INFO, "Loading ELF file \"%s\"", path);
 
     bool dynamic = false;
 
     ASSERT(ring == 3);
 
-    initrd_file_t* file;
-    if (!(file = initrd_find_file(path)))
+    int _errno;
+    vnode_ref_t file = vfs_get_vnode_from_path(&_errno, 0, 0, path, vfs_root_node, cwd, true);
+    if (!file.ptr)
     {
         LOG(ERROR, "Coudln't load file");
         return NULL;
     }
 
-    Elf64_Ehdr* header = (Elf64_Ehdr*)file->data;
+    ssize_t file_size = vnode_stat(file).st_size;
+    uint8_t* file_data = malloc(file_size);
+    if (!file_data)
+    {
+        vnode_delete_ref(&file);
+        return NULL;
+    }
+    vnode_read(file, file_data, file_size, 0);
+    vnode_delete_ref(&file);
+
+    Elf64_Ehdr* header = (Elf64_Ehdr*)file_data;
     if (memcmp("\x7f""ELF", header->e_ident, 4) != 0)
     {
         LOG(ERROR, "Invalid ELF signature");
+        free(file_data);
         return NULL;
     }
 
@@ -57,17 +69,23 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
         header->e_machine != EM_X86_64)
     {
         LOG(ERROR, "Non x86_64 ELF file");
+        free(file_data);
         return NULL;
     }
 
     if (header->e_type != ET_EXEC)
     {
         LOG(ERROR, "Non executable ELF file (%#x)", header->e_type);
+        free(file_data);
         return NULL;
     }
 
     thread_t* task = __task_create_empty();
-    if (!task) return NULL;
+    if (!task) 
+    {
+        free(file_data);
+        return NULL;
+    }
     task_set_name(task, name);
     task->cr3 = task_create_empty_vas(ring == 0 ? PG_SUPERVISOR : PG_USER);
 
@@ -86,7 +104,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
     for (Elf64_Half i = 0; i < n_ph; i++)
     {
-        Elf64_Phdr* ph = (Elf64_Phdr*)&file->data[header->e_phoff + i * header->e_phentsize];
+        Elf64_Phdr* ph = (Elf64_Phdr*)&file_data[header->e_phoff + i * header->e_phentsize];
         if (ph->p_type == PT_NULL) continue;
 
         LOG(DEBUG, "Program header %u : ", i);
@@ -105,6 +123,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
         if (ph->p_vaddr >= TASK_STACK_TOP_ADDRESS || ph->p_vaddr + ph->p_memsz >= TASK_STACK_TOP_ADDRESS)
         {
             task_destroy(task);
+            free(file_data);
             return NULL;
         }
 
@@ -140,7 +159,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
             size_t to_copy = (remaining_file < bytes_in_page) ? remaining_file : bytes_in_page;
 
-            memcpy(phys + offset_in_page, &file->data[file_offset], to_copy);
+            memcpy(phys + offset_in_page, &file_data[file_offset], to_copy);
 
             size_t to_zero = bytes_in_page - to_copy;
             memset(phys + offset_in_page + to_copy, 0, to_zero);
@@ -192,10 +211,22 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
     Elf64_Ehdr* ld_so_header = NULL;
     if (dynamic)
     {
-        initrd_file_t* ld_so = initrd_find_file("usr/lib/ld.so");
-        ASSERT(ld_so);
 
-        ld_so_header = (Elf64_Ehdr*)ld_so->data;
+        vnode_ref_t ld_so = vfs_get_vnode_from_path(&_errno, 0, 0, "/usr/lib/ld.so", vfs_root_node, cwd, true);
+        ASSERT(ld_so.ptr);
+
+        ssize_t ldso_size = vnode_stat(file).st_size;
+        uint8_t* ldso_data = malloc(ldso_size);
+        if (!ldso_data)
+        {
+            vnode_delete_ref(&ld_so);
+            free(file_data);
+            return NULL;
+        }
+        vnode_read(ld_so, ldso_data, ldso_size, 0);
+        vnode_delete_ref(&ld_so);
+
+        ld_so_header = (Elf64_Ehdr*)ldso_data;
         ASSERT(ld_so_header);
 
         ASSERT(memcmp("\x7f""ELF", ld_so_header->e_ident, 4) == 0);
@@ -208,7 +239,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
         for (Elf64_Half i = 0; i < ld_n_ph; i++)
         {
-            Elf64_Phdr* ph = (Elf64_Phdr*)&ld_so->data[ld_so_header->e_phoff + i * ld_so_header->e_phentsize];
+            Elf64_Phdr* ph = (Elf64_Phdr*)&ldso_data[ld_so_header->e_phoff + i * ld_so_header->e_phentsize];
             if (ph->p_type == PT_NULL) continue;
 
             LOG(DEBUG, "ld.so: Program header %u : ", i);
@@ -227,6 +258,8 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
             if (ph->p_vaddr >= TASK_STACK_TOP_ADDRESS || ph->p_vaddr + ph->p_memsz >= TASK_STACK_TOP_ADDRESS)
             {
                 task_destroy(task);
+                free(file_data);
+                free(ldso_data);
                 return NULL;
             }
 
@@ -259,7 +292,7 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
                 size_t to_copy = (remaining_file < bytes_in_page) ? remaining_file : bytes_in_page;
 
-                memcpy(phys + offset_in_page, &ld_so->data[file_offset], to_copy);
+                memcpy(phys + offset_in_page, &ldso_data[file_offset], to_copy);
 
                 size_t to_zero = bytes_in_page - to_copy;
                 memset(phys + offset_in_page + to_copy, 0, to_zero);
@@ -278,6 +311,8 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
         task_stack_push_auxv(task, (Elf64_auxv_t){.a_type = AT_ENTRY, .a_un.a_val = header->e_entry});
         task_stack_push_auxv(task, (Elf64_auxv_t){.a_type = AT_BASE, .a_un.a_val = 0});
         task_stack_push_auxv(task, (Elf64_auxv_t){.a_type = AT_PAGESZ, .a_un.a_val = 4096});
+
+        free(ldso_data);
     }
 
     for (int i = 0; i < data->envc + 1; i++)
@@ -297,69 +332,8 @@ thread_t* __multitasking_add_task_from_initrd(const char* name, const char* path
 
     LOG(DEBUG, "Done");
 
+    free(file_data);
     return task;
 }
 
-thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
-{
-    if (!name) return false;
-    if (!data)
-    {
-        LOG(DEBUG, "multitasking_add_task_from_vfs: data is NULL");
-        FATAL("multitasking_add_task_from_vfs: data is NULL");
-    }
 
-    if (strlen(path) == 0) return NULL;
-
-    vfs_file_tnode_t* tnode = vfs_get_file_tnode(path, NULL);
-
-    if (!tnode)
-    {
-        LOG(ERROR, "Couldn't find program \"%s\"", path);
-        return NULL;
-    }
-
-    char* simplified_path = malloc(PATH_MAX);
-    if (!simplified_path)
-    {
-        LOG(DEBUG, "multitasking_add_task_from_vfs: Out of memory");
-        FATAL("multitasking_add_task_from_vfs: Out of memory");
-    }
-
-    vfs_realpath_from_file_tnode(tnode, simplified_path);
-
-    LOG(DEBUG, "Loading file \"%s\"", simplified_path);
-    vfs_folder_tnode_t* mount_point = tnode->inode->parent;
-    while (!(mount_point->inode->flags & VFS_NODE_MOUNTPOINT))
-        mount_point = mount_point->inode->parent;
-    // !! Horrible way to do things
-    // TODO: Add more general program loading with the vfs read/write syscalls directly
-    if (mount_point->inode->drive.type != DT_INITRD)
-    {
-        LOG(ERROR, "Invalid path");
-        free(simplified_path);
-        return NULL;
-    }
-    char* prefix = malloc(PATH_MAX);
-    if (!prefix)
-    {
-        LOG(DEBUG, "multitasking_add_task_from_vfs: Out of memory");
-        FATAL("multitasking_add_task_from_vfs: Out of memory");
-    }
-    vfs_realpath_from_folder_tnode(mount_point, prefix);
-    size_t prefix_length = strlen(prefix);
-
-    thread_t* ret = __multitasking_add_task_from_initrd(simplified_path, strcmp(simplified_path, prefix) == 0 ? "" : &simplified_path[(mount_point == vfs_root ? 0 : 1) + prefix_length], ring, system, data, cwd);
-
-    free(simplified_path);
-    free(prefix);
-    return ret;
-}
-
-thread_t* multitasking_add_task_from_vfs(const char* name, const char* path, uint8_t ring, bool system, const startup_data_struct_t* data, vfs_folder_tnode_t* cwd)
-{
-    uint32_t flags = lock_scheduler();
-    thread_t* ret = __multitasking_add_task_from_vfs(name, path, ring, system, data, cwd);
-    unlock_scheduler(flags);
-    return ret;
-}

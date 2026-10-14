@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "../pic/pic.h"
 #include "../gdt/gdt.h"
+#include "../util/assert.h"
 
 #include <stdint.h>
 #include <assert.h>

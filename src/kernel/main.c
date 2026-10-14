@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 #include "vfs/vnode.h"
 #include "memalloc/page_data.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>

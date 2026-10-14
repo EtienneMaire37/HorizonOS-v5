@@ -5,16 +5,16 @@
 #include "inode_stack.h"
 #include "mountpoint_ref.h"
 #include "inode.h"
-#include "ref.h"
-#include "spinlock.h"
-#include "log.h"
-#include "util/string.h"
+#include "../util/ref.h"
+#include "../multicore/spinlock.h"
+#include "../debug/out.h"
+#include "../util/string.h"
 #include "mountpoint.h"
 #include "fs/virtual.h"
 #include "fs/initrd.h"
 #include "rdev.h"
 #include "vnode_ref.h"
-#include "util/assert.h"
+#include "../util/assert.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,7 +146,7 @@ int _vfs_add_new_child_node_ex(vnode_ref_t node, const char* name, vfs_add_new_c
 #undef vadncne_ret
     if (!child.ptr)
     {
-        LOG(WARN, "Couldn't allocate child");
+        LOG(WARNING, "Couldn't allocate child");
         vnode_delete_ref(&child);
         return ENOMEM;
     }
@@ -201,7 +201,7 @@ void _vfs_unload_children(vnode_ref_t node, bool locked, bool exploration_locked
 {
     if (!node.ptr)
     {
-        LOG(WARN, "Tried to unload a null vnode");
+        LOG(WARNING, "Tried to unload a null vnode");
         return;
     }
 
@@ -278,7 +278,7 @@ void ___vnode_free(const struct ref* _ref)
     LOG(TRACE, "Freeing vnode \"%s\"", node->name);
     if (node == vfs_root_node.ptr)
     {
-        LOG(FATAL, "Tried to free root node");
+        LOG(CRITICAL, "Tried to free root node");
         abort();
     }
     vnode_ref_t ref = { node };

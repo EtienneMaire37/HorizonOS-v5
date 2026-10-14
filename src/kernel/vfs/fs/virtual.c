@@ -1,7 +1,6 @@
 #include "virtual.h"
 #include "../inode.h"
 #include "../mountpoint.h"
-#include "../log.h"
 #include <errno.h>
 #include <limits.h>
 #include <string.h>

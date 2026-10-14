@@ -4,11 +4,12 @@
 #include "open_file.h"
 #include "inode_stack.h"
 #include "mountpoint.h"
-#include "ref.h"
+#include "../util/ref.h"
+#include "../debug/out.h"
 #include "vnode.h"
 #include "vnode_ref.h"
-#include "spinlock.h"
-#include "util/assert.h"
+#include "../multicore/spinlock.h"
+#include "../util/assert.h"
 
 /* STUB */
 // TODO: Use rw locks everywhere it should be used

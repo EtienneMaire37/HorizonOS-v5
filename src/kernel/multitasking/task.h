@@ -51,6 +51,7 @@ typedef struct thread
     pid_t pid, ppid, pgid, sid;
     bool system_task;    // * Allow causing kernel panics (temporary hack, TODO: remove this)
 
+    // TODO: Add a per process root
     vnode_ref_t cwd;
     uint8_t* fpu_state;
 

@@ -18,6 +18,7 @@ ino_t initrd_generate_ino()
 
 int initrd_explore(vnode_ref_t vnode)
 {
+    (void)vnode;
     // char path[PATH_MAX];
     // vfs_get_relative_path_to_node_from_mountpoint(vnode, path, sizeof(path));
     // for (size_t i = 0; i < initrd_file_count; i++)
@@ -35,6 +36,9 @@ int initrd_explore(vnode_ref_t vnode)
 ssize_t initrd_read(inode_ref_t inode, void* buf, size_t count, off_t offset)
 {
     ASSERT(inode.ptr);
+    (void)buf;
+    (void)count;
+    (void)offset;
     // if (offset < 0) return -EINVAL;
     // initrd_file_t* file = &initrd_files[*(size_t*)inode.ptr->fs_specific];
     // size_t filesize =    S_ISLNK(file->st.st_mode) ? strlen(file->link) :
