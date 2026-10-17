@@ -39,3 +39,5 @@ linux-kernel-headers
 
 .built
 .downloaded
+
+.cache
