@@ -29,7 +29,6 @@ open_file_descriptor_ref_t open_file_descriptor_copy_ref(open_file_descriptor_re
 
 open_file_descriptor_ref_t vfs_allocate_new_open_file_descriptor(int flags, vnode_ref_t vnode, struct stat *st)
 {
-    ASSERT(vnode.ptr);
     open_file_descriptor_ref_t ref = { calloc(1, sizeof(open_file_descriptor_t)) };
     if (!ref.ptr) return ref;
     ref.ptr->ref = OPEN_FD_REF_INIT;
