@@ -9,7 +9,6 @@
 #include "../util/ref.h"
 #include "flags.h"
 #include "vnode_ref.h"
-#include "mountpoint_ref.h"
 #include "inode_ref.h"
 
 struct vnode
@@ -43,10 +42,11 @@ typedef struct
     inode_ref_t inode;
     struct stat st;
     ssize_t (*read)(vnode_ref_t, void*, size_t, off_t);
-    ssize_t (*write)(vnode_ref_t, void*, size_t, off_t);
+    ssize_t (*write)(vnode_ref_t, const void*, size_t, off_t);
     void* fs_specific;
     void (*free_fs_specific_data)(void*);
     bool explored;
+    bool isatty;
     // Add here
 } vfs_add_new_child_node_ex_params_t;
 #define vfs_add_new_child_node_ex(node, name, ...) _vfs_add_new_child_node_ex(node, name, (vfs_add_new_child_node_ex_params_t){ \
@@ -55,8 +55,9 @@ typedef struct
 typedef struct
 {
     ssize_t (*read)(vnode_ref_t, void*, size_t, off_t);
-    ssize_t (*write)(vnode_ref_t, void*, size_t, off_t);
+    ssize_t (*write)(vnode_ref_t, const void*, size_t, off_t);
     size_t size; // For block special files
+    bool isatty;
     // Add here
 } vfs_create_params_t;
 #define vfs_create(name, parent, mode, uid, gid, ...) _vfs_create(name, parent, mode, uid, gid, (vfs_create_params_t){ __VA_ARGS__ })
@@ -74,7 +75,7 @@ vnode_ref_t vfs_create_new_vnode(const char* name, inode_ref_t inode);
 int vfs_add_new_child_node(vnode_ref_t node, const char* name, const struct stat* st, void* fs_specific, void (*free_fs_specific_data)(void*));
 int _vfs_add_new_child_node_ex(vnode_ref_t node, const char* name, vfs_add_new_child_node_ex_params_t params);
 int vfs_add_new_special_child_node(vnode_ref_t node, const char* name, mode_t mode, uid_t uid, gid_t gid,
-    ssize_t (*read)(vnode_ref_t, void*, size_t, off_t), ssize_t (*write)(vnode_ref_t, void*, size_t, off_t),
+    ssize_t (*read)(vnode_ref_t, void*, size_t, off_t), ssize_t (*write)(vnode_ref_t, const void*, size_t, off_t),
     void* fs_specific, void (*free_fs_specific_data)(void*));
 int vfs_add_new_child_node__hardlink(vnode_ref_t node, const char* name, inode_ref_t inode);
 #define vfs_unload_children(node) _vfs_unload_children((node), false, false);
@@ -92,7 +93,7 @@ vnode_ref_t vfs_get_vnode_from_path(int* _errno, uid_t uid, gid_t gid, const cha
 int vfs_unmount(vnode_ref_t ref, bool lazy);
 
 ssize_t vnode_read(vnode_ref_t ref, void* buf, size_t bytes, off_t offset);
-ssize_t vnode_write(vnode_ref_t ref, void* buf, size_t bytes, off_t offset);
+ssize_t vnode_write(vnode_ref_t ref, const void* buf, size_t bytes, off_t offset);
 struct stat vnode_stat(vnode_ref_t vnode);
 
 int vfs_mount(vnode_ref_t ref, vnode_ref_t dev, const char* fstype);

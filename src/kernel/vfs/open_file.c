@@ -5,18 +5,11 @@
 #include "inode_stack.h"
 #include "mountpoint.h"
 #include "../util/ref.h"
-#include "../debug/out.h"
+
 #include "vnode.h"
 #include "vnode_ref.h"
 #include "../multicore/spinlock.h"
 #include "../util/assert.h"
-
-/* STUB */
-// TODO: Use rw locks everywhere it should be used
-static spinlock_noint_t lock;
-#define OFDT_ENTRIES   64
-static open_file_descriptor_entry_t entries[OFDT_ENTRIES];
-/* STUB */
 
 void open_file_descriptor_delete_ref(open_file_descriptor_ref_t* ref)
 {
@@ -36,6 +29,7 @@ open_file_descriptor_ref_t open_file_descriptor_copy_ref(open_file_descriptor_re
 
 open_file_descriptor_ref_t vfs_allocate_new_open_file_descriptor(int flags, vnode_ref_t vnode, struct stat *st)
 {
+    ASSERT(vnode.ptr);
     open_file_descriptor_ref_t ref = { calloc(1, sizeof(open_file_descriptor_t)) };
     if (!ref.ptr) return ref;
     ref.ptr->ref = OPEN_FD_REF_INIT;
@@ -92,53 +86,6 @@ void ___open_file_descriptor_free(const struct ref *ref)
     free(ofd);
 }
 
-int vfs_allocate_thread_fd(open_file_descriptor_ref_t desc, int flags)
-{
-    int fd = -1;
-    uint32_t eflags = acquire_spinlock_noint(&lock);
-    for (int i = 0; i < OFDT_ENTRIES; i++)
-    {
-        if (entries[i].fd.ptr == NULL)
-        {
-            entries[i].fd.ptr = open_file_descriptor_copy_ref(desc).ptr;
-            entries[i].flags = flags;
-            fd = i;
-            goto end;
-        }
-    }
-end:
-    release_spinlock_noint(&lock, eflags);
-    return fd;
-}
-bool vfs_get_thread_fd(int fd, open_file_descriptor_ref_t* desc, int* flags)
-{
-    ASSERT(desc);
-    ASSERT(flags);
-    if (fd < 0 || fd >= OFDT_ENTRIES) return false;
-    uint32_t eflags = acquire_spinlock_noint(&lock);
-    *desc = open_file_descriptor_copy_ref(entries[fd].fd);
-    *flags = entries[fd].flags;
-    release_spinlock_noint(&lock, eflags);
-    return true;
-}
-
-int vfs_close(int fd)
-{
-    if (fd < 0 || fd >= OFDT_ENTRIES) return EBADF;
-    int ret = 0;
-    uint32_t eflags = acquire_spinlock_noint(&lock);
-    if (entries[fd].fd.ptr)
-        open_file_descriptor_delete_ref(&entries[fd].fd);
-    else
-        ret = EBADF;
-    release_spinlock_noint(&lock, eflags);
-    return ret;
-}
-void vfs_close_all()
-{
-    for (int i = 0; i < OFDT_ENTRIES; i++)
-        vfs_close(i);
-}
 int vfs_open(const char* path, int flags, mode_t mode,
              uid_t euid, gid_t egid,
              vnode_ref_t root, vnode_ref_t cwd,
@@ -199,18 +146,4 @@ int vfs_open(const char* path, int flags, mode_t mode,
 end:
     vnode_delete_ref(&vnode);
     return ret;
-}
-
-void vfs_log_thread_fds()
-{
-    // No need to lock as it is only a stub for debugging the user space build (same as everywhere else)
-    for (int i = 0; i < OFDT_ENTRIES; i++)
-    {
-        if (entries[i].fd.ptr)
-        {
-            LOG(DEBUG, "fd %d: ", i);
-            LOG(DEBUG, "- flags: %#o", entries[i].flags);
-            LOG(DEBUG, "- mode:  %#o", entries[i].fd.ptr->st.st_mode);
-        }
-    }
 }

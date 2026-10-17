@@ -1,7 +1,6 @@
 #pragma once
 
 #include <stddef.h>
-#include <errno.h>
 #include "inode_ref.h"
 #include "mountpoint_ref.h"
 #include "../multicore/spinlock.h"

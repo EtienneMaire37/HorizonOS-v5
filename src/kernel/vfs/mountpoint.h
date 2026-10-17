@@ -4,8 +4,9 @@
 #include "../multicore/spinlock.h"
 #include "vnode_ref.h"
 #include "../util/ref.h"
-#include "inode.h"
+#include "inode_ref.h"
 #include <sys/types.h>
+#include <sys/stat.h>
 
 struct mountpoint
 {
@@ -26,7 +27,7 @@ struct mountpoint
 
     int (*explore)(vnode_ref_t); 
     ssize_t (*read)(inode_ref_t, void*, size_t, off_t); 
-    ssize_t (*write)(inode_ref_t, void*, size_t, off_t);
+    ssize_t (*write)(inode_ref_t, const void*, size_t, off_t);
     int (*create)(const char*, vnode_ref_t, struct stat*, void**, void (**)(void*));
     // TODO: Add more operations
     void (*flush)(vnode_ref_t);

@@ -47,7 +47,7 @@ void vfs_create_root_node()
     st.st_nlink = 1;
     st.st_size = 0;
 
-    inode_ref_t inode = vfs_create_new_inode(&st, NULL, NULL, (mountpoint_ref_t){ NULL });
+    inode_ref_t inode = vfs_create_new_inode(&st, NULL, NULL, (mountpoint_ref_t){ NULL }, false);
     vfs_root_node = vfs_create_new_vnode("/", inode);
     inode_delete_ref(&inode);
 
@@ -134,7 +134,7 @@ int _vfs_add_new_child_node_ex(vnode_ref_t node, const char* name, vfs_add_new_c
     release_spinlock_noint(&node.ptr->lock, flags);
     inode_delete_ref(&parent_inode);
 
-    inode_ref_t inode = params.inode.ptr ? (inode_ref_t){ NULL } : vfs_create_new_inode(&params.st, params.fs_specific, params.free_fs_specific_data, parent_mountpoint);
+    inode_ref_t inode = params.inode.ptr ? (inode_ref_t){ NULL } : vfs_create_new_inode(&params.st, params.fs_specific, params.free_fs_specific_data, parent_mountpoint, params.isatty);
     mountpoint_delete_ref(&parent_mountpoint);
     vnode_ref_t child = vfs_create_new_vnode(name, inode.ptr ? inode : params.inode );
     inode_delete_ref(&inode);
@@ -190,7 +190,7 @@ int vfs_add_new_child_node__hardlink(vnode_ref_t node, const char* name, inode_r
     return vfs_add_new_child_node_ex(node, name, .inode = inode, .st = (struct stat){});
 }
 int vfs_add_new_special_child_node(vnode_ref_t node, const char* name, mode_t mode, uid_t uid, gid_t gid,
-    ssize_t (*read)(vnode_ref_t, void*, size_t, off_t), ssize_t (*write)(vnode_ref_t, void*, size_t, off_t),
+    ssize_t (*read)(vnode_ref_t, void*, size_t, off_t), ssize_t (*write)(vnode_ref_t, const void*, size_t, off_t),
     void* fs_specific, void (*free_fs_specific_data)(void*))
 {
     ASSERT(S_ISBLK(mode) || S_ISCHR(mode));
@@ -659,7 +659,7 @@ end:
     return ret;
 }
 
-ssize_t vnode_write(vnode_ref_t ref, void* buf, size_t bytes, off_t offset)
+ssize_t vnode_write(vnode_ref_t ref, const void* buf, size_t bytes, off_t offset)
 {
     vnode_t* node = ref.ptr;
     if (!node) return -ENOENT;
@@ -771,7 +771,7 @@ int _vfs_create(const char* name, vnode_ref_t parent, mode_t mode, uid_t uid, gi
     mountpoint_delete_ref(&mountpoint);
     if (ret) return ret;
     LOG(TRACE, "Adding vnode to tree...");
-    ret = vfs_add_new_child_node_ex(parent, name, (inode_ref_t){ NULL }, st, .fs_specific = fs_specific, .free_fs_specific_data = free_fs_specific_data, .explored = true);
+    ret = vfs_add_new_child_node_ex(parent, name, (inode_ref_t){ NULL }, st, .fs_specific = fs_specific, .free_fs_specific_data = free_fs_specific_data, .explored = true, .isatty = params.isatty);
     release_spinlock_noint(&parent.ptr->exploration_lock, flags);
     return ret;
 }

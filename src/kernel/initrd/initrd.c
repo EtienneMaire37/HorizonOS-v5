@@ -1,9 +1,8 @@
 #include "initrd.h"
-#include "../multitasking/multitasking.h"
+#include "../util/assert.h"
 #include "../debug/out.h"
 
 #include <stdlib.h>
-#include <assert.h>
 
 initrd_file_t initrd_files[MAX_INITRD_FILES];
 uint16_t initrd_files_count = 0;

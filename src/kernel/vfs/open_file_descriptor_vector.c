@@ -1,72 +1,115 @@
-#include "inode_stack.h"
-#include "inode.h"
-#include "mountpoint.h"
+#include "open_file_descriptor_vector.h"
 #include "../util/assert.h"
-#include "../debug/out.h"
+#include "inode.h"
+#include "inode_stack.h"
+#include "open_file.h"
+#include "../multitasking/multitasking.h"
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
 
-int inode_stack_push(inode_stack_t* stack, inode_ref_t ref)
+int ofdv_open(open_file_descriptor_vector_t* vec, open_file_descriptor_entry_t entry)
 {
-    ASSERT(ref.ptr);
-    LOG(TRACE, "Pushing new inode on stack");
-    uint32_t flags = acquire_spinlock_noint(&stack->lock);
-    if (stack->size * sizeof(inode_ref_t) == stack->allocated)
+    ASSERT(entry.fd.ptr);
+    uint32_t flags = acquire_spinlock_noint(&vec->lock);
+    for (size_t i = 0; i < vec->size; i++)
     {
-        if (stack->allocated == 0)
-        // Most vnodes won't have multiple mountpoints on them so it'd be wasteful to use more than one
-            stack->allocated = sizeof(inode_ref_t); 
-        else
-            stack->allocated *= 2;
-
-        inode_ref_t* data = (inode_ref_t*)realloc(stack->data, stack->allocated);
-        if (!data) return (release_spinlock_noint(&stack->lock, flags), ENOMEM);
-        stack->data = data;
+        if (!vec->data[i].fd.ptr)
+        {
+            open_file_descriptor_copy_ref(entry.fd);
+            vec->data[i] = entry;
+            release_spinlock_noint(&vec->lock, flags);
+            return i;
+        }
     }
-
-    stack->data[stack->size] = inode_copy_ref(ref);
-    stack->size++;
-    release_spinlock_noint(&stack->lock, flags);
     
-    return 0;
-}
-
-inode_ref_t inode_stack_pop(inode_stack_t* stack)
-{
-    LOG(TRACE, "Poping inode from stack");
-    uint32_t flags = acquire_spinlock_noint(&stack->lock);
-    if (!stack->size) return (release_spinlock_noint(&stack->lock, flags), (inode_ref_t){ NULL });
-    stack->size--;
-    inode_ref_t ret = stack->data[stack->size];
-    ASSERT(ret.ptr);
-
-    if (2 * stack->size * sizeof(inode_ref_t) == stack->allocated)
+    if (vec->size * sizeof(inode_ref_t) == vec->allocated)
     {
-        if (stack->allocated >= sizeof(inode_ref_t))
-            stack->allocated /= 2;
+        if (vec->allocated == 0)
+        // Most vnodes won't have multiple mountpoints on them so it'd be wasteful to use more than one
+            vec->allocated = sizeof(inode_ref_t); 
         else
-            stack->allocated = 0;
+            vec->allocated *= 2;
 
-        inode_ref_t* data = (inode_ref_t*)realloc(stack->data, stack->allocated);
-        if (data || !stack->allocated)
-            stack->data = data;
+        open_file_descriptor_entry_t* data = (open_file_descriptor_entry_t*)realloc(vec->data, vec->allocated);
+        if (!data) return (release_spinlock_noint(&vec->lock, flags), ENOMEM);
+        vec->data = data;
     }
-    release_spinlock_noint(&stack->lock, flags);
+
+    open_file_descriptor_copy_ref(entry.fd);
+    vec->data[vec->size] = entry;
+    int idx = vec->size;
+    vec->size++;
+    release_spinlock_noint(&vec->lock, flags);
+    
+    return idx;
+}
+open_file_descriptor_entry_t ofdv_get(open_file_descriptor_vector_t* vec, int fd)
+{
+    if (fd < 0) return (open_file_descriptor_entry_t){ .flags = 0, .fd.ptr = NULL };
+    uint32_t flags = acquire_spinlock_noint(&vec->lock);
+    open_file_descriptor_entry_t ret = { .flags = 0, .fd.ptr = NULL };
+    if ((size_t)fd <= vec->size)
+        ret = vec->data[fd];
+    release_spinlock_noint(&vec->lock, flags);
+    open_file_descriptor_copy_ref(ret.fd);
+    return ret;
+}
+int ofdv_close(open_file_descriptor_vector_t* vec, int fd)
+{
+    if (fd < 0) return EBADF;
+    uint32_t flags = acquire_spinlock_noint(&vec->lock);
+    int ret = EBADF;
+    if ((size_t)fd <= vec->size)
+        open_file_descriptor_delete_ref(&vec->data[fd].fd);
+    release_spinlock_noint(&vec->lock, flags);
+    return ret;
+}
+void ofdv_closeall(open_file_descriptor_vector_t* vec)
+{
+    uint32_t flags = acquire_spinlock_noint(&vec->lock);
+    for (size_t i = 0; i < vec->size; i++)
+        open_file_descriptor_delete_ref(&vec->data[i].fd);
+    free(vec->data);
+    vec->data = NULL;
+    vec->allocated = vec->size = 0;
+    release_spinlock_noint(&vec->lock, flags);
+}
+open_file_descriptor_vector_t ofdv_copyall(open_file_descriptor_vector_t* vec, bool cloexec)
+{
+    open_file_descriptor_vector_t ret = { NULL , 0, 0, SPINLOCK_NOINT_INIT };
+    uint32_t flags = acquire_spinlock_noint(&vec->lock);
+    if (!(ret.data = malloc(vec->allocated)))
+    {
+        release_spinlock_noint(&vec->lock, flags);
+        return ret;
+    }
+    memcpy(ret.data, vec->data, vec->size);
+    ret.size = vec->size;
+    ret.allocated = vec->allocated;
+    if (cloexec)
+    {
+        for (size_t i = 0; i < vec->size; i++)
+            if (vec->data[i].flags & FD_CLOEXEC)
+                open_file_descriptor_delete_ref(&vec->data[i].fd);
+    }
+    release_spinlock_noint(&vec->lock, flags);
     return ret;
 }
 
-inode_ref_t inode_stack_top_inode(inode_stack_t* stack)
+int vfs_isatty(int fd)
 {
-    uint32_t flags = acquire_spinlock_noint(&stack->lock);
-    if (!stack->size) return (release_spinlock_noint(&stack->lock, flags), (inode_ref_t){ NULL });
-    inode_ref_t ret = inode_copy_ref(stack->data[stack->size - 1]);
-    release_spinlock_noint(&stack->lock, flags);
+    open_file_descriptor_entry_t entry = ofdv_get(&current_task->open_file_table, fd);
+    int ret;
+    if (entry.fd.ptr)
+    {
+        inode_ref_t inode = inode_stack_top_inode(&entry.fd.ptr->vnode.ptr->inodes);
+        ret = inode.ptr ? (inode.ptr->isatty ? 0 : ENOTTY) : ENOTTY;
+        inode_delete_ref(&inode);
+    }
+    else
+        ret = EBADF;
+    open_file_descriptor_delete_ref(&entry.fd);
     return ret;
-}
-mountpoint_ref_t inode_stack_top_mountpoint(inode_stack_t* stack)
-{
-    inode_ref_t inode = inode_stack_top_inode(stack);
-    if (!inode.ptr) return (mountpoint_ref_t){ NULL };
-    mountpoint_ref_t mp = mountpoint_copy_ref(inode.ptr->mountpoint);
-    inode_delete_ref(&inode);
-    return mp;
 }

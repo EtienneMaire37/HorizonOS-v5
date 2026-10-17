@@ -51,7 +51,7 @@ ssize_t initrd_read(inode_ref_t inode, void* buf, size_t count, off_t offset)
     // return count;
     return -ENOSYS;
 }
-ssize_t initrd_write(inode_ref_t inode, void* buf, size_t count, off_t offset)
+ssize_t initrd_write(inode_ref_t inode, const void* buf, size_t count, off_t offset)
 {
     (void)inode;
     (void)buf;
@@ -89,7 +89,7 @@ inode_ref_t initrd_create_root_inode(mountpoint_t* mp)
 
     st.st_size = 0;
 
-    inode_ref_t inode = vfs_create_new_inode(&st, NULL, NULL, mp_ref);
+    inode_ref_t inode = vfs_create_new_inode(&st, NULL, NULL, mp_ref, false);
     if (!inode.ptr) return inode;
     inode.ptr->st.st_nlink = 1;
     return inode;

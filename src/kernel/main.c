@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <errno.h>
 
 extern char kernel_start, kernel_end;
 void *kernel_start_ptr, *kernel_end_ptr;
@@ -595,7 +596,7 @@ void _start()
         }
 
         vfs_create("null", dev_node, S_IFCHR | 0666, 0, 0, null_read, null_write);
-        vfs_create("tty", dev_node, S_IFCHR | 0666, 0, 0, NULL, NULL);
+        vfs_create("tty", dev_node, S_IFCHR | 0666, 0, 0, NULL, NULL, .isatty = true);
         vfs_create("console", dev_node, S_IFCHR | 0666, 0, 0, NULL, NULL);
         
         vnode_delete_ref(&dev_node);

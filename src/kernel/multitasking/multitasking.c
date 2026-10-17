@@ -118,19 +118,6 @@ thread_t* __find_next_task()
     return task;
 }
 
-bool __is_fd_valid(int fd)
-{
-    if (fd < 0 || fd >= OPEN_MAX)
-        return false;
-    if (current_task->file_table[fd].index == invalid_fd)
-        return false;
-    if (current_task->file_table[fd].index < 0 || current_task->file_table[fd].index >= MAX_FILE_TABLE_ENTRIES)
-        return false;
-    if (file_table[current_task->file_table[fd].index].used <= 0)
-        return false;
-    return true;
-}
-
 pid_t __waitpid_find_child_in_tq(thread_queue_t* tq, pid_t pid, int* wstatus, int pgid_on_call)
 {
     thread_queue_item_t* it = *tq;

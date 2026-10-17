@@ -89,7 +89,6 @@ extern void syscall_handler();
 extern void context_switch(thread_t* old_tcb, thread_t* next_tcb, uint64_t ds);
 void end_context_switch();
 thread_t* __find_next_task();
-bool __is_fd_valid(int fd);
 
 pid_t task_generate_pid();
 void __task_set_pid(thread_t* task, pid_t pid);

@@ -1,30 +1,21 @@
 #include "task.h"
-#include "mutex.h"
 #include "vas.h"
 #include "../fpu/fpu.h"
 #include "../util/math.h"
-#include "../cpu/memory.h"
 #include "../paging/paging.h"
 #include <fcntl.h>
-#include "../terminal/textio.h"
 #include <string.h>
 #include "queue.h"
 #include "multitasking.h"
 #include "hashmap.h"
-#include "signal.h"
 #include "multitasking.h"
-#include "../vfs/table.h"
 #include "preempt.h"
-#include "../util/memory.h"
+#include "../vfs/poll.h"
+#include "../gdt/gdt.h"
+#include "../cpu/segbase.h"
 
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
 const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
-
-void __task_init_file_table(thread_t* task)
-{
-    for (int i = 0; i < OPEN_MAX; i++)
-        task->file_table[i].index = invalid_fd;
-}
 
 thread_t* __task_create_empty()
 {
@@ -55,7 +46,7 @@ thread_t* __task_create_empty()
 
     task->wait_pid = -1;
 
-    task->cwd = vfs_root;
+    task->cwd = vnode_copy_ref(vfs_root_node);
 
     task->queue = NULL;
 
@@ -103,17 +94,15 @@ void __task_destroy(thread_t* task)
     if (parent)
         __tq_hashmap_remove(pid_to_children_tq_hashmap, parent->pid, task);
 
-    for (int i = 0; i < OPEN_MAX; i++)
-    {
-    	if (task->file_table[i].index != invalid_fd)
-            ___vfs_remove_global_file(task->file_table[i].index);
-    }
+    ofdv_closeall(&task->open_file_table);
 
     __task_stop_polling(task);
+
 
     ASSERT(task->_poll_tqs == TQ_INIT);
     fpu_state_destroy(&task->fpu_state);
     task_free_vas((physical_address_t)task->cr3);
+    vnode_delete_ref(&task->cwd);
     free(task);
 }
 
@@ -303,7 +292,7 @@ void switch_task()
     uint32_t flags;
     bool did_lock_sched = !try_lock_scheduler(&flags);
 
-    if (!did_lock_sched || atomic_load(&preempt_disable_depth))
+    if (!did_lock_sched || preempt_disable_depth)
     {
         if (did_lock_sched)
             unlock_scheduler(flags);
@@ -369,16 +358,12 @@ void task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 }
 void __task_copy_file_table(thread_t* from, thread_t* to, bool cloexec)
 {
-    for (int i = 0; i < OPEN_MAX; i++)
-    {
-        if (from->file_table[i].index == invalid_fd || (cloexec && (from->file_table[i].flags & FD_CLOEXEC)))
-            to->file_table[i].index = invalid_fd;
-        else
-        {
-            to->file_table[i] = from->file_table[i];
-            file_table[to->file_table[i].index].used++;
-        }
-    }
+    ofdv_closeall(&to->open_file_table);
+    to->open_file_table = ofdv_copyall(&from->open_file_table, cloexec);
+    // Not sure how to handle this cleanly
+    // Maybe tasks should wait for their clone to be created before returning from the fork syscall
+    // TODO: Do this
+    ASSERT(to->open_file_table.data);
 }
 
 void __fork_task(thread_t* task)

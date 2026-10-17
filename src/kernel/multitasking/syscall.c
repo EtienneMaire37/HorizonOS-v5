@@ -18,19 +18,13 @@
 #include "sigset.h"
 #include <sys/resource.h>
 #include <time.h>
-#include "../time/ktime.h"
 #include <fcntl.h>
 #include <assert.h>
 #include "signal.h"
 #include "multitasking.h"
-#include "../util/memory.h"
-#include "../vfs/entries.h"
 #include <dirent.h>
-#include "../util/units.h"
-#include "../vfs/table.h"
 #include <sys/utsname.h>
 #include "../system/info.h"
-#include "../vfs/pipe.h"
 #include <sys/poll.h>
 #include <sched.h>
 #include "../cpu/tsc.h"
@@ -84,33 +78,33 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
-        if (!__is_fd_valid(arg1))
+        open_file_descriptor_entry_t entry = ofdv_get(&current_task->open_file_table, arg1);
+        open_file_descriptor_ref_t open_file = entry.fd;
+        if (!open_file.ptr)
         {
-            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
         ssize_t ret;
-        sc_ret_errno = (uint64_t)__vfs_read(arg1, arg2, arg3, &ret);
-        set_rflags_if(flags);
+        sc_ret_errno = (uint64_t)vnode_read(open_file.ptr->vnode, arg2, arg3, open_file.ptr->offset);
+        open_file_descriptor_delete_ref(&open_file);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_WRITE, 3, int, const void*, size_t)
         SC_LOG("syscall SYS_WRITE(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
-        if (!__is_fd_valid(arg1))
+        open_file_descriptor_entry_t entry = ofdv_get(&current_task->open_file_table, arg1);
+        open_file_descriptor_ref_t open_file = entry.fd;
+        if (!open_file.ptr)
         {
-            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             sc_ret(1) = (uint64_t)-1;
             break;
         }
         ssize_t ret;
-        sc_ret_errno = __vfs_write(arg1, arg2, arg3, &ret);
-        set_rflags_if(flags);
+        sc_ret_errno = (uint64_t)vnode_write(open_file.ptr->vnode, arg2, arg3, open_file.ptr->offset);
+        open_file_descriptor_delete_ref(&open_file);
         sc_ret(1) = (uint64_t)ret;
         break;
     sc_case(SYS_EXIT, 1, int)
@@ -119,19 +113,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         break;
     sc_case(SYS_ISATTY, 1, int)
         SC_LOG("syscall SYS_ISATTY(%d)", arg1);
-        uint32_t flags = get_rflags(); // TODO: Add proper locking support to the VFS with RCU and spinlocks/mutexes. // https://wiki.osdev.org/Kernel_Debugging#Develop_in_hosted_environment
-        if (!__is_fd_valid(arg1))
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            break;
-        }
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        if (__vfs_isatty(entry))
-            sc_ret_errno = 0;
-        else
-            sc_ret_errno = ENOTTY;
-        set_rflags_if(flags);
+        sc_ret(0) = vfs_isatty(arg1);
         break;
     sc_case(SYS_VM_MAP, 6, void*, size_t, int, int, int, off_t)
         SC_LOG("syscall SYS_VM_MAP(%p, %zu, %#x, %#x, %d, %" PRId64 ")", arg1, arg2, arg3, arg4, arg5, arg6);
