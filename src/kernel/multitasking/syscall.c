@@ -1,3 +1,4 @@
+#include "abi-bits/fcntl.h"
 #define _GNU_SOURCE
 #include "sched_lock.h"
 #include <stdio.h>
@@ -269,180 +270,62 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
 
-        lock;
-        bool relative = *arg2 != '/';
-        if (relative && arg1 != AT_FDCWD && !__is_fd_valid(arg1))
+        open_file_descriptor_ref_t dir_open_file = ofdv_get(&current_task->open_file_table, arg1).fd;
+        if (!dir_open_file.ptr)
         {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
+            sc_ret_errno = ENOENT;
             break;
         }
-        int fd = __vfs_allocate_global_file();
-
-        if (fd == -1)
+        if (!S_ISDIR(dir_open_file.ptr->st.st_mode))
         {
-            set_rflags_if(flags);
-            sc_ret_errno = ENFILE;
+            open_file_descriptor_delete_ref(&dir_open_file);
+            sc_ret_errno = ENOTDIR;
             break;
         }
+        vnode_ref_t cwd = (arg1 == AT_FDCWD) ? current_task->cwd : dir_open_file.ptr ? dir_open_file.ptr->vnode : (vnode_ref_t){ NULL };
+        open_file_descriptor_delete_ref(&dir_open_file);
 
-        file_table[fd].flags = arg3;
-        file_table[fd].position = 0;
-
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        vfs_folder_tnode_t* cwd = (arg1 == AT_FDCWD) ? current_task->cwd : ((entry && (entry->entry_type == VFS_ET_FOLDER)) ? entry->tnode.folder : NULL);
-
-        struct stat st;
-        int stat_ret = __vfs_stat(arg2, cwd, &st);
-        if (stat_ret != 0)
+        int _errno;
+        vnode_ref_t file_node = vfs_get_vnode_from_path(&_errno, 0, 0, arg2, vfs_root_node, cwd, (arg3 & O_NOFOLLOW) ? false : true);
+        if (!file_node.ptr)
         {
-            __vfs_remove_global_file(fd);
-            set_rflags_if(flags);
-            if (stat_ret == ENOENT && (arg3 & O_CREAT))
-                sc_ret_errno = EROFS;
+            if (_errno == ENOENT && (arg3 & O_CREAT))
+                sc_ret_errno = EROFS; // TODO: Add file creation support
             else
-                sc_ret_errno = stat_ret;
+                sc_ret_errno = _errno;
             break;
         }
+
+        struct stat st = vnode_stat(file_node);
 
         if ((arg3 & O_DIRECTORY) && !S_ISDIR(st.st_mode))
         {
-            __vfs_remove_global_file(fd);
-            set_rflags_if(flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
 
-        file_table[fd].entry_type = S_ISDIR(st.st_mode) ? VFS_ET_FOLDER : VFS_ET_FILE;
-
-        file_table[fd].tnode.file = NULL;
-        file_table[fd].tnode.folder = NULL;
-
-        bool wr = ((arg3 & O_ACCMODE) == O_WRONLY || (arg3 & O_ACCMODE) == O_RDWR);
-
-        if (file_table[fd].entry_type == VFS_ET_FILE)
+        open_file_descriptor_ref_t open_file = vfs_allocate_new_open_file_descriptor(arg3, file_node, &st);
+        vnode_delete_ref(&file_node);
+        if (!open_file.ptr)
         {
-            file_table[fd].tnode.file = vfs_get_file_tnode(arg2, cwd);
-            ASSERT(file_table[fd].tnode.file);
-
-            if (wr && file_table[fd].tnode.file->inode->drive.type == DT_INITRD)
-            {
-                __vfs_remove_global_file(fd);
-                set_rflags_if(flags);
-                sc_ret_errno = EROFS;
-                break;
-            }
-
-            file_table[fd].iofunc = file_table[fd].tnode.file->inode->io_func;
-
-            file_table[fd].st = file_table[fd].tnode.file->inode->st;
+            sc_ret_errno = ENOMEM; // ENFILE
+            break;
         }
-        else if (file_table[fd].entry_type == VFS_ET_FOLDER)
+
+        int fd = ofdv_open(&current_task->open_file_table, (open_file_descriptor_entry_t){ .flags = arg3 & O_CLOEXEC ? FD_CLOEXEC : 0, .fd = open_file });
+        open_file_descriptor_delete_ref(&open_file);
+        if (fd == -1)
         {
-            if (wr)
-            {
-                __vfs_remove_global_file(fd);
-                set_rflags_if(flags);
-                sc_ret_errno = EISDIR;
-                break;
-            }
-
-            file_table[fd].tnode.folder = vfs_get_folder_tnode(arg2, cwd);
-            ASSERT(file_table[fd].tnode.folder);
-
-            file_table[fd].iofunc = NULL;
-
-            file_table[fd].st = file_table[fd].tnode.folder->inode->st;
-        }
-        else
-            FATAL("openat fatal error");
-
-        file_table[fd].on_destroy = NULL;
-
-        file_table[fd].file_data.folder_child.cur_index = 0;
-        file_table[fd].file_data.folder_child.done_reading = false;
-
-        int ret = __vfs_allocate_thread_file(current_task);
-        if (ret == -1)
-        {
-            __vfs_remove_global_file(fd);
-            set_rflags_if(flags);
-
             sc_ret_errno = EMFILE;
+            break;
         }
-        else
-        {
-            current_task->file_table[ret].index = fd;
-            current_task->file_table[ret].flags = (arg3 & O_CLOEXEC) ? FD_CLOEXEC : 0;
-            set_rflags_if(flags);
-            sc_ret_errno = 0;
-            sc_ret(1) = (uint64_t)ret;
-        }
+        sc_ret_errno = 0;
+        sc_ret(1) = fd;
         break;
     sc_case(SYS_CLOSE, 1, int)
         SC_LOG("syscall SYS_CLOSE(%d)", arg1);
-        lock;
-        if (!__is_fd_valid(arg1))
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            break;
-        }
-        __vfs_close(arg1);
-        set_rflags_if(flags);
+        vfs_close(arg1);
         sc_ret_errno = 0;
-        break;
-    sc_case(SYS_OPEN_DIR, 1, const char*)
-        SC_LOG("syscall SYS_OPEN_DIR(\"%s\")", arg1);
-        sc_validate_pointer(arg1);
-        if (!strcmp(arg1, ""))
-        {
-            sc_ret_errno = ENOENT;
-            sc_ret(1) = -1;
-            break;
-        }
-
-        lock;
-
-        vfs_folder_tnode_t* tnode = vfs_get_folder_tnode(arg1, current_task->cwd);
-        if (!tnode)
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = ENOENT;
-            sc_ret(1) = -1;
-            break;
-        }
-
-        int fd = __vfs_allocate_global_file();
-
-        file_table[fd].entry_type = VFS_ET_FOLDER;
-
-        file_table[fd].tnode.file = NULL;
-        file_table[fd].tnode.folder = tnode;
-        file_table[fd].st = file_table[fd].tnode.folder->inode->st;
-
-        file_table[fd].file_data.folder_child.cur_index = 0;
-        file_table[fd].file_data.folder_child.done_reading = false;
-
-        file_table[fd].on_destroy = NULL;
-
-        int ret = __vfs_allocate_thread_file(current_task);
-        if (ret == -1)
-        {
-            __vfs_remove_global_file(fd);
-            set_rflags_if(flags);
-
-            sc_ret_errno = EMFILE;
-            sc_ret(1) = (uint64_t)(-1);
-        }
-        else
-        {
-            current_task->file_table[ret].index = fd;
-            current_task->file_table[ret].flags = 0;
-            set_rflags_if(flags);
-            sc_ret_errno = 0;
-            sc_ret(1) = (uint64_t)ret;
-        }
         break;
     sc_case(SYS_READ_ENTRIES, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ_ENTRIES(%d, %p, %zu)", arg1, arg2, arg3);

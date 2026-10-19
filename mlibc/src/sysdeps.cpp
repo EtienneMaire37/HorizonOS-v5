@@ -388,10 +388,7 @@ namespace mlibc
 
 	int sys_open_dir(const char* path, int* handle)
 	{
-		uint64_t _handle;
-		int ret = syscall1_2(SYS_OPEN_DIR, (uint64_t)path, &_handle);
-		*handle = (int)_handle;
-		return ret;
+		return sys_open(path, O_DIRECTORY | O_RDONLY, 0, handle);
 	}
 	int sys_read_entries(int handle, void* buffer, size_t max_size, size_t* bytes_read)
 	{

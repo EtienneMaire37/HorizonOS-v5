@@ -38,7 +38,6 @@
 #define SYS_SIGRET          33
 #define SYS_PSELECT         34
 #define SYS_VM_PROTECT      35
-#define SYS_OPEN_DIR        36
 #define SYS_READ_ENTRIES    37
 #define SYS_ACCESS          38
 #define SYS_FADVISE         39
