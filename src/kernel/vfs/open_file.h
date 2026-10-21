@@ -1,7 +1,11 @@
 #pragma once
 
+#define _GNU_SOURCE
+#include <dirent.h>
+#include <sys/stat.h>
 #include "../util/ref.h"
-#include "vnode.h"
+#include "../multicore/spinlock.h"
+#include "vnode_ref.h"
 
 typedef struct open_file_descriptor open_file_descriptor_t;
 typedef struct open_file_descriptor
@@ -47,3 +51,5 @@ int vfs_close(int fd);
 void vfs_close_all();
 
 void vfs_log_thread_fds();
+struct dirent64 vfs_find_new_child_entry(open_file_descriptor_ref_t open_file);
+

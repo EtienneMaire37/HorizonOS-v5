@@ -22,7 +22,6 @@
 #define SYS_SIGACTION       17
 #define SYS_SIGPROCMASK	    18
 #define SYS_WAIT4           19
-#define SYS_TTYNAME         20
 #define SYS_GETRESUID       21
 #define SYS_GETRESGID       22
 #define SYS_CLOCK_GET       23

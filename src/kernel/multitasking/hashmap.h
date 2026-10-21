@@ -4,7 +4,6 @@
 #include "queue.h"
 
 #include <stdlib.h>
-#include "multitasking.h"
 
 static inline void __tq_hashmap_push_back(hashmap_t* hmp, uint64_t key, thread_t* thread)
 {

@@ -1,4 +1,5 @@
 #include "task.h"
+#include "sched_lock.h"
 #include "vas.h"
 #include "../fpu/fpu.h"
 #include "../util/math.h"
@@ -13,6 +14,7 @@
 #include "../vfs/poll.h"
 #include "../gdt/gdt.h"
 #include "../cpu/segbase.h"
+#include "../vfs/vnode.h"
 
 const uint64_t task_rsp_offset = offsetof(thread_t, rsp);
 const uint64_t task_cr3_offset = offsetof(thread_t, cr3);
@@ -525,6 +527,16 @@ void kill_task(thread_t* task, int ret)
     int flags = lock_scheduler();
     __kill_task(task, ret);
     unlock_scheduler(flags);
+}
+
+vnode_ref_t task_get_cwd(thread_t* task)
+{
+    // TODO: Add lock to thread structure directly!!!!!
+    // FIXME ASAP
+    uint32_t flags = lock_scheduler();
+    vnode_ref_t ret = vnode_copy_ref(task->cwd);
+    unlock_scheduler(flags);
+    return ret;
 }
 
 void __kill_task(thread_t* task, int ret)

@@ -47,6 +47,7 @@
 #endif
 
 // TODO: Valide area including memory mapped io/files
+// ASAP: FIX THIS
 #define sc_validate_pointer(ptr)    if ((uintptr_t)ptr >= TASK_STACK_TOP_ADDRESS) \
                                     { \
                                         sc_ret_errno = EFAULT; \

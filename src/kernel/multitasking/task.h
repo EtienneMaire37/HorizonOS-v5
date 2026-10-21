@@ -1,6 +1,7 @@
 #pragma once
 
 #include <elf.h>
+#include <signal.h>
 #include "../time/time.h"
 #include "../util/linked_list.h"
 #include "../vfs/open_file_descriptor_vector.h"
@@ -120,6 +121,8 @@ void task_stack_push(thread_t*, uint64_t);
 void task_stack_push_auxv(thread_t* task, Elf64_auxv_t val);
 void task_stack_push_string(thread_t* task, const char* str);
 void task_stack_push_data(thread_t* task, void* data, size_t bytes);
+
+vnode_ref_t task_get_cwd(thread_t* task);
 
 void cleanup_tasks();
 

@@ -1,5 +1,7 @@
 CompileFlags:
   Compiler: ./hostoolchain/usr/bin/x86_64-horizonos-gcc
+  Add:
+    - -ferror-limit=0
 ---
 If:
   PathMatch: .*\.h
@@ -8,3 +10,4 @@ CompileFlags:
     - -x
     - c
     - -std=gnu11
+    - -ferror-limit=0

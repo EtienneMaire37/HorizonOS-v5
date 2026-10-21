@@ -77,6 +77,8 @@ vnode_ref_t vfs_create_new_vnode(const char* name, inode_ref_t inode)
 void vnode_delete_ref(vnode_ref_t* ref)
 {
     if (!ref || !ref->ptr) return;
+    // XXX: FIXME: TODO: Use an atomic test and set intrinsic
+    // to make this (and all reference counting) mt safe!!
     struct ref* ref_ref = ref->ptr ? &ref->ptr->ref : NULL;
     ref->ptr = NULL;
     if (ref_ref)

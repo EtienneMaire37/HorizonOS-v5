@@ -189,11 +189,6 @@ namespace mlibc
 		return syscall3_1(SYS_SIGACTION, (uint64_t)signum, (uint64_t)act, (uint64_t)oldact);
 	}
 
-	int sys_ttyname(int fd, char* buf, size_t size)
-	{
-		return syscall3_1(SYS_TTYNAME, (uint64_t)fd, (uint64_t)buf, (uint64_t)size);
-	}
-
 	int sys_getresuid(uid_t* ruid, uid_t* euid, uid_t* suid)
 	{
 		return syscall3_1(SYS_GETRESUID, (uint64_t)ruid, (uint64_t)euid, (uint64_t)suid);

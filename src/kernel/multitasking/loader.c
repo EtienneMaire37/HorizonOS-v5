@@ -6,7 +6,7 @@
 #include "task.h"
 #include "multitasking.h"
 #include "startup_data.h"
-#include "../vfs/vnode_ref.h"
+#include "../vfs/vnode.h"
 
 thread_t* multitasking_add_task_from_function(const char* name, void (*func)())
 {
@@ -94,7 +94,7 @@ thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, u
     task->ring = ring;
 
     task->system_task = system;
-    task->cwd = cwd;
+    task->cwd = vnode_copy_ref(cwd);
 
     LOG(DEBUG, "Entry point : %#" PRIx64, header->e_entry);
 
@@ -335,5 +335,4 @@ thread_t* __multitasking_add_task_from_vfs(const char* name, const char* path, u
     free(file_data);
     return task;
 }
-
 

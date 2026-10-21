@@ -1,8 +1,13 @@
-#include "abi-bits/fcntl.h"
 #define _GNU_SOURCE
+#include "abi-bits/fcntl.h"
 #include "sched_lock.h"
+#include <limits.h>
 #include <stdio.h>
+#include "loader.h"
+#include "../terminal/textio.h"
+#include "../vfs/vnode.h"
 #include "hashmap.h"
+#include "startup_data.h"
 #include "task.h"
 #include <sys/select.h>
 #include <asm-generic/errno.h>
@@ -216,7 +221,6 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret(1) = (uint64_t)((off_t)-1);
             break;
         }
-        // TODO: Implement telldir/seekdir and make readdir use them
         struct stat st = open_file.ptr->st;
         // ESPIPE fd is associated with a pipe, socket, or FIFO.
         if (S_ISFIFO(st.st_mode) || S_ISSOCK(st.st_mode))
@@ -282,11 +286,12 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = ENOTDIR;
             break;
         }
-        vnode_ref_t cwd = (arg1 == AT_FDCWD) ? current_task->cwd : dir_open_file.ptr ? dir_open_file.ptr->vnode : (vnode_ref_t){ NULL };
+        vnode_ref_t cwd = (arg1 == AT_FDCWD) ? task_get_cwd(current_task) : dir_open_file.ptr ? vnode_copy_ref(dir_open_file.ptr->vnode) : (vnode_ref_t){ NULL };
         open_file_descriptor_delete_ref(&dir_open_file);
 
         int _errno;
         vnode_ref_t file_node = vfs_get_vnode_from_path(&_errno, 0, 0, arg2, vfs_root_node, cwd, (arg3 & O_NOFOLLOW) ? false : true);
+        vnode_delete_ref(&cwd);
         if (!file_node.ptr)
         {
             if (_errno == ENOENT && (arg3 & O_CREAT))
@@ -314,9 +319,9 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
 
         int fd = ofdv_open(&current_task->open_file_table, (open_file_descriptor_entry_t){ .flags = arg3 & O_CLOEXEC ? FD_CLOEXEC : 0, .fd = open_file });
         open_file_descriptor_delete_ref(&open_file);
-        if (fd == -1)
+        if (fd < 0)
         {
-            sc_ret_errno = EMFILE;
+            sc_ret_errno = -fd;
             break;
         }
         sc_ret_errno = 0;
@@ -330,33 +335,15 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_READ_ENTRIES, 3, int, void*, size_t)
         SC_LOG("syscall SYS_READ_ENTRIES(%d, %p, %zu)", arg1, arg2, arg3);
         sc_validate_pointer(arg2);
-        lock;
-        if (!__is_fd_valid(arg1))
+        open_file_descriptor_ref_t open_file = ofdv_get(&current_task->open_file_table, arg1).fd;
+        if (!open_file.ptr)
         {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            sc_ret(1) = 0;
-            break;
-        }
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        ASSERT(entry);
-        if (entry->entry_type != VFS_ET_FOLDER)
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = ENOTDIR;
-            sc_ret(1) = 0;
-            break;
-        }
-        sc_ret_errno = 0;
-        if (entry->file_data.folder_child.done_reading)
-        {
-            sc_ret(1) = 0;
-            entry->file_data.folder_child.done_reading = false;
-            set_rflags_if(flags);
+            sc_ret_errno = ENOMEM;
             break;
         }
         struct dirent64 dir_entry;
         size_t bytes_read = 0;
+        sc_ret_errno = 0;
         while (true)
         {
             if (bytes_read + sizeof(dir_entry) > arg3)
@@ -365,17 +352,14 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
                     sc_ret_errno = EINVAL;
                 break;
             }
-            dir_entry = vfs_find_new_child_entry(entry);
+            dir_entry = vfs_find_new_child_entry(open_file);
             if (dir_entry.d_name[0] == 0)
-            {
-                entry->file_data.folder_child.done_reading = true;
                 break;
-            }
             memcpy((void*)((char*)arg2 + bytes_read), &dir_entry, sizeof(dir_entry));
             bytes_read += sizeof(dir_entry);
         }
+        open_file_descriptor_delete_ref(&open_file);
         sc_ret(1) = bytes_read;
-        set_rflags_if(flags);
         break;
     sc_case(SYS_IOCTL, 3, int, unsigned long, void*)
         SC_LOG("syscall SYS_IOCTL(%d, %#lx, %p)", arg1, arg2, arg3);
@@ -388,22 +372,11 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         sc_validate_pointer(arg1);
         sc_validate_pointer(arg2);
         sc_validate_pointer(arg3);
-        vfs_file_tnode_t* tnode = vfs_get_file_tnode(arg1, current_task->cwd);
-        if (!tnode)
-        {
-            sc_ret_errno = ENOENT;
-            break;
-        }
-        char rpath[PATH_MAX];
-        vfs_realpath_from_file_tnode(tnode, rpath);
-        if (vfs_access(arg1, current_task->cwd, X_OK) != 0)
-        {
-            sc_ret_errno = EACCES;
-            break;
-        }
         startup_data_struct_t data = startup_data_init_from_command(arg2, arg3);
         uint32_t flags = lock_scheduler();
-        thread_t* new_task = __multitasking_add_task_from_vfs(rpath, rpath, 3, false, &data, current_task->cwd);
+        vnode_ref_t cwd = task_get_cwd(current_task);
+        thread_t* new_task = __multitasking_add_task_from_vfs(arg1, arg1, 3, false, &data, cwd);
+        vnode_delete_ref(&cwd);
         if (!new_task)
         {
             LOG(TRACE, "EXECVE: Couldn't load executable");
@@ -439,41 +412,25 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_TCGETATTR, 2, int, struct termios*)
         SC_LOG("syscall SYS_TCGETATTR(%d, %p)", arg1, arg2);
         sc_validate_pointer(arg2);
-    lock;
-        if (!__is_fd_valid(arg1))
+        int _errno = vfs_isatty(arg1);
+        if (_errno)
         {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            break;
-        }
-        if (!__vfs_isatty(__get_global_file_entry(arg1)))
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = ENOTTY;
+            sc_ret_errno = _errno;
             break;
         }
         *arg2 = tty_ts;
-        set_rflags_if(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_TCSETATTR, 3, int, int, const struct termios*)
         SC_LOG("syscall SYS_TCSETATTR(%d, %d, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg3);
-    lock;
-        if (!__is_fd_valid(arg1))
+        int _errno = vfs_isatty(arg1);
+        if (_errno)
         {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            break;
-        }
-        if (!__vfs_isatty(__get_global_file_entry(arg1)))
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = ENOTTY;
+            sc_ret_errno = _errno;
             break;
         }
         tty_ts = *arg3;
-        set_rflags_if(flags);
         if (arg2 == TCSAFLUSH)
         {
             uint32_t flags = acquire_spinlock_noint(&keyboard_input_lock);
@@ -492,7 +449,9 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             break;
         }
         char buf_cpy[PATH_MAX];
-        size_t ret = vfs_realpath_from_folder_tnode(current_task->cwd, buf_cpy);
+        vnode_ref_t cwd = task_get_cwd(current_task);
+        size_t ret = vfs_get_absolute_path_to_node(cwd, buf_cpy, sizeof(buf_cpy));
+        vnode_delete_ref(&cwd);
         if (ret > arg2)
         {
             sc_ret_errno = ERANGE;
@@ -504,39 +463,46 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
     sc_case(SYS_CHDIR, 1, const char*)
         SC_LOG("syscall SYS_CHDIR(\"%s\")", arg1);
         sc_validate_pointer(arg1);
-        vfs_folder_tnode_t* tnode = vfs_get_folder_tnode(arg1, current_task->cwd);
-        if (!tnode)
+        uint32_t flags = lock_scheduler();
+        vnode_ref_t old_cwd = task_get_cwd(current_task);
+        vnode_delete_ref(&current_task->cwd);
+        int _errno;
+        vnode_ref_t new_cwd = vfs_get_vnode_from_path(&_errno, 0, 0, arg1, vfs_root_node, old_cwd, true);
+        if (!new_cwd.ptr)
         {
-            sc_ret_errno = vfs_get_file_tnode(arg1, current_task->cwd) ? ENOTDIR : ENOENT;
+            unlock_scheduler(flags);
+            sc_ret_errno = _errno;
             break;
         }
-        if (vfs_access(arg1, current_task->cwd, X_OK) != 0)
+        if (!S_ISDIR(vnode_stat(new_cwd).st_mode))
         {
-            sc_ret_errno = EACCES;
+            unlock_scheduler(flags);
+            sc_ret_errno = ENOTDIR;
             break;
         }
-        current_task->cwd = tnode;
+        current_task->cwd = new_cwd;
+        unlock_scheduler(flags);
         sc_ret_errno = 0;
         break;
     sc_case(SYS_FCHDIR, 1, int)
         SC_LOG("syscall SYS_FCHDIR(%d)", arg1);
-        lock;
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        if (!entry)
+        open_file_descriptor_ref_t open_file = ofdv_get(&current_task->open_file_table, arg1).fd;
+        if (!open_file.ptr)
         {
-            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
-        if (entry->entry_type != VFS_ET_FOLDER)
+        if (!S_ISDIR(open_file.ptr->st.st_mode))
         {
-            set_rflags_if(flags);
             sc_ret_errno = ENOTDIR;
             break;
         }
-        current_task->cwd = entry->tnode.folder;
-        set_rflags_if(flags);
-        sc_ret_errno = 0;
+        // TODO: Search permissions
+        uint32_t flags = lock_scheduler();
+        vnode_delete_ref(&current_task->cwd);
+        current_task->cwd = vnode_copy_ref(open_file.ptr->vnode);
+        unlock_scheduler(flags);
+        open_file_descriptor_delete_ref(&open_file);
         break;
     sc_case(SYS_FORK, 0)
         SC_LOG("syscall SYS_FORK()");
@@ -663,36 +629,6 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = 0;
         unlock_scheduler(flags);
         break;
-    sc_case(SYS_TTYNAME, 3, int, char*, size_t)
-        SC_LOG("syscall SYS_TTYNAME(%d, %p, %zu)", arg1, arg2, arg3);
-        sc_validate_pointer(arg2);
-        lock;
-        if (!__is_fd_valid(arg1))
-        {
-            sc_ret_errno = EBADF;
-            set_rflags_if(flags);
-            break;
-        }
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        if (!__vfs_isatty(entry))
-        {
-            sc_ret_errno = ENOTTY;
-            set_rflags_if(flags);
-            break;
-        }
-        vfs_file_tnode_t* tnode = entry->tnode.file;
-        char path[PATH_MAX];
-        ssize_t rp_ret = vfs_realpath_from_file_tnode(tnode, path);
-        if (rp_ret == -1 || rp_ret > (ssize_t)arg3) // TODO: Check arg3 bounds
-        {
-            sc_ret_errno = ERANGE;
-            set_rflags_if(flags);
-            break;
-        }
-        memcpy(arg2, path, rp_ret);
-        set_rflags_if(flags);
-        sc_ret_errno = 0;
-        break;
     sc_case(SYS_GETRESUID, 3, uid_t*, uid_t*, uid_t*)
         SC_LOG("syscall SYS_GETRESUID(%p, %p, %p)", arg1, arg2, arg3);
         sc_validate_pointer(arg1);
@@ -762,72 +698,41 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
         SC_LOG("syscall SYS_FSTATAT(%d, \"%s\", %#x, %p)", arg1, arg2, arg3, arg4);
         sc_validate_pointer(arg2);
         sc_validate_pointer(arg4);
-        // TODO: Implement symbolic links
-        if (arg3 & ~(AT_EMPTY_PATH | AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW))
+        if (arg3 & ~(AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW))
         {
             LOG(WARNING, "SYS_FSTATAT: Invalid or unsupported argument %#x", arg3);
             sc_ret_errno = EINVAL;
             break;
         }
-        lock;
-        file_entry_t* entry = __get_global_file_entry(arg1);
-        if (arg1 != AT_FDCWD && !entry)
+        open_file_descriptor_ref_t open_file = ofdv_get(&current_task->open_file_table, arg1).fd;
+        if (!open_file.ptr)
         {
-            set_rflags_if(flags);
             sc_ret_errno = EBADF;
             break;
         }
-        if ((strcmp(arg2, "") == 0) && (arg3 & AT_EMPTY_PATH))
+        if (!arg2[0])
         {
-            if (!entry)
-                sc_ret_errno = EBADF;
+            if (arg3 & AT_EMPTY_PATH)
+            {
+                *arg4 = vnode_stat(open_file.ptr->vnode);
+                break;
+            }
             else
             {
-                *arg4 = entry->st;
-                sc_ret_errno = 0;
-            }
-            set_rflags_if(flags);
-            break;
-        }
-        bool relative_path = *arg2 != '/';
-        vfs_folder_tnode_t* cwd = NULL;
-        if (relative_path)
-        {
-            if (arg1 == AT_FDCWD)
-            {
-                cwd = current_task->cwd;
-                goto fstatat_get_st;
-            }
-            if (entry->entry_type != VFS_ET_FOLDER)
-            {
-                sc_ret_errno = ENOTDIR;
-                set_rflags_if(flags);
+                open_file_descriptor_delete_ref(&open_file);
                 break;
             }
-            if (entry->entry_type == VFS_ET_FOLDER)
-            {
-                cwd = entry->tnode.folder;
-                goto fstatat_get_st;
-            }
-            FATAL("fstatat fatal error");
         }
-        else
+        int _errno;
+        vnode_ref_t vnode = vfs_get_vnode_from_path(&_errno, 0, 0, arg2, vfs_root_node, open_file.ptr->vnode, (arg3 & AT_SYMLINK_NOFOLLOW) ? false : true);
+        open_file_descriptor_delete_ref(&open_file);
+        if (!vnode.ptr)
         {
-        fstatat_get_st:
-            ;
-            struct stat st;
-            int stat_ret = __vfs_stat(arg2, cwd, &st);
-            set_rflags_if(flags);
-            if (stat_ret != 0)
-            {
-                sc_ret_errno = stat_ret;
-                break;
-            }
-
-            *arg4 = st;
-            sc_ret_errno = 0;
+            sc_ret_errno = _errno;
             break;
         }
+        *arg4 = vnode_stat(vnode);
+        vnode_delete_ref(&vnode);
         break;
     sc_case(SYS_ACCESS, 2, const char*, int)
         SC_LOG("syscall SYS_ACCESS(\"%s\", %#o)", arg1, arg2);
@@ -838,7 +743,20 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        sc_ret_errno = vfs_access(arg1, current_task->cwd, arg2);
+        vnode_ref_t cwd = task_get_cwd(current_task);
+        int _errno;
+        vnode_ref_t vnode = vfs_get_vnode_from_path(&_errno, 0, 0, arg1, vfs_root_node, cwd, true);
+        vnode_delete_ref(&cwd);
+        if (!vnode.ptr)
+        {
+            sc_ret_errno = _errno;
+            break;
+        }
+        mode_t mode = vnode_stat(vnode).st_mode;
+        // TODO: Implement proper permission checks
+        // The check is done using the calling process's real UID and GID, rather than the effective IDs as is done when actually attempting an operation (e.g., open(2)) on the file.
+        vnode_delete_ref(&vnode);
+        sc_ret_errno = 0;
         break;
     sc_case(SYS_GETPGID, 1, pid_t)
         SC_LOG("syscall SYS_GETPGID(%d)", arg1);
@@ -904,26 +822,7 @@ uint64_t c_syscall_handler(interrupt_registers_t* registers, void** return_addre
             sc_ret_errno = EINVAL;
             break;
         }
-        lock;
-        if (!__is_fd_valid(arg1))
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = EBADF;
-            break;
-        }
-        if (arg3 <= -1)
-        {
-            set_rflags_if(flags);
-            sc_ret_errno = EINVAL;
-            break;
-        }
-        if (__is_fd_valid(arg3))
-            __vfs_close(arg3);
-        current_task->file_table[arg3].index = current_task->file_table[arg1].index;
-        current_task->file_table[arg3].flags = (arg2 & O_CLOEXEC) ? FD_CLOEXEC : 0;
-        file_table[current_task->file_table[arg3].index].used++;
-        set_rflags_if(flags);
-        sc_ret_errno = 0;
+        sc_ret_errno = vfs_dup3(arg1, arg3, arg2);
         break;
     sc_case(SYS_FCNTL, 3, int, int, uint64_t)
         SC_LOG("syscall SYS_FCNTL(%d, %d, %" PRIu64 ")", arg1, arg2, arg3);

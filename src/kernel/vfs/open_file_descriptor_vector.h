@@ -20,3 +20,5 @@ void ofdv_closeall(open_file_descriptor_vector_t* vec);
 open_file_descriptor_vector_t ofdv_copyall(open_file_descriptor_vector_t* vec, bool cloexec);
 
 int vfs_isatty(int fd);
+int vfs_dup(int fd);
+int vfs_dup3(int oldfd, int newfd, int flags);
