@@ -2,16 +2,15 @@
 #include "mountpoint_ref.h"
 #include "../util/ref.h"
 #include "vnode.h"
-#include "../util/assert.h"
 #include <stdlib.h>
 
 void mountpoint_delete_ref(mountpoint_ref_t* ref)
 {
-    ASSERT(ref);
-    struct ref* ref_ref = ref->ptr ? &ref->ptr->ref : NULL;
-    ref->ptr = NULL;
-    if (ref_ref)
-        ref_dec(ref_ref);
+    if (!ref) return;
+    mountpoint_ref_t ref_ref = (mountpoint_ref_t){ __atomic_exchange_n((void**)&ref->ptr, 0, __ATOMIC_RELEASE ) };
+    struct ref* ref_ref_ref = ref_ref.ptr ? &ref_ref.ptr->ref : NULL;
+    if (ref_ref_ref)
+        ref_dec(ref_ref_ref);
 }
 
 mountpoint_ref_t mountpoint_copy_ref(mountpoint_ref_t ref)

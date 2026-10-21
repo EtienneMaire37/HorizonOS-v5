@@ -76,13 +76,11 @@ vnode_ref_t vfs_create_new_vnode(const char* name, inode_ref_t inode)
 
 void vnode_delete_ref(vnode_ref_t* ref)
 {
-    if (!ref || !ref->ptr) return;
-    // XXX: FIXME: TODO: Use an atomic test and set intrinsic
-    // to make this (and all reference counting) mt safe!!
-    struct ref* ref_ref = ref->ptr ? &ref->ptr->ref : NULL;
-    ref->ptr = NULL;
-    if (ref_ref)
-        ref_dec(ref_ref);
+    if (!ref) return;
+    vnode_ref_t ref_ref = (vnode_ref_t){ __atomic_exchange_n((void**)&ref->ptr, 0, __ATOMIC_RELEASE ) };
+    struct ref* ref_ref_ref = ref_ref.ptr ? &ref_ref.ptr->ref : NULL;
+    if (ref_ref_ref)
+        ref_dec(ref_ref_ref);
 }
 
 vnode_ref_t ___vnode_dereference_vnode(vnode_ref_t node, size_t field_offset, bool locked)
@@ -95,17 +93,6 @@ vnode_ref_t ___vnode_dereference_vnode(vnode_ref_t node, size_t field_offset, bo
     if (!locked)
         release_spinlock_noint(&node.ptr->lock, flags);
     return (vnode_ref_t){ field_value };
-}
-
-inode_ref_t ___vnode_dereference_inode(vnode_ref_t node, size_t field_offset)
-{
-    ASSERT(node.ptr);
-    uint32_t flags = acquire_spinlock_noint(&node.ptr->lock);
-    inode_t* field_value = *(inode_t**)((uintptr_t)node.ptr + field_offset);
-    if (field_value)
-        ref_inc(&field_value->ref);
-    release_spinlock_noint(&node.ptr->lock, flags);
-    return (inode_ref_t){ field_value };
 }
 
 void ___vnode_move_reference(vnode_ref_t* ref, size_t field_offset)

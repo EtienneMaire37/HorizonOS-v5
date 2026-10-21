@@ -2,7 +2,7 @@
 
 typedef struct inode inode_t;
 
-typedef struct __attribute__((packed))
+typedef struct
 {
     inode_t* _Atomic ptr;
 } inode_ref_t;

@@ -29,7 +29,6 @@ struct vnode
 
 #define vnode_dereference_vnode(vnode, field)       ___vnode_dereference_vnode((vnode), offsetof(vnode_t, field), false)
 #define vnode_dereference_vnode_locked(vnode, field)       ___vnode_dereference_vnode((vnode), offsetof(vnode_t, field), true)
-#define vnode_dereference_inode(vnode, field)       ___vnode_dereference_inode((vnode), offsetof(vnode_t, field))
 #define vnode_move_reference(vnode, field)       ___vnode_move_reference((vnode), offsetof(vnode_t, field))
 
 #define VNODE_REF_INIT ((struct ref){___vnode_free, 1})
@@ -66,7 +65,6 @@ int _vfs_create(const char* name, vnode_ref_t parent, mode_t mode, uid_t uid, gi
 void vfs_create_root_node();
 
 vnode_ref_t ___vnode_dereference_vnode(vnode_ref_t node, size_t field_offset, bool locked);
-inode_ref_t ___vnode_dereference_inode(vnode_ref_t node, size_t field_offset);
 void vnode_delete_ref(vnode_ref_t* ref);
 void ___vnode_move_reference(vnode_ref_t* ref, size_t field_offset);
 

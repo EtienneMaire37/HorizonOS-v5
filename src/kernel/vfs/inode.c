@@ -36,11 +36,11 @@ void ___inode_free(const struct ref* _ref)
 
 void inode_delete_ref(inode_ref_t* ref)
 {
-    if (!ref || !ref->ptr) return;
-    struct ref* ref_ref = ref->ptr ? &ref->ptr->ref : NULL;
-    ref->ptr = NULL;
-    if (ref_ref)
-        ref_dec(ref_ref);
+    if (!ref) return;
+    inode_ref_t ref_ref = (inode_ref_t){ __atomic_exchange_n((void**)&ref->ptr, 0, __ATOMIC_RELEASE ) };
+    struct ref* ref_ref_ref = ref_ref.ptr ? &ref_ref.ptr->ref : NULL;
+    if (ref_ref_ref)
+        ref_dec(ref_ref_ref);
 }
 
 inode_ref_t inode_copy_ref(inode_ref_t ref)

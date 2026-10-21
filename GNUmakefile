@@ -320,7 +320,12 @@ distclean: clean
 	rm -rf crosstoolchain
 	rm -rf hostoolchain
 	rm -rf debug
-	rm -rf $(BASH_DIR)
 	rm -rf limine
+	rm -rf $(BASH_DIR)
+	rm -rf $(COREUTILS_DIR)
+	rm -rf $(LESS_DIR)
+	rm -rf $(CMATRIX_DIR)
+	rm -rf $(GREP_DIR)
+	rm -rf $(GNULIB_SRCDIR)
 
 -include $(KERNEL_OBJ:.o=.d)
